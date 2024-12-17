@@ -1,0 +1,242 @@
+import os 
+import yaml
+import json 
+from typing import Callable, Any, Dict
+from pydantic import BaseModel, ValidationError
+from pydantic._internal._model_construction import ModelMetaclass
+
+from .logging import logger
+from .callbacks import callback_manager, exception_buffer
+from .module_utils import (
+    save_json,
+    custom_serializer,
+    parse_json_from_text, 
+    get_error_message,
+    get_base_module_init_error_message
+)
+from .registry import register_module, MODULE_REGISTRY
+
+
+class MetaModule(ModelMetaclass):
+    def __new__(mcs, name, bases, namespace):
+        cls = super().__new__(mcs, name, bases, namespace)
+        register_module(name, cls)
+        return cls 
+
+
+class BaseModule(BaseModel, metaclass=MetaModule):
+
+    """
+    model_config是用于控制类型匹配的参数, 子类的model_config会覆盖父类的model_config
+    """
+    class_name: str = None 
+    model_config = {"arbitrary_types_allowed": True, "extra": "allow", "protected_namespaces": ()}
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls.class_name = cls.__name__
+    
+    def __init__(self, **kwargs):
+
+        try:
+            super().__init__(**kwargs) 
+            self.init_module()
+        except (ValidationError, Exception) as e:
+            exception_handler = callback_manager.get_callback("exception_buffer")
+            if exception_handler is None:
+                error_message = get_base_module_init_error_message(
+                    cls=self.__class__, 
+                    data=kwargs, 
+                    errors=e
+                )
+                logger.error(error_message)
+                raise
+            else:
+                exception_handler.add(e)
+    
+    def init_module(self):
+        pass
+
+    def __str__(self):
+        return self.to_str()
+    
+    @property
+    def kwargs(self):
+        return self.model_extra
+    
+    @classmethod
+    def _create_instance(cls, data: Dict[str, Any]) -> "BaseModule":
+        processed_data = {k: cls._process_data(v) for k, v in data.items()}
+        # print(processed_data)
+        return cls.model_validate(processed_data)
+
+    @classmethod
+    def _process_data(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "class_name" in data:
+                sub_class = MODULE_REGISTRY.get_module(data.get("class_name"))
+                return sub_class._create_instance(data)
+            else:
+                return {k: cls._process_data(v) for k, v in data.items()}
+        elif isinstance(data, (list, tuple)):
+            return [cls._process_data(x) for x in data]
+        else:
+            return data 
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any], **kwargs):
+        """
+        Instantiate the BaseModule from a dict.
+        """
+        use_logger = kwargs.get("log", True)
+        with exception_buffer() as buffer:
+            try:
+                class_name = data.get("class_name", None)
+                if class_name:
+                    cls = MODULE_REGISTRY.get_module(class_name)
+                module = cls._create_instance(data)
+                # module = cls.model_validate(data)
+                if len(buffer.exceptions) > 0:
+                    error_message = get_base_module_init_error_message(cls, data, buffer.exceptions)
+                    if use_logger:
+                        logger.error(error_message)
+                    raise Exception(get_error_message(buffer.exceptions))
+            finally:
+                pass
+        return module
+    
+    @classmethod
+    def from_json(cls, content: str, **kwargs):
+        """
+        construct the BaseModule from a JSON str. 
+        """
+        use_logger = kwargs.get("log", True)
+        try:
+            data = yaml.safe_load(content)
+        except:
+            error_message = f"Can not instantiate {cls.__name__}. The input to {cls.__name__}.from_json is not a valid JSON string."
+            if use_logger:
+                logger.error(error_message)
+            raise ValueError(error_message)
+        
+        if not isinstance(data, (list, dict)):
+            error_message = f"Can not instantiate {cls.__name__}. The input to {cls.__name__}.from_json is not a valid JSON string."
+            if use_logger:
+                logger.error(error_message)
+            raise ValueError(error_message)
+
+        return cls.from_dict(data, log=use_logger)
+    
+    @classmethod
+    def from_str(cls, content: str, **kwargs):
+        """
+        construct the BaseModule from a str. The input content should contain valid JSON str. 
+
+        Args:
+            content (str): the text that contain the JSON str. 
+        """
+        use_logger = kwargs.get("log", True)
+        
+        extracted_json_list = parse_json_from_text(content)
+        if len(extracted_json_list) == 0:
+            error_message = f"The input to {cls.__name__}.from_str does not contain any valid JSON str."
+            if use_logger:
+                logger.error(error_message)
+            raise ValueError(error_message)
+        
+        module = None
+        for json_str in extracted_json_list:
+            try:
+                module = cls.from_json(json_str, log=False)
+            except:
+                continue
+            break
+        
+        if module is None:
+            error_message = f"Can not instantiate {cls.__name__}. The input to {cls.__name__}.from_str either does not contain a valide JSON str, or the JSON str is incomplete or incompatable (incorrect variables or types) with {cls.__name__}."
+            error_message += f"\nInput:\n{content}"
+            if use_logger:
+                logger.error(error_message)
+            raise ValueError(error_message)
+        
+        return module
+    
+    @classmethod 
+    def load_module(cls, path: str, **kwargs) -> dict:
+        """
+        load the values for a module from a file. 
+
+        Args:
+            path (str): the path of the file. 
+        
+        Returns:
+            dict: the JSON object instantiated from the file.
+        """
+        with open(path, mode="r", encoding="utf-8") as file:
+            content = yaml.safe_load(file.read())
+        return content
+
+    @classmethod
+    def from_file(cls, path: str, load_function: Callable=None, **kwargs):
+        """
+        construct the BaseModule from a file. It will load the file and then use .from_str to instantiate the BaseModule by default. 
+
+        Args:
+            path (str): the path of the file. 
+            load_function: (Callable): the function used to load the data. It takes a file path as input and a JSON object 
+        """
+        use_logger = kwargs.get("log", True)
+        if not os.path.exists(path):
+            error_message = f"File \"{path}\" does not exist!"
+            if use_logger:
+                logger.error(error_message)
+            raise ValueError(error_message)
+        
+        function = load_function or cls.load_module
+        content = function(path)
+        module = cls.from_dict(content, log=use_logger)
+
+        return module
+    
+    def to_dict(self, **kwargs) -> dict:
+        """
+        convert the BaseModule to a dict. 
+        """
+        return self.model_dump()
+    
+    def to_json(self, use_indent: bool=False, **kwargs) -> str:
+        """
+        convert the BaseModule to JSON str format
+        """
+        if use_indent:
+            kwargs["indent"] = kwargs.get("indent", 4)
+        else:
+            kwargs.pop("indent", None)
+        if kwargs.get("default", None) is None:
+            kwargs["default"] = custom_serializer
+        return json.dumps(self.model_dump(), **kwargs)
+    
+    def to_str(self, **kwargs) -> str:
+        """
+        convert the BaseModule to a str. Use .to_json to output JSON str by default. 
+        """
+        return self.to_json(use_indent=False)
+    
+    def save_module(self, path: str, **kwargs)-> str:
+        """
+        Save the BaseModule to a file. This function will set the non-serilizable object to None by default. 
+        If you want to save the non-serilizable objects, override this function. Remember to override ``load_module'' function to make sure the loaded object can be correctly parsed by ``cls.from_dict''
+
+        Args:
+            path (str): the path to save the file. 
+        
+        Returns:
+            str: the path where the file is saved. It is the same as the input ``path''.
+        """
+        logger.info("Saving {} to {}", self.__class__.__name__, path)
+        default_ignore = lambda x: None 
+        return save_json(self.to_json(use_indent=True, default=default_ignore), path=path)
+    
+
+__all__ = ["BaseModule"]
+
