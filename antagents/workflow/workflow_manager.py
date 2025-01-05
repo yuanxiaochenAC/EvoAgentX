@@ -74,7 +74,7 @@ class ActionScheduler(Action):
         """
         Determine the next actions to take for the given task. 
         Implement this using ReAct by default.
-        If the last message stored in ``next_action`` specifies the ``next_action``, return this action as the next action to execute. 
+        If the last message stored in ``next_actions`` specifies the ``next_actions``, choose an action from these actions to execute. 
 
         Returns:
             NextAction: The next action to execute for the task.

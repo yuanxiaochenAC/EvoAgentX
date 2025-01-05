@@ -26,7 +26,7 @@ class Environment(BaseModule):
     """
     trajectory: List[TrajectoryStep] = []
 
-    def publish_message(self, message: Message, state: TrajectoryState = None, error: str = None, **kwargs):
+    def update(self, message: Message, state: TrajectoryState = None, error: str = None, **kwargs):
         """
         Add a message to the shared memory and optionally to a specific task's message list.
 

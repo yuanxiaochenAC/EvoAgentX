@@ -33,6 +33,9 @@ class CallbackManager:
 
     def get_callback(self, callback_type: str):
         return self.local_data.callbacks.get(callback_type, None)
+    
+    def has_callback(self, callback_type: str):
+        return callback_type in self.local_data.callbacks
 
     def clear_callback(self, callback_type: str):
         if callback_type in self.local_data.callbacks:
@@ -55,8 +58,11 @@ class DeferredExceptionHandler(Callback):
 
 @contextmanager
 def exception_buffer():
-    exception_handler = DeferredExceptionHandler()
-    callback_manager.set_callback("exception_buffer", exception_handler)
+    if not callback_manager.has_callback("exception_buffer"):
+        exception_handler = DeferredExceptionHandler()
+        callback_manager.set_callback("exception_buffer", exception_handler)
+    else:
+        exception_handler = callback_manager.get_callback("exception_buffer")
     try:
         yield exception_handler
     finally:

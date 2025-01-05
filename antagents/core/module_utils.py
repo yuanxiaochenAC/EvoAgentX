@@ -79,6 +79,41 @@ def save_json(data, path: str, type: str="json", use_indent: bool=True) -> str:
 
     return path
 
+def escape_json_values(string: str) -> str:
+
+    def escape_value(match):
+        raw_value = match.group(1)
+        raw_value = raw_value.replace('\n', '\\n')
+        return f'"{raw_value}"'
+    
+    def fix_json(match):
+        raw_key = match.group(1)
+        raw_value = match.group(2)
+        raw_value = raw_value.replace("\n", "\\n")
+        raw_value = regex.sub(r'(?<!\\)"', '\\\"', raw_value)
+        return f'"{raw_key}": "{raw_value}"'
+    
+    try:
+        json.loads(string)
+        return string
+    except json.JSONDecodeError:
+        pass
+
+    try:
+        string = regex.sub(r'(?<!\\)"', '\\\"', string) # replace " with \"
+        pattern_key = r'\\"([^"]+)\\"(?=\s*:\s*)'
+        string = regex.sub(pattern_key, r'"\1"', string) # replace \\"key\\" with "key"
+        pattern_value = r'(?<=:\s*)\\"((?:\\.|[^"\\])*)\\"'
+        string = regex.sub(pattern_value, escape_value, string, flags=regex.DOTALL) # replace \\"value\\" with "value"and change \n to \\n
+        pattern_nested_json = r'"([^"]+)"\s*:\s*\\"([^"]*\{+[\S\s]*?\}+)[\r\n\\n]*"' # handle nested json in value
+        string = regex.sub(pattern_nested_json, fix_json, string, flags=regex.DOTALL)
+        json.loads(string)
+        return string
+    except json.JSONDecodeError:
+        pass
+    
+    return string
+
 def parse_json_from_text(text: str) -> List[str]:
     """
     Autoregressively extract JSON object from text 
@@ -92,7 +127,17 @@ def parse_json_from_text(text: str) -> List[str]:
     json_pattern = r"""(?:\{(?:[^{}]*|(?R))*\}|\[(?:[^\[\]]*|(?R))*\])"""
     pattern = regex.compile(json_pattern, regex.VERBOSE)
     matches = pattern.findall(text)
-    return list(matches)
+    matches = [escape_json_values(match) for match in matches]
+    return matches
+
+def extract_code_blocks(text):
+
+    # Regular expression to match code blocks enclosed in triple backticks
+    code_block_pattern = r"```(?:[a-zA-Z]*)?\n*(.*?)\n*```"
+    # Find all matches in the text
+    code_blocks = regex.findall(code_block_pattern, text, regex.DOTALL)
+
+    return code_blocks
 
 def remove_repr_quotes(json_string):
     pattern = r'"([A-Za-z_]\w*\(.*\))"'

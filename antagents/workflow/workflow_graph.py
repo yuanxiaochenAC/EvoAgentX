@@ -8,6 +8,7 @@ from typing import Union, Optional, Tuple, List
 
 from ..core.logging import logger
 from ..core.module import BaseModule
+from ..core.base_config import Parameter
 from ..core.decorators import atomic_method
 
 
@@ -21,7 +22,9 @@ class WorkFlowNodeState(str, Enum):
 class WorkFlowNode(BaseModule):
 
     name: str # A short name of the task. Should be unique in a single workflow
-    description: str # A detailed description of the task.
+    description: str # A detailed description of the task
+    inputs: List[Parameter] # inputs for the task
+    outputs: List[Parameter] # outputs of the task
     agents: List[Union[str, dict]] = None
     status: WorkFlowNodeState = WorkFlowNodeState.PENDING
 

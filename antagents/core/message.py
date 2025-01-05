@@ -1,8 +1,17 @@
+from enum import Enum
 from pydantic import Field
-from typing import Optional, Any
+from typing import Optional, Any, List
 
 from .module import BaseModule
 from .module_utils import generate_id, get_timestamp
+
+class MessageType(Enum):
+    
+    REQUEST = "request"
+    RESPONSE = "response"
+    COMMAND = "command"
+    ERROR = "error"
+    UNKNOWN = "unknown"
 
 
 class Message(BaseModule):
@@ -25,8 +34,9 @@ class Message(BaseModule):
     agent: Optional[str] = None
     # receivers: Optional[Union[str, List[str]]] = None
     action: Optional[str] = None
-    next_action: Optional[str] = None
-    msg_type: Optional[str] = None
+    prompt: Optional[str] = None
+    next_actions: Optional[List[str]] = None
+    msg_type: Optional[MessageType] = MessageType.UNKNOWN
     wf_goal: Optional[str] = None
     wf_task: Optional[str] = None
     wf_task_desc: Optional[str] = None
