@@ -88,7 +88,7 @@ class BaseLLM(ABC):
         pass
 
     @abstractmethod
-    def single_generate(self, prompt: str, **kwargs) -> str:
+    def single_generate(self, messages: List[dict], **kwargs) -> str:
         """
         generate LLM output for a given prompt. 
 
@@ -102,7 +102,7 @@ class BaseLLM(ABC):
         pass
 
     @abstractmethod
-    def batch_generate(self, prompt: List[str], **kwargs) -> List[str]:
+    def batch_generate(self, messages: List[List[dict]], **kwargs) -> List[str]:
         """
         generate outputs for a batch of prompts. 
 
@@ -117,6 +117,19 @@ class BaseLLM(ABC):
 
     @abstractmethod
     def parse_generated_text(self, text: str, parser: Optional[Type[LLMOutputParser]]=None, **kwargs) -> LLMOutputParser:
+        """
+        use parser to obtain a structured output. 
+
+        Args: 
+            text (str): a text that potentially contains structured string. 
+            parser (Type[LLMOutputParser]): an LLMOutputParser class. 
+        
+        Returns:
+            LLMOutputParser: an LLMOutputParser object. 
+        
+        Note: 
+            use parser.parse(text) to obtain the result. 
+        """
         pass
 
     @abstractmethod
@@ -137,9 +150,15 @@ class BaseLLM(ABC):
 
         Args:
             prompt (Union[str, List[str]]): the input to the LLM. 
-            generation_config (LLMGenerationConfig): the generation config for LLM. If None, self.generation_config will be used by default.
+            system_message (str): the system message for the LLM. 
+            messages: (Union[List[dict],List[List[dict]]]): the chat message for the LLM. 
             parser (Optional[Type[LLMOutputParser]]): A LLMOutputParser (sub)class used to parse the LLM output.
                 This class should implement .parse() method to parse the output. If None, LLMOutputParser will be used by default.
+        
+        Note:
+            Either prompt or messages must be provided. Raise an error if both prompt and messages are provided or none of them is provided. 
+            If parser is None, use LLMOutputParser by default. 
+            Need to calculate the cost of an LLM call!
         """
         pass
 
