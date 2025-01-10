@@ -1,7 +1,7 @@
 from typing import Optional, Type, List
 
 from ..core.module import BaseModule
-from ..core.base_config import Parameter
+# from ..core.base_config import Parameter
 from ..core.message import Message
 from ..models.base_model import BaseLLM
 from ..tools.tool import Tool 

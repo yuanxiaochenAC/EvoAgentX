@@ -25,6 +25,5 @@ class Parameter(BaseModel):
     type: str 
     description: str 
 
-    
-__all__ = ["BaseConfig"]
+
 
