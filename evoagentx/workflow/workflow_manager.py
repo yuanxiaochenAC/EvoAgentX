@@ -3,7 +3,6 @@ from pydantic import Field
 from ..core.parser import Parser
 from ..models.base_model import BaseLLM
 from ..core.module import BaseModule
-from ..core.parser import Parser
 from ..actions.action import Action
 from ..agents.agent_manager import AgentManager
 from .workflow_graph import WorkFlowGraph

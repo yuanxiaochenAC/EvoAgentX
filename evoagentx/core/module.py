@@ -113,7 +113,7 @@ class BaseModule(BaseModel, metaclass=MetaModule):
         use_logger = kwargs.get("log", True)
         try:
             data = yaml.safe_load(content)
-        except:
+        except yaml.YAMLError:
             error_message = f"Can not instantiate {cls.__name__}. The input to {cls.__name__}.from_json is not a valid JSON string."
             if use_logger:
                 logger.error(error_message)
@@ -148,7 +148,7 @@ class BaseModule(BaseModel, metaclass=MetaModule):
         for json_str in extracted_json_list:
             try:
                 module = cls.from_json(json_str, log=False)
-            except:
+            except ValueError:
                 continue
             break
         
@@ -234,8 +234,7 @@ class BaseModule(BaseModel, metaclass=MetaModule):
             str: the path where the file is saved. It is the same as the input ``path''.
         """
         logger.info("Saving {} to {}", self.__class__.__name__, path)
-        default_ignore = lambda x: None 
-        return save_json(self.to_json(use_indent=True, default=default_ignore), path=path)
+        return save_json(self.to_json(use_indent=True, default=lambda x: None), path=path)
     
 
 __all__ = ["BaseModule"]

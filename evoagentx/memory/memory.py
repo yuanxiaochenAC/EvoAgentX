@@ -104,7 +104,7 @@ class BaseMemory(BaseModule):
         Returns:
             List[Message]: A list of messages corresponding to the given `key`, possibly filtered or truncated according to `n` and other provided keyword arguments.
         """
-        if not data or not key in data:
+        if not data or key not in data:
             return []
         assert n is None or n>=0, "n must be None or a positive int"
         messages = data[key] if n is None else data[key][-n:]

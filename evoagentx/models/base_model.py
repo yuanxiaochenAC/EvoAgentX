@@ -1,12 +1,12 @@
 import yaml
-from copy import deepcopy
+# from copy import deepcopy
 from abc import ABC, abstractmethod
 from pydantic import Field
 from typing import Union, Optional, Type, List
 
 from ..core.parser import Parser
 from ..core.module_utils import parse_json_from_text, extract_code_blocks
-from ..core.registry import register_model
+# from ..core.registry import register_model
 from .model_configs import LLMConfig
 
 
@@ -39,13 +39,13 @@ class LLMOutputParser(Parser):
             try:
                 data = yaml.safe_load(json_str)
                 return data
-            except:
+            except yaml.YAMLError:
                 pass 
             try:
                 code_blocks = extract_code_blocks(content) # extract json/python code blocks
                 code_block = code_blocks[0]
                 data = {attr: code_block for attr in attrs}
-            except:
+            except Exception:
                 data = {attr: content for attr in attrs}
         else:
             raise ValueError(f"The following generated content does not contain JSON string!\n{content}")
