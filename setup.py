@@ -19,14 +19,14 @@ def get_requirements(path):
 
 
 setup(
-    name='antagents',
-    version=get_version('antagents/__init__.py'),
+    name='evoagentx',
+    version=get_version('evoagentx/__init__.py'),
     author='Jinyuan Fang',
     author_email='fangjy6@gmail.com',
-    description="AntAgents Framework",
+    description="EvoAgentX Framework",
     long_description=open('README.md', 'r').read(),
     long_description_content_type="text/markdown",
-    url='https://github.com/clayxai/antagents',
+    url='https://github.com/clayxai/EvoAgentX',
     packages=find_packages(),
     include_package_data=True,
     entry_points={},
