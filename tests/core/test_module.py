@@ -2,7 +2,7 @@ import os
 import unittest
 from pydantic import Field, field_validator, ValidationError
 from typing import Optional, Union, Tuple, List, Dict
-from antagents.core.module import BaseModule
+from evoagentx.core.module import BaseModule
 
 class ToyTool:
 

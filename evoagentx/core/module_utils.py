@@ -34,7 +34,7 @@ def load_json(path: str, type: str="json"):
         try:
             with open(path, "r", encoding="utf-8") as file:
                 outputs = yaml.safe_load(file.read())
-        except (FileNotFoundError, yaml.YAMLError):
+        except Exception:
             logger.error(f"File \"{path}\" is not a valid json file!")
     
     elif type == "jsonl":

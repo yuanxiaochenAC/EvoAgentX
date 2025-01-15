@@ -113,7 +113,7 @@ class BaseModule(BaseModel, metaclass=MetaModule):
         use_logger = kwargs.get("log", True)
         try:
             data = yaml.safe_load(content)
-        except yaml.YAMLError:
+        except Exception:
             error_message = f"Can not instantiate {cls.__name__}. The input to {cls.__name__}.from_json is not a valid JSON string."
             if use_logger:
                 logger.error(error_message)
@@ -148,7 +148,7 @@ class BaseModule(BaseModel, metaclass=MetaModule):
         for json_str in extracted_json_list:
             try:
                 module = cls.from_json(json_str, log=False)
-            except ValueError:
+            except Exception:
                 continue
             break
         

@@ -39,7 +39,7 @@ class LLMOutputParser(Parser):
             try:
                 data = yaml.safe_load(json_str)
                 return data
-            except yaml.YAMLError:
+            except Exception:
                 pass 
             try:
                 code_blocks = extract_code_blocks(content) # extract json/python code blocks
