@@ -29,14 +29,35 @@ class AgentManager(BaseModule):
 
     def init_module(self):
         self._lock = threading.Lock()
+        if self.agents:
+            self.check_agents()
+            for agent in self.agents:
+                self.agent_states[agent.name] = self.agent_states.get(agent.name, AgentState.AVAILABLE)
     
+    def check_agents(self):
+        # check that the names of self.agents should be unique
+        duplicate_agent_names = self.check_duplicate_agents(self.agents)
+        if duplicate_agent_names:
+            raise ValueError(f"The agents should be unique. Found duplicate agent names: {duplicate_agent_names}!")
+    
+    def check_duplicate_agents(self, agents: List[Agent]) -> List[str]:
+        # return the names of duplicate agents based on agent.name 
+        unique_agent_names = set()
+        duplicate_agent_names = set()
+        for agent in agents:
+            agent_name = agent.name
+            if agent_name in unique_agent_names:
+                duplicate_agent_names.add(agent_name)
+            unique_agent_names.add(agent_name)
+        return list(duplicate_agent_names)
+
     def list_agents(self) -> List[str]:
         """
         return all the agent names in self.agents. 
         """
-        pass 
+        return [agent.name for agent in self.agents]
     
-    def load_agent(self, agent_name: str, **kwargs):
+    def load_agent(self, agent_name: str, **kwargs) -> Agent:
 
         """
         load an agent from local storage through self.storage_handler and add it to self.agents. 
@@ -51,7 +72,11 @@ class AgentManager(BaseModule):
                 an agent instance based on that class. Otherwise, the Agent class will be used.
             - Add the Agent instance to self.agents. 
         """
-        pass 
+        if not self.storage_handler:
+            raise ValueError("muse provide ``self.storage_handler`` to use ``load_agent``")
+        agent_data = self.storage_handler.load_agent(agent_name=agent_name)
+        agent: Agent = self.create_customize_agent(agent_data=agent_data)
+        return agent
 
     @atomic_method
     def load_all_agents(self, **kwargs):
@@ -90,7 +115,15 @@ class AgentManager(BaseModule):
                 - If a dictionary is provided, CustomizeAgent.from_dict() will be used to create an Agent instance.
                 - If an Agent instance is provided, it will be directly added to self.agents.
         """
-        pass
+        if isinstance(agent, str):
+            agent_instance = self.load_agent(agent_name=agent)
+        elif isinstance(agent, dict):
+            agent_instance = self.create_customize_agent(agent_data=agent)
+        elif isinstance(agent, Agent):
+            agent_instance = agent 
+        else:
+            raise ValueError(f"{type(agent)} is not a supported input type of ``add_agent``. Supported types: [str, dict, Agent].")
+        
 
     def add_agents(self, agents: List[Union[str, dict, Agent]], **kwargs):
         """
