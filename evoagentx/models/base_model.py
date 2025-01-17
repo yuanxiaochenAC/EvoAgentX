@@ -88,6 +88,20 @@ class BaseLLM(ABC):
         pass
 
     @abstractmethod
+    def formulate_messages(self, prompts: List[str], system_messages: Optional[List[str]] = None) -> List[List[dict]]:
+        """
+        Converts input prompts into the chat format compatible with different LLMs.
+
+        Args:
+            prompts (List[str]): A list of user prompts that need to be converted.
+            system_messages (Optional[List[str]]): An optional list of system messages that provide instructions or context to the model.
+        
+        Returns:
+            List[List[dict]]: A list of message lists, where each inner list contains messages in the chat format required by LLMs. 
+        """
+        pass
+
+    @abstractmethod
     def single_generate(self, messages: List[dict], **kwargs) -> str:
         """
         generate LLM output for a given prompt. 
@@ -115,7 +129,6 @@ class BaseLLM(ABC):
         """
         pass
 
-    @abstractmethod
     def parse_generated_text(self, text: str, parser: Optional[Type[LLMOutputParser]]=None, **kwargs) -> LLMOutputParser:
         """
         use parser to obtain a structured output. 
@@ -130,16 +143,19 @@ class BaseLLM(ABC):
         Note: 
             use parser.parse(text) to obtain the result. 
         """
-        pass
+        if not parser:
+            parser = LLMOutputParser
+        return parser.parse(text)
 
-    @abstractmethod
     def parse_generated_texts(self, texts: List[str], parser: Optional[Type[LLMOutputParser]]=None, **kwargs) -> List[LLMOutputParser]:
-        pass 
-    
+
+        parsed_results = [self.parse_generated_text(text=text, parser=parser, **kwargs) for text in texts]
+        return parsed_results
+
     def generate(
         self,
         prompt: Optional[Union[str, List[str]]] = None,
-        system_message: Optional[str] = None,
+        system_message: Optional[Union[str, List[str]]] = None,
         messages: Optional[Union[List[dict],List[List[dict]]]] = None,
         parser: Optional[Type[LLMOutputParser]] = None,
         **kwargs
@@ -160,7 +176,34 @@ class BaseLLM(ABC):
             If parser is None, use LLMOutputParser by default. 
             Need to calculate the cost of an LLM call!
         """
-        pass
+
+        if not (prompt or messages):
+            raise ValueError("Either 'prompt' or 'messages' must be provided.")
+        if prompt and messages:
+            raise ValueError("Both 'prompt' and 'messages' are provided. Please provide only one of them.")
+
+        if prompt:
+            if isinstance(prompt, str):
+                prompt = [prompt]
+                if system_message:
+                    if not isinstance(system_message, str):
+                        raise TypeError(f"'system_message' should be a string when passing a single prompt, but found {type(system_message)}.")
+                    system_message = [system_message]
+                messages = self.formulate_messages(prompts=prompt, system_messages=system_message)
+            elif isinstance(prompt, list) and all(isinstance(p, str) for p in prompt):
+                if system_message:
+                    if not isinstance(system_message, list) or len(prompt) != len(system_message):
+                        raise ValueError(f"'system_message' should be a list of string when passing multiple prompts and the number of prompts ({len(prompt)}) must match the number of system messages ({len(system_message)}).")
+                messages = self.formulate_messages(prompts=prompt, system_messages=system_message)
+            else:
+                raise ValueError(f"'prompt' must be a str or List[str], but found {type(prompt)}")
+        
+        single_generate = len(messages) == 1 
+        generated_texts = self.batch_generate(messages=messages, **kwargs)
+        parsed_outputs = self.parse_generated_texts(texts=generated_texts, parser=parser, **kwargs)
+        output = parsed_outputs[0] if single_generate else parsed_outputs
+
+        return output
 
 
 __all__ = ["LLMConfig", "BaseLLM"]

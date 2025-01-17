@@ -16,7 +16,8 @@ class LLMConfig(BaseConfig):
 class OpenAILLMConfig(LLMConfig):
 
     llm_type: str = "OpenAILLM"
-
+    API_KEY: str 
+    
     # generation parameters
     temperature: Optional[float] = Field(default=None, description="the temperature used to scaling logits")
     max_tokens : Optional[int] = Field(default=None, description="maximum number of generated tokens. This value is now deprecated in favor of max_completion_tokens, and is not compatible with o1 series models.")

@@ -1,8 +1,10 @@
 import threading
 from enum import Enum
-from typing import Union, Dict, List
+from pydantic import Field
+from typing import Union, Optional, Dict, List
 
 from .agent import Agent
+from .agent_generator import AgentGenerator
 from .customize_agent import CustomizeAgent
 from ..core.module import BaseModule
 from ..core.decorators import atomic_method
@@ -26,7 +28,8 @@ class AgentManager(BaseModule):
     """
     agents: List[Agent] = []
     agent_states: Dict[str, AgentState] = {} # agent_name to AgentState mapping
-    storage_handler: StorageHandler = None # used to load and save agent from storage.
+    storage_handler: Optional[StorageHandler] = None # used to load and save agent from storage.
+    agent_generator: Optional[AgentGenerator] = Field(default_factory=AgentGenerator) # used to generate agents for a specific subtask
 
     def init_module(self):
         self._lock = threading.Lock()
