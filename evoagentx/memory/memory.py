@@ -1,6 +1,6 @@
 from collections import defaultdict
 from pydantic import Field, PositiveInt
-from typing import Union, List, Dict
+from typing import Union, Optional, List, Dict
 
 from ..core.module import BaseModule
 from ..core.module_utils import generate_id, get_timestamp
@@ -13,7 +13,7 @@ class BaseMemory(BaseModule):
     messages: List[Message] = []
     memory_id: str = Field(default_factory=generate_id)
     timestamp: str = Field(default_factory=get_timestamp)
-    capacity: PositiveInt = Field(default=None, description="maximum of messages, None means there is no limit to the message number")
+    capacity: Optional[PositiveInt] = Field(default=None, description="maximum of messages, None means there is no limit to the message number")
 
     def init_module(self):
         self._by_action = defaultdict(list)

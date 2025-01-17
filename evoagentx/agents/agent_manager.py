@@ -3,6 +3,7 @@ from enum import Enum
 from typing import Union, Dict, List
 
 from .agent import Agent
+from .customize_agent import CustomizeAgent
 from ..core.module import BaseModule
 from ..core.decorators import atomic_method
 from ..storages.base import StorageHandler
@@ -29,29 +30,68 @@ class AgentManager(BaseModule):
 
     def init_module(self):
         self._lock = threading.Lock()
+        if self.agents:
+            for agent in self.agents:
+                self.agent_states[agent.name] = self.agent_states.get(agent.name, AgentState.AVAILABLE)
+            self.check_agents()
     
+    def check_agents(self):
+        # check that the names of self.agents should be unique
+        duplicate_agent_names = self.find_duplicate_agents(self.agents)
+        if duplicate_agent_names:
+            raise ValueError(f"The agents should be unique. Found duplicate agent names: {duplicate_agent_names}!")
+        # check agent states
+        if len(self.agents) != len(self.agent_states):
+            raise ValueError(f"The lengths of self.agents ({len(self.agents)}) and self.agent_states ({len(self.agent_states)}) are different!")
+        missing_agents = self.find_missing_agent_states()
+        if missing_agents:
+            raise ValueError(f"The following agents' states were not found: {missing_agents}")
+
+    def find_duplicate_agents(self, agents: List[Agent]) -> List[str]:
+        # return the names of duplicate agents based on agent.name 
+        unique_agent_names = set()
+        duplicate_agent_names = set()
+        for agent in agents:
+            agent_name = agent.name
+            if agent_name in unique_agent_names:
+                duplicate_agent_names.add(agent_name)
+            unique_agent_names.add(agent_name)
+        return list(duplicate_agent_names)
+
+    def find_missing_agent_states(self):
+        missing_agents = [agent.name for agent in self.agents if agent.name not in self.agent_states]
+        return missing_agents
+
     def list_agents(self) -> List[str]:
         """
         return all the agent names in self.agents. 
         """
-        pass 
+        return [agent.name for agent in self.agents]
     
-    def load_agent(self, agent_name: str, **kwargs):
+    def has_agent(self, agent_name: str) -> bool:
+        all_agent_names = self.list_agents()
+        return agent_name in all_agent_names
+    
+    @property
+    def size(self):
+        return len(self.agents)
+    
+    def load_agent(self, agent_name: str, **kwargs) -> Agent:
 
         """
-        load an agent from local storage through self.storage_handler and add it to self.agents. 
+        load an agent from local storage through self.storage_handler
 
         Args:
             agent (str): the name of the agent.
         
-        Notes: 
-            - We could first load the data of an agent through self.storage_handler. 
-            - Create an Agent instance through Agent.from_dict(agent_data). 
-                If there is a `class_name` key in the agent_data, Agent.from_dict will create 
-                an agent instance based on that class. Otherwise, the Agent class will be used.
-            - Add the Agent instance to self.agents. 
+        Returns:
+            Agent: the agent instance with the data loaded from local storage. 
         """
-        pass 
+        if not self.storage_handler:
+            raise ValueError("must provide ``self.storage_handler`` to use ``load_agent``")
+        agent_data = self.storage_handler.load_agent(agent_name=agent_name)
+        agent: Agent = self.create_customize_agent(agent_data=agent_data)
+        return agent
 
     @atomic_method
     def load_all_agents(self, **kwargs):
@@ -73,7 +113,31 @@ class AgentManager(BaseModule):
         Notes: 
             - use CustomizeAgent.from_dict() to create the agent instance.
         """
-        pass 
+        return CustomizeAgent.from_dict(data=agent_data)
+    
+    def get_agent_name(self, agent: Union[str, dict, Agent]):
+
+        if isinstance(agent, str):
+            agent_name = agent
+        elif isinstance(agent, dict):
+            agent_name = agent["name"]
+        elif isinstance(agent, Agent):
+            agent_name = agent.name
+        else:
+            raise ValueError(f"{type(agent)} is not a supported type for ``get_agent_name``. Supported types: [str, dict, Agent].")
+        return agent_name
+    
+    def create_agent(self, agent: Union[str, dict, Agent], **kwargs) -> Agent:
+
+        if isinstance(agent, str):
+            agent_instance = self.load_agent(agent_name=agent)
+        elif isinstance(agent, dict):
+            agent_instance = self.create_customize_agent(agent_data=agent)
+        elif isinstance(agent, Agent):
+            agent_instance = agent
+        else:
+            raise ValueError(f"{type(agent)} is not a supported input type of ``create_agent``. Supported types: [str, dict, Agent].")
+        return agent_instance
     
     @atomic_method
     def add_agent(self, agent: Union[str, dict, Agent], **kwargs):
@@ -90,16 +154,23 @@ class AgentManager(BaseModule):
                 - If a dictionary is provided, CustomizeAgent.from_dict() will be used to create an Agent instance.
                 - If an Agent instance is provided, it will be directly added to self.agents.
         """
-        pass
+        agent_name = self.get_agent_name(agent=agent)
+        if self.has_agent(agent_name=agent_name):
+            return
+        agent_instance = self.create_agent(agent=agent)
+        self.agents.append(agent_instance)
+        self.agent_states[agent_instance.name] = AgentState.AVAILABLE
+        self.check_agents()
 
     def add_agents(self, agents: List[Union[str, dict, Agent]], **kwargs):
         """
         add several agents by using self.add_agent().
         """
-        pass
+        for agent in agents:
+            self.add_agent(agent=agent, **kwargs)
     
     @atomic_method
-    def initialize_agents_from_workflow(self, workflow_graph: WorkFlowGraph, **kwargs):
+    def add_agents_from_workflow(self, workflow_graph: WorkFlowGraph, **kwargs):
         """
         Initialize agents from the nodes of a given WorkFlowGraph and add these agents to self.agents. 
 
@@ -109,13 +180,19 @@ class AgentManager(BaseModule):
         Notes:
             - The agent information is in workflow_graph.nodes: List[WorkFlowNode].
         """
-        pass
+        for node in workflow_graph.nodes:
+            if node.agents:
+                for agent in node.agents:
+                    self.add_agent(agent=agent, **kwargs)
 
     def get_agent(self, agent_name: str, **kwargs) -> Agent:
         """
         Retrieve an agent by its name from self.agents. 
         """
-        pass
+        for agent in self.agents:
+            if agent.name == agent_name:
+                return agent
+        raise ValueError(f"Agent ``{agent_name}`` does not exists!")
     
     @atomic_method
     def remove_agent(self, agent_name: str, remove_from_storage: bool=False, **kwargs):
@@ -126,7 +203,11 @@ class AgentManager(BaseModule):
             agent_name (str): the name of the agent to be removed. 
             remove_from_storage (boo): if True, remove the agent from storage if the agent is already in the storage.
         """
-        pass
+        self.agents = [agent for agent in self.agents if agent.name != agent_name]
+        self.agent_states.pop(agent_name, None)
+        if remove_from_storage:
+            self.storage_handler.remove_agent(agent_name=agent_name, **kwargs)
+        self.check_agents()
 
     def get_agent_state(self, agent_name: str) -> AgentState:
         """
@@ -138,7 +219,7 @@ class AgentManager(BaseModule):
         Returns:
             AgentState: The current state of the agent, or None if not found.
         """
-        pass 
+        return self.agent_states[agent_name]
     
     @atomic_method
     def set_agent_state(self, agent_name: str, new_state: AgentState) -> bool:
@@ -152,7 +233,12 @@ class AgentManager(BaseModule):
         Returns:
             bool: True if the state was updated successfully, False otherwise.
         """
-        pass
+        if agent_name in self.agent_states and isinstance(new_state, AgentState):
+            self.agent_states[agent_name] = new_state
+            self.check_agents()
+            return True
+        else:
+            return False
 
     def get_all_agent_states(self) -> Dict[str, AgentState]:
         """
@@ -161,7 +247,7 @@ class AgentManager(BaseModule):
         Returns:
             Dict[str, AgentState]: A dictionary mapping agent names to their states.
         """
-        pass
+        return self.agent_states
     
     @atomic_method
     def save_all_agents(self, **kwargs):
@@ -175,5 +261,7 @@ class AgentManager(BaseModule):
         """
         Remove all agents from the manager.
         """
-        pass 
+        self.agents = [] 
+        self.agent_states = {}
+        self.check_agents()
 
