@@ -182,8 +182,17 @@ class BaseLLM(ABC):
         if prompt and messages:
             raise ValueError("Both 'prompt' and 'messages' are provided. Please provide only one of them.")
 
-        if prompt:
+        single_generate = False
+        if messages is not None:
+            if not messages: # empty messages
+                return [] 
+            if isinstance(messages[0], dict):
+                single_generate = True
+                messages = [messages]
+        
+        if prompt is not None:
             if isinstance(prompt, str):
+                single_generate = True
                 prompt = [prompt]
                 if system_message:
                     if not isinstance(system_message, str):
@@ -191,14 +200,16 @@ class BaseLLM(ABC):
                     system_message = [system_message]
                 messages = self.formulate_messages(prompts=prompt, system_messages=system_message)
             elif isinstance(prompt, list) and all(isinstance(p, str) for p in prompt):
+                single_generate = False
+                if not prompt: # empty prompt
+                    return []
                 if system_message:
                     if not isinstance(system_message, list) or len(prompt) != len(system_message):
                         raise ValueError(f"'system_message' should be a list of string when passing multiple prompts and the number of prompts ({len(prompt)}) must match the number of system messages ({len(system_message)}).")
                 messages = self.formulate_messages(prompts=prompt, system_messages=system_message)
             else:
-                raise ValueError(f"'prompt' must be a str or List[str], but found {type(prompt)}")
+                raise ValueError(f"'prompt' must be a str or List[str], but found {type(prompt)}.")
         
-        single_generate = len(messages) == 1 
         generated_texts = self.batch_generate(messages=messages, **kwargs)
         parsed_outputs = self.parse_generated_texts(texts=generated_texts, parser=parser, **kwargs)
         output = parsed_outputs[0] if single_generate else parsed_outputs
