@@ -29,7 +29,7 @@ class AgentManager(BaseModule):
     agents: List[Agent] = []
     agent_states: Dict[str, AgentState] = {} # agent_name to AgentState mapping
     storage_handler: Optional[StorageHandler] = None # used to load and save agent from storage.
-    agent_generator: Optional[AgentGenerator] = Field(default_factory=AgentGenerator) # used to generate agents for a specific subtask
+    agent_generator: Optional[AgentGenerator] = None # used to generate agents for a specific subtask
 
     def init_module(self):
         self._lock = threading.Lock()
