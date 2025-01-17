@@ -1,9 +1,11 @@
+import json
 from pydantic import Field
 from typing import Optional, List
 
 from ..core.module import BaseModule
 from ..core.module_utils import generate_id
 from ..core.message import Message
+from ..core.registry import MODEL_REGISTRY
 from ..models.model_configs import LLMConfig
 from ..models.base_model import BaseLLM
 from ..memory.memory import ShortTermMemory
@@ -31,19 +33,23 @@ class Agent(BaseModule):
     version: int = 0 
 
     def init_module(self):
-        """
-        Step 1: If self.is_human is False, llm_config or llm must be provided. 
-        Step 2: Initialize self._llm: 
-            - If self.llm_config is provided, create a BaseLLM instance based on the config
-            - If self.llm is provided, directly use the provided llm and set the self.llm_config to self.llm.config 
-        Step 3: If self.use_long_term_memory is True:
-            - If self.storage_handler is None, raise an error, since is required in this case. 
-            - If self.long_term_memory is None, create a new LongTermMemory instance. 
-                Otherwise, use self.long_term_memory directly (load from saved memory).
-            - If self.long_term_memory_manager is None, create a new MemoryManager using 
-                both self.storage_handler and self.long_term_memory as input.
-        """
-        pass
+        if not self.is_human:
+            assert self.llm_config or self.llm, "must provide either ``llm_config`` or ``llm`` when is_human=False"
+            if self.llm_config and not self.llm:
+                llm_cls = MODEL_REGISTRY.get_model(self.llm_config.llm_type)
+                self.llm = llm_cls(config=self.llm_config)
+            if self.llm:
+                self.llm_config = self.llm.config
+        if self.use_long_term_memory:
+            assert self.storage_handler is not None, "must provide ``storage_handler`` when use_long_term_memory=True"
+            # TODO revise the initialisation of long_term_memory and long_term_memory_manager
+            if not self.long_term_memory:
+                self.long_term_memory = LongTermMemory()
+            if not self.long_term_memory_manager:
+                self.long_term_memory_manager = MemoryManager(
+                    storage_handler=self.storage_handler,
+                    memory=self.long_term_memory
+                )
 
     def execute(self, action_name: str, msgs: List[Message], **kwargs) -> Message:
         """
@@ -69,4 +75,17 @@ class Agent(BaseModule):
 
     def __hash__(self):
         return self.agent_id
+    
+    def to_json(self, use_indent: bool=False, **kwargs) -> str:
+        """
+        convert the BaseModule to JSON str format
+        """
+        if use_indent:
+            kwargs["indent"] = kwargs.get("indent", 4)
+        else:
+            kwargs.pop("indent", None)
+        agent_data: dict = self.model_dump()
+        agent_data.pop("llm", None)
+        return json.dumps(agent_data, **kwargs)
+    
 

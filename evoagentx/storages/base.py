@@ -52,6 +52,7 @@ class StorageHandler(BaseModule, ABC):
 
     @abstractmethod
     def load_agent(self, agent_name: str, **kwargs) -> Dict[str, Any]:
+        # TODO
         """
         Load a single agent's data.
 
@@ -62,6 +63,17 @@ class StorageHandler(BaseModule, ABC):
             Dict[str, Any]: the data that can be used to create an Agent instance. 
         """
         pass 
+
+    @abstractmethod
+    def remove_agent(self, agent_name: str, **kwargs):
+        # TODO 
+        """
+        Remove an agent from storage if the agent exists. 
+
+        Args:
+            agent_name (str) the name of the agent to be deleted.
+        """
+        pass
 
     @abstractmethod
     def save_agent(self, agent_data: Dict[str, Any], **kwargs):
