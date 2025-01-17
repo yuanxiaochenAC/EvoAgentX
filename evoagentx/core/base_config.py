@@ -16,6 +16,7 @@ class BaseConfig(BaseModule):
         explicitly_set_fields = {field: getattr(self, field) for field in self.__fields_set__}
         if self.kwargs:
             explicitly_set_fields.update(self.kwargs)
+        explicitly_set_fields.pop("class_name", None)
         return explicitly_set_fields
 
 

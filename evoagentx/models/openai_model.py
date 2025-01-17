@@ -38,7 +38,9 @@ class OpenAILLM(BaseLLM):
     def single_generate(self, messages: List[dict], **kwargs) -> str:
 
         config: OpenAILLMConfig = self.config
-        response = self._client.chat.completions.create(messages=messages, **config.get_set_params(), **kwargs)
+        set_params = config.get_set_params()
+        set_params.pop("API_KEY", None)
+        response = self._client.chat.completions.create(messages=messages, **set_params, **kwargs)
         if config.stream:
             output = ""
             for chunk in response:
@@ -54,5 +56,6 @@ class OpenAILLM(BaseLLM):
         return output.strip()
         
     def batch_generate(self, messages: List[List[dict]], **kwargs) -> List[str]:
-        return [self.single_generate(messages=one_messages) for one_messages in messages]
+        return [self.single_generate(messages=one_messages, **kwargs) for one_messages in messages]
+    
         
