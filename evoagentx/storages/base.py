@@ -65,6 +65,17 @@ class StorageHandler(BaseModule, ABC):
         pass 
 
     @abstractmethod
+    def remove_agent(self, agent_name: str, **kwargs):
+        # TODO 
+        """
+        Remove an agent from storage if the agent exists. 
+
+        Args:
+            agent_name (str) the name of the agent to be deleted.
+        """
+        pass
+
+    @abstractmethod
     def save_agent(self, agent_data: Dict[str, Any], **kwargs):
         """
         Save or update a single agent's data.
