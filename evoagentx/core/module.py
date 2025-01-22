@@ -1,7 +1,7 @@
 import os 
 import yaml
 import json 
-from typing import Callable, Any, Dict
+from typing import Callable, Any, Dict, List
 from pydantic import BaseModel, ValidationError
 from pydantic._internal._model_construction import ModelMetaclass
 
@@ -39,6 +39,12 @@ class BaseModule(BaseModel, metaclass=MetaModule):
     def __init__(self, **kwargs):
 
         try:
+            for field_name, _ in self.model_fields.items():
+                field_value = kwargs.get(field_name, None)
+                if field_value and isinstance(field_value, dict) and "class_name" in field_value:
+                    class_name = field_value.get("class_name")
+                    sub_cls = MODULE_REGISTRY.get_module(cls_name=class_name)
+                    kwargs[field_name] = sub_cls._create_instance(field_value)
             super().__init__(**kwargs) 
             self.init_module()
         except (ValidationError, Exception) as e:
@@ -198,13 +204,39 @@ class BaseModule(BaseModel, metaclass=MetaModule):
 
         return module
     
-    def to_dict(self, **kwargs) -> dict:
+    # def to_dict(self, **kwargs) -> dict:
+    #     """
+    #     convert the BaseModule to a dict. 
+    #     """
+    #     return self.model_dump()
+
+    def to_dict(self, exclude_none: bool = True, **kwargs) -> dict:
         """
         convert the BaseModule to a dict. 
         """
-        return self.model_dump()
+        data = {}
+        for field_name, _ in self.model_fields.items():
+            field_value = getattr(self, field_name, None)
+            if exclude_none and field_value is None:
+                continue
+            if isinstance(field_value, BaseModule):
+                data[field_name] = field_value.to_dict(exclude_none=exclude_none)
+            elif isinstance(field_value, list):
+                data[field_name] = [
+                    item.to_dict(exclude_none=exclude_none) if isinstance(item, BaseModule) else item
+                    for item in field_value
+                ]
+            elif isinstance(field_value, dict):
+                data[field_name] = {
+                    key: value.to_dict(exclude_none=exclude_none) if isinstance(value, BaseModule) else value
+                    for key, value in field_value.items()
+                }
+            else:
+                data[field_name] = field_value
+        
+        return data
     
-    def to_json(self, use_indent: bool=False, **kwargs) -> str:
+    def to_json(self, use_indent: bool=False, ignore: List[str] = [], **kwargs) -> str:
         """
         convert the BaseModule to JSON str format
         """
@@ -214,7 +246,10 @@ class BaseModule(BaseModel, metaclass=MetaModule):
             kwargs.pop("indent", None)
         if kwargs.get("default", None) is None:
             kwargs["default"] = custom_serializer
-        return json.dumps(self.model_dump(), **kwargs)
+        data = self.to_dict(exclude_none=True)
+        for ignore_field in ignore:
+            data.pop(ignore_field, None)
+        return json.dumps(data, **kwargs)
     
     def to_str(self, **kwargs) -> str:
         """
@@ -222,7 +257,7 @@ class BaseModule(BaseModel, metaclass=MetaModule):
         """
         return self.to_json(use_indent=False)
     
-    def save_module(self, path: str, **kwargs)-> str:
+    def save_module(self, path: str, ignore: List[str] = [], **kwargs)-> str:
         """
         Save the BaseModule to a file. This function will set the non-serilizable object to None by default. 
         If you want to save the non-serilizable objects, override this function. Remember to override ``load_module'' function to make sure the loaded object can be correctly parsed by ``cls.from_dict''
@@ -234,7 +269,7 @@ class BaseModule(BaseModel, metaclass=MetaModule):
             str: the path where the file is saved. It is the same as the input ``path''.
         """
         logger.info("Saving {} to {}", self.__class__.__name__, path)
-        return save_json(self.to_json(use_indent=True, default=lambda x: None), path=path)
+        return save_json(self.to_json(use_indent=True, default=lambda x: None, ignore=ignore), path=path)
     
 
 __all__ = ["BaseModule"]
