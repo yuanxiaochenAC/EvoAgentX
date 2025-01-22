@@ -1,4 +1,3 @@
-import json
 from pydantic import Field
 from typing import Optional, List
 
