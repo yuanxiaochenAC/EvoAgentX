@@ -10,7 +10,8 @@ class TestModule(unittest.TestCase):
 
     def test_agent_manager(self):
 
-        llm_config = LiteLLMConfig(model="gpt-4o-mini")
+        OPENAI_API_KEY = "xxxxx"
+        llm_config = LiteLLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY)
         agent = Agent(
             name="Bob",
             description="Bob is an engineer. He excels in writing and reviewing codes for different projects.", 

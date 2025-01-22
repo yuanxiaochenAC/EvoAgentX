@@ -4,6 +4,7 @@ pytest-subtests
 pytest-json-report
 ruff
 
+tenacity
 networkx==3.3
 nltk==3.9.1
 numpy==1.26.4
