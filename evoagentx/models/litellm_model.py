@@ -1,7 +1,7 @@
 import os
 import litellm
 from litellm import completion, token_counter, cost_per_token
-from typing import Optional, Type, List
+from typing import List
 from ..core.registry import register_model
 from .model_configs import LiteLLMConfig
 # from .base_model import BaseLLM, LLMOutputParser
