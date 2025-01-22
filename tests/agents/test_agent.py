@@ -45,28 +45,26 @@ class TestModule(unittest.TestCase):
         self.assertTrue(agent2 == agent)
         agent2.agent_id = agent2_id
 
-    
-    # TODO save agent couldn't save openai_key
-    # def test_save_agent(self):
+    def test_save_agent(self):
 
-    #     llm_config = LiteLLMConfig(model="gpt-4o-mini", openai_key="xxxxx")
-    #     agent = Agent(
-    #         name="Bob",
-    #         description="Bob is an engineer. He excels in writing and reviewing codes for different projects.", 
-    #         system_prompt="You are an excellent engineer and you can solve diverse coding tasks.",
-    #         llm_config=llm_config,
-    #         actions = [
-    #             {
-    #                 "name": "WriteFileToDisk",
-    #                 "description": "save several files to local storage.", 
-    #                 "tools": [{"class_name": "Tool"}]
-    #             }
-    #         ]
-    #     )
-    #     agent.save_module(path=self.save_file)
-    #     from pdb import set_trace; set_trace()
-    #     loaded_agent = Agent.from_file(path=self.save_file)
-    #     self.assertEqual(agent, loaded_agent)
+        llm_config = LiteLLMConfig(model="gpt-4o-mini", openai_key="xxxxx")
+        
+        agent = Agent(
+            name="Bob",
+            description="Bob is an engineer. He excels in writing and reviewing codes for different projects.", 
+            system_prompt="You are an excellent engineer and you can solve diverse coding tasks.",
+            llm_config=llm_config,
+            actions = [
+                {
+                    "name": "WriteFileToDisk",
+                    "description": "save several files to local storage.", 
+                    "tools": [{"class_name": "Tool"}]
+                }
+            ]
+        )
+        agent.save_module(path=self.save_file)
+        loaded_agent = Agent.from_file(path=self.save_file)
+        self.assertEqual(agent, loaded_agent)
 
     def tearDown(self):
         if os.path.exists(self.save_file):
