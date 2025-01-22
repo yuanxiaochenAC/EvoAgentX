@@ -16,8 +16,8 @@ class LLMConfig(BaseConfig):
 class OpenAILLMConfig(LLMConfig):
 
     llm_type: str = "OpenAILLM"
-    API_KEY: str 
-    
+    openai_key: str 
+
     # generation parameters
     temperature: Optional[float] = Field(default=None, description="the temperature used to scaling logits")
     max_tokens : Optional[int] = Field(default=None, description="maximum number of generated tokens. This value is now deprecated in favor of max_completion_tokens, and is not compatible with o1 series models.")
@@ -52,6 +52,10 @@ class LiteLLMConfig(LLMConfig):
 
     llm_type: str = "LiteLLM"
 
+    # LLM keys
+    openai_key: Optional[str] = Field(default=None, description="the API key used to authenticate OpenAI requests")
+    deepseek_key: Optional[str] = Field(default=None, description="the API key used to authenticate Deepseek requests")
+
     # generation parameters 
     temperature: Optional[float] = Field(default=None, description="the temperature used to scaling logits")
     max_tokens : Optional[int] = Field(default=None, description="maximum number of generated tokens")
@@ -74,6 +78,8 @@ class LiteLLMConfig(LLMConfig):
     # output format
     response_format: Optional[Union[BaseModel, dict]] = Field(default=None, description=" An object specifying the format that the model must output.")
 
+    def __str__(self):
+        return self.model
 
 def get_default_device():
     return "cuda" if torch.cuda.is_available() else "cpu"

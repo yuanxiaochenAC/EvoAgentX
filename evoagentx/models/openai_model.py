@@ -15,7 +15,7 @@ class OpenAILLM(BaseLLM):
 
     def init_model(self):
         config: OpenAILLMConfig = self.config
-        self._client = OpenAI(api_key=config.API_KEY)
+        self._client = OpenAI(api_key=config.openai_key)
 
     def formulate_messages(self, prompts: List[str], system_messages: Optional[List[str]] = None) -> List[List[dict]]:
         
@@ -38,8 +38,7 @@ class OpenAILLM(BaseLLM):
     def single_generate(self, messages: List[dict], **kwargs) -> str:
 
         config: OpenAILLMConfig = self.config
-        set_params = config.get_set_params()
-        set_params.pop("API_KEY", None)
+        set_params = config.get_set_params(ignore=["openai_key"])
         response = self._client.chat.completions.create(messages=messages, **set_params, **kwargs)
         if config.stream:
             output = ""
@@ -55,7 +54,6 @@ class OpenAILLM(BaseLLM):
         
         return output.strip()
         
-    def batch_generate(self, messages: List[List[dict]], **kwargs) -> List[str]:
-        return [self.single_generate(messages=one_messages, **kwargs) for one_messages in messages]
+    def batch_generate(self, batch_messages: List[List[dict]], **kwargs) -> List[str]:
+        return [self.single_generate(messages=one_messages, **kwargs) for one_messages in batch_messages]
     
-        
