@@ -116,7 +116,7 @@ class BaseLLM(ABC):
         pass
 
     @abstractmethod
-    def batch_generate(self, messages: List[List[dict]], **kwargs) -> List[str]:
+    def batch_generate(self, batch_messages: List[List[dict]], **kwargs) -> List[str]:
         """
         generate outputs for a batch of prompts. 
 
@@ -210,7 +210,7 @@ class BaseLLM(ABC):
             else:
                 raise ValueError(f"'prompt' must be a str or List[str], but found {type(prompt)}.")
         
-        generated_texts = self.batch_generate(messages=messages, **kwargs)
+        generated_texts = self.batch_generate(batch_messages=messages, **kwargs)
         parsed_outputs = self.parse_generated_texts(texts=generated_texts, parser=parser, **kwargs)
         output = parsed_outputs[0] if single_generate else parsed_outputs
 
