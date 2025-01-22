@@ -50,6 +50,7 @@ class Agent(BaseModule):
                     storage_handler=self.storage_handler,
                     memory=self.long_term_memory
                 )
+        self._save_ignore_fields = ["llm"]
 
     def execute(self, action_name: str, msgs: List[Message], **kwargs) -> Message:
         """
@@ -75,17 +76,7 @@ class Agent(BaseModule):
 
     def __hash__(self):
         return self.agent_id
-    
-    def to_json(self, use_indent: bool=False, **kwargs) -> str:
-        """
-        convert the BaseModule to JSON str format
-        """
-        if use_indent:
-            kwargs["indent"] = kwargs.get("indent", 4)
-        else:
-            kwargs.pop("indent", None)
-        agent_data: dict = self.model_dump()
-        agent_data.pop("llm", None)
-        return json.dumps(agent_data, **kwargs)
-    
-
+        
+    def save_module(self, path: str, ignore: List[str] = [], **kwargs)-> str:
+        ignore_fields = self._save_ignore_fields + ignore
+        super().save_module(path=path, ignore=ignore_fields, **kwargs)
