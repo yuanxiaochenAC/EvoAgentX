@@ -1,5 +1,10 @@
 import os
 import litellm
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_random_exponential,
+)
 from litellm import completion, token_counter, cost_per_token
 from typing import List
 from ..core.registry import register_model
@@ -35,6 +40,9 @@ class LiteLLM(OpenAILLM):
         else:
             raise ValueError(f"Unsupported company: {company}")
 
+        self._default_ignore_fields = ["llm_type", "output_response", "openai_key", "deepseek_key"] # parameters in LiteLLMConfig that are not LiteLLM models' input parameters
+
+    @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(5))
     def single_generate(self, messages: List[dict], **kwargs) -> str:
 
         """
@@ -43,24 +51,22 @@ class LiteLLM(OpenAILLM):
         :param kwargs: Additional parameters to be passed to the `completion` function.
         :return: A string containing the model's response.
         """
+        stream = kwargs["stream"] if "stream" in kwargs else self.config.stream
+        output_response = kwargs["output_response"] if "output_response" in kwargs else self.config.output_response
+
         try:
-            response = completion(
-                model=self.model,
-                messages=messages,
-                temperature=self.config.temperature,
-                max_tokens=self.config.max_tokens,
-                top_p=self.config.top_p,
-                n=self.config.n,
-                stream=self.config.stream,
-                timeout=self.config.timeout,
-                **kwargs
-            )
-            # Extract and return the response content
-            if isinstance(response, dict) and "choices" in response:
-                return response["choices"][0]["message"]["content"]
-            return response
+            completion_params = self.get_completion_params(**kwargs)
+            response = completion(messages=messages, **completion_params)
+            if stream:
+                output = self.get_stream_output(response, output_response=output_response)
+            else:
+                output: str = response.choices[0].message.content
+                if output_response:
+                    print(output)
         except Exception as e:
             raise RuntimeError(f"Error during single_generate: {str(e)}")
+        
+        return output
     
     def batch_generate(self, batch_messages: List[List[dict]], **kwargs) -> List[str]:
         """
