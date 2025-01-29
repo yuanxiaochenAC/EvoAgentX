@@ -41,10 +41,12 @@ class BaseModule(BaseModel, metaclass=MetaModule):
         try:
             for field_name, _ in self.model_fields.items():
                 field_value = kwargs.get(field_name, None)
-                if field_value and isinstance(field_value, dict) and "class_name" in field_value:
-                    class_name = field_value.get("class_name")
-                    sub_cls = MODULE_REGISTRY.get_module(cls_name=class_name)
-                    kwargs[field_name] = sub_cls._create_instance(field_value)
+                if field_value:
+                    kwargs[field_name] = self._process_data(field_value)
+                # if field_value and isinstance(field_value, dict) and "class_name" in field_value:
+                #     class_name = field_value.get("class_name")
+                #     sub_cls = MODULE_REGISTRY.get_module(cls_name=class_name)
+                #     kwargs[field_name] = sub_cls._create_instance(field_value)
             super().__init__(**kwargs) 
             self.init_module()
         except (ValidationError, Exception) as e:
