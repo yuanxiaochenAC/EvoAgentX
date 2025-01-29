@@ -13,6 +13,9 @@ class BaseConfig(BaseModule):
     def save(self, path: str, **kwargs)-> str:
         super().save_module(path, **kwargs)
 
+    def get_config_params(self):
+        return list(self.model_fields.keys())
+
     def get_set_params(self, ignore: List[str] = []):
         explicitly_set_fields = {field: getattr(self, field) for field in self.__fields_set__}
         if self.kwargs:

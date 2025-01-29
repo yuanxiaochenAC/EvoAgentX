@@ -217,6 +217,31 @@ class TestModule(unittest.TestCase):
         self.assertTrue(isinstance(module.k12["key"].k7, TestSubClass) and module.k12["key"].k7.class_name=="TestSubClass")
         self.assertTrue(isinstance(module.k12["key"].k9, Test2) and module.k12["key"].k9.class_name=="Test2")
         self.assertTrue(isinstance(module.k13, dict))
+    
+    def test_subclass_from_init(self):
+
+        test2_instance = Test2(k4="k4_valid_value1", k5="k5_value1")
+        test4_instance = Test4(
+            k10 = [{"k1": "k1_value"}], 
+            k11 = [test2_instance, {"k4": "k4_valid_value2", "k5": "k5_valid_value2"}, {"class_name": "Test2SubClass", "k4": "k4_valid_value3", "k5": "k5_value3", "test2_subclass_variable": 888}], 
+            k12 = {
+                "key": {
+                    "class_name": "Test3SubClass", 
+                    "k7": {"class_name": "TestSubClass", "k1": "k1_value2"}, 
+                    "k8": 11, 
+                    "k9": {"k4": "k4_valid_value4", "k5": "k5_value4"}
+                }
+            }, 
+            k13 = {
+                "key2": 999
+            }
+        )
+        self.assertEqual(test4_instance.k10[0].k1, "k1_value")
+        self.assertTrue(isinstance(test4_instance.k11[0], Test2))
+        self.assertTrue(isinstance(test4_instance.k11[2], Test2SubClass))
+        self.assertEqual(test4_instance.k11[2].test2_subclass_variable, 888)
+        self.assertTrue(isinstance(test4_instance.k12["key"], Test3SubClass))
+        self.assertTrue(isinstance(test4_instance.k12["key"].k7, TestSubClass))
 
     def tearDown(self):
         if os.path.exists(self.save_file):
