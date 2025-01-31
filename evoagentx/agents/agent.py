@@ -62,7 +62,7 @@ class Agent(BaseModule):
         Returns:
             Message: a message that contains the execution results. 
         """
-        assert msgs is not None or action_input_data is not None, f"must provide either `msgs` or `action_input_data` in execute(...)"
+        assert msgs is not None or action_input_data is not None, "must provide either `msgs` or `action_input_data` in execute(...)"
         action = self.get_action(action_name=action_name)
 
         # update short-term memory
