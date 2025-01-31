@@ -58,7 +58,7 @@ class Action(BaseModule):
     def init_module(self):
         pass 
 
-    def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, **kwargs) -> Optional[Parser]:
+    def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, **kwargs) -> Optional[Parser]:
         """
         The main entrance for executing an action. 
 

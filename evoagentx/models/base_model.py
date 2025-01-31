@@ -5,7 +5,7 @@ from pydantic import Field
 from typing import Union, Optional, Type, List
 
 from ..core.parser import Parser
-from ..core.module_utils import parse_json_from_text, extract_code_blocks
+from ..core.module_utils import parse_json_from_text # extract_code_blocks
 # from ..core.registry import register_model
 from .model_configs import LLMConfig
 

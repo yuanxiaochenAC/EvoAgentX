@@ -1,10 +1,11 @@
 from pydantic import Field
-from typing import Type, Optional, Union, List
+from typing import Type, Optional, Union, Tuple, List
 
 from ..core.module import BaseModule
 from ..core.module_utils import generate_id
-from ..core.message import Message
+from ..core.message import Message, MessageType
 from ..core.registry import MODEL_REGISTRY
+from ..core.parser import Parser
 from ..models.model_configs import LLMConfig
 from ..models.base_model import BaseLLM
 from ..memory.memory import ShortTermMemory
@@ -43,7 +44,14 @@ class Agent(BaseModule):
         self._save_ignore_fields = ["llm"]
         self.init_context_extractor()
 
-    def execute(self, action_name: str, msgs: List[Message], action_input_data: Optional[dict] = None, return_prompt: bool = False, **kwargs) -> Message:
+    def execute(
+        self, 
+        action_name: str, 
+        msgs: List[Message], 
+        action_input_data: Optional[dict] = None, 
+        return_msg_type: Optional[MessageType] = MessageType.UNKNOWN,
+        **kwargs
+    ) -> Message:
         """
         Execute an action.
 
@@ -54,7 +62,41 @@ class Agent(BaseModule):
         Returns:
             Message: a message that contains the execution results. 
         """
-        pass 
+        assert msgs is not None or action_input_data is not None, f"must provide either `msgs` or `action_input_data` in execute(...)"
+        action = self.get_action(action_name=action_name)
+
+        # update short-term memory
+        if msgs is not None:
+            self.short_term_memory.add_messages(msgs)
+        
+        # obtain action input data from short term memory
+        action_input_data = action_input_data or self.get_action_inputs(action=action)
+
+        # execute action
+        execution_results: Tuple[Parser, str] = action.execute(
+            llm=self.llm, 
+            inputs=action_input_data, 
+            sys_msg=self.system_prompt,
+            return_prompt=True
+        )
+        action_output, prompt = execution_results
+
+        # formulate a message
+        message = Message(
+            content=action_output.to_str(),
+            agent=self.name,
+            action=action_name,
+            prompt=prompt, 
+            msg_type=return_msg_type,
+            wf_goal = kwargs.get("wf_goal", None),
+            wf_task = kwargs.get("wf_task", None),
+            wf_task_desc = kwargs.get("wf_task_desc", None)
+        )
+
+        # update short-term memory
+        self.short_term_memory.add_message(message)
+
+        return message
     
     def init_llm(self):
         assert self.llm_config or self.llm, "must provide either 'llm_config' or 'llm' when is_human=False"
