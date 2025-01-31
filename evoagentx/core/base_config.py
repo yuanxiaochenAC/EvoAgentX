@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+# from pydantic import BaseModel
 from typing import List
 from .module import BaseModule
 
@@ -14,7 +14,9 @@ class BaseConfig(BaseModule):
         super().save_module(path, **kwargs)
 
     def get_config_params(self):
-        return list(self.model_fields.keys())
+        config_params = list(type(self).model_fields.keys())
+        config_params.remove("class_name")
+        return config_params
 
     def get_set_params(self, ignore: List[str] = []):
         explicitly_set_fields = {field: getattr(self, field) for field in self.__fields_set__}
@@ -25,11 +27,7 @@ class BaseConfig(BaseModule):
         return explicitly_set_fields
 
 
-class Parameter(BaseModel):
-    
+class Parameter(BaseModule):
     name: str
     type: str 
     description: str 
-
-
-

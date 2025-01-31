@@ -25,8 +25,9 @@ class WorkFlowNode(BaseModule):
     description: str # A detailed description of the task
     inputs: List[Parameter] # inputs for the task
     outputs: List[Parameter] # outputs of the task
+    reason: Optional[str] = None
     agents: Optional[List[Union[str, dict]]] = None
-    status: Optional[WorkFlowNodeState] = WorkFlowNodeState.PENDING
+    status: Optional[WorkFlowNodeState] = None
 
     @field_validator('agents')
     @classmethod

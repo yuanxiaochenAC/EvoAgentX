@@ -39,7 +39,7 @@ class BaseModule(BaseModel, metaclass=MetaModule):
     def __init__(self, **kwargs):
 
         try:
-            for field_name, _ in self.model_fields.items():
+            for field_name, _ in type(self).model_fields.items():
                 field_value = kwargs.get(field_name, None)
                 if field_value:
                     kwargs[field_name] = self._process_data(field_value)
@@ -212,25 +212,27 @@ class BaseModule(BaseModel, metaclass=MetaModule):
     #     """
     #     return self.model_dump()
 
-    def to_dict(self, exclude_none: bool = True, **kwargs) -> dict:
+    def to_dict(self, exclude_none: bool = True, ignore: List[str] = [], **kwargs) -> dict:
         """
         convert the BaseModule to a dict. 
         """
         data = {}
-        for field_name, _ in self.model_fields.items():
+        for field_name, _ in type(self).model_fields.items():
+            if field_name in ignore:
+                continue
             field_value = getattr(self, field_name, None)
             if exclude_none and field_value is None:
                 continue
             if isinstance(field_value, BaseModule):
-                data[field_name] = field_value.to_dict(exclude_none=exclude_none)
+                data[field_name] = field_value.to_dict(exclude_none=exclude_none, ignore=ignore)
             elif isinstance(field_value, list):
                 data[field_name] = [
-                    item.to_dict(exclude_none=exclude_none) if isinstance(item, BaseModule) else item
+                    item.to_dict(exclude_none=exclude_none, ignore=ignore) if isinstance(item, BaseModule) else item
                     for item in field_value
                 ]
             elif isinstance(field_value, dict):
                 data[field_name] = {
-                    key: value.to_dict(exclude_none=exclude_none) if isinstance(value, BaseModule) else value
+                    key: value.to_dict(exclude_none=exclude_none, ignore=ignore) if isinstance(value, BaseModule) else value
                     for key, value in field_value.items()
                 }
             else:

@@ -1,5 +1,5 @@
 from pydantic import Field
-from typing import Optional, List
+from typing import Type, Optional, Union, List
 
 from ..core.module import BaseModule
 from ..core.module_utils import generate_id
@@ -12,6 +12,7 @@ from ..memory.long_term_memory import LongTermMemory
 from ..memory.memory_manager import MemoryManager
 from ..storages.base import StorageHandler
 from ..actions.action import Action
+from ..actions.action import ContextExtraction
 
 
 class Agent(BaseModule):
@@ -28,30 +29,21 @@ class Agent(BaseModule):
     long_term_memory: Optional[LongTermMemory] = None
     long_term_memory_manager: Optional[MemoryManager] = None
     actions: List[Action] = Field(default=None)
+    n: int = Field(default=None, description="number of latest messages used to provide context for action execution. It uses all the messages in short term memory by default.")
     is_human: bool = Field(default=False)
     version: int = 0 
 
     def init_module(self):
         if not self.is_human:
-            assert self.llm_config or self.llm, "must provide either ``llm_config`` or ``llm`` when is_human=False"
-            if self.llm_config and not self.llm:
-                llm_cls = MODEL_REGISTRY.get_model(self.llm_config.llm_type)
-                self.llm = llm_cls(config=self.llm_config)
-            if self.llm:
-                self.llm_config = self.llm.config
+            self.init_llm()
         if self.use_long_term_memory:
-            assert self.storage_handler is not None, "must provide ``storage_handler`` when use_long_term_memory=True"
-            # TODO revise the initialisation of long_term_memory and long_term_memory_manager
-            if not self.long_term_memory:
-                self.long_term_memory = LongTermMemory()
-            if not self.long_term_memory_manager:
-                self.long_term_memory_manager = MemoryManager(
-                    storage_handler=self.storage_handler,
-                    memory=self.long_term_memory
-                )
+            self.init_long_term_memory()
+        self.actions = [] if self.actions is None else self.actions
+        self._action_map = {action.name: action for action in self.actions} if self.actions else dict()
         self._save_ignore_fields = ["llm"]
+        self.init_context_extractor()
 
-    def execute(self, action_name: str, msgs: List[Message], **kwargs) -> Message:
+    def execute(self, action_name: str, msgs: List[Message], action_input_data: Optional[dict] = None, return_prompt: bool = False, **kwargs) -> Message:
         """
         Execute an action.
 
@@ -63,6 +55,52 @@ class Agent(BaseModule):
             Message: a message that contains the execution results. 
         """
         pass 
+    
+    def init_llm(self):
+        assert self.llm_config or self.llm, "must provide either 'llm_config' or 'llm' when is_human=False"
+        if self.llm_config and not self.llm:
+            llm_cls = MODEL_REGISTRY.get_model(self.llm_config.llm_type)
+            self.llm = llm_cls(config=self.llm_config)
+        if self.llm:
+            self.llm_config = self.llm.config
+
+    def init_long_term_memory(self):
+        assert self.storage_handler is not None, "must provide ``storage_handler`` when use_long_term_memory=True"
+        # TODO revise the initialisation of long_term_memory and long_term_memory_manager
+        if not self.long_term_memory:
+            self.long_term_memory = LongTermMemory()
+        if not self.long_term_memory_manager:
+            self.long_term_memory_manager = MemoryManager(
+                storage_handler=self.storage_handler,
+                memory=self.long_term_memory
+            )
+    
+    def init_context_extractor(self):
+        cext_action = ContextExtraction()
+        self.cext_action_name = cext_action.name
+        self.add_action(cext_action)
+
+    def add_action(self, action: Type[Action]):
+        action_name  = action.name
+        if action_name in self._action_map:
+            return
+        self.actions.append(action)
+        self._action_map[action_name] = action
+
+    def check_action_name(self, action_name: str):
+        if action_name not in self._action_map:
+            raise KeyError(f"'{action_name}' is an invalid action for {self.name}! Available action names: {list(self._action_map.keys())}")
+    
+    def get_action(self, action_name: str) -> Action:
+        self.check_action_name(action_name=action_name)
+        return self._action_map[action_name]
+    
+    def get_action_inputs(self, action: Action) -> Union[dict, None]:
+        # return the input data of an action.
+        context = self.short_term_memory.get(n=self.n)
+        cext_action = self.get_action(self.cext_action_name)
+        action_inputs = cext_action.execute(llm=self.llm, action=action, context=context)
+        return action_inputs
 
     def clear_short_term_memory(self):
         """
