@@ -1,0 +1,128 @@
+
+TASK_PLANNER_DESC = "TaskPlanner is an intelligent task planning agent designed to assist users in achieving their goals. \
+    It specializes in breaking down complex tasks into clear, manageable sub-tasks and organizing them in the most efficient sequence." 
+
+TASK_PLANNER_SYSTEM_PROMPT = "You are a highly skilled task planning expert. Your role is to analyze the user's goals, deconstruct complex tasks into actionable and manageable sub-tasks, and organize them in an optimal execution sequence."
+
+TASK_PLANNER = {
+    "name": "TaskPlanner", 
+    "description": TASK_PLANNER_DESC,
+    "system_prompt": TASK_PLANNER_SYSTEM_PROMPT,
+}
+
+
+TASK_PLANNING_ACTION_DESC = "This action analyzes a given task, breaks it down into manageable sub-tasks, and organizes them in the optimal order to help achieve the user's goal efficiently."
+
+TASK_PLANNING_ACTION_PROMPT = """
+Given a user's goal, analyze the task and create a workflow by breaking it down into actionable sub-tasks. Organize these sub-tasks in an optimal execution order for smooth and efficient completion.
+
+### Instructions:
+1. **Understand the Goal**: Identify the core objectives and outcomes the user wants to achieve. 
+2. **Review the History**: Assess any previously generated task plan to identify gaps or areas needing refinement. 
+3. **Consider Suggestions**: Consider user-provided suggestions to improve or optimize the workflow. 
+
+4. **Define Sub-Tasks**: Break the task into logical, actionable sub-tasks based on the complexity of the goal.
+
+4.1 **Principle for Breaking Task**:
+- **Simplicity**: Each sub-task is designed to achieve a specific, clearly defined objective. Avoid overloading sub-tasks with multiple objectives. 
+- **Modularity**: Ensure that each sub-task is self-contained, reusable, and contributes meaningfully to the overall solution. 
+- **Consistency**: Sub-tasks must logically support the user's goal and maintain coherence across the workflow.
+- **Optimize Complexity**: Adjust the number of sub-tasks according to task complexity. Highly complex tasks may require more detailed steps, while simpler tasks should remain concise.
+- **Avoid Redundancy**: Ensure that there are no overlapping or unnecessary sub-tasks. 
+
+4.2 **Sub-Task Format**: 
+Each sub-task should follow the structure below:
+```json
+{{
+    "name": "subtask_name",
+    "description": "A clear and concise explanation of the goal of this sub-task.",
+    "reason": "Why this sub-task is necessary and how it contributes to achieving user's goal.",
+    "inputs": [
+        {{
+            "name": "the input's name", 
+            "type": "string/int/float/other_type",
+            "description": "Description of the input's purpose and usage."
+        }},
+        ...
+    ], 
+    "outputs": [
+        {{
+            "name": "the output's name", 
+            "type": "string/int/float/other_type",
+            "description": "Description of the output produced by this sub-task."
+        }},
+        ...
+    ]
+}}
+```
+
+### Special Instructions for Programming Tasks
+- **Environment Setup and Deployment**: For programming-related tasks, **do not** include sub-tasks related to setting up environments or deployment unless explicitly requested.
+- Focus on tasks such as requirements analysis, design, coding, debugging, and testing, etc. 
+- Ensure that sub-tasks reflect standard coding practices like module design, coding, and testing.
+
+
+### Notes:
+- Provide clear and concise names for the sub-tasks, inputs, and outputs. 
+- Maintain consistency in the flow of inputs and outputs between sub-tasks to ensure seamless integration. 
+- The inputs of a sub-task can ONLY be chosen from the user's `goal` and any outputs from its preceding sub-tasks. 
+- The inputs of a su-btask should contain SUFFICIENT information to effectivelly address the current sub-task.
+- The inputs of a sub-task MUST include the user's input `goal`. 
+- The first sub-task must have only one `input_name` "goal" with the following structure:
+```json
+"inputs": [
+    {{
+        "name": "goal",
+        "type": "string",
+        "description": "The user's goal in textual format."
+    }}
+]
+```
+
+### Output Format
+Your final output should ALWAYS in the following format:
+
+## Thought 
+Provide a brief explanation of your reasoning for breaking down the task and the chosen task structure.  
+
+## Goal
+Restate the user's goal clearly and concisely.
+
+## Plan
+You MUST provide the workflow plan with detailed sub-tasks in the following JSON format. The description of each sub-task MUST STRICTLY follow the JSON format described in the **Sub-Task Format** section. If a sub-task doesn't require inputs or do not have ouputs, still include `inputs` and `outputs` in the definiton by setting them as empty dicts. 
+```json
+{{
+    "sub_tasks": [
+        {{
+            "name": "subtask_name", 
+            ...
+        }}, 
+        {{
+            "name": "another_subtask_name", 
+            ...
+        }},
+        ...
+    ]
+}}
+```
+
+-----
+Let's begin. 
+
+### User's Goal:
+{goal}
+
+### History (previously generated task plan):
+{history}
+
+### Suggestions (idea of how to design the workflow or suggestions to refine the history plan):
+{suggestion}
+
+Output:
+"""
+
+TASK_PLANNING_ACTION = {
+    "name": "TaskPlanning", 
+    "description": TASK_PLANNING_ACTION_DESC, 
+    "prompt": TASK_PLANNING_ACTION_PROMPT, 
+}
