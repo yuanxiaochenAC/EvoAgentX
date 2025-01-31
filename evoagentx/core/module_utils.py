@@ -161,18 +161,41 @@ def custom_serializer(obj: Any):
     
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
-def get_type_name(type):
-    """
-    return the name of a type.
-    """
-    origin = get_origin(type)
-    args = get_args(type)
-    if origin:
-        type_name = f"{origin.__name__}[{', '.join(arg.__name__ for arg in args)}]"
-    else:
-        type_name = getattr(type, "__name__", str(type))
+# def get_type_name(type):
+#     """
+#     return the name of a type.
+#     """
+#     origin = get_origin(type)
+#     args = get_args(type)
+#     if origin:
+#         type_name = f"{origin.__name__}[{', '.join(arg.__name__ for arg in args)}]"
+#     else:
+#         type_name = getattr(type, "__name__", str(type))
 
-    return type_name
+#     return type_name
+
+def get_type_name(typ):
+
+    origin = get_origin(typ)
+    if origin is None:
+        return getattr(typ, "__name__", str(typ))
+    
+    if origin is Union:
+        args = get_args(typ)
+        return " | ".join(get_type_name(arg) for arg in args)
+    
+    if origin is type:
+        return f"Type[{get_type_name(args[0])}]" if args else "Type[Any]"
+    
+    if origin in (list, tuple):
+        args = get_args(typ)
+        return f"{origin.__name__}[{', '.join(get_type_name(arg) for arg in args)}]"
+    
+    if origin is dict:
+        key_type, value_type = get_args(typ)
+        return f"dict[{get_type_name(key_type)}, {get_type_name(value_type)}]"
+    
+    return str(origin)
 
 def get_pydantic_field_types(model: Type[BaseModel]) -> Dict[str, Union[str, dict]]:
 

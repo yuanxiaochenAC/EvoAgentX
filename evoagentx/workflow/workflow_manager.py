@@ -22,8 +22,8 @@ class TaskScheduler(Action):
     Determines the next task to execute based on the workflow graph and node statuses.
     """
     def __init__(self, **kwargs):
-        name = kwargs.pop("name", None) or "todo_default_name"
-        description = kwargs.pop("description", None) or "todo_default_description"
+        name = kwargs.pop("name", None) if "name" in kwargs else "todo_default_name"
+        description = kwargs.pop("description", None) if "description" in kwargs else "todo_default_description"
         super().__init__(name=name, description=description, **kwargs)
 
     def are_dependencies_complete(self, graph: WorkFlowGraph, task_name: str) -> bool:

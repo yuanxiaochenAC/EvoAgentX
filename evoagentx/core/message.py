@@ -21,8 +21,8 @@ class Message(BaseModule):
     the base class for message. 
 
     Args: 
-        content (Any): the content of the message. 
-        agent (str): the sender of the message, should be an agent_id.
+        content (Any): the content of the message, need to implement str() function. 
+        agent (str): the sender of the message, normally set as the agent name.
         action (str): the trigger of the message, normally set as the action name.
         prompt (str): the prompt used to obtain the generated text. 
         next_actions (List[str]): the following actions. 
@@ -44,8 +44,8 @@ class Message(BaseModule):
     wf_goal: Optional[str] = None
     wf_task: Optional[str] = None
     wf_task_desc: Optional[str] = None
-    message_id: Optional[str] = Field(default=generate_id)
-    timestamp: Optional[str] = Field(default=get_timestamp)
+    message_id: Optional[str] = Field(default_factory=generate_id)
+    timestamp: Optional[str] = Field(default_factory=get_timestamp)
     
     def __str__(self) -> str:
         return self.to_str()
@@ -57,8 +57,25 @@ class Message(BaseModule):
         return self.message_id
     
     def to_str(self) -> str:
-        # TODO 
-        pass 
+
+        msg_part = []
+        if self.timestamp:
+            msg_part.append(f"[{self.timestamp}]")
+        if self.agent:
+            msg_part.append(f"Agent: {self.agent}")
+        if self.msg_type and self.msg_type != MessageType.UNKNOWN:
+            msg_part.append(f"Type: {self.msg_type}")
+        if self.action:
+            msg_part.append(f"Action: {self.action}")
+        if self.wf_goal:
+            msg_part.append(f"Goal: {self.wf_goal}")
+        if self.wf_task:
+            msg_part.append(f"Task: {self.wf_task} ({self.wf_task_desc or 'No description'})")
+        if self.content:
+            msg_part.append(f"Content: {str(self.content)}")
+                
+        msg = "\n".join(msg_part)
+        return msg 
 
     @classmethod
     def sort_by_timestamp(cls, messages: List['Message'], reverse: bool = False) -> List['Message']:
