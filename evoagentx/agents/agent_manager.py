@@ -1,6 +1,5 @@
 import threading
 from enum import Enum
-from pydantic import Field
 from typing import Union, Optional, Dict, List
 
 from .agent import Agent

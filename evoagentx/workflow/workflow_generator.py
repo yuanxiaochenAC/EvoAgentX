@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import Field, PositiveInt
+from pydantic import PositiveInt
 
 from ..core.module import BaseModule
 from ..agents.agent_manager import AgentManager
