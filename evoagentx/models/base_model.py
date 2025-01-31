@@ -38,15 +38,14 @@ class LLMOutputParser(Parser):
             json_str = extracted_json_list[0] # only use the first JSON
             try:
                 data = yaml.safe_load(json_str)
-                return data
             except Exception:
-                pass 
-            try:
-                code_blocks = extract_code_blocks(content) # extract json/python code blocks
-                code_block = code_blocks[0]
-                data = {attr: code_block for attr in attrs}
-            except Exception:
-                data = {attr: content for attr in attrs}
+                raise ValueError(f"The generated content is not a valid JSON string:\n{json_str}")
+            # try:
+            #     code_blocks = extract_code_blocks(content) # extract json/python code blocks
+            #     code_block = code_blocks[0]
+            #     data = {attr: code_block for attr in attrs}
+            # except Exception:
+            #     data = {attr: content for attr in attrs}
         else:
             raise ValueError(f"The following generated content does not contain JSON string!\n{content}")
         
@@ -63,14 +62,18 @@ class LLMOutputParser(Parser):
         parser = cls.from_dict(data, **kwargs)
         parser.content = content
         return parser
+
+    def __str__(self) -> str:
+        return self.to_str()
     
     def to_str(self, **kwargs) -> str:
         return self.content
     
     def get_structured_data(self) -> dict:
         attrs = type(self).get_attrs()
-        data = self.to_dict()
-        structured_data = {attr: data[attr] for attr in attrs}
+        data = self.to_dict(ignore=["class_name"])
+        # structured_data = {attr: data[attr] for attr in attrs}
+        structured_data = {key: value for key, value in data.items() if key in attrs}
         return structured_data
 
 
