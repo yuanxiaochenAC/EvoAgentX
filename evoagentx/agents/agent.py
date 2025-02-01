@@ -47,7 +47,7 @@ class Agent(BaseModule):
     def execute(
         self, 
         action_name: str, 
-        msgs: List[Message], 
+        msgs: Optional[List[Message]] = None, 
         action_input_data: Optional[dict] = None, 
         return_msg_type: Optional[MessageType] = MessageType.UNKNOWN,
         **kwargs
@@ -83,7 +83,8 @@ class Agent(BaseModule):
 
         # formulate a message
         message = Message(
-            content=action_output.to_str(),
+            # content=action_output.to_str(),
+            content=action_output, 
             agent=self.name,
             action=action_name,
             prompt=prompt, 
@@ -136,6 +137,12 @@ class Agent(BaseModule):
     def get_action(self, action_name: str) -> Action:
         self.check_action_name(action_name=action_name)
         return self._action_map[action_name]
+    
+    def get_action_name(self, action_cls: Type[Action]) -> str:
+        for name, action in self._action_map.items():
+            if isinstance(action, action_cls):
+                return name
+        raise ValueError(f"Couldn't find an action that matches Type '{action_cls.__name__}'")
     
     def get_action_inputs(self, action: Action) -> Union[dict, None]:
         # return the input data of an action.

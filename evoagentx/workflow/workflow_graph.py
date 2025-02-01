@@ -51,6 +51,9 @@ class WorkFlowNode(BaseModule):
             else:
                 raise TypeError(f"{type(agent)} is an unknown agent type!")
         return agent_names
+    
+    def set_agents(self, agents: List[Union[str, dict]]):
+        self.agents = agents
 
 
 class WorkFlowEdge(BaseModule):
