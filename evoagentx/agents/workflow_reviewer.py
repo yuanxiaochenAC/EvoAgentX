@@ -17,3 +17,4 @@ class WorkFlowReviewer(Agent):
             return_msg_type=MessageType.RESPONSE, 
             **kwargs  
         )
+        return message
