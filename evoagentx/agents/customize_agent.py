@@ -51,8 +51,8 @@ class CustomizeAgent(Agent):
         name = kwargs["name"]
         description = kwargs["description"]
         prompt = kwargs.pop("prompt", None)
-        inputs = kwargs.pop("inputs", None)
-        outputs = kwargs.pop("outputs", None)
+        inputs = kwargs.pop("inputs", [])
+        outputs = kwargs.pop("outputs", [])
         system_prompt = kwargs.pop("system_prompt") if "system_prompt" in kwargs else DEFAULT_SYSTEM_PROMPT
         customize_action = self.create_customize_action(
             name=name, desc=description, prompt=prompt, inputs=inputs, outputs=outputs
@@ -65,6 +65,7 @@ class CustomizeAgent(Agent):
     
     def create_customize_action(self, name: str, desc: str, prompt: str, inputs: List[dict], outputs: List[dict]) -> Action:
 
+        assert prompt is None, "must provide `prompt` when creating CustomizeAgent"
         action_input_fields = {}
         for field in inputs:
             action_input_fields[field["name"]] = (str, Field(description=field["description"]))

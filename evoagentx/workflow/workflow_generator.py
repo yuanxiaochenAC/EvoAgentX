@@ -27,12 +27,12 @@ class WorkFlowGenerator(BaseModule):
 
         if self.task_planner is None:
             if self.llm is None:
-                raise ValueError(f"Must provide `llm` when `task_planner` is None")
+                raise ValueError("Must provide `llm` when `task_planner` is None")
             self.task_planner = TaskPlanner(llm=self.llm)
         
         if self.agent_generator is None:
             if self.llm is None:
-                raise ValueError(f"Must provide `llm` when `agent_generator` is None")
+                raise ValueError("Must provide `llm` when `agent_generator` is None")
             self.agent_generator = AgentGenerator(llm=self.llm)
         
         # TODO  完成WorkFlowReviewer之后解开注释
