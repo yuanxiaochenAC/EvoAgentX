@@ -86,12 +86,12 @@ Clearly state the goal of the agent.
 
 ### Instructions
 - Provide a clear and logical sequence of actions the agent should follow to complete its task. 
-- Reference the input variables using placeholders (e.g., `{{input_name}}`) that match the agent's `inputs`. Use a SINGLE curly brace to reference the inputs.
+- Reference the input variables using placeholders (e.g., `{{input_name}}`) that match the agent's `inputs`. You MUST use a SINGLE curly brace to reference the inputs.
 - Include instructions on how the agent can use relevant tools from the "### Tools" section to assist with its task if applicable. 
 
 ### Output Format (in JSON)
 Define the agent's output explicitly in JSON format. The output variables should match those listed in the `outputs` field of the agent. Use two DOUBLE curly braces in the JSON to format outputs.
-```
+```json
 {{{{
     "output_name": "The value of an output variable, as defined in the `outputs` filed of the agent.", 
     ... 
@@ -108,7 +108,9 @@ Define the agent's output explicitly in JSON format. The output variables should
 
 
 ### Notes:
-- Use concise, meaningful names for agents, inputs, and outputs.
+- Use concise, meaningful names for agents, inputs, and outputs. 
+- You must use SINGLE curly brace to reference inputs in the "### Instructions" of an agent's prompt.
+- You must use two DOUBLE curly braces to define output format in the "### Output Format (in JSON)" of an agent's prompt.
 
 ### Output Format
 Your final output should ALWAYS in the following format:
