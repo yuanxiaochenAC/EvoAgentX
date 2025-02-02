@@ -1,10 +1,9 @@
-import json 
 from pydantic import Field
 from typing import Optional, List
 
 # from ..core.parser import Parser
-from .action import Action, ActionInput
-from ..models.base_model import BaseLLM, LLMOutputParser
+from ..models.base_model import BaseLLM
+from .action import Action, ActionInput, ActionOutput
 from ..prompts.task_planner import TASK_PLANNING_ACTION
 from ..workflow.workflow_graph import WorkFlowNode
 
@@ -16,13 +15,9 @@ class TaskPlanningInput(ActionInput):
     suggestion: Optional[str] = Field(default=None, description="Optional suggestions or ideas to guide the planning process.")
 
 
-class TaskPlanningOutput(LLMOutputParser):
+class TaskPlanningOutput(ActionOutput):
 
     sub_tasks: List[WorkFlowNode] = Field(description="A list of sub-tasks that collectively achieve user's goal.")
-
-    def to_str(self) -> str:
-        str_task_plan = json.dumps(self.get_structured_data(), indent=4)
-        return str_task_plan
     
 
 class TaskPlanning(Action):
@@ -37,7 +32,8 @@ class TaskPlanning(Action):
         super().__init__(name=name, description=description, prompt=prompt, inputs_format=inputs_format, outputs_format=outputs_format, **kwargs)
     
     def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, **kwargs) -> TaskPlanningOutput:
-        
+        # from debug.debug_data import generated_snake_game_plan
+        # return self.outputs_format.parse(generated_snake_game_plan), "xxx"
         prompt_params_names = ["goal", "history", "suggestion"]
         prompt_params_values = {param: inputs.get(param, "") for param in prompt_params_names}
         prompt = self.prompt.format(**prompt_params_values)

@@ -1,6 +1,4 @@
-from typing import Optional, List
 from .agent import Agent
-from ..core.message import Message, MessageType
 from ..actions.task_planning import TaskPlanning
 from ..prompts.task_planner import TASK_PLANNER
 
@@ -18,17 +16,7 @@ class TaskPlanner(Agent):
         actions = kwargs.pop("actions") if "actions" in kwargs else [TaskPlanning()]
         super().__init__(name=name, description=description, system_prompt=system_prompt, actions=actions, **kwargs)
     
-    def execute(self, action_name: str, msgs: Optional[List[Message]] = None, action_input_data: Optional[dict] = None, **kwargs) -> Message:
-
-        """
-        Plan and decompose high-level tasks into executable task configurations.
-        """
-        message = super().execute(
-            action_name=action_name, 
-            action_input_data=action_input_data, 
-            msgs=msgs, 
-            return_msg_type=MessageType.RESPONSE, 
-            **kwargs  
-        )
-
-        return message
+    @property
+    def task_planning_action_name(self):
+        return self.get_action_name(action_cls=TaskPlanning)
+    

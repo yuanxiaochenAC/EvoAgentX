@@ -44,6 +44,12 @@ class ActionInput(LLMOutputParser):
             return "" 
         fields_info_str = json.dumps(fields_info, indent=4)
         return fields_info_str
+
+
+class ActionOutput(LLMOutputParser):
+    
+    def to_str(self) -> str:
+        return json.dumps(self.get_structured_data(), indent=4)
     
 
 class Action(BaseModule):

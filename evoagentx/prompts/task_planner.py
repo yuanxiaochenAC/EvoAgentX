@@ -89,7 +89,7 @@ Provide a brief explanation of your reasoning for breaking down the task and the
 Restate the user's goal clearly and concisely.
 
 ## Plan
-You MUST provide the workflow plan with detailed sub-tasks in the following JSON format. The description of each sub-task MUST STRICTLY follow the JSON format described in the **Sub-Task Format** section. If a sub-task doesn't require inputs or do not have ouputs, still include `inputs` and `outputs` in the definiton by setting them as empty dicts. 
+You MUST provide the workflow plan with detailed sub-tasks in the following JSON format. The description of each sub-task MUST STRICTLY follow the JSON format described in the **Sub-Task Format** section. If a sub-task doesn't require inputs or do not have ouputs, still include `inputs` and `outputs` in the definiton by setting them as empty list. 
 ```json
 {{
     "sub_tasks": [
@@ -109,14 +109,14 @@ You MUST provide the workflow plan with detailed sub-tasks in the following JSON
 -----
 Let's begin. 
 
-### User's Goal:
-{goal}
-
 ### History (previously generated task plan):
 {history}
 
 ### Suggestions (idea of how to design the workflow or suggestions to refine the history plan):
 {suggestion}
+
+### User's Goal:
+{goal}
 
 Output:
 """
