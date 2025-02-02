@@ -18,7 +18,7 @@ from .registry import register_module, MODULE_REGISTRY
 
 
 class MetaModule(ModelMetaclass):
-    def __new__(mcs, name, bases, namespace):
+    def __new__(mcs, name, bases, namespace, **kwargs):
         cls = super().__new__(mcs, name, bases, namespace)
         register_module(name, cls)
         return cls 
