@@ -24,6 +24,7 @@ class BaseConfig(BaseModule):
             explicitly_set_fields.update(self.kwargs)
         for field in ignore:
             explicitly_set_fields.pop(field, None)
+        explicitly_set_fields.pop("class_name", None)
         return explicitly_set_fields
 
 

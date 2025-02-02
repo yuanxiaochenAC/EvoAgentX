@@ -95,7 +95,6 @@ class AgentManager(BaseModule):
         agent: Agent = self.create_customize_agent(agent_data=agent_data)
         return agent
 
-    @atomic_method
     def load_all_agents(self, **kwargs):
         """
         load all agents from storage and add them to self.agents. 
@@ -171,7 +170,6 @@ class AgentManager(BaseModule):
         for agent in agents:
             self.add_agent(agent=agent, **kwargs)
     
-    @atomic_method
     def add_agents_from_workflow(self, workflow_graph: WorkFlowGraph, **kwargs):
         """
         Initialize agents from the nodes of a given WorkFlowGraph and add these agents to self.agents. 

@@ -88,7 +88,12 @@ class WorkFlowGenerator(BaseModule):
                 return_msg_type=MessageType.RESPONSE
             ).content
             # todo I only handle generated agents
-            subtask.set_agents(agents=[agent.to_dict(ignore=["class_name"]) for agent in agents.generated_agents])
+            generated_agents = []
+            for agent in agents.generated_agents:
+                agent_dict = agent.to_dict(ignore=["class_name"])
+                agent_dict["llm_config"] = self.llm.config.to_dict()
+                generated_agents.append(agent_dict)
+            subtask.set_agents(agents=generated_agents)
         return workflow
     
     # def review_plan(self, goal: str, )
