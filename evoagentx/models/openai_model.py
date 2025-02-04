@@ -16,7 +16,7 @@ class OpenAILLM(BaseLLM):
     def init_model(self):
         config: OpenAILLMConfig = self.config
         self._client = OpenAI(api_key=config.openai_key)
-        self._default_ignore_fields = ["llm_type", "openai_key", "output_response"] # parameters in OpenAILLMConfig that are not OpenAI models' input parameters 
+        self._default_ignore_fields = ["llm_type", "output_response", "openai_key", "deepseek_key", "anthropic_key"] # parameters in OpenAILLMConfig that are not OpenAI models' input parameters 
 
     def formulate_messages(self, prompts: List[str], system_messages: Optional[List[str]] = None) -> List[List[dict]]:
         
