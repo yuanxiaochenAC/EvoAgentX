@@ -4,7 +4,8 @@ from tenacity import (
     wait_random_exponential,
 )
 from openai import OpenAI, Stream 
-from typing import Optional, List, Any
+from openai.types.chat import ChatCompletion
+from typing import Optional, List
 from litellm import token_counter, cost_per_token
 from ..core.registry import register_model
 from .model_configs import OpenAILLMConfig
@@ -66,7 +67,7 @@ class OpenAILLM(BaseLLM):
             print("")
         return output
 
-    def get_completion_output(self, response: Any, output_response: bool=True) -> str:
+    def get_completion_output(self, response: ChatCompletion, output_response: bool=True) -> str:
         output = response.choices[0].message.content
         if output_response:
             print(output)
@@ -96,7 +97,7 @@ class OpenAILLM(BaseLLM):
     def batch_generate(self, batch_messages: List[List[dict]], **kwargs) -> List[str]:
         return [self.single_generate(messages=one_messages, **kwargs) for one_messages in batch_messages]
     
-    def _completion_cost(self, response: Any) -> Cost:
+    def _completion_cost(self, response: ChatCompletion) -> Cost:
         input_tokens = response.usage.prompt_tokens
         output_tokens = response.usage.completion_tokens
         return self._compute_cost(input_tokens=input_tokens, output_tokens=output_tokens)
