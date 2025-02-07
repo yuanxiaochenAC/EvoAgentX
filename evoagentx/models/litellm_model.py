@@ -63,10 +63,11 @@ class LiteLLM(OpenAILLM):
             response = completion(messages=messages, **completion_params)
             if stream:
                 output = self.get_stream_output(response, output_response=output_response)
+                cost = self._stream_cost(messages=messages, output=output)
             else:
-                output: str = response.choices[0].message.content
-                if output_response:
-                    print(output)
+                output: str = self.get_completion_output(response=response, output_response=output_response)
+                cost = self._completion_cost(response=response)
+            self._update_cost(cost=cost)
         except Exception as e:
             raise RuntimeError(f"Error during single_generate: {str(e)}")
         
