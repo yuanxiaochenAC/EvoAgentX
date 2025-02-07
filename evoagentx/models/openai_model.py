@@ -5,7 +5,7 @@ from tenacity import (
 )
 from openai import OpenAI, Stream 
 from openai.types.chat import ChatCompletion
-from typing import Optional, List, Any
+from typing import Optional, List
 from litellm import token_counter, cost_per_token
 from ..core.registry import register_model
 from .model_configs import OpenAILLMConfig
