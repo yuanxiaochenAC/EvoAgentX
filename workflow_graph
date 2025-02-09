@@ -1,0 +1,52 @@
+digraph {
+	rankdir=LR size="12,8"
+	define_game_requirements [label="Name: define_game_requirements
+Inputs:
+  - goal (string)
+Outputs:
+  - requirements_list (array)
+Agents:
+  - RequirementDefinitionsAgent" fillcolor=lightgray style=filled]
+	design_game_structure [label="Name: design_game_structure
+Inputs:
+  - requirements_list (array)
+Outputs:
+  - design_document (string)
+Agents:
+  - GameDesignAgent" fillcolor=lightgray style=filled]
+	implement_game_logic [label="Name: implement_game_logic
+Inputs:
+  - design_document (string)
+Outputs:
+  - game_code (string)
+Agents:
+  - SnakeGameLogicGenerator" fillcolor=lightgray style=filled]
+	test_game_functionality [label="Name: test_game_functionality
+Inputs:
+  - game_code (string)
+Outputs:
+  - test_results (string)
+Agents:
+  - game_functionality_tester" fillcolor=lightgray style=filled]
+	optimize_game_performance [label="Name: optimize_game_performance
+Inputs:
+  - test_results (string)
+  - game_code (string)
+Outputs:
+  - optimized_game_code (string)
+Agents:
+  - OptimizeGamePerformanceAgent" fillcolor=lightgray style=filled]
+	launch_game [label="Name: launch_game
+Inputs:
+  - optimized_game_code (string)
+Outputs:
+  - launch_package (string)
+Agents:
+  - packaging_agent" fillcolor=lightgray style=filled]
+	define_game_requirements -> design_game_structure [label="Priority: 0"]
+	design_game_structure -> implement_game_logic [label="Priority: 0"]
+	implement_game_logic -> test_game_functionality [label="Priority: 0"]
+	implement_game_logic -> optimize_game_performance [label="Priority: 0"]
+	test_game_functionality -> optimize_game_performance [label="Priority: 0"]
+	optimize_game_performance -> launch_game [label="Priority: 0"]
+}

@@ -3,8 +3,9 @@ from enum import Enum
 import networkx as nx 
 from copy import deepcopy
 from networkx import MultiDiGraph
+from collections import defaultdict
 from pydantic import Field, field_validator
-from typing import Union, Optional, Tuple, List
+from typing import Union, Optional, Tuple, Dict, List
 
 from ..core.logging import logger
 from ..core.module import BaseModule
@@ -27,7 +28,7 @@ class WorkFlowNode(BaseModule):
     outputs: List[Parameter] # outputs of the task
     reason: Optional[str] = None
     agents: Optional[List[Union[str, dict]]] = None
-    status: Optional[WorkFlowNodeState] = None
+    status: Optional[WorkFlowNodeState] = WorkFlowNodeState.PENDING
 
     @field_validator('agents')
     @classmethod
@@ -42,7 +43,10 @@ class WorkFlowNode(BaseModule):
         """
         return the agent names specified in the self.agents. 
         """
-        agent_names = [] 
+        agent_names = []
+        if not self.agents:
+            return []
+        
         for agent in self.agents:
             if isinstance(agent, str):
                 agent_names.append(agent)
@@ -55,6 +59,16 @@ class WorkFlowNode(BaseModule):
     def set_agents(self, agents: List[Union[str, dict]]):
         self.agents = agents
 
+    def get_status(self) -> WorkFlowNodeState:
+        return self.status
+    
+    def set_status(self, state: WorkFlowNodeState):
+        self.status = state
+    
+    @property
+    def is_complete(self) -> bool:
+        return self.status == WorkFlowNodeState.COMPLETED
+    
 
 class WorkFlowEdge(BaseModule):
 
@@ -124,7 +138,12 @@ class WorkFlowGraph(BaseModule):
             self._init_from_workflowgraph(self.graph, self.nodes, self.edges)
         else:
             raise TypeError(f"{type(self.graph)} is an unknown type for graph. Supported types: [MultiDiGraph, WorkFlowGraph]")
+        self.update_graph()
+    
+    def update_graph(self):
+        # call this function when modifying nodes or edges!
         self._validate_workflow_structure()
+        self._loop = self._find_all_loops()
 
     def _init_from_nodes_and_edges(self, nodes: List[WorkFlowNode] = [], edges: List[WorkFlowEdge] = []):
 
@@ -138,8 +157,8 @@ class WorkFlowGraph(BaseModule):
         self.nodes = []
         self.edges = []
         self.graph = MultiDiGraph()
-        self.add_nodes(*nodes)
-        self.add_edges(*edges)
+        self.add_nodes(*nodes, update_graph=False)
+        self.add_edges(*edges, update_graph=False)
 
     def _init_from_multidigraph(self, graph: MultiDiGraph, nodes: List[WorkFlowNode] = [], edges: List[WorkFlowEdge] = []):
         
@@ -173,16 +192,96 @@ class WorkFlowGraph(BaseModule):
         if len(self.graph.nodes) > 1 and not end_nodes:
             logger.warning("There are no end nodes in the workflow")
     
-    def find_initial_nodes(self):
+    def find_initial_nodes(self) -> List[str]:
         initial_nodes = [node for node, in_degree in self.graph.in_degree() if in_degree==0]
         return initial_nodes
     
-    def find_end_nodes(self):
+    def find_end_nodes(self) -> List[str]:
         end_nodes = [node for node, out_degree in self.graph.out_degree() if out_degree==0]
         return end_nodes
     
+    def _find_loops(self, start_node: Union[str, WorkFlowNode]) -> Dict[str, list]:
+        """
+        得到从一个节点出发进行深度遍历搜索能够得到的所有环, 并存储为: start_node: [a sequence of loop nodes]的形式
+        """
+        if isinstance(start_node, str):
+            start_node = self.get_node(node_name=start_node)
+        start_node_name = start_node.name
+
+        loops = defaultdict(list)
+        def dfs(current_node_name: str, path: List[str]):
+            if current_node_name in path:
+                # a loop exists
+                loops[current_node_name].append(path[path.index(current_node_name):])
+                return
+            path.append(current_node_name)
+            children = self.get_node_children(current_node_name)
+            if children:
+                for child in children:
+                    dfs(child, path)
+            path.pop()
+        
+        dfs(start_node_name, [])
+        return loops
+
+    def _find_all_loops(self) -> Dict[str, list]:
+
+        initial_nodes = self.find_initial_nodes()
+        if not initial_nodes:
+            return {} 
+        
+        def contain_loop(loops: List[List[str]], new_loop: List[str]):
+            if not loops:
+                return False
+            return frozenset(new_loop) in [frozenset(loop) for loop in loops]
+        
+        # merge loops from different nodes 
+        all_loops = defaultdict(list)
+        for initial_node in initial_nodes:
+            loops_from_init_node = self._find_loops(initial_node)
+            for start_node, loops in loops_from_init_node.items():
+                for loop in loops:
+                    if not contain_loop(all_loops[start_node], loop):
+                        # 合并从相同的start_node开始的环
+                        all_loops[start_node].append(loop)
+        
+        if len(all_loops) <= 1:
+            return all_loops
+        
+        # merge same loops with different starts (因为同一个环可能在之前的遍历中有不同的start_node)
+        loop_to_start_nodes = defaultdict(dict)
+        for start_node, loops in all_loops.items():
+            for loop in loops:
+                normalized_loop = frozenset(loop)
+                loop_to_start_nodes[normalized_loop][start_node] = loop
+        
+        all_paths: List[List[str]] = [] 
+        # 用深度遍历来判断一个环中的开始节点
+        for initial_node in initial_nodes:
+            all_paths.extend(self.get_all_paths_from_node(initial_node))
+        
+        def rank_nodes(nodes: List[str]):
+            if len(nodes) == 1:
+                return nodes[0]
+            path_contain_nodes = None
+            for path in all_paths:
+                if all(node in path for node in nodes):
+                    path_contain_nodes = path
+                    break
+            if path_contain_nodes is None:
+                raise ValueError(f"Couldn't find a path that contain nodes: {nodes}")
+            node_indices = [path.index(node) for node in nodes]
+            return nodes[node_indices.index(min(node_indices))]
+        
+        all_loops = defaultdict(list)
+        for start_node_loop in loop_to_start_nodes.values():
+            first_node = rank_nodes(list(start_node_loop.keys()))
+            all_loops[first_node].append(start_node_loop[first_node])
+        
+        return all_loops
+
     @atomic_method
-    def add_node(self, node: WorkFlowNode, **kwargs):
+    def add_node(self, node: WorkFlowNode, update_graph: bool = True, **kwargs):
 
         if not isinstance(node, WorkFlowNode):
             raise ValueError(f"{node} is not a valid WorkFlowNode instance!")
@@ -191,9 +290,11 @@ class WorkFlowGraph(BaseModule):
 
         self.nodes.append(node)
         self.graph.add_node(node.name, ref=node)
+        if update_graph:
+            self.update_graph()
 
     @atomic_method
-    def add_edge(self, edge: WorkFlowEdge, **kwargs):
+    def add_edge(self, edge: WorkFlowEdge, update_graph: bool = True, **kwargs):
 
         if not isinstance(edge, WorkFlowEdge):
             raise ValueError(f"{edge} is not a valid WorkFlowEdge instance!")
@@ -205,6 +306,8 @@ class WorkFlowGraph(BaseModule):
         
         self.edges.append(edge)
         self.graph.add_edge(edge.source, edge.target, ref=edge)
+        if update_graph:
+            self.update_graph()
 
     def add_nodes(self, *nodes: WorkFlowNode, **kwargs):
 
@@ -299,7 +402,36 @@ class WorkFlowGraph(BaseModule):
             edges.append(edge)
         return edges 
 
-    def set_node_state(self, node: Union[str, WorkFlowNode], new_state: WorkFlowNodeState) -> bool:
+    def list_nodes(self) -> List[str]:
+        """
+        return the names of all nodes 
+        """
+        return [node.name for node in self.nodes]
+
+    def get_node(self, node_name: str) -> WorkFlowNode:
+        """
+        return a WorkFlowNode instance based on its name.
+        """
+        if not self.node_exists(node=node_name):
+            raise KeyError(f"{node_name} is an invalid node name. Currently available node names: {self.list_nodes()}")
+        return self.graph.nodes[node_name]["ref"]
+    
+    def get_node_status(self, node: Union[str, WorkFlowNode]) -> WorkFlowNodeState:
+        if isinstance(node, str):
+            node = self.get_node(node_name=node)
+        return node.get_status()
+    
+    @property
+    def is_complete(self):
+        node_complete_list = [node.is_complete for node in self.nodes]
+        if len(node_complete_list) == 0:
+            return True
+        if all(node_complete_list):
+            return True
+        return False
+
+    @atomic_method
+    def set_node_status(self, node: Union[str, WorkFlowNode], new_state: WorkFlowNodeState) -> bool:
         """
         Update the state of a specific node. 
 
@@ -310,4 +442,230 @@ class WorkFlowGraph(BaseModule):
         Returns:
             bool: True if the state was updated successfully, False otherwise.
         """
-        pass 
+        flag = False
+        try:
+            if isinstance(node, str):
+                node = self.get_node(node_name=node)
+            node.set_status(new_state)
+            flag = True
+        except Exception as e:
+            raise ValueError(f"An error occurs when setting node status: {e}")
+        return flag
+    
+    def get_node_children(self, node: Union[str, WorkFlowNode]) -> List[str]:
+        node_name = node if isinstance(node, str) else node.name
+        if not self.node_exists(node=node):
+            raise ValueError(f"Node `{node_name}` does not exists!")
+        children = list(self.graph.successors(node_name))
+        return children
+    
+    def get_node_predecessors(self, node: Union[str, WorkFlowNode]) -> List[str]:
+        node_name = node if isinstance(node, str) else node.name
+        if not self.node_exists(node=node):
+            raise ValueError(f"Node `{node_name}` does not exists!")
+        predecessors = list(self.graph.predecessors(node_name))
+        return predecessors
+
+    def get_uncomplete_initial_nodes(self) -> List[str]:
+        initial_nodes = self.find_initial_nodes()
+        are_initial_nodes_complete = [self.get_node(node_name).is_complete for node_name in initial_nodes]
+        uncomplete_initial_nodes = []
+        for node_name, is_complete in zip(initial_nodes, are_initial_nodes_complete):
+            if not is_complete:
+                uncomplete_initial_nodes.append(node_name)
+        return uncomplete_initial_nodes 
+    
+    def get_all_paths_from_node(self, start_node: Union[str, WorkFlowNode]) -> List[List[str]]:
+        """
+        get all paths starting from a node
+        """
+        if isinstance(start_node, str):
+            start_node = self.get_node(node_name=start_node)
+        start_node_name = start_node.name
+
+        all_paths = []
+        visited = set() # handle loop in the graph
+
+        def dfs(current_node_name: str, path: List[str]):
+            if current_node_name in visited:
+                return
+            path.append(current_node_name)
+            visited.add(current_node_name)
+            children = self.get_node_children(current_node_name)
+            if not children:
+                all_paths.append(path.copy())
+            else:
+                for child in children:
+                    dfs(child, path)
+            
+            path.pop()
+            visited.remove(current_node_name)
+        
+        dfs(start_node_name, [])
+        return all_paths
+
+    def find_completed_leaf_nodes(self, start_node: Union[str, WorkFlowNode]) -> List[str]:
+
+        if isinstance(start_node, str):
+            start_node = self.get_node(node_name=start_node)
+        start_node_name = start_node.name
+
+        paths_starting_from_node = self.get_all_paths_from_node(start_node=start_node_name)
+        last_completed_nodes = [] 
+        for path in paths_starting_from_node:
+            if not path:
+                continue
+            completed_node = None
+            for path_node in path:
+                if self.get_node(path_node).is_complete:
+                    completed_node = path_node
+                else:
+                    break
+            if completed_node and completed_node not in last_completed_nodes:
+                last_completed_nodes.append(completed_node)
+        last_completed_nodes = last_completed_nodes[::-1]
+        return last_completed_nodes
+    
+    def find_completed_leaf_nodes_start_from_initial_nodes(self) -> List[str]:
+
+        initial_nodes = self.find_initial_nodes()
+        completed_leaf_nodes = []
+        for initial_node in initial_nodes:
+            for complete_node in self.find_completed_leaf_nodes(start_node=initial_node):
+                if complete_node not in completed_leaf_nodes:
+                    completed_leaf_nodes.append(complete_node)
+        return completed_leaf_nodes
+    
+    def get_all_children_nodes(self, nodes: List[Union[str, WorkFlowNode]]) -> List[str]:
+
+        node_names = [node if isinstance(node, str) else node.name for node in nodes]
+        children_nodes = [] 
+        for node_name in node_names:
+            for child in self.get_node_children(node_name):
+                if child not in children_nodes:
+                    children_nodes.append(child)
+        return children_nodes
+    
+    def filter_completed_nodes(self, nodes: List[Union[str, WorkFlowNode]]) -> List[str]:
+        """
+        remove completed nodes from `nodes`
+        """
+        node_names = [node if isinstance(node, str) else node.name for node in nodes]
+        uncompleted_nodes = [] 
+        for node_name in node_names:
+            if self.get_node(node_name).is_complete:
+                continue
+            uncompleted_nodes.append(node_name)
+        return uncompleted_nodes
+    
+    def are_dependencies_complete(self, node_name: str) -> bool:
+        """
+        Check if all predecessors for a node are complete.
+
+        Args:
+            graph (WorkFlowGraph): The workflow graph.
+            task_name (str): the name of a task.
+        
+        Returns:
+            bool: True if all predecessors are complete, False otherwise.
+        """
+        predecessors = self.get_node_predecessors(node=node_name)
+        return all(self.get_node(pre).is_complete for pre in predecessors)
+
+    def filter_nodes_with_uncompleted_predecessors(self, nodes: List[Union[str, WorkFlowNode]]) -> List[str]:
+        node_names = [node if isinstance(node, str) else node.name for node in nodes]
+        nodes_with_completed_predecessors = [] 
+        for node_name in node_names:
+            if self.are_dependencies_complete(node_name=node_name):
+                nodes_with_completed_predecessors.append(node_name)
+        return nodes_with_completed_predecessors
+
+    def get_next_candidate_nodes(self) -> List[str]:
+
+        uncomplete_initial_nodes = self.get_uncomplete_initial_nodes()
+        if len(uncomplete_initial_nodes) > 0:
+            return uncomplete_initial_nodes
+        
+        # find the last completed nodes in all paths starting from initial nodes. 
+        completed_leaf_nodes = self.find_completed_leaf_nodes_start_from_initial_nodes()
+
+        # obtain children nodes of last completed nodes which are uncompleted
+        children_nodes = self.get_all_children_nodes(nodes=completed_leaf_nodes)
+        uncompleted_children_nodes = self.filter_completed_nodes(nodes=children_nodes)
+
+        # check whether all the predecessors are completed
+        children_nodes_with_complete_predecessors = self.filter_nodes_with_uncompleted_predecessors(uncompleted_children_nodes)
+
+        return children_nodes_with_complete_predecessors
+
+    @property
+    def next_tasks(self) -> List[WorkFlowNode]:
+        candidate_node_names = self.get_next_candidate_nodes()
+        candidate_tasks = [self.get_node(node_name=node_name) for node_name in candidate_node_names]
+        return candidate_tasks
+
+    def get_node_description(self, node: Union[str, WorkFlowNode]) -> str:
+
+        if isinstance(node, str):
+            node = self.get_node(node_name=node)
+        
+        def format_parameters(params: List[Parameter]) -> str:
+            if not params:
+                return "None"
+            # return "\n".join(f"  - {param.name} ({param.type}): {param.description}" for param in params)
+            return "\n".join(f"  - {param.name} ({param.type})" for param in params)
+        
+        def format_agents(agent_names: List[str]) -> str:
+            if not agent_names:
+                return "None"
+            return "\n".join(f"  - {name}" for name in agent_names)
+        
+        desc = (
+            f"Name: {node.name}\n"
+            # f"Description: {node.description}\n"
+            f"Inputs:\n{format_parameters(node.inputs)}\n"
+            f"Outputs:\n{format_parameters(node.outputs)}\n"
+            f"Agents:\n{format_agents(node.get_agents())}"
+        )
+        return desc
+
+    def display_graph(self):
+        """
+        Display the workflow graph with node and edge attributes.
+        Nodes are colored based on their status.
+        """
+        import matplotlib.pyplot as plt
+
+        # Define colors for node statuses
+        status_colors = {
+            WorkFlowNodeState.PENDING: 'lightgray',
+            WorkFlowNodeState.RUNNING: 'yellow',
+            WorkFlowNodeState.COMPLETED: 'green',
+            WorkFlowNodeState.FAILED: 'red'
+        }
+
+        # Get node colors based on their statuses
+        node_colors = [status_colors.get(self.get_node_status(node), 'lightgray') for node in self.graph.nodes]
+
+        # Prepare node labels with additional information
+        node_labels = {node: self.get_node_description(data["ref"]) for node, data in self.graph.nodes(data=True)}
+        
+        # Draw the graph
+        pos = nx.shell_layout(self.graph)
+        plt.figure(figsize=(12, 8))
+        nx.draw(
+            self.graph, pos, with_labels=False, node_color=node_colors, edge_color='black',
+            node_size=1500, font_size=8, font_color='black', font_weight='bold'
+        )
+
+        # Draw node labels next to the nodes (left-aligned)
+        text_offsets = {node: (pos[node][0]-0.2, pos[node][1]-0.22) for node in self.graph.nodes}
+        for node, (x, y) in text_offsets.items():
+            plt.text(x, y, node_labels[node], ha='left', va='center', fontsize=9, bbox=dict(facecolor='white', alpha=0.7))
+
+        # Draw edge labels for priorities
+        edge_labels = nx.get_edge_attributes(self.graph, 'priority')
+        nx.draw_networkx_edge_labels(self.graph, pos, edge_labels=edge_labels)
+
+        plt.title("Workflow Graph")
+        plt.show()

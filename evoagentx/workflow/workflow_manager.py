@@ -5,8 +5,8 @@ from ..models.base_model import BaseLLM
 from ..core.module import BaseModule
 from ..actions.action import Action
 from ..agents.agent_manager import AgentManager
-from .workflow_graph import WorkFlowGraph
 from .environment import Environment
+from .workflow_graph import WorkFlowNode, WorkFlowGraph
 
 
 class Scheduler(Action):
@@ -25,19 +25,6 @@ class TaskScheduler(Action):
         name = kwargs.pop("name", None) if "name" in kwargs else "todo_default_name"
         description = kwargs.pop("description", None) if "description" in kwargs else "todo_default_description"
         super().__init__(name=name, description=description, **kwargs)
-
-    def are_dependencies_complete(self, graph: WorkFlowGraph, task_name: str) -> bool:
-        """
-        Check if all dependencies for a node are complete.
-
-        Args:
-            graph (WorkFlowGraph): The workflow graph.
-            task_name (str): the name of a task.
-        
-        Returns:
-            bool: True if all dependencies are complete, False otherwise.
-        """
-        pass
 
     def execute(self, graph: WorkFlowGraph, env: Environment = None, **kwargs) -> str:
         """
@@ -92,11 +79,15 @@ class WorkFlowManager(BaseModule):
     action_scheduler: ActionScheduler = Field(default_factory=ActionScheduler)
     task_scheduler: TaskScheduler = Field(default_factory=TaskScheduler)
 
-    def schedule_next_task(self, graph: WorkFlowGraph, env: Environment = None, **kwargs):
+    def schedule_next_task(self, graph: WorkFlowGraph, env: Environment = None, **kwargs) -> WorkFlowNode:
         """
         Return the next task to execute. 
         """
-        pass 
+        if graph.is_complete:
+            return None
+        task_name = self.task_scheduler.execute(graph=graph, env=env)
+        task: WorkFlowNode = graph.get_node(task_name)
+        return task
 
     def schedule_next_action(self, task: str, graph: WorkFlowGraph, agent_manager: AgentManager, env: Environment = None, llm: BaseLLM = None, **kwargs) -> NextAction:
         """
