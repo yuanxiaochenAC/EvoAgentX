@@ -138,12 +138,12 @@ class WorkFlowGraph(BaseModule):
             self._init_from_workflowgraph(self.graph, self.nodes, self.edges)
         else:
             raise TypeError(f"{type(self.graph)} is an unknown type for graph. Supported types: [MultiDiGraph, WorkFlowGraph]")
+        self._validate_workflow_structure()
         self.update_graph()
     
     def update_graph(self):
         # call this function when modifying nodes or edges!
-        self._validate_workflow_structure()
-        self._loop = self._find_all_loops()
+        self._loops = self._find_all_loops()
 
     def _init_from_nodes_and_edges(self, nodes: List[WorkFlowNode] = [], edges: List[WorkFlowEdge] = []):
 
@@ -309,7 +309,7 @@ class WorkFlowGraph(BaseModule):
         if update_graph:
             self.update_graph()
 
-    def add_nodes(self, *nodes: WorkFlowNode, **kwargs):
+    def add_nodes(self, *nodes: WorkFlowNode, update_graph: bool = True, **kwargs):
 
         nodes: list = list(nodes)
         nodes.extend([kwargs.pop(var) for var in ["node", "nodes"] if var in kwargs])
@@ -317,11 +317,11 @@ class WorkFlowGraph(BaseModule):
         for node in nodes:
             if isinstance(node, (tuple, list)):
                 for n in node:
-                    self.add_node(n, **kwargs)
+                    self.add_node(n, update_graph=update_graph, **kwargs)
             else:
-                self.add_node(node, **kwargs)
+                self.add_node(node, update_graph=update_graph, **kwargs)
 
-    def add_edges(self, *edges: WorkFlowEdge, **kwargs):
+    def add_edges(self, *edges: WorkFlowEdge, update_graph: bool = True, **kwargs):
 
         edges: list = list(edges)
         edges.extend([kwargs.pop(var) for var in ["edge", "edges"] if var in kwargs])
@@ -329,9 +329,9 @@ class WorkFlowGraph(BaseModule):
         for edge in edges:
             if isinstance(edge, (tuple, list)):
                 for e in edge:
-                    self.add_edge(e, **kwargs)
+                    self.add_edge(e, update_graph=update_graph, **kwargs)
             else:
-                self.add_edge(edge, **kwargs)
+                self.add_edge(edge, update_graph=update_graph, **kwargs)
 
     def node_exists(self, node: Union[str, WorkFlowNode]) -> bool:
         if isinstance(node, str):
@@ -385,6 +385,34 @@ class WorkFlowGraph(BaseModule):
         else:
             raise TypeError("edge must be a tuple (source, target) or WorkFlowEdge instance")
     
+    def is_loop_start(self, node: Union[str, WorkFlowNode]) -> bool:
+        if len(self._loops) == 0:
+            return False
+        node_name = node if isinstance(node, str) else node.name
+        return node_name in self._loops
+    
+    def is_loop_end(self, node: Union[str, WorkFlowNode]) -> bool:
+        if len(self._loops) == 0:
+            return False
+        loop_end_nodes = set()
+        node_name = node if isinstance(node, str) else node.name
+        for loops in self._loops.values():
+            loop_end_nodes.update([loop[-1] for loop in loops])
+        return node_name in loop_end_nodes
+    
+    def find_loops_with_start_and_end(self, start_node: Union[str, WorkFlowNode], end_node: Union[str, WorkFlowNode]) -> List[List[str]]:
+        if len(self._loops) == 0:
+            return []
+        start_node_name = start_node if isinstance(start_node, str) else start_node.name
+        end_node_name = end_node if isinstance(end_node, str) else end_node.name
+        if start_node_name not in self._loops:
+            return [] 
+        target = []
+        for loop in self._loops[start_node_name]:
+            if loop[-1] == end_node_name:
+                target.append(loop)
+        return target
+
     def merge_nodes(self, nodes: List[WorkFlowNode], new_nodes: List[WorkFlowNode]):
 
         node_names = {node.name for node in nodes}
@@ -451,6 +479,18 @@ class WorkFlowGraph(BaseModule):
         except Exception as e:
             raise ValueError(f"An error occurs when setting node status: {e}")
         return flag
+    
+    def pending(self, node: Union[str, WorkFlowNode]) -> bool:
+        return self.set_node_status(node=node, new_state=WorkFlowNodeState.PENDING)
+    
+    def running(self, node: Union[str, WorkFlowNode]) -> bool:
+        return self.set_node_status(node=node, new_state=WorkFlowNodeState.RUNNING)
+    
+    def completed(self, node: Union[str, WorkFlowNode]) -> bool:
+        return self.set_node_status(node=node, new_state=WorkFlowNodeState.COMPLETED)
+    
+    def failed(self, node: Union[str, WorkFlowNode]) -> bool:
+        return self.set_node_status(node=node, new_state=WorkFlowNodeState.FAILED)
     
     def get_node_children(self, node: Union[str, WorkFlowNode]) -> List[str]:
         node_name = node if isinstance(node, str) else node.name
@@ -558,6 +598,42 @@ class WorkFlowGraph(BaseModule):
             uncompleted_nodes.append(node_name)
         return uncompleted_nodes
     
+    def get_candidate_children_nodes(self, completed_nodes: List[Union[str, WorkFlowNode]]) -> List[str]:
+        """
+        return the next set of possible tasks to execute. If there are no loops in the graph, consider only the uncompleted children. 
+        If there exists loops, also consider the previous completed tasks.
+
+        Args:
+            nodes (List[Union[str, WorkFlowNode]]): a list of completed nodes. 
+        """
+        node_names = [node if isinstance(node, str) else node.name for node in completed_nodes]
+        has_loop = (len(self._loops) > 0)
+        if has_loop:
+            # 存在环的时候需要额外判断
+            uncompleted_children_nodes = []
+            for node_name in node_names:
+                children_nodes = self.get_all_children_nodes(nodes=[node_name])
+                if self.is_loop_end(node=node_name):
+                    current_uncompleted_children_nodes = [] 
+                    for child in children_nodes:
+                        if self.is_loop_start(node=child):
+                            # node_name是一个环的结束的时候，如果它的子节点是环的开始，那么无论它是否completed，都添加到下一步可执行的操作
+                            current_uncompleted_children_nodes.append(child)
+                        else:
+                            # node_name是环的结束，但是子节点不是环的开始时，需要检查child是否已经completed，只添加未完成的任务
+                            current_uncompleted_children_nodes.extend(self.filter_completed_nodes(nodes=[child]))
+                else:
+                    current_uncompleted_children_nodes = self.filter_completed_nodes(nodes=children_nodes)
+                for child in current_uncompleted_children_nodes:
+                    if child not in uncompleted_children_nodes:
+                        uncompleted_children_nodes.append(child)
+        else:
+            # 不存在环的时候直接得到所有的子节点，并去掉其中已完成的部分
+            children_nodes = self.get_all_children_nodes(nodes=node_names)
+            uncompleted_children_nodes = self.filter_completed_nodes(nodes=children_nodes)
+
+        return uncompleted_children_nodes
+    
     def are_dependencies_complete(self, node_name: str) -> bool:
         """
         Check if all predecessors for a node are complete.
@@ -569,8 +645,18 @@ class WorkFlowGraph(BaseModule):
         Returns:
             bool: True if all predecessors are complete, False otherwise.
         """
+        has_loop = (len(self._loops) > 0)
         predecessors = self.get_node_predecessors(node=node_name)
-        return all(self.get_node(pre).is_complete for pre in predecessors)
+        if has_loop and self.is_loop_start(node=node_name):
+            flag = True 
+            for pre in predecessors:
+                if self.is_loop_end(pre):
+                    pass 
+                else:
+                    flag &= self.get_node(pre).is_complete
+        else:
+            flag = all(self.get_node(pre).is_complete for pre in predecessors)
+        return flag
 
     def filter_nodes_with_uncompleted_predecessors(self, nodes: List[Union[str, WorkFlowNode]]) -> List[str]:
         node_names = [node if isinstance(node, str) else node.name for node in nodes]
@@ -589,21 +675,38 @@ class WorkFlowGraph(BaseModule):
         # find the last completed nodes in all paths starting from initial nodes. 
         completed_leaf_nodes = self.find_completed_leaf_nodes_start_from_initial_nodes()
 
-        # obtain children nodes of last completed nodes which are uncompleted
-        children_nodes = self.get_all_children_nodes(nodes=completed_leaf_nodes)
-        uncompleted_children_nodes = self.filter_completed_nodes(nodes=children_nodes)
+        # obtain children nodes of last completed nodes which are uncompleted (consider previous completed tasks if there exists loops)
+        # children_nodes = self.get_all_children_nodes(nodes=completed_leaf_nodes)
+        # uncompleted_children_nodes = self.filter_completed_nodes(nodes=children_nodes)
+        candidate_children_nodes = self.get_candidate_children_nodes(completed_nodes=completed_leaf_nodes)
 
         # check whether all the predecessors are completed
-        children_nodes_with_complete_predecessors = self.filter_nodes_with_uncompleted_predecessors(uncompleted_children_nodes)
+        # children_nodes_with_complete_predecessors = self.filter_nodes_with_uncompleted_predecessors(uncompleted_children_nodes)
+        children_nodes_with_complete_predecessors = self.filter_nodes_with_uncompleted_predecessors(candidate_children_nodes)
 
         return children_nodes_with_complete_predecessors
 
-    @property
-    def next_tasks(self) -> List[WorkFlowNode]:
+    def next(self) -> List[WorkFlowNode]:
         candidate_node_names = self.get_next_candidate_nodes()
         candidate_tasks = [self.get_node(node_name=node_name) for node_name in candidate_node_names]
         return candidate_tasks
 
+    def step(self, source_node: Union[str, WorkFlowNode], target_node: Union[str, WorkFlowNode]):
+        source_node_name = source_node if isinstance(source_node, str) else source_node.name
+        target_node_name = target_node if isinstance(target_node, str) else target_node.name
+        source_node_status = self.get_node_status(source_node_name)
+        if source_node_status != WorkFlowNodeState.COMPLETED:
+            raise ValueError(f"The state of `source_node` should be WorkFlowNodeState.COMPLETED, but found {source_node_status}")
+        # set the state of `target_node` to WorkFlowNodeState.RUNNING
+        if self.is_loop_end(source_node_name) and self.is_loop_start(target_node_name):
+            loops = self.find_loops_with_start_and_end(
+                start_node=target_node_name, end_node=source_node_name
+            )
+            loop_nodes = set(sum(loops, []))
+            for loop_node in loop_nodes:
+                self.pending(node=loop_node)
+        self.running(node=target_node_name)
+    
     def get_node_description(self, node: Union[str, WorkFlowNode]) -> str:
 
         if isinstance(node, str):
@@ -629,7 +732,7 @@ class WorkFlowGraph(BaseModule):
         )
         return desc
 
-    def display_graph(self):
+    def display(self):
         """
         Display the workflow graph with node and edge attributes.
         Nodes are colored based on their status.
@@ -639,7 +742,7 @@ class WorkFlowGraph(BaseModule):
         # Define colors for node statuses
         status_colors = {
             WorkFlowNodeState.PENDING: 'lightgray',
-            WorkFlowNodeState.RUNNING: 'yellow',
+            WorkFlowNodeState.RUNNING: 'orange',
             WorkFlowNodeState.COMPLETED: 'green',
             WorkFlowNodeState.FAILED: 'red'
         }
@@ -659,13 +762,32 @@ class WorkFlowGraph(BaseModule):
         )
 
         # Draw node labels next to the nodes (left-aligned)
-        text_offsets = {node: (pos[node][0]-0.2, pos[node][1]-0.22) for node in self.graph.nodes}
+        # text_offsets = {node: (pos[node][0]-0.2, pos[node][1]-0.22) for node in self.graph.nodes}
+        y_positions = [y for _, y in pos.values()]
+        y_min, y_max = min(y_positions), max(y_positions)
+        lower_third_boundary = y_min + (y_max - y_min) / 3
+
+        # Adjust text offsets based on node position in the graph
+        text_offsets = {}
+        for node, (x, y) in pos.items():
+            if y < lower_third_boundary:  # If in the lower third, display label above the node
+                text_offsets[node] = (x-0.2, y + 0.23)
+            else:  # Otherwise, display label below the node
+                text_offsets[node] = (x-0.2, y - 0.23)
+        
         for node, (x, y) in text_offsets.items():
             plt.text(x, y, node_labels[node], ha='left', va='center', fontsize=9, bbox=dict(facecolor='white', alpha=0.7))
 
         # Draw edge labels for priorities
         edge_labels = nx.get_edge_attributes(self.graph, 'priority')
         nx.draw_networkx_edge_labels(self.graph, pos, edge_labels=edge_labels)
+
+        # Add a legend to show node status colors
+        legend_elements = [
+            plt.Line2D([0], [0], marker='o', color='w', label=status.name, markersize=10, markerfacecolor=color)
+            for status, color in status_colors.items()
+        ]
+        plt.legend(handles=legend_elements, title="Workflow Node Status", loc='upper left', fontsize='medium')
 
         plt.title("Workflow Graph")
         plt.show()
