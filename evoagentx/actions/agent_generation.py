@@ -1,7 +1,7 @@
 from pydantic import Field
 from typing import Optional, List
 
-# from ..core.parser import Parser
+from ..core.logging import logger
 from ..core.module import BaseModule
 from ..core.base_config import Parameter
 from ..models.base_model import BaseLLM
@@ -48,6 +48,10 @@ class AgentGeneration(Action):
         super().__init__(name=name, description=description, prompt=prompt, inputs_format=inputs_format, outputs_format=outputs_format, **kwargs)
     
     def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, **kwargs) -> AgentGenerationOutput:
+        
+        if not inputs:
+            logger.error("AgentGeneration action received invalid `inputs`: None or empty.")
+            raise ValueError('The `inputs` to AgentGeneration action is None or empty.')
         
         inputs_format: AgentGenerationInput = self.inputs_format
         outputs_format: AgentGenerationOutput = self.outputs_format
