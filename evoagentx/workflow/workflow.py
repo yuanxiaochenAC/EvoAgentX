@@ -1,36 +1,32 @@
 from pydantic import Field
+from typing import Optional
 from ..core.module import BaseModule
 from ..core.module_utils import generate_id
-from ..models.model_configs import LLMConfig
+# from ..models.model_configs import LLMConfig
 from ..models.base_model import BaseLLM
 from ..agents.agent_manager import AgentManager
 from ..storages.base import StorageHandler
-from .workflow_graph import WorkFlowGraph
 from .environment import Environment
 from .workflow_manager import WorkFlowManager
+from .workflow_graph import WorkFlowNode, WorkFlowGraph, WorkFlowNodeState
 
 
 class WorkFlow(BaseModule):
 
     graph: WorkFlowGraph
     agent_manager: AgentManager
-
-    llm_config: LLMConfig = None
-    llm: BaseLLM = None
-    workflow_id: str = Field(default_factory=generate_id)
-    workflow_manager: WorkFlowManager = Field(default_factory=WorkFlowManager)
+    llm: Optional[BaseLLM] = None
+    workflow_manager: WorkFlowManager = Field(default=None, description="Responsible for task and action scheduling for workflow execution")
     environment: Environment = Field(default_factory=Environment)
     storage_handler: StorageHandler = None
+    workflow_id: str = Field(default_factory=generate_id)
     version: int = 0 
 
     def init_module(self):
-        pass
-
-    def is_workflow_complete(self):
-        """
-        Determine if the workflow has completed.
-        """
-        pass
+        if self.workflow_manager is None:
+            if self.llm is None:
+                raise ValueError("Must provide `llm` when `workflow_manager` is None")
+            self.workflow_manager = WorkFlowManager(llm=self.llm)
 
     def execute(self, **kwargs):
         """
@@ -49,8 +45,8 @@ class WorkFlow(BaseModule):
             - If the state of the current task is WorkFlowNodeState.FAILED, stop execution and return the error message. 
         If the workflow is successfully executed, update the agent's long_term_memory based on the short_term_memory.
         """
-        pass
-
-
-    
-    
+        failed = False
+        while not self.graph.is_complete and not failed:
+            task: WorkFlowNode = self.workflow_manager.schedule_next_task(graph=self.graph, env=self.environment)
+            if task is None:
+                break
