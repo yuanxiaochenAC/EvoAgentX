@@ -687,6 +687,8 @@ class WorkFlowGraph(BaseModule):
         return children_nodes_with_complete_predecessors
 
     def next(self) -> List[WorkFlowNode]:
+        if self.is_complete:
+            return [] 
         candidate_node_names = self.get_next_candidate_nodes()
         candidate_tasks = [self.get_node(node_name=node_name) for node_name in candidate_node_names]
         return candidate_tasks
@@ -791,3 +793,22 @@ class WorkFlowGraph(BaseModule):
 
         plt.title("Workflow Graph")
         plt.show()
+
+    def get_workflow_description(self) -> str:
+
+        def format_parameters(params: List[Parameter]) -> str:
+            if not params:
+                return "None"
+            return "\n".join(f"  - {param.name} ({param.type}): {param.description}" for param in params)
+        
+        subtask_texts = [] 
+        for node in self.nodes:
+            text = (
+                f"Task Name: {node.name}\n"
+                f"Description: {node.description}\n"
+                f"Inputs:\n{format_parameters(node.inputs)}\n"
+                f"Outputs:\n{format_parameters(node.outputs)}"
+            )
+            subtask_texts.append(text)
+        workflow_desc = "\n\n".join(subtask_texts)
+        return workflow_desc
