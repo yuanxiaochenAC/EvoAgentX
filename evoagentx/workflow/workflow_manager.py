@@ -1,8 +1,10 @@
 from pydantic import Field
+from typing import Union, List
 
 from ..core.parser import Parser
 from ..models.base_model import BaseLLM
 from ..core.module import BaseModule
+from ..prompts.workflow_manager import DEFAULT_TASK_SCHEDULER
 from ..actions.action import Action
 from ..agents.agent_manager import AgentManager
 from .environment import Environment
@@ -22,22 +24,28 @@ class TaskScheduler(Action):
     Determines the next task to execute based on the workflow graph and node statuses.
     """
     def __init__(self, **kwargs):
-        name = kwargs.pop("name", None) if "name" in kwargs else "todo_default_name"
-        description = kwargs.pop("description", None) if "description" in kwargs else "todo_default_description"
-        super().__init__(name=name, description=description, **kwargs)
+        name = kwargs.pop("name", None) if "name" in kwargs else DEFAULT_TASK_SCHEDULER["name"]
+        description = kwargs.pop("description", None) if "description" in kwargs else DEFAULT_TASK_SCHEDULER["description"]
+        prompt = kwargs.pop("prompt", None) if "prompt" in kwargs else DEFAULT_TASK_SCHEDULER["prompt"]
+        super().__init__(name=name, description=description, prompt=prompt, **kwargs)
 
-    def execute(self, graph: WorkFlowGraph, env: Environment = None, **kwargs) -> str:
+    def execute(self, graph: WorkFlowGraph, env: Environment = None, **kwargs) -> Union[str, None]:
         """
         Determine the next executable tasks.
 
         Args:
             graph (WorkFlowGraph): The workflow graph.
+            env (Environment): The execution environment. 
         
         Returns:
             str: the name of the task to execute. 
         """
-        pass 
-
+        candidate_tasks: List[WorkFlowNode] = graph.next()
+        if not candidate_tasks:
+            return None
+        if len(candidate_tasks) == 1:
+            return candidate_tasks[0].name
+        # todo 
 
 class NextAction(Parser):
     agent: str
@@ -83,8 +91,6 @@ class WorkFlowManager(BaseModule):
         """
         Return the next task to execute. 
         """
-        if graph.is_complete:
-            return None
         task_name = self.task_scheduler.execute(graph=graph, env=env)
         task: WorkFlowNode = graph.get_node(task_name)
         return task
