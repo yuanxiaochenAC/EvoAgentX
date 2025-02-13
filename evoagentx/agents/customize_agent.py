@@ -8,6 +8,36 @@ from ..prompts.utils import DEFAULT_SYSTEM_PROMPT
 from ..actions.action import Action, ActionInput, ActionOutput
 from ..utils.utils import generate_dynamic_class_name
 
+@classmethod
+def customize_get_content_data(cls, content: str, **kwargs) -> dict:
+    """
+    parse the LLM generated data to a dict, only valid when the data of all attrs is continuous in the `content`.
+    """
+    attrs = cls.get_attrs()
+    if not attrs:
+        return {}
+    output_titles = [f"## {attr}" for attr in attrs]
+
+    def is_output_title(text: str):
+        return any(text.strip().startswith(title) for title in output_titles)
+
+    data = {}
+    current_output_name: str = None
+    current_output_content: list = None
+    for line in content.split("\n"):
+        if is_output_title(line):
+            if current_output_name is not None and current_output_content is not None:
+                data[current_output_name] = "\n".join(current_output_content)
+            current_output_content = []
+            current_output_name = line.replace("#", "").strip()
+        else: 
+            if current_output_content is not None:
+                current_output_content.append(line)
+    if current_output_name is not None and current_output_content is not None:
+        data[current_output_name] = "\n".join(current_output_content)
+    return data
+
+
 def customize_action_execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, **kwargs) -> ActionOutput:
 
     prompt_params_names = self.inputs_format.get_attrs()
@@ -81,7 +111,8 @@ class CustomizeAgent(Agent):
         action_output_type = create_model(
             generate_dynamic_class_name(name+" ActionOutput"),
             **action_output_fields, 
-            __base__=ActionOutput
+            __base__=ActionOutput,
+            get_content_data=customize_get_content_data
         )
 
         customize_action_cls = create_model(
