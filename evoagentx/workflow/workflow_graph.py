@@ -707,6 +707,14 @@ class WorkFlowGraph(BaseModule):
             loop_nodes = set(sum(loops, []))
             for loop_node in loop_nodes:
                 self.pending(node=loop_node)
+        if not self.edge_exists(edge=(source_node_name, target_node_name)):
+            # the execution doesn't follow an edge means re-executing a previous subtask due to errors or incomplete output
+            # find a path that contains both source_node and target node and set them as "pending"
+            all_paths = self.get_all_paths_from_node(start_node=target_node_name)
+            for path in all_paths:
+                if source_node_name in path:
+                    for node_name in path:
+                        self.pending(node=node_name)
         self.running(node=target_node_name)
     
     def get_node_description(self, node: Union[str, WorkFlowNode]) -> str:
