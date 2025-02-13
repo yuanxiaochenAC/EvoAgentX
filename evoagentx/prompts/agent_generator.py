@@ -232,10 +232,10 @@ You are tasked with generating agents to complete a sub-task within a workflow. 
 5.2 **Agent Prompt Component**: The `prompt` field of the agent should be a string that uses the following template:
 ```
 ### Objective
-{{Clearly state the goal of the agent.}}
+Clearly state the goal of the agent. 
 
 ### Instructions
-{{instructions}}
+instructions
 
 ### Output Format
 Your final output should ALWAYS in the following format:
@@ -243,15 +243,18 @@ Your final output should ALWAYS in the following format:
 ## Thought
 Briefly explain the reasoning process for achieving the objective.
 
-## {{Output Name}}
-{{provide a description for this output}}
+## [Output Name]
+provide a description for this output
 ```
-You should STRICTLY use the above template to generate the `prompt` field of the agent. The variables you should change are marked with brackets ({{variable}}).
-Specifically, you should generate {{instructions}} following these principles:
-- Provide a clear and logical sequence of actions the agent should follow to complete its task. 
-- Reference the input variables using placeholders (e.g., `{{input_name}}`) that match the agent's `inputs`. You MUST use a SINGLE curly brace to reference the inputs.
-- Include instructions on how the agent can use relevant tools from the "### Tools" section to assist with its task if applicable. 
-Moreover, the {{Output Name}} should match those listed in the `outputs` field of the corresponding agent. 
+You should STRICTLY use the above template to generate the `prompt` field of the agent. You should follow these principles to formuate the prompt: 
+- In the '### Objective' section, you should provide a clear description of the agent's goal. 
+- In the '### Instructions' section, you should generate step-by-step instructions based on the following principles: 
+    - Provide a clear and logical sequence of actions the agent should follow to complete its task. 
+    - Reference the input variables using placeholders (e.g., </input>{{input_name}}</input>) that match the agent's `inputs`. You MUST use a SINGLE pair of curly brace warpped by "</input>" to reference the inputs.
+    - Include instructions on how the agent can use relevant tools from the "### Tools" section to assist with its task if applicable. 
+- In the '### Output Format' section, 
+    - For the '## Thought' subsection, keep the text 'Briefly explain the reasoning process for achieving the objective'. 
+    - For the '## [Output Name]' subsection, you should fist change the '[Output Name]' to the one listed in the `outputs` field of the corresponding agent (If the agent has multiple outputs, list each of them as a separate subsection). After that, you should provide a clear description of this output. 
 
 5.3 **Determine the Number of Agents**: Decide how many agents are needed based on the task's complexity and requirements. 
 - **Sequential WorkFlow**: Agents should work sequentially, where the outputs of an agent can serve as inputs for the following agents. 
@@ -264,8 +267,7 @@ Moreover, the {{Output Name}} should match those listed in the `outputs` field o
 - Ensure that ALL `inputs` defined in the sub-task are used by at least on created agent. 
 - Ensure that ALL `outputs` defined in the sub-task can be derived from the `outputs` of the created agents.
 - Ensure that the generated agent's input and output strictly follow the input and output names defined in the sub-task description. Do not replace the task's expected input and output with internal function parameters or return values.  
-- You must use SINGLE curly brace to reference inputs in the "### Instructions" of an agent's prompt.
-- You must use two DOUBLE curly braces to define output format in the "### Output Format (in JSON)" of an agent's prompt.
+- You must use a SINGLE pair of curly brace warpped by "</input>" to reference inputs in the "### Instructions" of an agent's prompt.
 
 ### Output Format
 Your final output should ALWAYS in the following format:
