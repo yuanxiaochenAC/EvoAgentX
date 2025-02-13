@@ -1,5 +1,5 @@
 from pydantic import Field
-from typing import Union, List
+from typing import Union, Optional, List
 
 from ..core.parser import Parser
 from ..models.base_model import BaseLLM
@@ -29,7 +29,7 @@ class TaskScheduler(Action):
         prompt = kwargs.pop("prompt", None) if "prompt" in kwargs else DEFAULT_TASK_SCHEDULER["prompt"]
         super().__init__(name=name, description=description, prompt=prompt, **kwargs)
 
-    def execute(self, graph: WorkFlowGraph, env: Environment = None, **kwargs) -> Union[str, None]:
+    def execute(self, graph: WorkFlowGraph, env: Environment = None, llm: Optional[BaseLLM] = None, **kwargs) -> Union[str, None]:
         """
         Determine the next executable tasks.
 
