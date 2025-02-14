@@ -69,6 +69,21 @@ class WorkFlowNode(BaseModule):
     def is_complete(self) -> bool:
         return self.status == WorkFlowNodeState.COMPLETED
     
+    def get_task_info(self) -> str:
+
+        def format_parameters(params: List[Parameter]) -> str:
+            if not params:
+                return "None"
+            return "\n".join(f"  - {param.name} ({param.type}): {param.description}" for param in params)
+        
+        desc = (
+            f"Name: {self.name}\n"
+            f"Description: {self.description}\n"
+            f"Inputs:\n{format_parameters(self.inputs)}\n"
+            f"Outputs:\n{format_parameters(self.outputs)}\n"
+        )
+        return desc
+
 
 class WorkFlowEdge(BaseModule):
 
@@ -694,6 +709,11 @@ class WorkFlowGraph(BaseModule):
         return candidate_tasks
 
     def step(self, source_node: Union[str, WorkFlowNode], target_node: Union[str, WorkFlowNode]):
+
+        if source_node is None:
+            self.running(target_node)
+            return
+        
         source_node_name = source_node if isinstance(source_node, str) else source_node.name
         target_node_name = target_node if isinstance(target_node, str) else target_node.name
         source_node_status = self.get_node_status(source_node_name)

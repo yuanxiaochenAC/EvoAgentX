@@ -39,11 +39,14 @@ Here is the information for your decision:
 ### Workflow Information:
 {workflow_graph_representation}
 
-### Current Execution Information:
+### Workflow Execution History:
+{execution_history}
+
+### Workflow Execution Outputs:
 {execution_outputs}
 
 ### Candidate Subtasks:
-{candidate_tasks_list}
+{candidate_tasks}
 
 Output:
 """
@@ -52,4 +55,68 @@ DEFAULT_TASK_SCHEDULER = {
     "name": "TaskScheduler", 
     "description": DEFAULT_TASK_SCHEDULER_DESC, 
     "prompt": DEFAULT_TASK_SCHEDULER_PROMPT, 
+}
+
+
+DEFAULT_ACTION_SCHEDULER_DESC = "This action determines the next agent and action required to continue executing a given subtask in a multi-agent workflow. Each subtask may require multiple actions, and the scheduler makes step-by-step decisions based on subtask requirements, execution history, and available agents. The goal is to iteratively select the most suitable action that ensures efficient workflow progression until the subtask is fully completed."
+
+DEFAULT_ACTION_SCHEDULER_PROMPT="""
+### Objective
+Your task is to analyze the given subtask, its input data, execution history, and the available agents with their actions to **determine the next action to be executed**. Since completing this subtask requires multiple actions, you should select only **one** action at a time that logically continues the execution process.
+
+### Instructions
+1. Review the Subtask Information to understand its requirements, dependencies, and expected outcomes.
+2. Analyze the Subtask Input Data to determine what information is already available for execution.
+3. Check the Subtask Execution History to evaluate:
+   - Which actions have already been executed.
+   - Whether any errors or missing information exist.
+   - What the next logical step should be.
+4. Evaluate the Available Agents and Their Actions to identify the most suitable action by considering:
+   - Whether an agent has the necessary capabilities to perform the next step.
+   - Whether an agent has successfully performed a similar action before.
+   - Whether selecting this action helps in progressing toward subtask completion.
+5. Select the Best Agent and Action for the next execution step.
+6. Output the decision in the required format.
+
+### Output Format
+Your final output should ALWAYS be in the following format:
+
+## Thought  
+Provide a brief explanation of your reasoning for selecting the agent and action.
+
+## Scheduled Execution  
+Produce your answer in valid JSON with the following structure:
+```json
+{{
+    "agent": "name of the selected agent, should be EXACTLY the same as the provided agent name",
+    "action": "name of the selected action, should be EXACTLY the same as the provided action name",
+    "reason": "the reasoning for selecting this agent and action"
+}}
+```
+Note that the `action` field of the output should be chosen from the provided action names. DON'T generate your own action name.
+
+-----
+lets' begin 
+
+Here is the information for your decision:
+
+### SubTask Information 
+{task_info}
+
+### SubTask Input data 
+{task_inputs}
+
+### SubTask Execution History 
+{task_execution_history}
+
+### Available Agents and Actions 
+{agent_action_list}
+
+Output:
+"""
+
+DEFAULT_ACTION_SCHEDULER = {
+    "name": "ActionScheduler", 
+    "description": DEFAULT_ACTION_SCHEDULER_DESC, 
+    "prompt": DEFAULT_ACTION_SCHEDULER_PROMPT
 }

@@ -38,6 +38,15 @@ def customize_get_content_data(cls, content: str, **kwargs) -> dict:
     return data
 
 
+def customize_to_str(self) -> str:
+    
+    data: dict = self.get_structured_data()
+    outputs = [] 
+    for key, value in data.items():
+        outputs.append("### {}\n{}".format(key, value))
+    return "\n\n".join(outputs)
+
+
 def customize_action_execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, **kwargs) -> ActionOutput:
 
     prompt_params_names = self.inputs_format.get_attrs()
@@ -112,7 +121,8 @@ class CustomizeAgent(Agent):
             generate_dynamic_class_name(name+" ActionOutput"),
             **action_output_fields, 
             __base__=ActionOutput,
-            get_content_data=customize_get_content_data
+            get_content_data=customize_get_content_data,
+            to_str=customize_to_str
         )
 
         customize_action_cls = create_model(
@@ -121,7 +131,7 @@ class CustomizeAgent(Agent):
             execute=customize_action_execute
         )
         customize_action = customize_action_cls(
-            name = name,
+            name = generate_dynamic_class_name(name+" Action"),
             description=desc, 
             prompt=prompt, 
             inputs_format=action_input_type, 
