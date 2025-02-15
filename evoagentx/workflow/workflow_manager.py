@@ -8,7 +8,7 @@ from ..core.module import BaseModule
 from ..core.message import Message, MessageType
 from ..models.base_model import BaseLLM, LLMOutputParser
 from ..prompts.workflow_manager import DEFAULT_TASK_SCHEDULER, DEFAULT_ACTION_SCHEDULER
-from ..agents.agent import Agent
+# from ..agents.agent import Agent
 from ..actions.action import Action
 from ..agents.agent_manager import AgentManager
 from .environment import Environment, TrajectoryState
