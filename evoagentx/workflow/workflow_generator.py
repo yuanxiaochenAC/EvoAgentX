@@ -3,7 +3,7 @@ from typing import Optional, List
 from pydantic import Field, PositiveInt 
 
 from ..core.module import BaseModule
-from ..core.base_config import Parameter
+# from ..core.base_config import Parameter
 from ..core.message import Message, MessageType
 from ..models.base_model import BaseLLM
 from ..agents.agent import Agent
