@@ -75,7 +75,7 @@ class WorkFlowGenerator(BaseModule):
     ) -> WorkFlowGraph:
         
         agent_generator: AgentGenerator = self.agent_generator
-        workflow_desc = self.get_workflow_description(workflow=workflow)
+        workflow_desc = workflow.get_workflow_description()
         agent_generation_action_name = agent_generator.agent_generation_action_name
         for subtask in workflow.nodes:
             subtask_fields = ["name", "description", "reason", "inputs", "outputs"]
@@ -114,21 +114,3 @@ class WorkFlowGenerator(BaseModule):
         workflow = WorkFlowGraph(goal=goal, nodes=nodes, edges=edges)
         return workflow
     
-    def get_workflow_description(self, workflow: WorkFlowGraph) -> str:
-
-        def format_parameters(params: List[Parameter]) -> str:
-            if not params:
-                return "None"
-            return "\n".join(f"  - {param.name} ({param.type}): {param.description}" for param in params)
-        
-        subtask_texts = [] 
-        for node in workflow.nodes:
-            text = (
-                f"Task Name: {node.name}\n"
-                f"Description: {node.description}\n"
-                f"Inputs:\n{format_parameters(node.inputs)}\n"
-                f"Outputs:\n{format_parameters(node.outputs)}"
-            )
-            subtask_texts.append(text)
-        workflow_desc = "\n\n".join(subtask_texts)
-        return workflow_desc
