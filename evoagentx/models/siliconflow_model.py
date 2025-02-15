@@ -9,7 +9,7 @@ from .openai_model import OpenAILLM
 from .model_configs import SiliconFlowConfig
 from ..core.registry import register_model
 from openai import OpenAI, Stream
-from loguru import logger
+# from loguru import logger
 from .model_utils import Cost, cost_manager
 from openai.types.chat import ChatCompletion
 from .siliconflow_model_cost import model_cost

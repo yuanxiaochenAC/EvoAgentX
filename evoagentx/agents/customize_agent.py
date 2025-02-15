@@ -92,7 +92,7 @@ def customize_action_execute(self, llm: Optional[BaseLLM] = None, inputs: Option
     llm_output: LLMOutputParser = llm.generate(prompt=prompt, system_message=sys_msg)
     try:
         output = self.outputs_format.parse(llm_output.content)
-    except Exception as e:
+    except Exception:
         logger.warning(f"Couldn't automatically extract output data for '{self.name}'. Use LLM to extract output data ...")
         attr_descriptions: dict = self.outputs_format.get_attr_descriptions()
         output_description_list = [] 
