@@ -2,6 +2,7 @@ import json
 from typing import Optional, List
 from pydantic import Field, PositiveInt 
 
+from ..core.logging import logger
 from ..core.module import BaseModule
 # from ..core.base_config import Parameter
 from ..core.message import Message, MessageType
@@ -45,9 +46,12 @@ class WorkFlowGenerator(BaseModule):
 
         plan_history, plan_suggestion = "", ""
         # generate the initial workflow
+        logger.info(f"Generating a workflow for: {goal} ...")
         plan = self.generate_plan(goal=goal, history=plan_history, suggestion=plan_suggestion)
         workflow = self.build_workflow_from_plan(goal=goal, plan=plan)
+        logger.info(f"Successfully generate the following workflow:\n{workflow.get_workflow_description()}")
         # generate / assigns the initial agents
+        logger.info("Generating agents for the workflow ...")
         workflow = self.generate_agents(goal=goal, workflow=workflow, existing_agents=existing_agents)
         return workflow
     
@@ -82,6 +86,7 @@ class WorkFlowGenerator(BaseModule):
             subtask_data = {key: value for key, value in subtask.to_dict(ignore=["class_name"]).items() if key in subtask_fields}
             subtask_desc = json.dumps(subtask_data, indent=4)
             agent_generation_action_data = {"goal": goal, "workflow": workflow_desc, "task": subtask_desc}
+            logger.info(f"Generating agents for subtask: {subtask_data['name']}")
             agents: AgentGenerationOutput = agent_generator.execute(
                 action_name=agent_generation_action_name, 
                 action_input_data=agent_generation_action_data,
