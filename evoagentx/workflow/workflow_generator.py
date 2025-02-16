@@ -51,7 +51,7 @@ class WorkFlowGenerator(BaseModule):
         workflow = self.build_workflow_from_plan(goal=goal, plan=plan)
         logger.info(f"Successfully generate the following workflow:\n{workflow.get_workflow_description()}")
         # generate / assigns the initial agents
-        logger.info(f"Generating agents for the workflow ...")
+        logger.info("Generating agents for the workflow ...")
         workflow = self.generate_agents(goal=goal, workflow=workflow, existing_agents=existing_agents)
         return workflow
     
