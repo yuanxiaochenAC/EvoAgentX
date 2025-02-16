@@ -62,6 +62,7 @@ class WorkFlow(BaseModule):
                 task: WorkFlowNode = self.get_next_task()
                 if task is None:
                     break
+                logger.info(f"Executing subtask: {task.name}")
                 self.execute_task(task=task)
             except Exception as e:
                 failed = True
@@ -76,7 +77,10 @@ class WorkFlow(BaseModule):
             logger.error(error_message.content)
     
     def get_next_task(self) -> WorkFlowNode:
+        task_execution_history = " -> ".join(self.environment.task_execution_history)
+        logger.info(f"Task Execution Trajectory: {task_execution_history}. Scheduling next subtask ...")
         task: WorkFlowNode = self.workflow_manager.schedule_next_task(graph=self.graph, env=self.environment)
+        logger.info(f"The next subtask to be executed is: {task.name}")
         return task
         
     def execute_task(self, task: WorkFlowNode):
