@@ -33,7 +33,8 @@ def load_json(path: str, type: str="json"):
     if type == "json":
         try:
             with open(path, "r", encoding="utf-8") as file:
-                outputs = yaml.safe_load(file.read())
+                # outputs = yaml.safe_load(file.read()) # 用yaml.safe_load加载大文件的时候会非常慢
+                outputs = json.loads(file.read())
         except Exception:
             logger.error(f"File \"{path}\" is not a valid json file!")
     
@@ -41,7 +42,8 @@ def load_json(path: str, type: str="json"):
         outputs = []
         with open(path, "r", encoding="utf-8") as fin:
             for line in fin:
-                outputs.append(yaml.safe_load(line))
+                # outputs.append(yaml.safe_load(line))
+                outputs.append(json.loads(line))
     else:
         outputs = []
         
