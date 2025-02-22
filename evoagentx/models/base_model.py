@@ -188,7 +188,7 @@ class BaseLLM(ABC):
         """
         pass
 
-    def parse_generated_text(self, text: str, parser: Optional[Type[LLMOutputParser]]=None, **kwargs) -> LLMOutputParser:
+    def parse_generated_text(self, text: str, parser: Optional[Type[LLMOutputParser]]=None, parse_mode: Optional[str] = "json", **kwargs) -> LLMOutputParser:
         """
         use parser to obtain a structured output. 
 
@@ -204,11 +204,11 @@ class BaseLLM(ABC):
         """
         if not parser:
             parser = LLMOutputParser
-        return parser.parse(text)
+        return parser.parse(text, mode=parse_mode)
 
-    def parse_generated_texts(self, texts: List[str], parser: Optional[Type[LLMOutputParser]]=None, **kwargs) -> List[LLMOutputParser]:
+    def parse_generated_texts(self, texts: List[str], parser: Optional[Type[LLMOutputParser]]=None, parse_mode: Optional[str] = "json", **kwargs) -> List[LLMOutputParser]:
 
-        parsed_results = [self.parse_generated_text(text=text, parser=parser, **kwargs) for text in texts]
+        parsed_results = [self.parse_generated_text(text=text, parser=parser, parse_mode=parse_mode, **kwargs) for text in texts]
         return parsed_results
 
     def generate(
@@ -217,6 +217,7 @@ class BaseLLM(ABC):
         system_message: Optional[Union[str, List[str]]] = None,
         messages: Optional[Union[List[dict],List[List[dict]]]] = None,
         parser: Optional[Type[LLMOutputParser]] = None,
+        parse_mode: Optional[str] = "json", 
         **kwargs
     ) -> Union[LLMOutputParser, List[LLMOutputParser]]:
         
@@ -270,7 +271,7 @@ class BaseLLM(ABC):
                 raise ValueError(f"'prompt' must be a str or List[str], but found {type(prompt)}.")
         
         generated_texts = self.batch_generate(batch_messages=messages, **kwargs)
-        parsed_outputs = self.parse_generated_texts(texts=generated_texts, parser=parser, **kwargs)
+        parsed_outputs = self.parse_generated_texts(texts=generated_texts, parser=parser, parse_mode=parse_mode, **kwargs)
         output = parsed_outputs[0] if single_generate else parsed_outputs
 
         return output
