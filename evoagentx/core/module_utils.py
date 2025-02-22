@@ -132,6 +132,35 @@ def parse_json_from_text(text: str) -> List[str]:
     matches = [escape_json_values(match) for match in matches]
     return matches
 
+def parse_xml_from_text(text: str, label: str) -> List[str]:
+    pattern = rf"<{label}>(.*?)</{label}>"
+    matches: List[str] = regex.findall(pattern, text, regex.DOTALL)
+    values = [] 
+    if matches:
+        values = [match.strip() for match in matches]
+    return values
+
+def parse_data_from_text(text: str, datatype: str):
+
+    if datatype == "str":
+        data = text
+    elif datatype == "int":
+        data = int(text)
+    elif datatype == "float":
+        data = float(text)
+    elif datatype == "bool":
+        data = text.lower() in ("true", "yes", "1", "on", "True")
+    elif datatype == "list":
+        data = eval(text)
+    elif datatype == "dict":
+        data = eval(text)
+    else:
+        raise ValueError(
+            f"Invalid value '{datatype}' is detected for `datatype`. "
+            "Available choices: ['str', 'int', 'float', 'bool', 'list', 'dict']"
+        )
+    return data
+
 def parse_json_from_llm_output(text: str) -> dict:
     """
     Extract JSON str from LLM outputs and convert it to dict. 
