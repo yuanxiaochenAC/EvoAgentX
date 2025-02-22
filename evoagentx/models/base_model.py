@@ -69,8 +69,9 @@ class LLMOutputParser(Parser):
     
     @classmethod
     def _parse_str_content(cls, content: str, **kwargs) -> dict:
-        # by default, it returns all the generated text.
-        return {"content": content}
+        # if `parse_mode=str` in llm.generate(), it will set all the defined parameters to `content`
+        attrs = cls.get_attrs()
+        return {attr: content for attr in attrs}
     
     @classmethod 
     def _parse_json_content(cls, content: str, **kwargs) -> dict:
