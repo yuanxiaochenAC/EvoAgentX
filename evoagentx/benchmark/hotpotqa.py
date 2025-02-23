@@ -1,5 +1,5 @@
 import os 
-from typing import Optional, Any
+from typing import Any
 from .benchmark import Benchmark
 from .measures import exact_match_score, f1_score
 from ..core.logging import logger
