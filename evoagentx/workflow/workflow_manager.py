@@ -118,7 +118,7 @@ class NextAction(LLMOutputParser):
         elif self.action_graph is not None:
             return f"The predefined action graph '{type(self.action_graph).__name__}' will be executed."
         else:
-            raise ValueError(f"must provide either both agent (str) and action (str), or action_graph (ActionGraph).")
+            raise ValueError("must provide either both agent (str) and action (str), or action_graph (ActionGraph).")
 
 
 class ActionScheduler(Action):
