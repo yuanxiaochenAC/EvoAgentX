@@ -16,10 +16,6 @@ from .workflow_graph import WorkFlowNode, WorkFlowGraph
 from .action_graph import ActionGraph
 
 
-# class WorkFlowInput(LLMOutputParser):
-#     goal: str 
-
-
 class WorkFlow(BaseModule):
 
     graph: WorkFlowGraph
