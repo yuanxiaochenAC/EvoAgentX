@@ -468,7 +468,9 @@ class WorkFlowGraph(BaseModule):
     
     @property
     def is_complete(self):
-        node_complete_list = [node.is_complete for node in self.nodes]
+        # node_complete_list = [node.is_complete for node in self.nodes]
+        leaf_nodes = [self.get_node(name) for name in self.find_end_nodes()]
+        node_complete_list = [node.is_complete for node in leaf_nodes]
         if len(node_complete_list) == 0:
             return True
         if all(node_complete_list):
@@ -545,6 +547,9 @@ class WorkFlowGraph(BaseModule):
 
         def dfs(current_node_name: str, path: List[str]):
             if current_node_name in visited:
+                # 如果一个loop的end node只有指向loop的start node的边，那么添加这条路径
+                if path and len(self.get_node_children(path[-1])) == 1:
+                    all_paths.append(path.copy())
                 return
             path.append(current_node_name)
             visited.add(current_node_name)
@@ -785,6 +790,10 @@ class WorkFlowGraph(BaseModule):
             WorkFlowNodeState.FAILED: 'red'
         }
 
+        if not self.graph.nodes:
+            print("Graph is empty. No nodes to display.")
+            return
+
         # Get node colors based on their statuses
         node_colors = [status_colors.get(self.get_node_status(node), 'lightgray') for node in self.graph.nodes]
 
@@ -792,29 +801,39 @@ class WorkFlowGraph(BaseModule):
         node_labels = {node: self.get_node_description(data["ref"]) for node, data in self.graph.nodes(data=True)}
         
         # Draw the graph
-        pos = nx.shell_layout(self.graph)
+        # pos = nx.shell_layout(self.graph)
+        if len(self.graph.nodes) == 1:
+            single_node = list(self.graph.nodes)[0]
+            pos = {single_node: (0, 0)}  # Place the single node at the center
+        else:
+            pos = nx.shell_layout(self.graph)
+        
         plt.figure(figsize=(12, 8))
         nx.draw(
             self.graph, pos, with_labels=False, node_color=node_colors, edge_color='black',
             node_size=1500, font_size=8, font_color='black', font_weight='bold'
         )
 
-        # Draw node labels next to the nodes (left-aligned)
-        # text_offsets = {node: (pos[node][0]-0.2, pos[node][1]-0.22) for node in self.graph.nodes}
-        y_positions = [y for _, y in pos.values()]
-        y_min, y_max = min(y_positions), max(y_positions)
-        lower_third_boundary = y_min + (y_max - y_min) / 3
+        if len(self.graph.nodes) == 1:
+            for node, (x, y) in pos.items():
+                plt.text(x+0.005, y, node_labels[node], ha='left', va='center', fontsize=9, bbox=dict(facecolor='white', alpha=0.7))
+        else:
+            # Draw node labels next to the nodes (left-aligned)
+            # text_offsets = {node: (pos[node][0]-0.2, pos[node][1]-0.22) for node in self.graph.nodes}
+            y_positions = [y for _, y in pos.values()]
+            y_min, y_max = min(y_positions), max(y_positions)
+            lower_third_boundary = y_min + (y_max - y_min) / 3
 
-        # Adjust text offsets based on node position in the graph
-        text_offsets = {}
-        for node, (x, y) in pos.items():
-            if y < lower_third_boundary:  # If in the lower third, display label above the node
-                text_offsets[node] = (x-0.2, y + 0.23)
-            else:  # Otherwise, display label below the node
-                text_offsets[node] = (x-0.2, y - 0.23)
-        
-        for node, (x, y) in text_offsets.items():
-            plt.text(x, y, node_labels[node], ha='left', va='center', fontsize=9, bbox=dict(facecolor='white', alpha=0.7))
+            # Adjust text offsets based on node position in the graph
+            text_offsets = {}
+            for node, (x, y) in pos.items():
+                if y < lower_third_boundary:  # If in the lower third, display label above the node
+                    text_offsets[node] = (x-0.2, y + 0.23)
+                else:  # Otherwise, display label below the node
+                    text_offsets[node] = (x-0.2, y - 0.23)
+            
+            for node, (x, y) in text_offsets.items():
+                plt.text(x, y, node_labels[node], ha='left', va='center', fontsize=9, bbox=dict(facecolor='white', alpha=0.7))
 
         # Draw edge labels for priorities
         edge_labels = nx.get_edge_attributes(self.graph, 'priority')
@@ -832,10 +851,16 @@ class WorkFlowGraph(BaseModule):
 
     def get_workflow_description(self) -> str:
 
+        def format_param_requirement(required: bool):
+            return "required" if required else "optional"
+        
         def format_parameters(params: List[Parameter]) -> str:
             if not params:
                 return "None"
-            return "\n".join(f"  - {param.name} ({param.type}): {param.description}" for param in params)
+            return "\n".join(
+                f"  - {param.name} ({param.type}, {format_param_requirement(param.required)}): "
+                f"{param.description}" for param in params
+            )
         
         subtask_texts = [] 
         for node in self.nodes:

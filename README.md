@@ -17,6 +17,7 @@ from evoagentx.agents import AgentManager
 from evoagentx.workflow import WorkFlowGenerator, WorkFlowGraph, WorkFlow
 
 OPENAI_API_KEY = "OPENAI_API_KEY" 
+# set output_response=True to see LLM outputs 
 openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=False)
 model = OpenAILLM(config=openai_config)
 
