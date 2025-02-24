@@ -61,7 +61,7 @@ class GeneratedAgent(BaseModule):
         def replace_with_braces(match):
             instructions = match.group(1)
             for name in input_names:
-                instructions = re.sub(fr'</input>{{*\b{re.escape(name)}\b}}*</input>', fr'</input>{{{name}}}</input>', instructions)
+                instructions = re.sub(fr'<input>{{*\b{re.escape(name)}\b}}*</input>', fr'<input>{{{name}}}</input>', instructions)
             return "### Instructions" + instructions + "### Output Format"
         
         modified_prompt = re.sub(pattern, replace_with_braces, prompt, flags=re.DOTALL)
