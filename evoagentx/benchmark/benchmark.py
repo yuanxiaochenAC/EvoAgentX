@@ -71,7 +71,10 @@ class Benchmark(ABC):
             dict: A dictionary containing evaluation metrics.
         """
         pass 
-
+    
+    def get_label(self, example: List[Any]) -> Any:
+        return self._get_label(example=example)
+    
     def get_labels(self, examples: List[Any]) -> List[Any]:
         return [self._get_label(example=example) for example in examples]
     
