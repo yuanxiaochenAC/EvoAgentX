@@ -1,3 +1,4 @@
+import json
 import threading
 from enum import Enum
 import networkx as nx 
@@ -12,7 +13,9 @@ from ..core.module import BaseModule
 from ..core.base_config import Parameter
 from ..core.decorators import atomic_method
 from .action_graph import ActionGraph
-
+from ..models.base_model import BaseLLM
+from ..models.model_configs import LLMConfig
+from ..utils.utils import generate_dynamic_class_name
 
 class WorkFlowNodeState(str, Enum):
     PENDING="pending"
@@ -873,3 +876,123 @@ class WorkFlowGraph(BaseModule):
             subtask_texts.append(text)
         workflow_desc = "\n\n".join(subtask_texts)
         return workflow_desc
+    
+    def _infer_edges_from_nodes(self, nodes: List[WorkFlowNode]) -> List[WorkFlowEdge]:
+
+        if not nodes:
+            return []
+        edges: List[WorkFlowEdge] = []
+        for node in nodes:
+            for another_node in nodes:
+                if node.name == another_node.name:
+                    continue
+                node_output_params = [param.name for param in node.outputs]
+                another_node_input_params = [param.name for param in another_node.inputs]
+                if any([param in another_node_input_params for param in node_output_params]):
+                    edges.append(WorkFlowEdge(edge_tuple=(node.name, another_node.name)))
+        return edges
+
+
+class LinearWorkFlowGraph(WorkFlowGraph):
+
+    """
+    A linear workflow graph with a single path from start to end.
+
+    Args:
+        goal (str): The goal of the workflow.
+        tasks (List[dict]): A list of tasks with their descriptions and inputs. Each task should have the following format:
+            {
+                "name": str,
+                "description": str,
+                "inputs": [{"name": str, "type": str, "required": bool, "description": str}, ...],
+                "outputs": [{"name": str, "type": str, "required": bool, "description": str}, ...],
+                "prompt": str, 
+                "llm_config" (optional): dict,
+                "llm" (optional): BaseLLM,
+                "output_parser" (optional): Type[ActionOutput],
+                "parse_mode" (optional): str,
+                "parse_func" (optional): Callable
+            }
+        llm_config (LLMConfig, optional): The default configuration for the LLM. If provided, it will be used as the default configuration for agents without `llm_config`.
+        llm (BaseLLM, optional): The default LLM. If provided, it will be used as the default LLM for agents without `llm`.
+    """
+
+    def __init__(self, goal: str, tasks: List[dict], llm_config: Optional[LLMConfig] = None, llm: Optional[BaseLLM] = None, **kwargs):
+        if llm_config is not None or llm is not None:
+            assert (llm_config is not None) != (llm is not None), "exactly one of `llm_config` or `llm` should be provided"
+        nodes = self._infer_nodes_from_tasks(tasks=tasks, llm_config=llm_config, llm=llm)
+        edges = self._infer_edges_from_nodes(nodes=nodes)
+        super().__init__(goal=goal, nodes=nodes, edges=edges, **kwargs)
+    
+    def _infer_nodes_from_tasks(self, tasks: List[dict], llm_config: Optional[LLMConfig] = None, llm: Optional[BaseLLM] = None) -> List[WorkFlowNode]:
+        nodes = [self._infer_node_from_task(task=task, llm_config=llm_config, llm=llm) for task in tasks]
+        return nodes
+    
+    def _infer_node_from_task(self, task: dict, llm_config: Optional[LLMConfig] = None, llm: Optional[BaseLLM] = None) -> WorkFlowNode:
+
+        node_name = task["name"] 
+        node_description = task["description"]
+        inputs = task["inputs"]
+        outputs = task["outputs"]
+        agent_name = generate_dynamic_class_name(node_name+" Agent")
+        agent_description = node_description.replace("task", "agent")
+        agent_prompt = task["prompt"]
+        agent_llm_config = task.get("llm_config", llm_config)
+        agent_llm = task.get("llm", llm)
+        agent_output_parser = task.get("output_parser", None)
+        agent_parse_mode = task.get("parse_mode", "str")
+        agent_parse_func = task.get("parse_func", None)
+
+        node = WorkFlowNode.from_dict(
+            {
+                "name": node_name,
+                "description": node_description,
+                "inputs": inputs,
+                "outputs": outputs,
+                "agents": [
+                    {
+                        "name": agent_name,
+                        "description": agent_description,
+                        "prompt": agent_prompt,
+                        "llm_config": agent_llm_config,
+                        "llm": agent_llm,
+                        "inputs": inputs,
+                        "outputs": outputs,
+                        "output_parser": agent_output_parser,
+                        "parse_mode": agent_parse_mode,
+                        "parse_func": agent_parse_func
+                    }
+                ],
+            }
+        )
+        return node
+    
+    def save_module(self, path: str, ignore: List[str] = [], **kwargs):
+        """
+        Save the workflow graph to a module file.
+        """
+        config = {
+            "goal": self.goal, 
+            "tasks": [
+                {
+                    "name": node.name,
+                    "description": node.description,
+                    "inputs": [param.to_dict(ignore=["class_name"]) for param in node.inputs],
+                    "outputs": [param.to_dict(ignore=["class_name"]) for param in node.outputs],
+                    "prompt": node.agents[0].get("prompt", None),
+                    "llm_config": node.agents[0].get("llm_config", None).to_dict(exclude_none=True) \
+                        if node.agents[0].get("llm_config", None) is not None else \
+                            node.agents[0]["llm"].config.to_dict(exclude_none=True),
+                    "parse_mode": node.agents[0].get("parse_mode", "str")
+                }
+                for node in self.nodes
+            ]
+        }
+
+        for ignore_key in ignore:
+            config.pop(ignore_key, None)
+
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=4)
+
+        return path

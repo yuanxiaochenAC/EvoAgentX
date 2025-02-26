@@ -1,6 +1,6 @@
 import json
 from pydantic import create_model, Field
-from typing import Union, Optional, Callable, List
+from typing import Union, Optional, Callable, Type, List
 
 from .agent import Agent
 from ..core.logging import logger
@@ -48,7 +48,7 @@ def customize_action_execute(self, llm: Optional[BaseLLM] = None, inputs: Option
         elif isinstance(value, (dict, list)):
             prompt_params_values[param] = json.dumps(value, indent=4)
         else:
-            raise TypeError(f"The input type {type(value)} to `customize_action_execute` is invalid! Valid types: str, dict, list.")
+            raise TypeError(f"The input type {type(value)} to `customize_action_execute` is invalid! Valid types: [str, dict, list].")
     prompt = self.prompt.format(**prompt_params_values)
     # output = llm.generate(prompt=prompt, system_message=sys_msg, parser=self.outputs_format)
     llm_output: LLMOutputParser = llm.generate(prompt=prompt, system_message=sys_msg)
@@ -80,13 +80,14 @@ class CustomizeAgent(Agent):
         "name": str, 
         "description": str, 
         "prompt": str, 
-        "llm_config": dict,
+        "llm_config": dict, / "llm": BaseLLM, 
         "inputs": [
             {name: str, type: str, description: str, [required: bool]},
         ],
         "outputs": [
             {name: str, type: str, description: str, [required: bool]}
         ],
+        "output_parser" (optional): ActionOutput,
         "parse_mode" (optional): str, default is "title"
         "parse_func" (optional): Callable, default is None
     }
@@ -114,8 +115,16 @@ class CustomizeAgent(Agent):
             if parse_func is None:
                 raise ValueError("`parse_func` must be provided when `parse_mode` is 'custom'.")
         
+        output_parser = kwargs.pop("output_parser", None)
         customize_action = self.create_customize_action(
-            name=name, desc=description, prompt=prompt, inputs=inputs, outputs=outputs, parse_mode=parse_mode, parse_func=parse_func
+            name=name, 
+            desc=description, 
+            prompt=prompt, 
+            inputs=inputs, 
+            outputs=outputs, 
+            parse_mode=parse_mode, 
+            parse_func=parse_func,
+            output_parser=output_parser
         )
         super().__init__(system_prompt=system_prompt, actions=[customize_action], **kwargs)
         self._store_inputs_outputs_info(inputs, outputs)
@@ -127,12 +136,23 @@ class CustomizeAgent(Agent):
                 return action.name
         raise ValueError("Couldn't find the customize action name!")
     
-    def create_customize_action(self, name: str, desc: str, prompt: str, inputs: List[dict], outputs: List[dict], parse_mode: str, parse_func: Callable) -> Action:
+    def create_customize_action(
+        self, 
+        name: str, 
+        desc: str, 
+        prompt: str, 
+        inputs: List[dict], 
+        outputs: List[dict], 
+        parse_mode: str, 
+        parse_func: Optional[Callable] = None,
+        output_parser: Optional[ActionOutput] = None
+    ) -> Action:
         """
         Create the customize action.
         """
         assert prompt is not None, "must provide `prompt` when creating CustomizeAgent"
 
+        # create the action input type
         action_input_fields = {}
         for field in inputs:
             required = field.get("required", True)
@@ -147,21 +167,26 @@ class CustomizeAgent(Agent):
             __base__=ActionInput
         )
 
-        action_output_fields = {}
-        for field in outputs:
-            required = field.get("required", True)
-            if required:
-                action_output_fields[field["name"]] = (Union[str, dict, list], Field(description=field["description"]))
-            else:
-                action_output_fields[field["name"]] = (Optional[Union[str, dict, list]], Field(description=field["description"]))
-        
-        action_output_type = create_model(
-            generate_dynamic_class_name(name+" ActionOutput"),
-            **action_output_fields, 
-            __base__=ActionOutput,
-            # get_content_data=customize_get_content_data,
-            # to_str=customize_to_str
-        )
+        # create the action output type
+        if output_parser is None:
+            action_output_fields = {}
+            for field in outputs:
+                required = field.get("required", True)
+                if required:
+                    action_output_fields[field["name"]] = (Union[str, dict, list], Field(description=field["description"]))
+                else:
+                    action_output_fields[field["name"]] = (Optional[Union[str, dict, list]], Field(description=field["description"]))
+            
+            action_output_type = create_model(
+                generate_dynamic_class_name(name+" ActionOutput"),
+                **action_output_fields, 
+                __base__=ActionOutput,
+                # get_content_data=customize_get_content_data,
+                # to_str=customize_to_str
+            )
+        else:
+            self._check_output_parser(outputs, output_parser)
+            action_output_type = output_parser
 
         customize_action_cls = create_model(
             generate_dynamic_class_name(name+" Action"),
@@ -181,6 +206,26 @@ class CustomizeAgent(Agent):
             parse_func=parse_func
         )
         return customize_action
+    
+    def _check_output_parser(self, outputs: List[dict], output_parser: Type[ActionOutput]):
+        """
+        Check if the output parser is valid.
+        """
+        if output_parser is not None:
+            if not isinstance(output_parser, type):
+                raise TypeError(f"output_parser must be a class, but got {type(output_parser).__name__}")
+            if not issubclass(output_parser, ActionOutput):
+                raise ValueError(f"`output_parser` must be a class and a subclass of `ActionOutput`, but got `{output_parser.__name__}`.")
+        
+        # check if the output parser is compatible with the outputs
+        output_parser_fields = output_parser.get_attrs()
+        for field in outputs:
+            if field["name"] not in output_parser_fields:
+                raise ValueError(
+                    f"The output parser `{output_parser.__name__}` is not compatible with the `outputs`.\n"
+                    f"The output parser fields: {output_parser_fields}.\n"
+                    f"The outputs: {outputs}."
+                )
     
     def _store_inputs_outputs_info(self, inputs: List[dict], outputs: List[dict]):
         """
