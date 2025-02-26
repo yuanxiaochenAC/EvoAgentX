@@ -87,7 +87,7 @@ class CustomizeAgent(Agent):
         "outputs": [
             {name: str, type: str, description: str, [required: bool]}
         ],
-        "output_parser" (optional): ActionOutput,
+        "output_parser" (optional): Type[ActionOutput],
         "parse_mode" (optional): str, default is "title"
         "parse_func" (optional): Callable, default is None
     }
