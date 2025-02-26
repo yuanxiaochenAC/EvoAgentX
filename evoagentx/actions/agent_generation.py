@@ -125,7 +125,8 @@ class AgentGeneration(Action):
         agents = llm.generate(
             prompt = prompt, 
             system_message = sys_msg, 
-            parser=outputs_format
+            parser=outputs_format,
+            parse_mode="json"
         )
         
         if return_prompt:
