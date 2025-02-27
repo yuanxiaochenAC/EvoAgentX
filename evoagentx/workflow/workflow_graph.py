@@ -16,7 +16,7 @@ from .action_graph import ActionGraph
 from ..models.base_model import BaseLLM
 from ..models.model_configs import LLMConfig
 from ..utils.utils import generate_dynamic_class_name
-from ..prompts.sem_workflow import SEM_WORKFLOW
+from ..prompts.workflow.sem_workflow import SEM_WORKFLOW
 
 
 class WorkFlowNodeState(str, Enum):
