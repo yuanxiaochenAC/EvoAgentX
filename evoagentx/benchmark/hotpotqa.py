@@ -60,7 +60,7 @@ class HotPotQA(Benchmark):
     def _get_id(self, example: Any) -> Any:
         return example["_id"]
     
-    def evaluate(prediction: Any, label: Any) -> dict:
+    def evaluate(self, prediction: Any, label: Any) -> dict:
         em = exact_match_score(prediction=prediction, ground_truth=label)
         f1 = f1_score(prediction=prediction, ground_truth=label)
         return {"f1": f1, "em": em}
