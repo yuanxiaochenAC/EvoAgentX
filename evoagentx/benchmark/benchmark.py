@@ -66,7 +66,7 @@ class Benchmark(ABC):
         pass
 
     @abstractmethod
-    def evaluate(prediction: Any, label: Any) -> dict:
+    def evaluate(self, prediction: Any, label: Any) -> dict:
         """
         Abstract method to evaluate a single prediction against the ground-truth label.
         
