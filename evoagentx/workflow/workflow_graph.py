@@ -16,6 +16,8 @@ from .action_graph import ActionGraph
 from ..models.base_model import BaseLLM
 from ..models.model_configs import LLMConfig
 from ..utils.utils import generate_dynamic_class_name
+from ..prompts.sem_workflow import SEM_WORKFLOW
+
 
 class WorkFlowNodeState(str, Enum):
     PENDING="pending"
@@ -893,7 +895,7 @@ class WorkFlowGraph(BaseModule):
         return edges
 
 
-class LinearWorkFlowGraph(WorkFlowGraph):
+class SequentialWorkFlowGraph(WorkFlowGraph):
 
     """
     A linear workflow graph with a single path from start to end.
@@ -996,3 +998,9 @@ class LinearWorkFlowGraph(WorkFlowGraph):
             json.dump(config, f, indent=4)
 
         return path
+    
+
+class SEMWorkFlowGraph(SequentialWorkFlowGraph):
+
+    def __init__(self, llm_config: Optional[LLMConfig] = None, llm: Optional[BaseLLM] = None, **kwargs):
+        super().__init__(goal=SEM_WORKFLOW["goal"], tasks=SEM_WORKFLOW["tasks"], llm_config=llm_config, llm=llm, **kwargs)
