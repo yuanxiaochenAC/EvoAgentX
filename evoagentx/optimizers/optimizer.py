@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Optional
 from pydantic import Field 
 
 from ..core.module import BaseModule
@@ -20,10 +20,25 @@ class Optimizer(BaseModule):
     eval_rounds: int = Field(default=1, description="Run evaluation for `eval_rounds` times and compute the average score.")
 
     def optimize(self, dataset: Benchmark, **kwargs):
+        """
+        Optimize the workflow.
+        """
         raise NotImplementedError(f"``optimize`` function for {type(self).__name__} is not implemented!")
 
     def step(self, **kwargs):
+        """
+        Take a step of optimization.
+        """
         raise NotImplementedError(f"``step`` function for {type(self).__name__} is not implemented!")
     
-    def evaluate(self, dataset: Benchmark, eval_mode: str = "test", **kwargs) -> dict:
+    def evaluate(self, dataset: Benchmark, eval_mode: str = "test", graph: Optional[Union[WorkFlowGraph, ActionGraph]] = None, **kwargs) -> dict:
+        """
+        Evaluate the workflow. If `graph` is provided, use the provided graph for evaluation. Otherwise, use the graph in the optimizer.
+        """
         raise NotImplementedError(f"``evaluate`` function for {type(self).__name__} is not implemented!")
+    
+    def convergence_check(self, *args, **kwargs) -> bool:
+        """
+        Check if the optimization has converged.
+        """
+        raise NotImplementedError(f"``convergence_check`` function for {type(self).__name__} is not implemented!")
