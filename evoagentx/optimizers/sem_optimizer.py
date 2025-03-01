@@ -1,6 +1,9 @@
+import yaml 
+import regex
 import numpy as np
 from pydantic import Field 
 from copy import deepcopy
+import xml.etree.ElementTree as ET
 from typing import Literal, Union, Optional, List
 
 from .optimizer import Optimizer
@@ -43,7 +46,19 @@ class SEMWorkFlowScheme:
         """
         Parse the SequentialWorkFlowGraph from the given scheme and representation.
         """
-        pass # TODO: implement the workflow parsing
+        if scheme not in VALID_SCHEMES:
+            raise ValueError(f"Invalid scheme: {scheme}. The scheme should be one of {VALID_SCHEMES}.")
+        if scheme == "python":
+            graph = self.parse_workflow_python_repr(repr)
+        elif scheme == "yaml":
+            graph = self.parse_workflow_yaml_repr(repr)
+        elif scheme == "code":
+            graph = self.parse_workflow_code_repr(repr)
+        elif scheme == "core":
+            graph = self.parse_workflow_core_repr(repr)
+        elif scheme == "bpmn":
+            graph = self.parse_workflow_bpmn_repr(repr)
+        return graph
 
     def _get_workflow_repr_info(self) -> List[dict]:
         """
@@ -70,8 +85,7 @@ class SEMWorkFlowScheme:
         name = name.replace(' ', '_').replace('-', '_')
         name = ''.join(c for c in name if c.isalnum() or c == '_')
         # Replace multiple consecutive underscores with a single underscore
-        while '__' in name:
-            name = name.replace('__', '_')
+        name = regex.sub(r'_+', "_", name)
         # Remove leading/trailing underscores
         name = name.strip('_')
         return name
@@ -212,6 +226,322 @@ class SEMWorkFlowScheme:
         workflow_lines.append(f"Step {last_step}::: Terminal ::: End of Workflow:::")
         
         return "\n".join(workflow_lines)
+
+    def _find_task_index(self, step: dict, graph_repr_info: List[dict]) -> int:
+        """
+        Find the index of the task in the original workflow graph. If the task is not found, return -1. 
+
+        Args:
+            step (dict): The step of the workflow.
+            graph_repr_info (List[dict]): The information of the original workflow graph.
+        
+        Returns:
+            int: The index of the task.
+        """
+        def _is_task_name_match(task_name: str, another_name: str) -> bool:
+            return self._convert_to_func_name(task_name) == self._convert_to_func_name(another_name)
+
+        def _is_task_inputs_match(task_inputs: List[str], another_inputs: List[str]) -> bool:
+            return len(set(task_inputs) & set(another_inputs)) == len(task_inputs)
+        
+        def _is_task_outputs_match(task_outputs: List[str], another_outputs: List[str]) -> bool:
+            return len(set(task_outputs) & set(another_outputs)) == len(task_outputs)
+        
+        for i, task in enumerate(graph_repr_info):
+            if _is_task_name_match(task["task_name"], step["name"]) and _is_task_inputs_match(task["input_names"], step["args"]) and _is_task_outputs_match(task["output_names"], step["outputs"]):
+                return i
+        return -1
+
+    def create_workflow_graph_from_steps(
+        self, 
+        steps: List[dict]
+    ) -> SequentialWorkFlowGraph:
+        
+        """
+        Create a new workflow graph from the steps.
+        Since both the inputs and outputs are provided, new tasks will be created in the new workflow graph. 
+        It is used for the `python` `yaml` and `code` representations. 
+
+        Args:
+            steps (List[dict]): The steps of the workflow. The steps are in the format of:
+                [
+                    {
+                        "name": str,
+                        "args": List[str],
+                        "outputs": List[str]
+                    }
+                ]
+        
+        Returns:
+            SequentialWorkFlowGraph: The new workflow graph.
+        """
+        original_workflow_config = self.graph.get_graph_info()
+        repr_info = self._get_workflow_repr_info()
+        new_tasks = [] 
+        for step in steps: 
+            task_index = self._find_task_index(step=step, graph_repr_info=repr_info)
+            if task_index == -1:
+                # create a new task
+                task_name = step["name"]
+                description = f"Task to {task_name.lower()}. " 
+                if step["args"]: 
+                    description += f"Takes {', '.join(step['args'])} as input. " 
+                if step["outputs"]: 
+                    description += f"Produces {', '.join(step['outputs'])} as output."
+                
+                new_task = {
+                    "name": task_name, 
+                    "description": description,
+                    "inputs": [
+                        {
+                            "name": input_name, 
+                            "type": "str", 
+                            "description": f"Input parameter {input_name} for {task_name}"
+                        } for input_name in step["args"]
+                    ], 
+                    "outputs": [
+                        {
+                            "name": output_name, 
+                            "type": "str", 
+                            "description": f"Output parameter {output_name} from {task_name}"
+                        } for output_name in step["outputs"]
+                    ], 
+                    "prompt": "to be updated",
+                    "llm_config": original_workflow_config["tasks"][0]["llm_config"], 
+                    "parse_mode": "str"     
+                }
+                new_tasks.append(new_task)
+            else:
+                # copy the task from the original workflow graph
+                new_tasks.append(deepcopy(original_workflow_config["tasks"][task_index]))
+        # create new workflow configuration 
+        new_workflow_config = {
+            "goal": original_workflow_config["goal"],
+            "tasks": new_tasks
+        }
+
+        # create new workflow graph
+        new_graph = SequentialWorkFlowGraph.from_dict(new_workflow_config)
+        return new_graph
+
+    def create_workflow_graph_from_task_names(
+        self,
+        task_names: Optional[List[str]] = None,
+        task_titles: Optional[List[str]] = None
+    ) -> SequentialWorkFlowGraph:
+        """
+        Create a new workflow graph from the task names or titles. 
+        Since only the task names or titles are provided, the tasks in the new workflow graph will be copied from the original workflow graph. 
+        It is used for the `bpmn` and `core` representations. 
+
+        Args:
+            task_names (Optional[List[str]]): The names of the tasks.
+            task_titles (Optional[List[str]]): The titles of the tasks.
+        
+        Returns:
+            SequentialWorkFlowGraph: The new workflow graph.
+        """
+        if task_names:
+            original_workflow_config = self.graph.get_graph_info()
+            tasks = task_names
+            original_tasks = {self._convert_to_func_name(task["name"]): task for task in original_workflow_config["tasks"]} 
+        elif task_titles:
+            original_workflow_config = self.graph.get_graph_info()
+            tasks = task_titles 
+            original_tasks = {self._convert_to_title(task["name"]): task for task in original_workflow_config["tasks"]}
+        else:
+            raise ValueError("No task names or titles provided.")
+
+        new_tasks = []
+        for task in tasks:
+            if task not in original_tasks:
+                raise ValueError(f"Task {task} not found in the original workflow.")
+            new_tasks.append(deepcopy(original_tasks[task]))
+        
+        # create new workflow configuration 
+        new_workflow_config = {
+            "goal": original_workflow_config["goal"],
+            "tasks": new_tasks
+        }
+
+        # create new workflow graph
+        new_graph = SequentialWorkFlowGraph.from_dict(new_workflow_config)
+        return new_graph
+
+    def parse_workflow_python_repr(self, repr: str) -> SequentialWorkFlowGraph:
+        """
+        Parse the workflow from the python representation. The input format is:
+        steps = [
+            {"name": task_name, "args": [input1, input2, ...],"outputs": [output1, output2, ...]}, 
+            {"name": another_task_name, "args": [input1, input2, ...],"outputs": [output1, output2, ...]}, 
+            ...
+        ]
+        """
+        try:
+            steps_str = repr.replace('steps = ', '').strip()
+            steps = eval(steps_str)
+            new_graph = self.create_workflow_graph_from_steps(steps=steps)
+            return new_graph
+        except Exception as e:
+            logger.warning(f"Failed to parse workflow string: {e}. Return the original workflow.")
+        
+        return self.graph
+    
+    def parse_workflow_yaml_repr(self, repr: str) -> SequentialWorkFlowGraph:
+        """
+        Parse the workflow from the yaml representation. The input format is:
+        - name: task_name
+          args:
+            - input1
+            - input2
+          outputs:
+            - output1
+        """
+        try:
+            steps = yaml.safe_load(repr)
+            new_graph = self.create_workflow_graph_from_steps(steps=steps)
+            return new_graph
+        except Exception as e:
+            logger.warning(f"Failed to parse workflow string: {e}. Return the original workflow.")
+
+        return self.graph
+    
+    def parse_workflow_code_repr(self, repr: str) -> SequentialWorkFlowGraph:
+        """
+        Parse the workflow from the code representation. 
+        The input format is:
+        task_name(input1, input2, ...) -> output1, output2, ...
+        another_task_name(input1, input2, ...) -> output1, output2, ...
+        ...
+        """
+        try:
+            lines = [line.strip() for line in repr.split("\n") if line.strip()] 
+            steps = []
+            for line in lines:
+                func_part, output_part = line.split('->')
+                func_part = func_part.strip()
+                name = func_part[:func_part.index('(')]
+                args_str = func_part[func_part.index('(') + 1:func_part.rindex(')')]
+                args = [arg.strip() for arg in args_str.split(',') if arg.strip()]
+                outputs = [out.strip() for out in output_part.split(',') if out.strip()]
+                step = {"name": name, "args": args, "outputs": outputs}
+                steps.append(step)
+            if not steps:
+                raise ValueError("No steps found in the workflow.")
+            new_graph = self.create_workflow_graph_from_steps(steps=steps)
+            return new_graph
+        except Exception as e:
+            logger.warning(f"Failed to parse workflow string: {e}. Return the original workflow.")
+
+        return self.graph
+    
+    def parse_workflow_bpmn_repr(self, repr: str) -> SequentialWorkFlowGraph:
+        """
+        Parse the workflow from the BPMN XML representation.
+        
+        The input format is BPMN XML with:
+        - task elements defining the tasks
+        - sequenceFlow elements defining the order of tasks
+        
+        Will extract ordered task names from the sequence flows and create a workflow.
+        """
+        try:            
+            # Parse XML string
+            root = ET.fromstring(repr)
+            
+            # Define namespace for BPMN XML
+            ns = {'bpmn': 'http://www.omg.org/spec/BPMN/20100524/MODEL'}
+            
+            # Get process element
+            process = root.find('bpmn:process', ns) or root.find('process')
+            
+            if process is None:
+                raise ValueError("No process element found in BPMN XML")
+                
+            # Create a dictionary of all tasks
+            tasks = {}
+            # for task in process.findall('.//task', ns) or process.findall('.//task'):
+            for task in process.findall("bpmn:task", ns): 
+                tasks[task.get('id')] = task.get('name')
+            
+            # Get sequence flows and order them
+            flows = {}
+            ordered_tasks = []
+            current_ref = 'start'
+            
+            # Create dictionary of source -> target
+            # for flow in process.findall('.//sequenceFlow', ns) or process.findall('.//sequenceFlow'):
+            for flow in process.findall("bpmn:sequenceFlow", ns): 
+                flows[flow.get('sourceRef')] = flow.get('targetRef')
+            
+            # Follow the sequence flows to get ordered tasks
+            while current_ref in flows:
+                next_ref = flows[current_ref]
+                if next_ref in tasks:  # Only add if it's a task (not end event)
+                    ordered_tasks.append(tasks[next_ref])
+                current_ref = next_ref
+            
+            # Create new workflow graph using the ordered task names
+            new_graph = self.create_workflow_graph_from_task_names(task_titles=ordered_tasks)
+            return new_graph
+            
+        except Exception as e:
+            logger.warning(f"Failed to parse BPMN workflow string: {e}. Return the original workflow.")
+        
+        return self.graph
+        
+    def parse_workflow_core_repr(self, repr: str) -> SequentialWorkFlowGraph:
+        """
+        Parse the workflow from the Core representation.
+        
+        The input format is:
+        Step 1::: Process ::: Task Name:::next::Step 2
+        Step 2::: Process ::: Another Task:::next::Step 3
+        ...
+        Step N::: Terminal ::: End of Workflow:::
+        
+        Will extract task names from Process steps and create a workflow.
+        """
+        try:
+            # Split into lines and remove empty lines
+            lines = [line.strip() for line in repr.split('\n') if line.strip()]
+            
+            # Initialize flows and tasks dictionaries
+            flows = {}  # step -> next_step
+            tasks = {}  # step -> task_title
+            
+            # First pass: build flows and tasks mappings
+            for line in lines:
+                parts = line.split(':::')
+                current_step = parts[0].strip()
+                step_type = parts[1].strip()
+                
+                if step_type == 'Process':
+                    # Extract task title and next step 
+                    task_title = parts[2].strip()
+                    tasks[current_step] = task_title 
+                    if len(parts) > 3 and "next" in parts[3]: 
+                        next_step = parts[3].split("::")[-1].strip()
+                        flows[current_step] = next_step
+                elif step_type == 'Terminal':
+                    flows[current_step] = None
+            
+            # Second pass: follow flows to build ordered task list
+            ordered_tasks = []
+            current_step = 'Step 1'
+            
+            while current_step in flows:
+                if current_step in tasks:  # Only add if it's a Process step
+                    ordered_tasks.append(tasks[current_step])
+                current_step = flows[current_step]
+            # Create new workflow graph using the ordered task titles
+            new_graph = self.create_workflow_graph_from_task_names(task_titles=ordered_tasks)
+            return new_graph
+            
+        except Exception as e:
+            logger.warning(f"Failed to parse Core workflow string: {e}. Return the original workflow.")
+        
+        return self.graph
 
 
 class SimplePromptBreeder:
