@@ -1,5 +1,5 @@
 
-mutation_prompt = [
+mutation_prompts = [
     "Modify the following instruction creatively, giving some advice on how to solve it:",
     "Just change this instruction to make it more fun, think WELL outside the box:",
     "Modify this instruction in a way that no self-respecting LLM would!",
@@ -57,7 +57,7 @@ mutation_prompt = [
     "The above working out has some errors, here is a version with the errors fixed."
 ]
 
-thinking_style = [
+thinking_styles = [
     "How could I devise an experiment to help solve that problem?",
     "Make a list of ideas for solving this problem, and apply them one by one to the problem to see if any progress can be made.",
     "How could I measure progress on this problem?",

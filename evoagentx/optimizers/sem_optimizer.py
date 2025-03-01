@@ -1,5 +1,6 @@
 import yaml 
 import regex
+import random
 import numpy as np
 from pydantic import Field 
 from copy import deepcopy
@@ -8,10 +9,12 @@ from typing import Literal, Union, Optional, List
 
 from .optimizer import Optimizer
 from ..core.logging import logger
+from ..models.base_model import BaseLLM 
 from ..benchmark.benchmark import Benchmark
 from ..workflow.action_graph import ActionGraph
+from evoagentx.core.callbacks import suppress_cost_logging
 from ..workflow.workflow_graph import SequentialWorkFlowGraph
-from ..prompts.workflow.sem_optimizer import mutation_prompt, thinking_style
+from ..prompts.workflow.sem_optimizer import mutation_prompts, thinking_styles
 
 VALID_SCHEMES = ["python", "yaml", "code", "core", "bpmn"]
 
@@ -378,8 +381,21 @@ class SEMWorkFlowScheme:
         ]
         """
         try:
-            steps_str = repr.replace('steps = ', '').strip()
-            steps = eval(steps_str)
+            # extract ```python ``` 
+            code_block = regex.search(r'```python\s*(.*?)\s*```', repr, regex.DOTALL)
+            if not code_block:
+                raise ValueError("No Python code block found in the representation")
+            code_block = code_block.group(1).strip()
+            # relevant_lines = [] 
+            # for line in code_block.splitlines():
+            #     line = line.strip()
+            #     if not line or line.startswith("#") or line.startswith("```"):
+            #         continue
+            #     if all(key in line for key in ["name", "args", "outputs"]):
+            #         relevant_lines.append(line)
+            # steps_str = "[\n" + "\n".join(relevant_lines) + "\n]"
+            # steps = eval(steps_str)
+            steps = eval(code_block.replace("steps = ", "").strip())
             new_graph = self.create_workflow_graph_from_steps(steps=steps)
             return new_graph
         except Exception as e:
@@ -398,7 +414,29 @@ class SEMWorkFlowScheme:
             - output1
         """
         try:
-            steps = yaml.safe_load(repr)
+            # extract ```yaml ``` 
+            match = regex.search(r'```yaml\s*(.*?)\s*```', repr, regex.DOTALL) 
+            if not match:
+                raise ValueError("No YAML code block found in the representation")
+            yaml_block = match.group(1).strip()
+            steps = yaml.safe_load(yaml_block)
+            # relevant_lines = []  
+            # in_step = False  
+            # for line in yaml_block.splitlines(): 
+            #     stripped_line = line.strip() 
+            #     if stripped_line.startswith('- name:'):
+            #         in_step = True 
+            #         relevant_lines.append(line) 
+            #     elif in_step and (
+            #         stripped_line.startswith('args:') or 
+            #         stripped_line.startswith('outputs:') or 
+            #         stripped_line.startswith('- ')
+            #     ):
+            #         relevant_lines.append(line)
+            #     elif not stripped_line: 
+            #         in_step = False  
+            # yaml_step = "\n".join(relevant_lines)
+            # steps = yaml.safe_load(yaml_step)
             new_graph = self.create_workflow_graph_from_steps(steps=steps)
             return new_graph
         except Exception as e:
@@ -415,9 +453,16 @@ class SEMWorkFlowScheme:
         ...
         """
         try:
-            lines = [line.strip() for line in repr.split("\n") if line.strip()] 
+            # extract ```code ``` 
+            match = regex.search(r'```code\s*(.*?)\s*```', repr, regex.DOTALL)
+            if not match:
+                raise ValueError("No code block found in the representation")
+            code_block = match.group(1).strip()
+            lines = [line.strip() for line in code_block.split("\n") if line.strip() and "->" in line]
             steps = []
             for line in lines:
+                # Remove any leading numbers and dots (e.g., "1. ")
+                line = regex.sub(r'^\d+\.\s*', '', line)
                 func_part, output_part = line.split('->')
                 func_part = func_part.strip()
                 name = func_part[:func_part.index('(')]
@@ -445,9 +490,14 @@ class SEMWorkFlowScheme:
         
         Will extract ordered task names from the sequence flows and create a workflow.
         """
-        try:            
+        try:
+            # extract ```bpmn ``` 
+            match = regex.search(r'```bpmn\s*(.*?)\s*```', repr, regex.DOTALL) 
+            if not match:
+                raise ValueError("No BPMN code block found in the representation")
+            bpmn_block = match.group(1).strip()
             # Parse XML string
-            root = ET.fromstring(repr)
+            root = ET.fromstring(bpmn_block)
             
             # Define namespace for BPMN XML
             ns = {'bpmn': 'http://www.omg.org/spec/BPMN/20100524/MODEL'}
@@ -503,8 +553,13 @@ class SEMWorkFlowScheme:
         Will extract task names from Process steps and create a workflow.
         """
         try:
+            # extract ```core ```
+            match = regex.search(r'```core\s*(.*?)\s*```', repr, regex.DOTALL) 
+            if not match:
+                raise ValueError("No core code block found in the representation")
+            core_block = match.group(1).strip()
             # Split into lines and remove empty lines
-            lines = [line.strip() for line in repr.split('\n') if line.strip()]
+            lines = [line.strip() for line in core_block.split('\n') if line.strip()]
             
             # Initialize flows and tasks dictionaries
             flows = {}  # step -> next_step
@@ -548,20 +603,55 @@ class SimplePromptBreeder:
     """
     The simple prompt breeder for SEM optimizer.
     """
-    def __init__(self, **kwargs):
+    def __init__(self, llm: BaseLLM, **kwargs):
+        self.llm = llm
         self.kwargs = kwargs
 
     def generate_mutation_prompt(self, task_description: str, **kwargs) -> str:
         """
         Generate the mutation prompt for optimization.
         """
-        pass # TODO: implement the mutation prompt generation
+        thinking_style = random.choice(thinking_styles)
+        hyper_mutation_prompt = thinking_style + "\n\nProblem Description: " + task_description + ".\n" + "Output: "
+        # print(">>>>>>>>>> Hyper mutation prompt: <<<<<<<<<<<\n", hyper_mutation_prompt)
+        mutation_prompt = self.llm.generate(
+            prompt=hyper_mutation_prompt, 
+            system_message="You are a helpful assistant",
+        ).content
+        return mutation_prompt
+    
+    def get_mutation_prompt(self, task_description: str, order: Literal["zero-order", "first-order"], **kwargs) -> str:
+        """
+        Get the mutation prompt for optimization.
+        """
+        if order == "zero-order":
+            mutation_prompt = self.generate_mutation_prompt(task_description=task_description)
+        elif order == "first-order":
+            mutation_prompt = random.choice(mutation_prompts)
+        else:
+            raise ValueError(f"Invalid order: {order}. The order should be either 'zero-order' or 'first-order'.")
+        return mutation_prompt
 
-    def generate_prompt(self, order: Literal["zero-order", "first-order"], **kwargs) -> str:
+    def generate_prompt(self, task_description: str, prompt: str, order: Literal["zero-order", "first-order"], **kwargs) -> str:
         """
-        Generate the prompt for optimization.
+        Generate the prompt for optimization. 
+        
+        Args:
+            task_description (str): The description of the task, normally the goal of the workflow. 
+            prompt (str): The prompt to optimize.
+            order (Literal["zero-order", "first-order"]): The order of the mutation prompt.
+        
+        Returns:
+            str: The optimized prompt.
         """
-        pass # TODO: implement the prompt generation
+        mutation_prompt = self.get_mutation_prompt(task_description=task_description, order=order)
+        prompt = mutation_prompt + "\n\nINSTRUCTION:\n\n" + prompt
+        # print(">>>>>>>>>> Prompt: <<<<<<<<<<<\n", prompt)
+        new_prompt = self.llm.generate(
+            prompt=prompt, 
+            system_message="You are a helpful assistant",
+        ).content
+        return new_prompt
 
 
 class SEMOptimizer(Optimizer):
@@ -573,12 +663,14 @@ class SEMOptimizer(Optimizer):
 
     def init_module(self, **kwargs):
         self._snapshot: List[dict] = []
-        self._prompt_breeder = SimplePromptBreeder() # generate prompt for optimization
+        self._prompt_breeder = SimplePromptBreeder(llm=self.llm) # generate prompt for optimization
+        self._convergence_check_counter = 0 
+        self._best_score = float("-inf")
         if isinstance(self.graph, ActionGraph):
             if self.optimize_mode != "prompt":
                 raise ValueError(
                     f"{type(self).__name__} only support prompt optimization when `graph` is an `ActionGraph`. "
-                    "The `optimize_mode` should be set to `prompt`, but got {self.optimize_mode}."
+                    f"The `optimize_mode` should be set to `prompt`, but got {self.optimize_mode}."
                 )
 
     def optimize(self, dataset: Benchmark, **kwargs):
@@ -586,9 +678,10 @@ class SEMOptimizer(Optimizer):
         Optimize the workflow.
         """
         logger.info(f"Optimizing the workflow with {self.repr_scheme} representation.")
-        graph: Union[SequentialWorkFlowGraph, ActionGraph] = deepcopy(self.graph)
+        graph: Union[SequentialWorkFlowGraph, ActionGraph] = self.graph 
         logger.info(f"Run initial evaluation on the original workflow ...")
-        metrics = self.evaluate(dataset, eval_mode="dev", graph=graph)
+        with suppress_cost_logging():
+            metrics = self.evaluate(dataset, eval_mode="dev", graph=graph)
         logger.info(f"Initial metrics: {metrics}")
         self.log_snapshot(graph=graph, metrics=metrics)
 
@@ -599,7 +692,8 @@ class SEMOptimizer(Optimizer):
                 # evaluate the workflow
                 if (i + 1) % self.eval_every_n_steps == 0:
                     logger.info(f"Evaluate the workflow at step {i+1} ...")
-                    metrics = self.evaluate(dataset, eval_mode="dev", graph=graph)
+                    with suppress_cost_logging():
+                        metrics = self.evaluate(dataset, eval_mode="dev", graph=graph)
                     logger.info(f"Step {i+1} metrics: {metrics}")
                     self.log_snapshot(graph=graph, metrics=metrics)
             except Exception as e:
@@ -671,21 +765,39 @@ class SEMOptimizer(Optimizer):
         """
         Log the snapshot of the workflow.
         """
+        if isinstance(graph, SequentialWorkFlowGraph):
+            graph_info = graph.get_graph_info()
+        elif isinstance(graph, ActionGraph):
+            # TODO check if the action graph is valid 
+            graph_info = graph
+        else:
+            raise ValueError(f"Invalid graph type: {type(graph)}. The graph should be an instance of `SequentialWorkFlowGraph` or `ActionGraph`.")
+        
         self._snapshot.append(
             {
-                "index": len(self.snapshot),
-                "graph": graph,
+                "index": len(self._snapshot),
+                "graph": deepcopy(graph_info),
                 "metrics": metrics,
             }
         )
 
-    def _select_graph_with_highest_score(self, return_metrics: bool = False) -> Union[SequentialWorkFlowGraph, ActionGraph, dict]:
+    def _select_graph_with_highest_score(self, return_metrics: bool = False) -> Union[SequentialWorkFlowGraph, ActionGraph]:
         """
         Select the graph in `self._snapshot` with the highest score.
         """
-        snapshot_scores = [np.mean(snapshot["metrics"].values()) for snapshot in self._snapshot]
+        if len(self._snapshot) == 0:
+            return self.graph
+        snapshot_scores = [np.mean(list(snapshot["metrics"].values())) for snapshot in self._snapshot]
         best_index = np.argmax(snapshot_scores)
-        graph = self._snapshot[best_index]["graph"]
+
+        if isinstance(self.graph, SequentialWorkFlowGraph):
+            graph = SequentialWorkFlowGraph.from_dict(self._snapshot[best_index]["graph"])
+        elif isinstance(self.graph, ActionGraph):
+            # TODO check if the action graph is valid
+            graph = self._snapshot[best_index]["graph"]
+        else:
+            raise ValueError(f"Invalid graph type: {type(self.graph)}. The graph should be an instance of `SequentialWorkFlowGraph` or `ActionGraph`.")
+        
         if return_metrics:
             return graph, self._snapshot[best_index]["metrics"]
         return graph
@@ -701,15 +813,50 @@ class SEMOptimizer(Optimizer):
     def _wfg_structure_optimization_step(self, graph: SequentialWorkFlowGraph) -> SequentialWorkFlowGraph:
         """
         optinize the structure of the workflow graph and return the optimized graph.
+        Args:
+            graph (SequentialWorkFlowGraph): The workflow graph to optimize.
+        
+        Returns:
+            SequentialWorkFlowGraph: The optimized workflow graph.  
         """
-        pass # TODO: implement the workflow optimization step
-
+        graph_scheme = SEMWorkFlowScheme(graph=graph)
+        graph_repr = graph_scheme.convert_to_scheme(scheme=self.repr_scheme)
+        if self.repr_scheme == "python":
+            output_format = "\n\nALWAYS wrap the refined workflow in ```python\n``` format and DON'T include any other text within the code block!"
+        elif self.repr_scheme == "yaml":
+            output_format = "\n\nALWAYS wrap the refined workflow in ```yaml\n``` format and DON'T include any other text within the code block!"
+        elif self.repr_scheme == "code":
+            output_format = "\n\nALWAYS wrap the refined workflow in ```code\n``` format and DON'T include any other text within the code block!"
+        elif self.repr_scheme == "core":
+            output_format = "\n\nALWAYS wrap the refined workflow in ```core\n``` format and DON'T include any other text within the code block!"
+        elif self.repr_scheme == "bpmn":
+            output_format = "\n\nALWAYS wrap the refined workflow in ```bpmn\n``` format and DON'T include any other text within the code block!"
+        else:
+            raise ValueError(f"Invalid representation scheme: {self.repr_scheme}. The scheme should be one of {VALID_SCHEMES}.")
+        prompt = "Task Description: " + graph.goal + "\n\nWorkflow Steps: " + graph_repr + output_format
+        new_graph_repr = self._prompt_breeder.generate_prompt(task_description=graph.goal, prompt=prompt, order=self.order)
+        new_graph = graph_scheme.parse_from_scheme(scheme=self.repr_scheme, repr=new_graph_repr)
+        return new_graph
+    
     def _wfg_prompt_optimization_step(self, graph: SequentialWorkFlowGraph) -> SequentialWorkFlowGraph:
         """
         optinize the prompt of the workflow graph and return the optimized graph.
         """
-        pass # TODO: implement the prompt optimization step
-    
+        task_description = graph.goal
+        graph_scheme = SEMWorkFlowScheme(graph=graph)
+        graph_repr = graph_scheme.convert_to_scheme(scheme=self.repr_scheme)
+        graph_info = graph.get_graph_info()
+        for i, task in enumerate(graph_info["tasks"]):
+            original_prompt = task["prompt"]
+            optimization_prompt = "Task Description: " + task_description + "\n\nWorkflow Steps:\n" + graph_repr + f"\n\nINSTRUCTION for the {i+1}-th task:\n\"\"\"\n" + original_prompt + "\n\"\"\""
+            optimization_prompt += f"\n\nGiven the above information, please refine the instruction for the {i+1}-th task.\n"
+            optimization_prompt += r"Note that you should always use bracket (e.g. `{input_name}`) to wrap the inputs of the tasks in your refined instruction.\n"
+            optimization_prompt += "Only output the refined instruction and DON'T include any other text!" 
+            new_prompt = self._prompt_breeder.generate_prompt(task_description=task_description, prompt=optimization_prompt, order=self.order)
+            graph_info["tasks"][i]["prompt"] = new_prompt
+        new_graph = SequentialWorkFlowGraph.from_dict(graph_info)
+        return new_graph
+        
     def _workflow_graph_step(self, graph: SequentialWorkFlowGraph) -> SequentialWorkFlowGraph:
         """
         Take a step of optimization on the workflow graph and return the optimized graph.
@@ -727,6 +874,31 @@ class SEMOptimizer(Optimizer):
         """
         Take a step of optimization on the action graph and return the optimized graph.
         """
-        pass # TODO: implement the action graph step    
+        pass # TODO: implement the action graph step
+
+    def convergence_check(self, **kwargs) -> bool:
+        """
+        Check if the optimization has converged.
+        """
+        if not self._snapshot:
+            logger.warning("No snapshots available for convergence check")
+            return False
+        
+        # Get scores from snapshots
+        scores = [np.mean(list(snapshot["metrics"].values())) for snapshot in self._snapshot]
+        current_score = scores[-1]
+
+        if current_score > self._best_score:
+            self._best_score = current_score
+            self._convergence_check_counter = 0
+        else:
+            self._convergence_check_counter += 1
+
+        if self._convergence_check_counter >= self.convergence_threshold:
+            logger.info(f"Early stopping triggered: No improvement for {self.convergence_threshold} iterations")
+            logger.info(f"Score history: {scores[-self.convergence_threshold:]}")
+            return True
+        return False
+
     
     
