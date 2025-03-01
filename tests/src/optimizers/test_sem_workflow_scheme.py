@@ -15,8 +15,7 @@ class TestModule(unittest.TestCase):
     def test_python_scheme(self):
 
         repr = self.scheme.convert_to_scheme(scheme="python")
-        new_graph = self.scheme.parse_workflow_python_repr(repr)
-
+        new_graph = self.scheme.parse_workflow_python_repr("```python\n" + repr + "\n```")
         self.assertEqual(len(new_graph.nodes), len(self.graph.nodes))
         self.assertEqual(len(new_graph.edges), len(self.graph.edges))
         self.assertFalse(new_graph == self.graph)
@@ -33,7 +32,7 @@ class TestModule(unittest.TestCase):
         steps = eval(repr.replace("steps = ", "").strip())
         new_steps = steps[:4] + [{"name": "test", "args": ["test_input", "code"], "outputs": ["test_output"]}] + steps[4:]
         new_repr = "steps = " + str(new_steps)
-        new_graph = self.scheme.parse_workflow_python_repr(new_repr)
+        new_graph = self.scheme.parse_workflow_python_repr("```python\n" + new_repr + "\n```")
         new_graph_info = new_graph.get_graph_info() 
         self.assertEqual(len(new_graph_info["tasks"]), 6) 
         self.assertEqual(new_graph_info["tasks"][-2]["name"], "test") 
@@ -45,7 +44,7 @@ class TestModule(unittest.TestCase):
     
     def test_yaml_scheme(self):
         repr = self.scheme.convert_to_scheme(scheme="yaml")
-        new_graph = self.scheme.parse_workflow_yaml_repr(repr)
+        new_graph = self.scheme.parse_workflow_yaml_repr("```yaml\n" + repr + "\n```")
         self.assertEqual(len(new_graph.nodes), len(self.graph.nodes))
         self.assertEqual(len(new_graph.edges), len(self.graph.edges))
         self.assertFalse(new_graph == self.graph)
@@ -60,7 +59,7 @@ class TestModule(unittest.TestCase):
 
     def test_code_scheme(self):
         repr = self.scheme.convert_to_scheme(scheme="code")
-        new_graph = self.scheme.parse_workflow_code_repr(repr)
+        new_graph = self.scheme.parse_workflow_code_repr("```code\n" + repr + "\n```")
         self.assertEqual(len(new_graph.nodes), len(self.graph.nodes))
         self.assertEqual(len(new_graph.edges), len(self.graph.edges))
         self.assertFalse(new_graph == self.graph)
@@ -75,7 +74,7 @@ class TestModule(unittest.TestCase):
 
     def test_bpmn_scheme(self):
         repr = self.scheme.convert_to_scheme(scheme="bpmn")
-        new_graph = self.scheme.parse_workflow_bpmn_repr(repr)
+        new_graph = self.scheme.parse_workflow_bpmn_repr("```bpmn\n" + repr + "\n```")
         self.assertEqual(len(new_graph.nodes), len(self.graph.nodes))
         self.assertEqual(len(new_graph.edges), len(self.graph.edges))
         self.assertFalse(new_graph == self.graph)
@@ -90,7 +89,7 @@ class TestModule(unittest.TestCase):
 
     def test_core_scheme(self):
         repr = self.scheme.convert_to_scheme(scheme="core")
-        new_graph = self.scheme.parse_workflow_core_repr(repr)
+        new_graph = self.scheme.parse_workflow_core_repr("```core\n" + repr + "\n```")
         self.assertEqual(len(new_graph.nodes), len(self.graph.nodes))
         self.assertEqual(len(new_graph.edges), len(self.graph.edges))
         self.assertFalse(new_graph == self.graph)   

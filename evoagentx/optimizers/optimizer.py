@@ -15,9 +15,10 @@ class Optimizer(BaseModule):
     evaluator: Evaluator = Field(description="The evaluator to use for optimization.")
 
     llm: BaseLLM = Field(default=None, description="The LLM to use for optimization and evaluation.")
-    max_steps: int = Field(default=10, description="The maximum number of optimization steps to take.")
+    max_steps: int = Field(default=5, description="The maximum number of optimization steps to take.")
     eval_every_n_steps: int = Field(default=1, description="Evaluate the workflow every `eval_every_n_steps` steps.")
-    eval_rounds: int = Field(default=1, description="Run evaluation for `eval_rounds` times and compute the average score.")
+    eval_rounds: int = Field(default=3, description="Run evaluation for `eval_rounds` times and compute the average score.")
+    convergence_threshold: int = Field(default=5, description="If the optimization has not improved the score for `convergence_threshold` steps, the optimization will be stopped.")
 
     def optimize(self, dataset: Benchmark, **kwargs):
         """
