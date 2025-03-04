@@ -974,6 +974,7 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
         Get the information of the workflow graph.
         """
         config = {
+            "class_name": self.__class__.__name__,
             "goal": self.goal, 
             "tasks": [
                 {
@@ -996,13 +997,12 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
         """
         Save the workflow graph to a module file.
         """
+        logger.info("Saving {} to {}", self.__class__.__name__, path)
         config = self.get_graph_info()
         for ignore_key in ignore:
             config.pop(ignore_key, None)
-
         with open(path, "w", encoding="utf-8") as f:
             json.dump(config, f, indent=4)
-
         return path
     
 
