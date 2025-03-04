@@ -66,6 +66,7 @@ class ExecutionStatus(str, Enum):
 
 # Database Models
 class Agent(MongoBaseModel):
+    id: str = Field(..., alias="_id")
     name: str
     description: Optional[str] = None
     config: Dict[str, Any]

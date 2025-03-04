@@ -72,6 +72,8 @@ async def create_agent(
             agent, 
             user_id=str(current_user['_id'])
         )
+        # Convert the ObjectId to string before creating the response model
+        created_agent["_id"] = str(created_agent["_id"])
         return AgentResponse(**created_agent)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -85,6 +87,7 @@ async def get_agent(
     agent = await AgentService.get_agent(agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
+    agent["_id"] = str(agent["_id"])
     return AgentResponse(**agent)
 
 @agents_router.put("/agents/{agent_id}", response_model=AgentResponse, tags=["Agents"])
@@ -98,11 +101,25 @@ async def update_agent(
         updated_agent = await AgentService.update_agent(agent_id, agent_update)
         if not updated_agent:
             raise HTTPException(status_code=404, detail="Agent not found")
+        updated_agent["_id"] = str(updated_agent["_id"])
         return AgentResponse(**updated_agent)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@agents_router.delete("/agents/{agent_id}", tags=["Agents"])
+@agents_router.get("/agents", response_model=List[AgentResponse], tags=["Agents"])
+async def list_agents(
+    pagination: PaginationParams = Depends(),
+    search: SearchParams = Depends(),
+    current_user: Dict[str, Any] = Depends(get_current_active_user)
+):
+    """List agents with optional pagination and search."""
+    agents, total = await AgentService.list_agents(pagination, search)
+    # Convert _id to string for each agent in the list
+    for agent in agents:
+        agent["_id"] = str(agent["_id"])
+    return [AgentResponse(**agent) for agent in agents]
+
+@agents_router.delete("/agents/{agent_id}", status_code=204, tags=["Agents"])
 async def delete_agent(
     agent_id: str, 
     current_user: Dict[str, Any] = Depends(get_current_admin_user)
@@ -112,21 +129,11 @@ async def delete_agent(
         success = await AgentService.delete_agent(agent_id)
         if not success:
             raise HTTPException(status_code=404, detail="Agent not found")
-        return {"message": "Agent deleted successfully"}
+        return  # With 204, no content is returned
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@agents_router.get("/agents", response_model=List[AgentResponse], tags=["Agents"])
-async def list_agents(
-    pagination: PaginationParams = Depends(),
-    search: Optional[SearchParams] = Depends(),
-    current_user: Dict[str, Any] = Depends(get_current_active_user)
-):
-    """List agents with optional pagination and search."""
-    agents, total = await AgentService.list_agents(pagination, search)
-    
-    # You might want to add total count to response headers or as a separate field
-    return [AgentResponse(**agent) for agent in agents]
+
 
 # Workflow Routes
 @workflows_router.post("/workflows", response_model=WorkflowResponse, tags=["Workflows"])
@@ -170,7 +177,7 @@ async def update_workflow(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@workflows_router.delete("/workflows/{workflow_id}", tags=["Workflows"])
+@workflows_router.delete("/workflows/{workflow_id}", status_code=204, tags=["Workflows"])
 async def delete_workflow(
     workflow_id: str, 
     current_user: Dict[str, Any] = Depends(get_current_admin_user)
@@ -180,7 +187,7 @@ async def delete_workflow(
         success = await WorkflowService.delete_workflow(workflow_id)
         if not success:
             raise HTTPException(status_code=404, detail="Workflow not found")
-        return {"message": "Workflow deleted successfully"}
+        return Response(status_code=204)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
