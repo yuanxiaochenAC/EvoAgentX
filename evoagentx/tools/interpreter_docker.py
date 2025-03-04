@@ -3,7 +3,7 @@ import shlex
 import tarfile
 import uuid
 from pathlib import Path
-from typing import Any, ClassVar, Dict, List, Optional
+from typing import ClassVar, Dict, List, Optional
 
 import docker
 from docker.models.containers import Container
@@ -14,14 +14,10 @@ class DockerInterpreter:
     """
     _CODE_EXECUTE_CMD_MAPPING: ClassVar[Dict[str, str]] = {
         "python": "python {file_name}",
-        "bash": "bash {file_name}",
-        "r": "Rscript {file_name}",
     }
 
     _CODE_EXTENSION_MAPPING: ClassVar[Dict[str, str]] = {
         "python": "py",
-        "bash": "sh",
-        "r": "R",
     }
 
     _CODE_TYPE_MAPPING: ClassVar[Dict[str, str]] = {
@@ -29,19 +25,16 @@ class DockerInterpreter:
         "py3": "python",
         "python3": "python",
         "py": "python",
-        "shell": "bash",
-        "bash": "bash",
-        "sh": "bash",
-        "r": "r",
-        "R": "r",
     }
 
-    def __init__(self, require_confirm: bool = True, print_stdout: bool = False, print_stderr: bool = True):
+    def __init__(self, require_confirm: bool = True, print_stdout: bool = False, print_stderr: bool = True, image_tag: str = "fundingsocietiesdocker/python3.9-slim", dockerfile_path: str = "./docker/Dockerfile"):
         self.require_confirm = require_confirm
         self.print_stdout = print_stdout
         self.print_stderr = print_stderr
         self._container: Optional[Container] = None
         self._client = docker.from_env()
+        self.image_tag = image_tag
+        self.dockerfile_path = dockerfile_path
 
     def __del__(self):
         if self._container is not None:
@@ -50,22 +43,20 @@ class DockerInterpreter:
     def _initialize_if_needed(self):
         if self._container is not None:
             return
-
-        image_tag = "docker-interpreter:latest"
-        # image_tag = "fundingsocietiesdocker/python3.9-slim"
+        
         dockerfile_path = Path("./docker/Dockerfile")
 
         try:
-            self._client.images.get(image_tag)
+            self._client.images.get(self.image_tag)
         except docker.errors.ImageNotFound:
             print("Docker image not found. Building the image from ./docker/Dockerfile...")
             if not dockerfile_path.exists():
                 raise FileNotFoundError(f"Dockerfile not found at {dockerfile_path}")
             
-            self._client.images.build(path="./docker", tag=image_tag, rm=True, buildargs={})
+            self._client.images.build(path="./docker", tag=self.image_tag, rm=True, buildargs={})
 
         self._container = self._client.containers.run(
-            image_tag, detach=True, command="tail -f /dev/null"
+            self.image_tag, detach=True, command="tail -f /dev/null"
         )
 
     def _create_file_in_container(self, content: str) -> Path:

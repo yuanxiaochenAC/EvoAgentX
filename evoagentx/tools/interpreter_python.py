@@ -1,116 +1,231 @@
 import ast
-import abc
 import contextlib
 import io
 import importlib
+import sys
 import os
-import subprocess
-from typing import List, Set, Optional, Union, Any, Dict
+import traceback
+import multiprocessing
+from typing import List, Set, Optional, Union
 from .interpreter_base import BaseInterpreter
-
 
 class Interpreter_Python(BaseInterpreter):
     ALLOWED_CODE_TYPES = {"python", "py", "python3"}
-    
-    def __init__(self, project_path: str, allowed_imports: Optional[Set[str]] = None, namespace: Optional[Dict[str, Any]] = None, allowed_functions: Optional[Set[str]] = None):
-        """Interpreter that checks the code for safety before execution."""
-        # sample project_path: "./AGTChart"
-        # sample project_name: "AGTChart"
-        
+    def __init__(self, project_path: str, allowed_imports: Optional[Set[str]] = None, allowed_functions: Optional[Set[str]] = None):
+        """Initialize the Python interpreter with security checks.
+        Args:
+            project_path (str): The root directory of the project.
+            allowed_imports (Optional[Set[str]]): Set of allowed import modules. Defaults to an empty set.
+            allowed_functions (Optional[Set[str]]): Set of allowed functions. Defaults to an empty set.
+        """
         self.project_path = project_path
-        self.project_name = project_path.split("/")[-1]
+        self.directory_names = self._get_file_and_folder_names(project_path)  # List of available files and folders
         self.allowed_imports = allowed_imports if allowed_imports is not None else set()
         self.allowed_functions = allowed_functions if allowed_functions is not None else set()
-        self.namespace = namespace or dict()  # Dictionary to store imports and variables
+        self.namespace = {}  # Dictionary to store imported modules and variables
 
-    def _update_namespace(self, alias: str, module_name: Any) -> None:
-        self.namespace[alias] = module_name
+    def _get_file_and_folder_names(self, target_path: str) -> List[str]:
+        """Retrieves the names of files and folders (without extensions) in a given directory.
+        Args:
+            target_path (str): Path to the target directory.
+        Returns:
+            List[str]: List of file and folder names (excluding extensions).
+        """
+        names = []
+        for item in os.listdir(target_path):
+            name, _ = os.path.splitext(item)  # Extract filename without extension
+            names.append(name)
+        return names
+
+    def _extract_definitions(self, module_name: str, path: str, potential_names: Optional[Set[str]] = None) -> List[str]:
+        """Extracts function and class definitions from a module file while ensuring safety.
+        Args:
+            module_name (str): The name of the module.
+            path (str): The file path of the module.
+            potential_names (Optional[Set[str]]): The specific functions/classes to import (for ImportFrom).
+        Returns:
+            List[str]: A list of violations found during analysis. An empty list indicates no issues.
+        """
+        if path in self.namespace:  # Avoid re-importing if already processed
+            return []
+
+        try:
+            # Attempt to dynamically load the module
+            module_spec = importlib.util.spec_from_file_location(module_name, path)
+            loaded_module = importlib.util.module_from_spec(module_spec)
+            module_spec.loader.exec_module(loaded_module)
+
+            # Register the module in self.namespace
+            self.namespace[module_name] = loaded_module
+
+        except Exception as e:
+            return [f"Error loading module {module_name}: {e}"]
         
-
-    def _check_init(self, path: str) -> List[str]:
+        # Read the module file to perform code analysis
         with open(path, "r", encoding="utf-8") as f:
             code = f.read()
+
+        # Perform safety check before adding functions/classes
         violations = self._analyze_code(code)
+        if violations:
+            return violations  # Stop execution if safety violations are detected
+
+        # Parse the AST to extract function and class names
+        tree = ast.parse(code)
+        available_symbols = {}
+
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                available_symbols[node.name] = node  # Store detected functions/classes
+
+        # Dynamically load specific functions/classes if requested
+        try:
+            spec = importlib.util.spec_from_file_location(module_name, path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+
+            if potential_names is None:
+                # Import all detected functions/classes
+                for name in available_symbols:
+                    if hasattr(module, name):
+                        self.namespace[name] = getattr(module, name)
+            else:
+                # Import only specified functions/classes
+                for name in potential_names:
+                    if name in available_symbols and hasattr(module, name):
+                        self.namespace[name] = getattr(module, name)
+                    else:
+                        violations.append(f"Function or class '{name}' not found in {module_name}")
+
+        except Exception as e:
+            return [f"Error loading module {module_name}: {e}"]
+
         return violations
 
     def _check_project(self, module: Union[ast.Import, ast.ImportFrom]) -> List[str]:
+        """Checks and imports a local project module while ensuring safety.
+
+        Args:
+            module (Union[ast.Import, ast.ImportFrom]): The AST import node representing the module.
+
+        Returns:
+            List[str]: A list of violations found during analysis.
+        """
+        
         if isinstance(module, ast.Import):
             module_name = module.name
+            potential_names = None  # Full module import
         else:
             module_name = module.module
+            potential_names = {name.name for name in module.names}  # Selective import
 
+        # Construct the module file path based on project structure
         if len(module_name.split(".")) > 1:
-            init_path = self.project_path[:-len(self.project_name)] + "/".join(module_name.split(".")[:-1]) + "/__init__.py"
-            module_path = self.project_path[:-len(self.project_name)] + "/".join(module_name.split(".")) + ".py"
+            module_path = os.path.join(self.project_path, *module_name.split(".")) + ".py"
         else:
-            init_path = self.project_path[:-len(self.project_name)] + "__init__.py"
-            module_path = self.project_path[:-len(self.project_name)] + module_name + ".py"
-        full_path = self.project_path[:-len(self.project_name)] + "/".join(module_name.split(".")) + "/__init__.py"
-        
-        if os.path.exists(init_path):
-            if init_path in self.visited_modules:
-                return []
-            self.visited_modules[init_path] = True
-            return self._check_init(init_path)
-        
-        elif os.path.exists(module_path):
-            if module_path in self.visited_modules:
-                return []
-            self.visited_modules[module_path] = True
-            with open(module_path, "r", encoding="utf-8") as f:
-                code = f.read()
-            return self._analyze_code(code)
-        
-        elif os.path.exists(full_path):
-            if full_path in self.visited_modules:
-                return []
-            self.visited_modules[full_path] = True
-            return self._check_init(full_path)
-        
+            module_path = os.path.join(self.project_path, module_name + ".py")
+
+        # Attempt to safely extract functions/classes
+        if os.path.exists(module_path):
+            violations = self._extract_definitions(module_name, module_path, potential_names)
         else:
             return [f"Module not found: {module_name}"]
 
+        if violations:
+            return violations  # Stop execution if safety violations are detected
+
+        # Dynamically load the module and update self.namespace
+        try:
+            module_spec = importlib.util.spec_from_file_location(module_name, module_path)
+            loaded_module = importlib.util.module_from_spec(module_spec)
+            module_spec.loader.exec_module(loaded_module)
+
+            # Register the module in self.namespace
+            self.namespace[module_name] = loaded_module
+            
+        except Exception as e:
+            return [f"Error loading module {module_name}: {e}"]
+
+        return violations
+
     def _execute_import(self, import_module: ast.Import) -> List[str]:
+        """Processes an import statement, verifying permissions and adding modules to the namespace.
+
+        Args:
+            import_module (ast.Import): The AST node representing an import statement.
+
+        Returns:
+            List[str]: A list of violations found during import handling.
+        """
         violations = []
+        
         for module in import_module.names:
-            if module.name.startswith(self.project_name):
+            # Check if the module is part of the project directory (local module)
+            if module.name.split(".")[0] in self.directory_names:
                 violations += self._check_project(module)
                 continue
+
+            # Check if the import is explicitly allowed
             if module.name not in self.allowed_imports:
                 violations.append(f"Unauthorized import: {module.name}")
-                continue
+                return violations
+
+            # Attempt to import the module
             try:
                 alias = module.asname or module.name
                 imported_module = importlib.import_module(module.name)
-                self._update_namespace(alias, imported_module)
+                self.namespace[alias] = imported_module
             except ImportError:
                 violations.append(f"Failed to import: {module.name}")
+
         return violations
 
     def _execute_import_from(self, import_from: ast.ImportFrom) -> List[str]:
-        
+        """Processes a 'from module import name' statement, ensuring safety and adding modules to the namespace.
+
+        Args:
+            import_from (ast.ImportFrom): The AST node representing an 'import from' statement.
+
+        Returns:
+            List[str]: A list of violations found during import handling.
+        """
+        # Ensure that relative imports (e.g., 'from . import') are not allowed
         if import_from.module is None:
             return ["'from . import' is not supported."]
-        if import_from.module.startswith(self.project_name):
+
+        # Check if the module is a part of the project directory (local module)
+        if import_from.module.split(".")[0] in self.directory_names:
             return self._check_project(import_from)
+
+        # Ensure that the module is explicitly allowed
         if import_from.module not in self.allowed_imports:
             return [f"Unauthorized import: {import_from.module}"]
 
         try:
+            # Attempt to import the specified components from the module
             for import_name in import_from.names:
                 imported_module = importlib.import_module(import_from.module)
                 alias = import_name.asname or import_name.name
-                self._update_namespace(alias, getattr(imported_module, import_name.name))
+                self.namespace[alias] = getattr(imported_module, import_name.name)
             return []
         except ImportError:
             return [f"Failed to import: {import_from.module}"]
 
-    
     def _analyze_code(self, code: str) -> List[str]:
-        """Parses and analyzes the code for violations before execution."""
+        """Parses and analyzes the code for import violations before execution.
+
+        Args:
+            code (str): The raw Python code to analyze.
+
+        Returns:
+            List[str]: A list of violations detected in the code.
+        """
         violations = []
         try:
+            # Parse the provided code into an Abstract Syntax Tree (AST)
             tree = ast.parse(code)
+
+            # Traverse the AST and check for import violations
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import):
                     violations += self._execute_import(node)
@@ -118,31 +233,89 @@ class Interpreter_Python(BaseInterpreter):
                     violations += self._execute_import_from(node)
         except SyntaxError as e:
             violations.append(f"Syntax error in code: {e}")
+
         return violations
 
-    def execute(self, code: str, codetype: str) -> str:
-        self.visited_modules = {}
-        self.namespace = dict()
+    def _execute_process(self, code: str, result_queue: multiprocessing.Queue) -> None:
+        """Analyzes and executes the provided Python code in a controlled environment.
 
-        """Checks the code for safety and executes it if there are no violations."""
+        Args:
+            code (str): The Python code to execute.
+
+        Returns:
+            str: The output of the executed code, or a list of violations if found.
+        """
+        # Change to the project directory and update sys.path for module resolution
+        os.chdir(self.project_path)
+        sys.path.insert(0, self.project_path)
+
+        violations = self._analyze_code(code)
+        if violations:
+            result_queue.put("\n".join(violations))
+            return
+
+        # Capture standard output during execution
+        stdout_capture = io.StringIO()
+        with contextlib.redirect_stdout(stdout_capture):
+            try:
+                # Execute the code within an isolated namespace
+                exec(code, {})
+            except Exception as e:
+                error_msg = f"Execution Error: {e}\n{traceback.format_exc()}"
+                result_queue.put(error_msg)
+                return
+
+        # Retrieve and return the captured output
+        result_queue.put(stdout_capture.getvalue().strip())
+        return 
+
+    
+    def execute(self, code: str, codetype: str) -> str:
+        """Checks the code for safety and executes it in a separate process.
+
+        Args:
+            code (str): The Python code to execute.
+            codetype (str): The type of code (must be in ALLOWED_CODE_TYPES).
+
+        Returns:
+            str: The output of the executed code, or an error message if the execution fails.
+        """
+        # Reset visited modules and namespace before execution
+        self.visited_modules = {}
+        self.namespace = {}
+
+
+        # Ensure the provided code type is allowed
         if codetype not in self.ALLOWED_CODE_TYPES:
             return f"Unsupported code type: {codetype}. Allowed types are: {', '.join(self.ALLOWED_CODE_TYPES)}"
 
-        violations = self._analyze_code(code)
-        
-        if violations:
-            return "\n".join(violations)
+        # Execute the code in a separate process for safety
+        result_queue = multiprocessing.Queue()
+        process = multiprocessing.Process(target=self._execute_process, args=(code, result_queue))
+        process.start()
+        process.join()  # Wait for the process to complete
 
-        # Run the code in a subprocess for isolation
-        process = subprocess.Popen(
-            ["python", "-c", code],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        stdout, stderr = process.communicate()
-
-        if process.returncode != 0:
-            return f"Execution error: {stderr.strip()}"
+        return result_queue.get() if not result_queue.empty() else "No output"
+    
+    def execute_script(self, file_path: str, codetype: str) -> str:
+        """
+        Reads Python code from a file and executes it using the `execute` method.
         
-        return stdout.strip()
+        Args:
+            file_path (str): The path to the Python file to be executed.
+            codetype (str): The type of code (must be in ALLOWED_CODE_TYPES).
+        
+        Returns:
+            str: The output of the executed code, or an error message if the execution fails.
+        """
+        
+        if not os.path.isfile(file_path):
+            return f"Error: File '{file_path}' does not exist."
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                code = file.read()
+        except Exception as e:
+            return f"Error reading file: {e}"
+        
+        return self.execute(code, codetype)
