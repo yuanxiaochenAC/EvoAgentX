@@ -1,6 +1,7 @@
 import yaml 
 import regex
 import random
+import inspect
 import numpy as np
 from pydantic import Field 
 from copy import deepcopy
@@ -677,7 +678,10 @@ class SEMOptimizer(Optimizer):
         """
         Optimize the workflow.
         """
-        logger.info(f"Optimizing the workflow with {self.repr_scheme} representation.")
+        if isinstance(self.graph, SequentialWorkFlowGraph):
+            logger.info(f"Optimizing the {type(self.graph).__name__} workflow with {self.repr_scheme} representation.")
+        elif isinstance(self.graph, ActionGraph):
+            logger.info(f"Optimizing the {type(self.graph).__name__} graph ...")
         graph: Union[SequentialWorkFlowGraph, ActionGraph] = self.graph 
         logger.info(f"Run initial evaluation on the original workflow ...")
         with suppress_cost_logging():
@@ -693,7 +697,7 @@ class SEMOptimizer(Optimizer):
                 if (i + 1) % self.eval_every_n_steps == 0:
                     logger.info(f"Evaluate the workflow at step {i+1} ...")
                     with suppress_cost_logging():
-                        metrics = self.evaluate(dataset, eval_mode="dev", graph=graph)
+                        metrics = self.evaluate(dataset, eval_mode="dev")
                     logger.info(f"Step {i+1} metrics: {metrics}")
                     self.log_snapshot(graph=graph, metrics=metrics)
             except Exception as e:
@@ -747,7 +751,17 @@ class SEMOptimizer(Optimizer):
         """
         graph = graph if graph is not None else self.graph
         metrics_list = []
-        for _ in range(self.eval_rounds):
+        for i in range(self.eval_rounds):
+            eval_info = [
+                f"[{type(graph).__name__}]", 
+                f"Evaluation round {i+1}/{self.eval_rounds}", 
+                f"Mode: {eval_mode}"
+            ]
+            if indices is not None:
+                eval_info.append(f"Indices: {len(indices)} samples")
+            if sample_k is not None:
+                eval_info.append(f"Sample size: {sample_k}")
+            logger.info(" | ".join(eval_info))
             metrics = self.evaluator.evaluate(
                 graph=graph, 
                 benchmark=dataset, 
@@ -869,12 +883,38 @@ class SEMOptimizer(Optimizer):
             graph = self._wfg_prompt_optimization_step(graph)
         
         return graph
+    
+    def _action_graph_prompt_optimization_step(self, graph: ActionGraph) -> ActionGraph:
+        """
+        Optimize the prompts of the action graph. 
+        """
+        task_description = graph.description
+        graph_info = graph.get_graph_info()
+        graph_steps = inspect.getsource(getattr(graph, "execute"))
+        for operator_name, operator_info in graph_info["operators"].items():
+            original_prompt = operator_info["prompt"]
+            optimization_prompt = "Task Description: " + task_description + "\n\nWorkflow Steps:\n" + graph_steps + f"\n\nINSTRUCTION for the `{operator_name}` operator:\n\"\"\"\n" + original_prompt + "\n\"\"\""
+            optimization_prompt += "\n\nThe interface of the operator is as follows:\n" + operator_info["interface"]
+            optimization_prompt += f"\n\nGiven the above information, please refine the instruction for the `{operator_name}` operator.\n"
+            optimization_prompt += r"Note that you should always use bracket (e.g. `{input_name}`) to wrap the inputs of the operator in your refined instruction, "
+            optimization_prompt += r"and the input names should be EXACTLY the same as those defined in the interface. DON'T use bracket to wrap output names."
+            optimization_prompt += "\nOnly output the refined instruction and DON'T include any other text!"
+            new_prompt = self._prompt_breeder.generate_prompt(task_description=task_description, prompt=optimization_prompt, order=self.order)
+            new_prompt = new_prompt.replace("\"", "").strip()
+            graph_info["operators"][operator_name]["prompt"] = new_prompt
+        new_graph = ActionGraph.from_dict(graph_info)
+        return new_graph
 
     def _action_graph_step(self, graph: ActionGraph) -> ActionGraph:
         """
         Take a step of optimization on the action graph and return the optimized graph.
         """
-        pass # TODO: implement the action graph step
+        if self.optimize_mode == "prompt":
+            graph = self._action_graph_prompt_optimization_step(graph)
+        else:
+            raise ValueError(f"{type(self).__name__} only support prompt optimization when `self.graph` is an `ActionGraph` instance. "
+                    f"The `optimize_mode` should be set to `prompt`, but got {self.optimize_mode}.")
+        return graph
 
     def convergence_check(self, **kwargs) -> bool:
         """
