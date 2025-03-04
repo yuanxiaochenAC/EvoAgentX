@@ -683,7 +683,7 @@ class SEMOptimizer(Optimizer):
         elif isinstance(self.graph, ActionGraph):
             logger.info(f"Optimizing the {type(self.graph).__name__} graph ...")
         graph: Union[SequentialWorkFlowGraph, ActionGraph] = self.graph 
-        logger.info(f"Run initial evaluation on the original workflow ...")
+        logger.info("Run initial evaluation on the original workflow ...")
         with suppress_cost_logging():
             metrics = self.evaluate(dataset, eval_mode="dev", graph=graph)
         logger.info(f"Initial metrics: {metrics}")
@@ -711,7 +711,7 @@ class SEMOptimizer(Optimizer):
             logger.info(f"Reach the maximum number of steps {self.max_steps}. Stop the optimization.")
         
         # set self.graph to the best graph
-        logger.info(f"Restore the best graph from the snapshot ...")
+        logger.info("Restore the best graph from the snapshot ...")
         self.restore_best_graph()
     
     def step(self, **kwargs) -> Union[SequentialWorkFlowGraph, ActionGraph]:
@@ -897,7 +897,7 @@ class SEMOptimizer(Optimizer):
             optimization_prompt += "\n\nThe interface of the operator is as follows:\n" + operator_info["interface"]
             optimization_prompt += f"\n\nGiven the above information, please refine the instruction for the `{operator_name}` operator.\n"
             optimization_prompt += r"Note that you should always use bracket (e.g. `{input_name}`) to wrap the inputs of the operator in your refined instruction, "
-            optimization_prompt += r"and the input names should be EXACTLY the same as those defined in the interface. DON'T use bracket to wrap output names."
+            optimization_prompt += "and the input names should be EXACTLY the same as those defined in the interface. DON'T use bracket to wrap output names."
             optimization_prompt += "\nOnly output the refined instruction and DON'T include any other text!"
             new_prompt = self._prompt_breeder.generate_prompt(task_description=task_description, prompt=optimization_prompt, order=self.order)
             new_prompt = new_prompt.replace("\"", "").strip()
