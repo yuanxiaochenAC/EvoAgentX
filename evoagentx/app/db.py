@@ -79,6 +79,7 @@ class Agent(MongoBaseModel):
     tags: List[str] = Field(default_factory=list)
 
 class Workflow(MongoBaseModel):
+    id: str = Field(..., alias="_id")
     name: str
     description: Optional[str] = None
     definition: Dict[str, Any]
