@@ -187,7 +187,6 @@ class WorkflowService:
         """Get a workflow by ID."""
         if not ObjectId.is_valid(workflow_id):
             raise ValueError(f"Invalid workflow ID: {workflow_id}")
-            
         workflow = await Database.workflows.find_one({"_id": ObjectId(workflow_id)})
         return workflow
     
@@ -263,9 +262,8 @@ class WorkflowService:
         
         if recent_executions > 0:
             raise ValueError(f"Cannot delete workflow {workflow_id} with {recent_executions} active executions")
-        
+
         result = await Database.workflows.delete_one({"_id": ObjectId(workflow_id)})
-        
         if result.deleted_count:
             # Delete associated execution logs
             await Database.logs.delete_many({"workflow_id": workflow_id})

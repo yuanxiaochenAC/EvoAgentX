@@ -4,6 +4,7 @@ API routes for EvoAgentX application.
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import List, Optional, Dict, Any
+from fastapi import Response
 
 from datetime import timedelta
 
@@ -15,7 +16,7 @@ from evoagentx.app.schemas import (
     PaginationParams, SearchParams,
     Token, UserCreate, UserLogin, UserResponse
 )
-from evoagentx.app.services import AgentService, WorkflowService
+from evoagentx.app.services import AgentService, WorkflowService, WorkflowExecutionService
 from evoagentx.app.security import (
     create_access_token, 
     authenticate_user, 
@@ -136,7 +137,7 @@ async def delete_agent(
 
 
 # Workflow Routes
-@workflows_router.post("/workflows", response_model=WorkflowResponse, tags=["Workflows"])
+@workflows_router.post("/workflows", response_model=WorkflowResponse,status_code=201, tags=["Workflows"])
 async def create_workflow(
     workflow: WorkflowCreate, 
     current_user: Dict[str, Any] = Depends(get_current_active_user)
@@ -147,9 +148,13 @@ async def create_workflow(
             workflow, 
             user_id=str(current_user['_id'])
         )
+        # Convert the ObjectId to string for consistency
+        created_workflow["_id"] = str(created_workflow["_id"])
         return WorkflowResponse(**created_workflow)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
 
 @workflows_router.get("/workflows/{workflow_id}", response_model=WorkflowResponse, tags=["Workflows"])
 async def get_workflow(
@@ -160,6 +165,8 @@ async def get_workflow(
     workflow = await WorkflowService.get_workflow(workflow_id)
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
+    # Convert ObjectId to string
+    workflow["_id"] = str(workflow["_id"])
     return WorkflowResponse(**workflow)
 
 @workflows_router.put("/workflows/{workflow_id}", response_model=WorkflowResponse, tags=["Workflows"])
@@ -173,6 +180,8 @@ async def update_workflow(
         updated_workflow = await WorkflowService.update_workflow(workflow_id, workflow_update)
         if not updated_workflow:
             raise HTTPException(status_code=404, detail="Workflow not found")
+        
+        updated_workflow["_id"] = str(updated_workflow["_id"])
         return WorkflowResponse(**updated_workflow)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -191,56 +200,110 @@ async def delete_workflow(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @workflows_router.get("/workflows", response_model=List[WorkflowResponse], tags=["Workflows"])
 async def list_workflows(
     pagination: PaginationParams = Depends(),
-    search: Optional[SearchParams] = Depends(),
+    search: SearchParams = Depends(),
     current_user: Dict[str, Any] = Depends(get_current_active_user)
 ):
     """List workflows with optional pagination and search."""
     workflows, total = await WorkflowService.list_workflows(pagination, search)
     
-    return [WorkflowResponse(**workflow) for workflow in workflows]
+    # Convert ObjectId to string for each workflow
+    converted_workflows = [
+        {**workflow, "_id": str(workflow["_id"])}
+        for workflow in workflows
+    ]
+    
+    return [WorkflowResponse(**workflow) for workflow in converted_workflows]
+
 
 # Workflow Execution Routes
-@executions_router.post("/executions", response_model=ExecutionResponse, tags=["Executions"])
+@executions_router.post("/executions", response_model=ExecutionResponse, status_code=202)
 async def create_execution(
-    execution: ExecutionCreate, 
+    execution: ExecutionCreate,
     background_tasks: BackgroundTasks,
     current_user: Dict[str, Any] = Depends(get_current_active_user)
 ):
     """Create and start a workflow execution."""
     try:
-        execution_result = await WorkflowService.create_execution(
-            execution, 
-            user_id=str(current_user['_id']),
-            background_tasks=background_tasks
+        execution_result = await WorkflowExecutionService.create_execution(
+            execution_data=execution,
+            user_id=str(current_user['_id'])
         )
+        # Convert _id to string for consistency
+        execution_result["_id"] = str(execution_result["_id"])
         return ExecutionResponse(**execution_result)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@executions_router.get("/executions/{execution_id}", response_model=ExecutionResponse, tags=["Executions"])
+
+@executions_router.get("/executions/{execution_id}", response_model=ExecutionResponse)
 async def get_execution(
-    execution_id: str, 
+    execution_id: str,
     current_user: Dict[str, Any] = Depends(get_current_active_user)
 ):
     """Retrieve a specific workflow execution by ID."""
-    execution = await WorkflowService.get_execution(execution_id)
-    if not execution:
-        raise HTTPException(status_code=404, detail="Execution not found")
-    return ExecutionResponse(**execution)
+    try:
+        execution = await WorkflowExecutionService.get_execution(execution_id)
+        if not execution:
+            raise HTTPException(status_code=404, detail="Execution not found")
+        execution["_id"] = str(execution["_id"])
+        return ExecutionResponse(**execution)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
-@executions_router.get("/executions", response_model=List[ExecutionResponse], tags=["Executions"])
+
+@executions_router.post("/executions/{execution_id}/stop", response_model=ExecutionResponse)
+async def stop_execution(
+    execution_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_active_user)
+):
+    """Stop (cancel) a workflow execution."""
+    try:
+        updated_execution = await WorkflowExecutionService.update_execution_status(
+            execution_id=execution_id,
+            status=ExecutionStatus.CANCELLED
+        )
+        if not updated_execution:
+            raise HTTPException(status_code=404, detail="Execution not found")
+        # Convert ObjectId to string for consistency
+        updated_execution["_id"] = str(updated_execution["_id"])
+        return ExecutionResponse(**updated_execution)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@executions_router.get("/executions", response_model=List[ExecutionResponse])
 async def list_executions(
     pagination: PaginationParams = Depends(),
-    search: Optional[SearchParams] = Depends(),
+    search: SearchParams = Depends(), 
     current_user: Dict[str, Any] = Depends(get_current_active_user)
 ):
     """List workflow executions with optional pagination and search."""
-    executions, total = await WorkflowService.list_executions(pagination, search)
-    
-    return [ExecutionResponse(**execution) for execution in executions]
+    executions, total = await WorkflowExecutionService.list_executions(
+        params=pagination, 
+        search=search
+    )
+    # Convert _id to string for each execution
+    for exec_item in executions:
+        exec_item["_id"] = str(exec_item["_id"])
+    return [ExecutionResponse(**exec_item) for exec_item in executions]
+
+
+@executions_router.get("/executions/{execution_id}/logs", response_model=List[Dict[str, Any]])
+async def get_execution_logs(
+    execution_id: str,
+    pagination: PaginationParams = Depends(),
+    current_user: Dict[str, Any] = Depends(get_current_active_user)
+):
+    """Retrieve logs for a specific execution."""
+    logs, total = await WorkflowExecutionService.get_execution_logs(execution_id, params=pagination)
+    # Convert _id in each log entry to string
+    for log in logs:
+        log["_id"] = str(log["_id"])
+    return logs
 
 # Health Check Route
 @system_router.get("/health", tags=["System"])

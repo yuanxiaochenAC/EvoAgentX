@@ -8,37 +8,34 @@ from typing import Optional, Dict, Any, List
 
 class Settings(BaseSettings):
     # Application settings
-    APP_NAME: str = "EvoAgentX"
-    DEBUG: bool = True
-    API_PREFIX: str = "/api/v1"
-    HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    APP_NAME: str
+    DEBUG: bool
+    API_PREFIX: str
+    HOST: str
+    PORT: int
     
     # MongoDB settings
-    MONGODB_URL: str = "mongodb+srv://eax:eax@cluster0.1lkbi0y.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-    MONGODB_DB_NAME: str = "evoagentx"
+    MONGODB_URL: str
+    MONGODB_DB_NAME: str
     
     # JWT Authentication
-    SECRET_KEY: str = "your-secret-key"  # Change this in production!
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    ALGORITHM: str = "HS256"
-    
-    # Celery settings for task queue
-    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
-    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
+    SECRET_KEY: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+    ALGORITHM: str
     
     # Logging configuration
-    LOG_LEVEL: str = "INFO"
-    
-    # CORS settings
-    ALLOWED_HOSTS: List[str] = ["*"]
+    LOG_LEVEL: str
     
     # Add CORS settings
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+    CORS_ALLOW_CREDENTIALS: bool = True
     
     class Config:
         env_file = ".env"
         case_sensitive = True
+        env_delimiter = ","
+
+
 
 # Global settings instance
 settings = Settings()
