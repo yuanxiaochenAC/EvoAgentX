@@ -5,23 +5,81 @@ import importlib
 import sys
 import os
 import traceback
-import multiprocessing
 from typing import List, Set, Optional, Union
 from .interpreter_base import BaseInterpreter
 
-class Interpreter_Python(BaseInterpreter):
-    ALLOWED_CODE_TYPES = {"python", "py", "python3"}
-    def __init__(self, project_path: str, allowed_imports: Optional[Set[str]] = None, allowed_functions: Optional[Set[str]] = None):
+class InterpreterPython(BaseInterpreter):
+    def get_tool_info(self):
+        return {
+            "description": """The Python Interpreter Tool provides a secure execution environment for running Python code. 
+            It performs static analysis using AST to detect unauthorized imports and security risks before execution. 
+            The tool allows execution of both inline code snippets and external script files while enforcing strict security policies.
+            
+            The tool ensures:
+            - Python code is analyzed using AST to detect and restrict unauthorized imports.
+            - Scripts are executed in a controlled environment with predefined security constraints.
+            - Only explicitly allowed imports are permitted, blocking unsafe system-wide libraries.
+            - Project-specific modules can be dynamically loaded, ensuring local accessibility.
+            - Execution output, including potential security violations or runtime errors, is captured and returned.
+            """,
+            
+            "inputs": {
+                "project_path": {
+                    "type": "str",
+                    "description": "The root directory of the project where Python scripts are located.",
+                    "required": True
+                },
+                "allowed_imports": {
+                    "type": "Optional[Set[str]]",
+                    "description": "A set of module names that are explicitly allowed for import. If not provided, only local project modules are accessible.",
+                    "required": False
+                },
+                "code": {
+                    "type": "str",
+                    "description": "The Python code snippet to be executed after safety checks.",
+                    "required": True
+                },
+                "file_path": {
+                    "type": "str",
+                    "description": "The file path of the Python script to be executed.",
+                    "required": True
+                }
+            },
+            
+            "outputs": {
+                "execution_result": {
+                    "type": "str",
+                    "description": "The output of the executed code or an error message if execution fails."
+                },
+                "violations": {
+                    "type": "list[str]",
+                    "description": "A list of detected security violations, if any."
+                }
+            },
+            
+            "functionality": """Methods and their functionality:
+            - `_analyze_code(code: str)`: Parses and analyzes the code using AST to detect restricted imports.
+            - `_execute_import(import_module: ast.Import)`: Handles `import` statements, enforcing security policies.
+            - `_execute_import_from(import_from: ast.ImportFrom)`: Manages `from module import name` statements securely.
+            - `_check_project(module: Union[ast.Import, ast.ImportFrom])`: Verifies and imports project-specific modules.
+            - `_extract_definitions(module_name: str, path: str, potential_names: Optional[Set[str]])`: Extracts functions and classes from a given module while ensuring safety.
+            - `execute(code: str)`: Runs Python code after security checks, capturing output or errors.
+            - `execute_script(file_path: str)`: Reads a script file and executes it securely.""",
+            
+            "interface": "execute(code: str) -> dict with key 'execution_result' (str) or 'violations' (list of str)"
+        }
+
+
+
+    def __init__(self, project_path: str, allowed_imports: Optional[Set[str]] = None):
         """Initialize the Python interpreter with security checks.
         Args:
             project_path (str): The root directory of the project.
             allowed_imports (Optional[Set[str]]): Set of allowed import modules. Defaults to an empty set.
-            allowed_functions (Optional[Set[str]]): Set of allowed functions. Defaults to an empty set.
         """
         self.project_path = project_path
         self.directory_names = self._get_file_and_folder_names(project_path)  # List of available files and folders
         self.allowed_imports = allowed_imports if allowed_imports is not None else set()
-        self.allowed_functions = allowed_functions if allowed_functions is not None else set()
         self.namespace = {}  # Dictionary to store imported modules and variables
 
     def _get_file_and_folder_names(self, target_path: str) -> List[str]:
@@ -48,7 +106,7 @@ class Interpreter_Python(BaseInterpreter):
         """
         if path in self.namespace:  # Avoid re-importing if already processed
             return []
-
+        
         try:
             # Attempt to dynamically load the module
             module_spec = importlib.util.spec_from_file_location(module_name, path)
@@ -58,8 +116,10 @@ class Interpreter_Python(BaseInterpreter):
             # Register the module in self.namespace
             self.namespace[module_name] = loaded_module
 
-        except Exception as e:
-            return [f"Error loading module {module_name}: {e}"]
+        except Exception:
+            exc_type, exc_value, exc_tb = sys.exc_info()
+            return ["".join(traceback.format_exception(exc_type, exc_value, exc_tb))]
+
         
         # Read the module file to perform code analysis
         with open(path, "r", encoding="utf-8") as f:
@@ -97,8 +157,10 @@ class Interpreter_Python(BaseInterpreter):
                     else:
                         violations.append(f"Function or class '{name}' not found in {module_name}")
 
-        except Exception as e:
-            return [f"Error loading module {module_name}: {e}"]
+        except Exception:
+            exc_type, exc_value, exc_tb = sys.exc_info()
+            return ["".join(traceback.format_exception(exc_type, exc_value, exc_tb))]
+
 
         return violations
 
@@ -143,8 +205,9 @@ class Interpreter_Python(BaseInterpreter):
             # Register the module in self.namespace
             self.namespace[module_name] = loaded_module
             
-        except Exception as e:
-            return [f"Error loading module {module_name}: {e}"]
+        except Exception:
+            exc_type, exc_value, exc_tb = sys.exc_info()
+            return ["".join(traceback.format_exception(exc_type, exc_value, exc_tb))]
 
         return violations
 
@@ -176,7 +239,8 @@ class Interpreter_Python(BaseInterpreter):
                 imported_module = importlib.import_module(module.name)
                 self.namespace[alias] = imported_module
             except ImportError:
-                violations.append(f"Failed to import: {module.name}")
+                exc_type, exc_value, exc_tb = sys.exc_info()
+                violations.append("".join(traceback.format_exception(exc_type, exc_value, exc_tb)))
 
         return violations
 
@@ -209,7 +273,8 @@ class Interpreter_Python(BaseInterpreter):
                 self.namespace[alias] = getattr(imported_module, import_name.name)
             return []
         except ImportError:
-            return [f"Failed to import: {import_from.module}"]
+            exc_type, exc_value, exc_tb = sys.exc_info()
+            return ["".join(traceback.format_exception(exc_type, exc_value, exc_tb))]
 
     def _analyze_code(self, code: str) -> List[str]:
         """Parses and analyzes the code for import violations before execution.
@@ -221,6 +286,7 @@ class Interpreter_Python(BaseInterpreter):
             List[str]: A list of violations detected in the code.
         """
         violations = []
+
         try:
             # Parse the provided code into an Abstract Syntax Tree (AST)
             tree = ast.parse(code)
@@ -231,12 +297,13 @@ class Interpreter_Python(BaseInterpreter):
                     violations += self._execute_import(node)
                 elif isinstance(node, ast.ImportFrom):
                     violations += self._execute_import_from(node)
-        except SyntaxError as e:
-            violations.append(f"Syntax error in code: {e}")
+        except SyntaxError:
+            exc_type, exc_value, exc_tb = sys.exc_info()
+            violations.append("".join(traceback.format_exception(exc_type, exc_value, exc_tb)))
 
         return violations
 
-    def _execute_process(self, code: str, result_queue: multiprocessing.Queue) -> None:
+    def execute(self, code: str) -> None:
         """Analyzes and executes the provided Python code in a controlled environment.
 
         Args:
@@ -245,66 +312,39 @@ class Interpreter_Python(BaseInterpreter):
         Returns:
             str: The output of the executed code, or a list of violations if found.
         """
+        self.visited_modules = {}
+        self.namespace = {}
+
         # Change to the project directory and update sys.path for module resolution
         os.chdir(self.project_path)
         sys.path.insert(0, self.project_path)
 
-        violations = self._analyze_code(code)
-        if violations:
-            result_queue.put("\n".join(violations))
-            return
+        if self.allowed_imports:
+            violations = self._analyze_code(code)
+            if violations:
+                return"\n".join(violations)
+                
 
         # Capture standard output during execution
         stdout_capture = io.StringIO()
         with contextlib.redirect_stdout(stdout_capture):
             try:
-                # Execute the code within an isolated namespace
+                # Execute the code
                 exec(code, {})
-            except Exception as e:
-                error_msg = f"Execution Error: {e}\n{traceback.format_exc()}"
-                result_queue.put(error_msg)
-                return
+            except Exception:
+                exc_type, exc_value, exc_tb = sys.exc_info()
+                error_msg = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+                return error_msg
 
         # Retrieve and return the captured output
-        result_queue.put(stdout_capture.getvalue().strip())
-        return 
+        return stdout_capture.getvalue().strip()
 
-    
-    def execute(self, code: str, codetype: str) -> str:
-        """Checks the code for safety and executes it in a separate process.
-
-        Args:
-            code (str): The Python code to execute.
-            codetype (str): The type of code (must be in ALLOWED_CODE_TYPES).
-
-        Returns:
-            str: The output of the executed code, or an error message if the execution fails.
-        """
-        # Reset visited modules and namespace before execution
-        self.visited_modules = {}
-        self.namespace = {}
-
-
-        # Ensure the provided code type is allowed
-        if codetype not in self.ALLOWED_CODE_TYPES:
-            return f"Unsupported code type: {codetype}. Allowed types are: {', '.join(self.ALLOWED_CODE_TYPES)}"
-
-        # Execute the code in a separate process for safety
-        result_queue = multiprocessing.Queue()
-        process = multiprocessing.Process(target=self._execute_process, args=(code, result_queue))
-        process.start()
-        process.join()  # Wait for the process to complete
-
-        return result_queue.get() if not result_queue.empty() else "No output"
-    
     def execute_script(self, file_path: str, codetype: str) -> str:
         """
         Reads Python code from a file and executes it using the `execute` method.
         
         Args:
             file_path (str): The path to the Python file to be executed.
-            codetype (str): The type of code (must be in ALLOWED_CODE_TYPES).
-        
         Returns:
             str: The output of the executed code, or an error message if the execution fails.
         """
