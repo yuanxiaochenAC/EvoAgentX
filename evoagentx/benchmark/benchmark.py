@@ -144,7 +144,7 @@ class Benchmark(ABC):
         data = self.get_data_by_mode(mode=mode)
         return data[index] if index < len(data) else None
         
-    def _get_data(self, data: List[dict], indices: Optional[List[int]]=None, sample_k: Optional[int]=None) -> List[dict]:
+    def _get_data(self, data: List[dict], indices: Optional[List[int]]=None, sample_k: Optional[int]=None, seed: Optional[int]=None) -> List[dict]:
         """
         Retrieves a subset of data based on provided indices or a random sample.
         
@@ -152,40 +152,42 @@ class Benchmark(ABC):
             data (List[dict]): The list of data examples.
             indices (List[int], optional): Specific indices of data to retrieve. Defaults to None.
             sample_k (int, optional): The number of random samples to retrieve. Defaults to None.
-        
+            seed (int, optional): The seed for random sampling. Defaults to None. If provided, the random sampling will be deterministic.
         Returns:
             List[dict]: The selected subset of data. If both `indices` and `sample_k` are None, it will return the original `data`.
         """
         if indices is None:
             indices = list(range(len(data)))
         if sample_k is not None:
+            if seed is not None:
+                random.seed(seed)
             indices = random.sample(indices, k=min(sample_k, len(indices)))
         return_data = [data[idx] for idx in indices]
         return return_data
 
-    def get_train_data(self, indices: Optional[List[int]] = None, sample_k: Optional[int] = None) -> List[dict]:
+    def get_train_data(self, indices: Optional[List[int]] = None, sample_k: Optional[int] = None, seed: Optional[int] = None) -> List[dict]:
         # Retrieves training data based on specified indices or random sampling.
         if self._train_data is None:
             logger.warning(f"Train data for benchmark {type(self).__name__} is not loaded or None. Return an empty list.")
             return [] 
         
-        train_data = self._get_data(self._train_data, indices=indices, sample_k=sample_k)
+        train_data = self._get_data(self._train_data, indices=indices, sample_k=sample_k, seed=seed)
         return train_data 
     
-    def get_dev_data(self, indices: Optional[List[int]] = None, sample_k: Optional[int] = None) -> List[dict]:
+    def get_dev_data(self, indices: Optional[List[int]] = None, sample_k: Optional[int] = None, seed: Optional[int] = None) -> List[dict]:
         # Retrieves development data based on specified indices or random sampling.
         if self._dev_data is None:
             logger.warning(f"Dev data for benchmark {type(self).__name__} is not loaded or None. Return an empty list.")
             return [] 
         
-        dev_data = self._get_data(self._dev_data, indices=indices, sample_k=sample_k)
+        dev_data = self._get_data(self._dev_data, indices=indices, sample_k=sample_k, seed=seed)
         return dev_data  
 
-    def get_test_data(self, indices: Optional[List[int]] = None, sample_k: Optional[int] = None) -> List[dict]:
+    def get_test_data(self, indices: Optional[List[int]] = None, sample_k: Optional[int] = None, seed: Optional[int] = None) -> List[dict]:
         # Retrieves test data based on specified indices or random sampling.
         if self._test_data is None:
             logger.warning(f"Test data for benchmark {type(self).__name__} is not loaded or None. Return an empty list.")
             return [] 
         
-        test_data = self._get_data(self._test_data, indices=indices, sample_k=sample_k)
+        test_data = self._get_data(self._test_data, indices=indices, sample_k=sample_k, seed=seed)
         return test_data 
