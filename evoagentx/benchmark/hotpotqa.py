@@ -44,7 +44,7 @@ class HotPotQA(Benchmark):
         file_path = os.path.join(self.path, file_name)
         if not os.path.exists(file_path):
             download_raw_hotpotqa_data(name=file_name, save_folder=self.path)
-        logger.info(f"loading data from {file_path} ...")
+        logger.info(f"loading HotPotQA data from {file_path} ...")
         return load_json(path=file_path, type="json")
 
     def _load_data(self):

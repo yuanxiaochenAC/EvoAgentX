@@ -3,7 +3,6 @@ from typing import Any, List
 from .benchmark import Benchmark
 from .measures import ems, f1_score, acc_score
 from ..core.logging import logger
-from ..core.module_utils import load_json
 from ..utils.utils import download_file
 
 
@@ -56,7 +55,7 @@ class NQ(Benchmark):
         file_path = os.path.join(self.path, file_name)
         if not os.path.exists(file_path):
             download_raw_nq_data(name=file_name, save_folder=self.path)
-        logger.info(f"loading data from {file_path} ...")
+        logger.info(f"loading NQ data from {file_path} ...")
         return load_tsv_data(file_path=file_path)
             
     def _load_data(self):
