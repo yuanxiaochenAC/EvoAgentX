@@ -68,14 +68,14 @@ git push origin feature/your-feature-name
 
 ## 📏 Coding Guidelines
 
-# Google-Style Docstring Guidelines
+### Google-Style Docstring Guidelines
 
 All Python functions, classes, and modules in this project should use **Google-style docstrings**. Below are the guidelines and examples that contributors must follow to maintain consistency and clarity throughout the codebase.
 
 ---
 
 
-## Basic Structure
+#### Basic Structure
 
 A typical Google-style docstring contains:
 
