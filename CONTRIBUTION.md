@@ -15,8 +15,9 @@ Thank you for considering contributing to **EvoAgentX** – an automatic agentic
    ```
 4. **Create a Virtual Environment**:
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+   conda create -n agent python=3.10
+   conda activate agent
+   pip install -r requirements.txt 
    ```
 5. **Install Dependencies**:
    ```bash
