@@ -68,118 +68,67 @@ git push origin feature/your-feature-name
 
 ## 📏 Coding Guidelines
 
-All Python functions, classes, and modules in this project should use **NumPy-style docstrings**. Below are the guidelines and examples that contributors must follow to maintain consistency and clarity throughout the codebase.
+# Google-Style Docstring Guidelines
+
+All Python functions, classes, and modules in this project should use **Google-style docstrings**. Below are the guidelines and examples that contributors must follow to maintain consistency and clarity throughout the codebase.
 
 ---
 
 
 ## Basic Structure
 
-A typical NumPy-style docstring contains:
+A typical Google-style docstring contains:
 
 1. **Short Summary**  
-   A one-line (or short paragraph) summary describing what the function or class does.
-2. **Extended Description** (optional)  
-   A longer explanation or background details.
-3. **Parameters**  
-   A list of parameters with their types and descriptions.
-4. **Returns** (or **Yields** if it’s a generator)  
-   The return type(s) and explanation.
-5. **Raises** (optional)  
-   Document the exceptions that might be raised.
-6. **Additional Sections** (optional)  
-   Such as **Notes**, **Warns**, **Examples**, etc.
+   A brief statement of what the function or class does.
+2. **Args**  
+   A list of parameters with their types (optional) and descriptions.
+3. **Returns** or **Yields**  
+   Explains what the function returns or yields, along with types and descriptions.
+4. **Raises** (optional)  
+   Documents any exceptions that might be raised.
+5. **Other sections** (optional)  
+   Such as **Example(s)**, **Attributes** (for classes), etc.
 
 **Example Layout**:
 
 ```python
-def function_name(param1, param2):
-    """
-    Brief summary of the function.
-
-    Detailed explanation or reasoning (optional). Can be multiple lines.
-
-    Parameters
-    ----------
-    param1 : int
-        Description of param1.
-    param2 : str
-        Description of param2. For long text, continue on a new line
-        and indent properly.
-
-    Returns
-    -------
-    bool
-        Explanation of the return value.
-
-    Raises
-    ------
-    ValueError
-        Explanation of when/why this error is raised.
-    """
-    # function body
-    pass
-
 class Calculator:
-    """
-    A simple calculator class to demonstrate NumPy-style docstrings.
+    """A simple calculator class to demonstrate Google-style docstrings.
 
     This class provides basic arithmetic operations. Advanced features can be
     added as needed.
 
-    Attributes
-    ----------
-    last_result : float
-        Stores the result of the most recent operation.
-
-    Methods
-    -------
-    add(a, b)
-        Returns the sum of two numbers.
-    subtract(a, b)
-        Returns the difference between two numbers.
+    Attributes:
+        last_result (float): Stores the result of the most recent operation.
     """
 
     def __init__(self):
-        """
-        Initialize the Calculator with a default result of 0.
-        """
+        """Initializes the Calculator with a default result of 0."""
         self.last_result = 0
 
     def add(self, a, b):
-        """
-        Add two numbers and update `last_result`.
+        """Adds two numbers and updates `last_result`.
 
-        Parameters
-        ----------
-        a : float
-            The first number.
-        b : float
-            The second number.
+        Args:
+            a (float): The first number.
+            b (float): The second number.
 
-        Returns
-        -------
-        float
-            The sum of a and b.
+        Returns:
+            float: The sum of `a` and `b`.
         """
         self.last_result = a + b
         return self.last_result
 
     def subtract(self, a, b):
-        """
-        Subtract b from a and update `last_result`.
+        """Subtracts b from a and updates `last_result`.
 
-        Parameters
-        ----------
-        a : float
-            The number to be subtracted from.
-        b : float
-            The number to subtract.
+        Args:
+            a (float): The number to be subtracted from.
+            b (float): The number to subtract.
 
-        Returns
-        -------
-        float
-            The result of a - b.
+        Returns:
+            float: The result of `a - b`.
         """
         self.last_result = a - b
         return self.last_result
