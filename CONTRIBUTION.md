@@ -17,7 +17,6 @@ Thank you for considering contributing to **EvoAgentX** – an automatic agentic
    ```bash
    conda create -n agent python=3.10
    conda activate agent
-   pip install -r requirements.txt 
    ```
 5. **Install Dependencies**:
    ```bash
