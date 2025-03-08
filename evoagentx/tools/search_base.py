@@ -1,20 +1,10 @@
 import requests
 from bs4 import BeautifulSoup
-from .tools import Tool
+from .tool import Tool
 
-class Search_Tool(Tool):
-
-    
-    def __init__(self, num_search_pages: int = 5, max_content_words: int = 500):
-        """
-        Initializes the search tool.
-
-        Args:
-            num_search_pages (int): Number of search results to check.
-            max_content_words (int): Maximum words for the truncated content.
-        """
-        self.num_search_pages = num_search_pages
-        self.max_content_words = max_content_words
+class SearchBase(Tool):
+    num_search_pages:int = 5
+    max_content_words:int = 500
 
     def search(self, query: str) -> list:
         pass

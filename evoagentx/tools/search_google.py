@@ -1,7 +1,7 @@
 import requests
-from .search_base import Search_Tool
+from .search_base import SearchBase
 
-class SearchGoogle(Search_Tool):
+class SearchGoogle(SearchBase):
     def get_tool_info(self):
         return {
             "description": """The Google Search Tool utilizes the Google Custom Search API to perform structured search queries. 
@@ -12,7 +12,10 @@ class SearchGoogle(Search_Tool):
             - Secure and authenticated search queries using Google Custom Search API.
             - Structured and precise retrieval of search results based on the provided query.
             - Summarization and truncation of retrieved content for better readability.
-            - Optimized output formatting, returning structured lists containing titles, URLs, and extracted content.""",
+            - Optimized output formatting, returning structured lists containing titles, URLs, and extracted content.
+            
+            Google Custom Search API: https://developers.google.com/custom-search/v1/overview
+            Google Custom Search Engine: https://cse.google.com/cse/create/new""",
             
             "inputs": {
                 "query": {
@@ -55,18 +58,9 @@ class SearchGoogle(Search_Tool):
             
             "interface": "search(query: str, search_params: dict) -> dict with key 'results' (list of dicts) or 'error' (str)"
         }
-
-
-    def __init__(self, num_search_pages: int = 5, max_content_words: int = 500):
-        """
-        Initializes the search tool.
-
-        Args:
-            num_search_pages (int): Number of search results to check.
-            max_content_words (int): Maximum words for the truncated content.
-        """
-        self.num_search_pages = num_search_pages
-        self.max_content_words = max_content_words
+    
+    num_search_pages:int = 5
+    max_content_words:int = 500
 
     
     def search(self, query: str, search_params:dict) -> dict:
@@ -83,12 +77,11 @@ class SearchGoogle(Search_Tool):
                 "q": query,
                 "num": self.num_search_pages,
             }
-
             response = requests.get(search_url, params=params)
             data = response.json()
 
             if "items" not in data:
-                return {"error": "No search results found."}
+                return {"results": [], "error": "No search results found."}
 
             search_results = data["items"]
 
@@ -96,10 +89,9 @@ class SearchGoogle(Search_Tool):
             for item in search_results:
                 url = item["link"]
                 title = item["title"]
-
                 try:
-                    _, content = self._scrape_page(url)
-                    if content:
+                    title, content = self._scrape_page(url)
+                    if content:  # Ensure valid content exists
                         results.append({
                             "title": title,
                             "content": ' '.join(content.split()[:self.max_content_words]) + " ...",
@@ -108,7 +100,7 @@ class SearchGoogle(Search_Tool):
                 except Exception:
                     continue  # Skip pages that cannot be processed
 
-            return results
+            return {"results": results, "error": None}
 
         except Exception as e:
-            return {"error": str(e)}
+            return {"results": [], "error": str(e)}

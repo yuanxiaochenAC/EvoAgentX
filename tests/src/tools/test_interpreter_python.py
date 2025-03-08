@@ -1,64 +1,67 @@
 import unittest
-from evoagentx.tools.interpreter_python import Interpreter_Python  # Assuming the interpreter file is named interpreter.py
+from evoagentx.tools.interpreter_python import InterpreterPython
+import os
+import shutil
+import tempfile
 
 class TestInterpreterPython(unittest.TestCase):
-    
     def setUp(self):
-        self.interpreter = Interpreter_Python(
-            project_path="./",
-            allowed_imports={"math", "random"},
-            allowed_functions={"print"}
-        )
-    
-    def test_initialization(self):
-        self.assertIn("math", self.interpreter.allowed_imports)
-        self.assertIn("print", self.interpreter.allowed_functions)
-        self.assertIsInstance(self.interpreter.namespace, dict)
-    
-    def test_allowed_import(self):
-        code = "import math"
-        violations = self.interpreter._analyze_code(code)
-        self.assertEqual(violations, [])  # No violations expected
-    
-    def test_unauthorized_import(self):
-        code = "import os"
-        violations = self.interpreter._analyze_code(code)
-        self.assertIn("Unauthorized import: os", violations)
-    
-    def test_syntax_error(self):
-        code = "def test_func("
-        violations = self.interpreter._analyze_code(code)
-        self.assertTrue(any("Syntax error in code" in v for v in violations))
-    
-    def test_execution_with_valid_code(self):
-        code = "print('Hello World')"
-        output = self.interpreter.execute(code, "python")
-        self.assertEqual(output, "Hello World")
-    
-    def test_execution_with_unauthorized_import(self):
-        code = "import os\nprint('This should fail')"
-        output = self.interpreter.execute(code, "python")
-        self.assertIn("Unauthorized import: os", output)
-    
-    def test_execution_with_syntax_error(self):
-        code = "print('Hello"  # Missing closing quote
-        output = self.interpreter.execute(code, "python")
-        self.assertIn("Syntax error in code", output)
-    
-    def test_import_from_allowed_module(self):
-        code = "from math import sqrt"
-        violations = self.interpreter._analyze_code(code)
-        self.assertEqual(violations, [])  # No violations expected
-    
-    def test_import_from_unauthorized_module(self):
-        code = "from os import system"
-        violations = self.interpreter._analyze_code(code)
-        self.assertIn("Unauthorized import: os", violations)
-    
-    def test_execute_unsupported_code_type(self):
-        code = "print('Hello')"
-        output = self.interpreter.execute(code, "javascript")
-        self.assertIn("Unsupported code type", output)
+        # Create a temporary directory for the project
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.project_path = os.path.join(self.temp_dir.name, "AGTChart")
+        
+        # Create the project directory structure
+        os.makedirs(os.path.join(self.project_path, "test"), exist_ok=True)
 
-if __name__ == "__main__":
+        # Create evi.py
+        with open(os.path.join(self.project_path, "evi.py"), "w") as f:
+            f.write("""def func1():\n    return \"Hello from func1\"""")
+
+        # Create test/other.py
+        with open(os.path.join(self.project_path, "test", "other.py"), "w") as f:
+            f.write("""\n\ndef func2():\n  return \"Hello from func2\"""")
+
+        # Define allowed imports/functions
+        self.allowed_imports = {"math", "numpy", "os", "sys"}  # Allowed modules (optional)
+        self.interpreter = InterpreterPython(project_path=self.project_path, allowed_imports=self.allowed_imports)
+
+    def tearDown(self):
+        # Clean up the temporary directory
+        self.temp_dir.cleanup()
+
+    def test_execute_valid_code(self):
+        # Sample code that imports from AGTChart
+        test_code = """
+import os
+import math
+from math import sqrt
+import numpy as np
+import sys
+
+print('Hello World')
+print(len([1, 2, 3]))
+print("Testing Project Imports")
+np.array([1, 2, 3])
+print(sqrt(4))
+"""
+        result = self.interpreter.execute(test_code)
+        self.assertIn("Hello World", result)
+        self.assertIn("Testing Project Imports", result)
+
+    def test_unauthorized_import(self):
+        test_code = "import subprocess"
+        result = self.interpreter.execute(test_code)
+        self.assertIn("Unauthorized import", result)
+
+    def test_syntax_error(self):
+        test_code = "print('Hello World'"
+        result = self.interpreter.execute(test_code)
+        self.assertIn("SyntaxError", result)
+
+    def test_runtime_error(self):
+        test_code = "print(1/0)"
+        result = self.interpreter.execute(test_code)
+        self.assertIn("ZeroDivisionError", result)
+
+if __name__ == '__main__':
     unittest.main()

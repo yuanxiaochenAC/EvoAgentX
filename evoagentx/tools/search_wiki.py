@@ -1,8 +1,8 @@
 import wikipedia
-from .search_base import Search_Tool
+from .search_base import SearchBase
 
 
-class SearchWiki(Search_Tool):
+class SearchWiki(SearchBase):
 
     def get_tool_info(self):
         return {
@@ -56,39 +56,8 @@ class SearchWiki(Search_Tool):
             "interface": "search(query: str, max_sentences: int) -> dict with key 'results' (list of dicts) or 'error' (str)"
         }
 
-
-
-    def get_tool_description(self) -> str:
-        """
-        Returns a detailed description of the Wikipedia Search tool, including its functionality and parameters.
-        """
-        tool_description = """
-        The Wikipedia Search Tool allows querying Wikipedia to retrieve relevant pages, summaries, and truncated content.
-        It searches for Wikipedia articles matching the query and extracts key information from them.
-
-        Parameters:
-        - query (str, required): The search query string used to find relevant Wikipedia articles.
-        - num_search_pages (int, optional): The number of Wikipedia search results to retrieve (default is 5).
-        - max_content_words (int, optional): The maximum number of words extracted from the full Wikipedia page content (default is 500).
-        - max_sentences (int, optional): The maximum number of sentences returned in the summary (default is 15).
-
-        Functionality:
-        - Searches Wikipedia for relevant articles using the given query.
-        - Retrieves and returns the article title, summary, truncated content, and the Wikipedia page link.
-        - Filters ambiguous and non-existent pages to return the most relevant results.
-        """
-        return tool_description
-
-    def __init__(self, num_search_pages: int = 5, max_content_words: int = 500):
-        """
-        Initializes the search tool.
-
-        Args:
-            num_search_pages (int): Number of search results to check.
-            max_content_words (int): Maximum words for the truncated content.
-        """
-        self.num_search_pages = num_search_pages
-        self.max_content_words = max_content_words
+    num_search_pages:int = 5
+    max_content_words:int = 500
 
     def search(self, query: str, max_sentences: int = 15) -> list:
         """

@@ -5,7 +5,7 @@ import importlib
 import sys
 import os
 import traceback
-from typing import List, Set, Optional, Union
+from typing import List, Set, Optional, Union, Dict, Any
 from .interpreter_base import BaseInterpreter
 
 class InterpreterPython(BaseInterpreter):
@@ -70,17 +70,10 @@ class InterpreterPython(BaseInterpreter):
         }
 
 
-
-    def __init__(self, project_path: str, allowed_imports: Optional[Set[str]] = None):
-        """Initialize the Python interpreter with security checks.
-        Args:
-            project_path (str): The root directory of the project.
-            allowed_imports (Optional[Set[str]]): Set of allowed import modules. Defaults to an empty set.
-        """
-        self.project_path = project_path
-        self.directory_names = self._get_file_and_folder_names(project_path)  # List of available files and folders
-        self.allowed_imports = allowed_imports if allowed_imports is not None else set()
-        self.namespace = {}  # Dictionary to store imported modules and variables
+    project_path:str = ""
+    directory_names:List[str] = []
+    allowed_imports:Set[str] = set()
+    namespace:Dict[str, Any] = {}
 
     def _get_file_and_folder_names(self, target_path: str) -> List[str]:
         """Retrieves the names of files and folders (without extensions) in a given directory.

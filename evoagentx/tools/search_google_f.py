@@ -1,7 +1,7 @@
-from .search_base import Search_Tool
+from .search_base import SearchBase
 from googlesearch import search as google_f_search
 
-class SearchGoogleFree(Search_Tool):
+class SearchGoogleFree(SearchBase):
 
     def get_tool_info(self):
         return {
@@ -48,18 +48,8 @@ class SearchGoogleFree(Search_Tool):
             "interface": "search(query: str) -> dict with key 'results' (list of dicts) or 'error' (str)"
         }
 
-
-
-    def __init__(self, num_search_pages: int = 5, max_content_words: int = 500):
-        """
-        Initializes the search tool.
-
-        Args:
-            num_search_pages (int): Number of search results to check.
-            max_content_words (int): Maximum words for the truncated content.
-        """
-        self.num_search_pages = num_search_pages
-        self.max_content_words = max_content_words
+    num_search_pages:int = 5
+    max_content_words:int = 500
 
     
     def search(self, query: str) -> list:

@@ -4,7 +4,7 @@ import tarfile
 import uuid
 import docker
 from pathlib import Path
-from typing import ClassVar, Dict
+from typing import ClassVar, Dict, Set, Optional
 from .interpreter_base import BaseInterpreter
 
 class DockerInterpreter(BaseInterpreter):
@@ -106,19 +106,25 @@ class DockerInterpreter(BaseInterpreter):
         "py": "python",
     }
 
-    def __init__(self, require_confirm: bool = False, print_stdout: bool = True, print_stderr: bool = True, image_tag: str = "fundingsocietiesdocker/python3.9-slim", dockerfile_path: str = "./docker/Dockerfile", host_directory:str = "", container_directory:str = "/home/app/"):
-        self.require_confirm = require_confirm
-        self.print_stdout = print_stdout
-        self.print_stderr = print_stderr
-        self._container = None
+    require_confirm:bool = False
+    print_stdout:bool = True
+    print_stderr:bool = True
+    _container:docker.models.containers.Container = None
+    image_tag:str = "fundingsocietiesdocker/python3.9-slim"
+    dockerfile_path:str = "./docker/Dockerfile"
+    host_directory:str = ""
+    container_directory:str = "/home/app/"
+    
+    class Config:
+        arbitrary_types_allowed = True  # Allow non-pydantic types like sets
+
+    def __init__(self, **data):
+        super().__init__(**data)
         self._client = docker.from_env()
-        self.image_tag = image_tag
-        self.dockerfile_path = dockerfile_path
         self._initialize_if_needed()
-        self.host_directory = host_directory
-        self.container_directory = container_directory
-        if host_directory:
-            self._upload_directory_to_container(host_directory)
+        if self.host_directory:
+            self._upload_directory_to_container(self.host_directory)
+        
 
     def __del__(self):
         if self._container is not None:
@@ -133,7 +139,6 @@ class DockerInterpreter(BaseInterpreter):
         try:
             self._client.images.get(self.image_tag)
         except docker.errors.ImageNotFound:
-            print("Docker image not found. Building the image from ./docker/Dockerfile...")
             if not dockerfile_path.exists():
                 raise FileNotFoundError(f"Dockerfile not found at {dockerfile_path}")
             
@@ -227,3 +232,13 @@ class DockerInterpreter(BaseInterpreter):
             raise ValueError(f"Unsupported code type: {code_type}")
         return self._CODE_TYPE_MAPPING[code_type]
 
+    _CODE_EXECUTE_CMD_MAPPING: ClassVar[Dict[str, str]] = {
+        "python": "python {file_name}",
+    }
+
+    _CODE_TYPE_MAPPING: ClassVar[Dict[str, str]] = {
+        "python": "python",
+        "py3": "python",
+        "python3": "python",
+        "py": "python",
+    }
