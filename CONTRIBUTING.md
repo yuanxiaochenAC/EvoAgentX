@@ -72,16 +72,6 @@ All Python functions, classes, and modules in this project should use **NumPy-st
 
 ---
 
-## Table of Contents
-
-- [Basic Structure](#basic-structure)
-- [Function Example](#function-example)
-- [Class Example](#class-example)
-- [Common Sections](#common-sections)
-- [Additional Notes](#additional-notes)
-- [References](#references)
-
----
 
 ## Basic Structure
 
@@ -193,6 +183,7 @@ class Calculator:
         """
         self.last_result = a - b
         return self.last_result
+```
 
 ## 🧪 Testing
 Before submitting a PR, ensure that all tests pass:
