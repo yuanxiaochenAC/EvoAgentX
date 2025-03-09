@@ -5,6 +5,7 @@ pytest-subtests
 pytest-json-report
 ruff
 
+sympy
 tenacity
 networkx==3.3
 nltk==3.9.1

@@ -10,7 +10,7 @@ This repository provides a set of benchmarks to facilitate the evaluation of dif
 | QA                        | NQ              | 79,168    | 8,757   | 3,610  |
 | Multi-Hop QA              | HotPotQA        | 90,447    | 7,405   | /      |
 | Math                      | GSM8K           | 7,473     | /       | 1,319  |
-| Math                      | MATH            | /         | /       | /      |
+| Math                      | MATH            | 7,500     | /       | 5,000  |
 | Code Generation           | HumanEval       | /         | /       | /      |
 | Code Generation           | MBPP            | /         | /       | /      |
 | Code Generation           | LiveCodeBench   | /         | /       | /      |
@@ -33,7 +33,7 @@ Below, we introduce the preprocessing steps and evaluation metrics for each benc
 
 ### Question Answering 
 
-For the QA datasets, we use Exact Match (EM), F1, and Accuracy (ACC) as evaluation metrics. EM requires the predicted answer to be exactly the same as the ground truth answer. ACC requires that the predicted answer contains the ground-truth answer, which is usefule when the LLM is used to generate the answer. 
+For the QA datasets, we use Exact Match (EM), F1, and Accuracy (ACC) as evaluation metrics by default. EM requires the predicted answer to be exactly the same as the ground truth answer. ACC requires that the predicted answer contains the ground-truth answer, which is useful when the LLM is used to generate the answer. 
 
 #### NQ
 [Natural Questions (NQ)](https://github.com/google-research-datasets/natural-questions) contains questions from the Google search engine and the answers, annotated by human annotators, are paragraphs or entities in the Wikipedia page of the top 5 search results. We use the dataset splits provided by the [DPR](https://github.com/facebookresearch/DPR) repository, which contains 79,168 training, 8,757 development, and 3,610 test examples. 
@@ -77,6 +77,8 @@ Each example in the dataset is in the following format, where the second element
 
 ### Math
 
+For match datasets, we use the solve rate as the evaluation metric. The solve rate is the ratio of the number of examples that are solved correctly to the total number of examples.
+
 #### GSM8K 
 [GSM8K](https://github.com/openai/grade-school-math) consists of high quality grade school math problems created by human problem writers. These problems require multi-step mathematical reasoning to solve. We use the dataset splits provided by the original repository, which contains 7.5K training problems and 1K test problems. 
 
@@ -96,15 +98,27 @@ Each example in the dataset is in the following format:
 ```
 
 #### MATH 
+The [Mathematics Aptitude Test of Heuristics (MATH)](https://github.com/hendrycks/math) dataset consists of problems from mathematics competitions, including the AMC 10, AMC 12, AIME, etc. Each problem in MATH has a step-by-step solution. We use the dataset splits provided by the original repository, which contains 7.5K training problems and 5K test problems. 
+
+You can load the dataset using the following code: 
+```python
+from evoagentx.benchmark import MATH
+math_dataset = MATH() # optional: path="/path/to/save_data"
+test_data = math_dataset.get_test_data()
+```
+Each example in the dataset is in the following format. For the `level` field, valid values are: "Level 1", "Level 2", "Level 3", "Level 4", "Level 5", and "Level ?". The `type` field can be one of: "Geometry", "Algebra", "Intermediate Algebra", "Counting & Probability", "Precalculus", "Number Theory", or "Prealgebra".
+
+```json
+{
+    "id": "test-1", 
+    "problem": "the problem", 
+    "solution": "the solution",
+    "level": "Level 1",
+    "type": "Algebra"
+}
+```
 
 ### Code Generation 
-
-
-HotPotQA is a 
-
-
-
-
 
 #### HumanEval 
 
