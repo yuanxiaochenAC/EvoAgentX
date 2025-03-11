@@ -66,7 +66,7 @@ class MATH(Benchmark):
                 files = os.listdir(os.path.join(data_folder, sub_data_folder))
                 for file in files:
                     if file.endswith(".json"):
-                        example = {"id": f"{typ}-{i}"}
+                        example = {"id": f"{typ}-{i+1}"}
                         example.update(load_json(os.path.join(data_folder, sub_data_folder, file), type="json"))
                         data.append(example)
                         i += 1
