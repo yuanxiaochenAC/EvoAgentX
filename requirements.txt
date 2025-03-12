@@ -7,6 +7,9 @@ pytest-json-report
 ruff
 
 sympy
+stopit
+tree_sitter
+tree_sitter_python
 antlr4-python3-runtime==4.11
 tenacity
 networkx>=3.3
