@@ -11,8 +11,10 @@ This repository provides a set of benchmarks to facilitate the evaluation of dif
 | Multi-Hop QA              | HotPotQA        | 90,447    | 7,405   | /      |
 | Math                      | GSM8K           | 7,473     | /       | 1,319  |
 | Math                      | MATH            | 7,500     | /       | 5,000  |
-| Code Generation           | HumanEval       | /         | /       | /      |
+| Code Generation           | HumanEval       | /         | /       | 164    |
+| Code Generation           | HumanEvalu+     | /         | /       | 164    |
 | Code Generation           | MBPP            | /         | /       | /      |
+| Code Generation           | MBPPP+          | /         | /       | /      |
 | Code Generation           | LiveCodeBench   | /         | /       | /      |
 
 
@@ -122,7 +124,14 @@ Each example in the dataset is in the following format. For the `level` field, v
 
 #### HumanEval 
 
+```
+
+```
+#### HumanEvalu+
+
 #### MBPP 
+
+#### MBPPP+ 
 
 #### LiveCodeBench 
 
