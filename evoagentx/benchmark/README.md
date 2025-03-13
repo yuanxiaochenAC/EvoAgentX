@@ -13,7 +13,7 @@ This repository provides a set of benchmarks to facilitate the evaluation of dif
 | Math                      | MATH            | 7,500     | /       | 5,000  |
 | Code Generation           | HumanEval       | /         | /       | 164    |
 | Code Generation           | HumanEvalu+     | /         | /       | 164    |
-| Code Generation           | MBPP            | /         | /       | /      |
+| Code Generation           | MBPP            | /         | /       | 427    |
 | Code Generation           | MBPPP+          | /         | /       | /      |
 | Code Generation           | LiveCodeBench   | /         | /       | /      |
 
