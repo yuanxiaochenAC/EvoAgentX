@@ -14,7 +14,7 @@ This repository provides a set of benchmarks to facilitate the evaluation of dif
 | Code Generation           | HumanEval       | /         | /       | 164    |
 | Code Generation           | HumanEvalu+     | /         | /       | 164    |
 | Code Generation           | MBPP            | /         | /       | 427    |
-| Code Generation           | MBPPP+          | /         | /       | /      |
+| Code Generation           | MBPPP+          | /         | /       | 427    |
 | Code Generation           | LiveCodeBench   | /         | /       | /      |
 
 
@@ -121,17 +121,51 @@ Each example in the dataset is in the following format. For the `level` field, v
 ```
 
 ### Code Generation 
+For the code generation benchmarks, we use pass@k as the evaluation metric, where k is the number of solutions for each problem. By default, k is set to 1. 
 
 #### HumanEval 
+[HumanEval](https://github.com/openai/human-eval) is a dataset of 164 coding problems from the HumanEval benchmark. Each problem contains a function signature, a canonical solution, and a set of unit tests. 
 
+You can load the dataset using the following code: 
+```python
+from evoagentx.benchmark import HumanEval
+humaneval_dataset = HumanEval() # optional: path="/path/to/save_data"
+test_data = humaneval_dataset.get_test_data()
+```
+Each example in the dataset is in the following format: 
+```json
+{
+    "task_id": "HumanEval/0", 
+    "prompt": "the prompt of the problem", 
+    "entry_point": "the name of the function to be tested",
+    "canonical_solution": "the canonical solution of the problem", 
+    "test": "the unit tests of the problem"
+}
 ```
 
-```
 #### HumanEvalu+
 
 #### MBPP 
+[Mostly Basic Python Problems (MBPP)](https://github.com/google-research/google-research/tree/master/mbpp) consists of hundreds of entry-level Python programming problems. Each problem consists of a task description, code solution and 3 automated test cases. We use the [sanitized subset](https://github.com/google-research/google-research/blob/master/mbpp/sanitized-mbpp.json) of the MBPP dataset, which consists of 427 problems with data that are hand-verfied by the authors. To facilitate the evaluation, we convert the MBPP dataset into the HumanEval format. 
 
-#### MBPPP+ 
+You can load the dataset using the following code: 
+```python
+from evoagentx.benchmark import MBPP
+mbpp_dataset = MBPP() # optional: path="/path/to/save_data"
+test_data = mbpp_dataset.get_test_data()
+```
+Each example in the dataset is in the following format, where we keep the original MBPP `task_id`.  
+```json
+{
+    "task_id": 2, 
+    "prompt": "the prompt of the problem", 
+    "entry_point": "the name of the function to be tested",
+    "canonical_solution": "the canonical solution of the problem", 
+    "test": "the unit tests of the problem"
+}
+```
+You can also access the original MBPP attributes such as "code", "test_list" in the example by using `example["code"]`. 
+
 
 #### LiveCodeBench 
 

@@ -52,6 +52,7 @@ def load_mbpp_data(data_path: str):
     data = load_json(data_path, type="json")
 
     for example in data:
+        original_prompt = example["prompt"] 
         code = example["code"]
         test_list = [assert_str.strip() for assert_str in example["test_list"]]
         func_header = extract_func_header(code, test_list)
@@ -71,6 +72,7 @@ def load_mbpp_data(data_path: str):
         example["entry_point"] = entry_point 
         example["canonical_solution"] = canonical_solution 
         example["test"] = test 
+        example["original_prompt"] = original_prompt 
     
     return data
 
