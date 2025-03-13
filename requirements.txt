@@ -9,6 +9,7 @@ ruff
 sympy
 stopit
 tree_sitter
+pkg_resources
 tree_sitter_python
 antlr4-python3-runtime==4.11
 tenacity
