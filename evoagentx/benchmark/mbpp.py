@@ -131,10 +131,7 @@ class MBPP(CodingBenchmark):
         Returns:
             dict: The evaluation metrics (pass@k).
         """
-        assert isinstance(prediction, str) or isinstance(prediction, list), "prediction must be a string or a list of strings, but got {}".format(type(prediction))
-        assert isinstance(label, dict) or isinstance(label, list), "label must be a string or a list of strings, but got {}".format(type(label))
-        prediction = [prediction] if isinstance(prediction, str) else prediction
-        label = [label] if isinstance(label, dict) else label
+        prediction, label = self._check_evaluation_inputs(prediction, label)
 
         results = []
         for solution in prediction:

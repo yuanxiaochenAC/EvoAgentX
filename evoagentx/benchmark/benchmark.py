@@ -211,6 +211,16 @@ class CodingBenchmark(Benchmark):
 
     def handle_special_cases(self, task_id: str, solution: str, test: str) -> bool:
         return solution, test 
+    
+    def _check_evaluation_inputs(self, prediction: Any, label: Any) -> bool:
+        """
+        Check if the inputs are valid for evaluation.
+        """
+        assert isinstance(prediction, str) or isinstance(prediction, list), "prediction must be a string or a list of strings, but got {}".format(type(prediction))
+        assert isinstance(label, dict) or isinstance(label, list), "label must be a string or a list of strings, but got {}".format(type(label))
+        prediction = [prediction] if isinstance(prediction, str) else prediction
+        label = [label] if isinstance(label, dict) else label
+        return prediction, label
 
     def check_solution(self, task_id: str, solution: str, test: str, entry_point: Optional[str] = None) -> bool:
         """
