@@ -10,29 +10,25 @@ from .lcb_utils.code_generation import (
     CodeGenerationProblem, 
     load_code_generation_dataset
 )
-from .lcb_utils.evaluation import codegen_metrics 
+from .lcb_utils.test_output_prediction import (
+    TestOutputPredictionProblem, 
+    load_test_prediction_dataset
+)
+from .lcb_utils.code_execution import (
+    CodeExecutionProblem, 
+    load_code_execution_dataset
+)
+from .lcb_utils.evaluation import (
+    codegen_metrics, 
+    test_output_metrics,
+    code_execution_metrics
+)
+from .lcb_utils.utils import extract_test_output_code, extract_execution_code
 
 
-VALID_SCENARIO = ["code_generation", "code_repair", "code_execution", "test_output_prediction"]
+VALID_SCENARIO = ["code_generation", "test_output_prediction", "code_execution"]
 
 class LiveCodeBench(CodingBenchmark):
-
-    """
-    scenario: "code_generation"
-    CodeGenerationProblem(
-        question_title: str
-        question_content: str
-        platform: Platform
-        question_id: str
-        contest_id: str
-        contest_date: datetime
-        starter_code: str
-        difficulty: Difficulty
-        public_test_cases: list[Test]
-        private_test_cases: list[Test]
-        metadata: dict
-    )
-    """
 
     def __init__(
         self, 
@@ -45,6 +41,7 @@ class LiveCodeBench(CodingBenchmark):
         version: str = "release_latest", 
         start_date: str = None, 
         end_date: str = None, 
+        use_cot_for_execution: bool = False, 
         **kwargs
     ):
         path = os.path.expanduser(path or "~/.evoagentx/data/livecodebench")
@@ -53,8 +50,9 @@ class LiveCodeBench(CodingBenchmark):
         self.num_process = num_process
         self.start_date = start_date
         self.end_date = end_date
-        assert scenario in VALID_SCENARIO, f"Invalid scenario: {scenario}. Available choices: {VALID_SCENARIO}." 
         self.scenario = scenario 
+        self.use_cot_for_execution = use_cot_for_execution
+        assert scenario in VALID_SCENARIO, f"Invalid scenario: {scenario}. Available choices: {VALID_SCENARIO}." 
         super().__init__(name=type(self).__name__, path=path, mode=mode, timeout=timeout, **kwargs)
     
     def _load_data(self):
@@ -75,22 +73,22 @@ class LiveCodeBench(CodingBenchmark):
                 start_date=self.start_date, 
                 end_date=self.end_date
             )
+        elif self.scenario == "test_output_prediction":
+            logger.info(f"Loading test output prediction dataset from {self.path}.")
+            data: List[TestOutputPredictionProblem] = load_test_prediction_dataset(cache_dir=self.path)
+        elif self.scenario == "code_execution":
+            logger.info(f"Loading code execution dataset from {self.path}.")
+            data: List[CodeExecutionProblem] = load_code_execution_dataset(cache_dir=self.path)
         else:
             raise ValueError(f"Invalid scenario: {self.scenario}. Available choices: {VALID_SCENARIO}.")
 
         return data 
     
-    def _get_id(self, example: Union[CodeGenerationProblem]) -> str:
-        if isinstance(example, CodeGenerationProblem):
-            return example.question_id 
-        else:
-            raise ValueError(f"Invalid example type: {type(example)}. Expected CodeGenerationProblem.")
+    def _get_id(self, example: Union[CodeGenerationProblem, TestOutputPredictionProblem]) -> str:
+        return example.question_id  
     
-    def _get_label(self, example: Union[CodeGenerationProblem]) -> dict:
-        if isinstance(example, CodeGenerationProblem):
-            return example.get_evaluation_sample()
-        else:
-            raise ValueError(f"Invalid example type: {type(example)}. Expected CodeGenerationProblem.")
+    def _get_label(self, example: Union[CodeGenerationProblem, TestOutputPredictionProblem]) -> dict:
+        return example.get_evaluation_sample()
     
     def evaluate(self, prediction: Any, label: Any) -> dict:
         """
@@ -104,10 +102,10 @@ class LiveCodeBench(CodingBenchmark):
             dict: The evaluation metrics (pass@k).
         """
         prediction, label = self._check_evaluation_inputs(prediction, label)
-        solutions: List[str] = [extract_code_blocks(pred)[0] for pred in prediction]
-
         k_list = [self.k] if isinstance(self.k, int) else self.k
+
         if self.scenario == "code_generation":
+            solutions: List[str] = [extract_code_blocks(pred)[0] for pred in prediction]
             metrics, results, metadatas = codegen_metrics(
                 samples_list=label, # label is already a list 
                 generations_list=[solutions], # for a single example. 
@@ -115,7 +113,22 @@ class LiveCodeBench(CodingBenchmark):
                 num_process_evaluate=self.num_process,
                 timeout=self.timeout
             )
-            pass_at_k = {f"pass@{k}": float(metrics[f"pass@{k}"]) for k in k_list}
-            return pass_at_k
+            
+        elif self.scenario == "test_output_prediction":
+            pred_outputs = [extract_test_output_code(pred) for pred in prediction]
+            metrics, results = test_output_metrics(
+                samples=label, 
+                generations=[pred_outputs], 
+                k_list=k_list, 
+            )
+        elif self.scenario == "code_execution":
+            pred_outputs = [extract_execution_code(pred, self.use_cot_for_execution) for pred in prediction]
+            metrics, results = code_execution_metrics(
+                samples=label, 
+                generations=[pred_outputs], 
+            )
         else:
             raise ValueError(f"Invalid scenario: {self.scenario}. Available choices: {VALID_SCENARIO}.")
+        
+        pass_at_k = {f"pass@{k}": float(metrics[f"pass@{k}"]) for k in k_list}
+        return pass_at_k

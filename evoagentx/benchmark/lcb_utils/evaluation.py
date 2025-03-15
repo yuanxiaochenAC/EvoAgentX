@@ -1,15 +1,21 @@
-# modified from: https://github.com/LiveCodeBench/LiveCodeBench/blob/main/lcb_runner/evaluation/compute_code_generation_metrics.py
+# modified from: 
+# https://github.com/LiveCodeBench/LiveCodeBench/blob/main/lcb_runner/evaluation/compute_code_generation_metrics.py
+# https://github.com/LiveCodeBench/LiveCodeBench/blob/main/lcb_runner/evaluation/compute_test_output_prediction_metrics.py
+# https://github.com/LiveCodeBench/LiveCodeBench/blob/main/lcb_runner/evaluation/compute_code_execution_metrics.py
 
+import os 
+import io
 import sys
 import ast
 import time 
 import json
 import signal
+import tempfile
 import platform
+import contextlib
 import faulthandler
 import numpy as np 
 import multiprocessing 
-from tqdm import tqdm 
 from enum import Enum
 from io import StringIO
 from decimal import Decimal
@@ -22,6 +28,10 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import_string = "from string import *\nfrom re import *\nfrom datetime import *\nfrom collections import *\nfrom heapq import *\nfrom bisect import *\nfrom copy import *\nfrom math import *\nfrom random import *\nfrom statistics import *\nfrom itertools import *\nfrom functools import *\nfrom operator import *\nfrom io import *\nfrom sys import *\nfrom json import *\nfrom builtins import *\nfrom typing import *\nimport string\nimport re\nimport datetime\nimport collections\nimport heapq\nimport bisect\nimport copy\nimport math\nimport random\nimport statistics\nimport itertools\nimport functools\nimport operator\nimport io\nimport sys\nimport json\nsys.setrecursionlimit(50000)\n"
 
+
+#--------------------------------
+# code generation metrics
+#--------------------------------
 
 class TimeoutException(Exception):
     pass
@@ -806,3 +816,317 @@ def codegen_metrics(
         ), f"{len(final_metadata[i])=}"
 
     return [metrics, results, final_metadata]
+
+
+#--------------------------------
+# test output prediction metrics
+#--------------------------------
+
+def parse_assert_statement(statement):
+    """
+    Parse a Python assert statement and extract the expected output
+    from the right side of the '==' operator as a string.
+
+    :param statement: A string containing the assert statement.
+    :return: The expected output from the assert statement as a string.
+    """
+    try:
+        parsed = ast.parse(statement, mode="exec")
+    except SyntaxError:
+        return "Invalid syntax"
+
+    if len(parsed.body) == 0:
+        return "Empty statement"
+
+    if not isinstance(parsed.body[0], ast.Assert):
+        return "Not an assert statement"
+
+    comparison = parsed.body[0].test
+
+    if not isinstance(comparison, ast.Compare) or not isinstance(
+        comparison.ops[0], ast.Eq
+    ):
+        return "Not an equality assertion"
+
+    # Extract and return the right side of the '==' operator as a string
+    return ast.get_source_segment(statement, comparison.comparators[0])
+
+
+def check_testcase_output(testcase_str, expected_output):
+
+    if len(testcase_str.splitlines()) > 1:
+        for line in testcase_str.splitlines():
+            if line.startswith("#"):
+                continue
+            if "assert" in line:
+                testcase_str = line
+                break
+
+    testcase_str = testcase_str.strip()
+
+    if "assert" in testcase_str:
+        testcase_output_str = str(parse_assert_statement(testcase_str))
+
+    else:
+        testcase_output_str = testcase_str
+
+    global_result = None
+
+    try:
+        testcase_output_eval = eval(testcase_output_str)
+    except:
+        global_result = False
+        # print("Failed to eval testcase output", testcase_output_str)
+        # breakpoint()
+
+    try:
+        expected_output_eval = json.loads(expected_output)
+    except:
+        global_result = False
+        print("Failed to eval expected testcase output", expected_output)
+
+    if global_result is None:
+        global_result = testcase_output_eval == expected_output_eval
+
+    return global_result
+
+
+def test_output_metrics(
+    samples,
+    generations,
+    k_list=[1, 5],
+):
+    num_samples = len(samples)
+    results = []
+    # for idx in tqdm.tqdm(list(range(num_samples))):
+    for idx in range(num_samples):
+        idx_results = []
+        sample = samples[idx]
+        extracted_generation_list = generations[idx]
+        for extracted_generation in extracted_generation_list:
+            global_result = check_testcase_output(
+                extracted_generation, sample["output"]
+            )
+            idx_results.append([global_result])
+        results.append(idx_results)
+
+    results = {result_idx: results[result_idx] for result_idx in range(len(results))}
+
+    metrics = compute_metrics_from_results(results, k_list=k_list)
+
+    return [metrics, results]
+
+
+
+#--------------------------------
+# code execution metrics
+#--------------------------------
+
+BASE_IMPORTS = """from itertools import accumulate, chain, combinations, count, permutations, product, groupby, islice, repeat
+from copy import deepcopy
+from string import ascii_lowercase
+from math import floor, log2, log10, sqrt, comb, gcd, ceil, inf, isqrt
+from collections import defaultdict, deque, Counter
+from bisect import bisect, bisect_left, bisect_right, insort
+from heapq import heappush, heappop, heapify, merge
+from functools import reduce, cache, lru_cache
+from random import randrange, shuffle
+from operator import itemgetter, sub
+from re import search as re_search  # Assuming 're' refers to a regex search
+from os.path import commonprefix
+from typing import List, Tuple, Dict, Set, Optional, Union, Any, Callable, Iterable, Iterator, Generator
+import copy
+import string
+import math
+import collections
+import bisect
+import heapq
+import functools
+import random
+import itertools
+import operator
+import re
+import numpy as np
+import pandas as pd
+from math import log, prod  # 'log' and 'prod' are functions in the math module
+from collections import deque, defaultdict, Counter, OrderedDict
+from itertools import accumulate, permutations, combinations, product, groupby, islice, chain, repeat, zip_longest, cycle
+from functools import lru_cache, reduce, partial
+# from sortedcontainers import SortedList, SortedDict, SortedSet
+# import sortedcontainers
+from operator import iand
+import sys
+"""
+
+@contextlib.contextmanager
+def chdir(root):
+    if root == ".":
+        yield
+        return
+    cwd = os.getcwd()
+    os.chdir(root)
+    try:
+        yield
+    except BaseException as exc:
+        raise exc
+    finally:
+        os.chdir(cwd)
+
+@contextlib.contextmanager
+def create_tempdir():
+    with tempfile.TemporaryDirectory() as dirname:
+        with chdir(dirname):
+            yield dirname
+
+
+@contextlib.contextmanager
+def time_limit(seconds):
+    def signal_handler(signum, frame):
+        raise TimeoutException("Timed out!")
+
+    signal.setitimer(signal.ITIMER_REAL, seconds)
+    signal.signal(signal.SIGALRM, signal_handler)
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+
+
+class WriteOnlyStringIO(io.StringIO):
+    """StringIO that throws an exception when it's read from"""
+
+    def read(self, *args, **kwargs):
+        raise OSError
+
+    def readline(self, *args, **kwargs):
+        raise OSError
+
+    def readlines(self, *args, **kwargs):
+        raise OSError
+
+    def readable(self, *args, **kwargs):
+        """Returns True if the IO object can be read."""
+        return False
+    
+
+class redirect_stdin(contextlib._RedirectStream):  # type: ignore
+    _stream = "stdin"
+
+
+@contextlib.contextmanager
+def swallow_io():
+    stream = WriteOnlyStringIO()
+    with contextlib.redirect_stdout(stream):
+        with contextlib.redirect_stderr(stream):
+            with redirect_stdin(stream):
+                yield
+
+
+def unsafe_execute(check_program, result, timeout):
+
+    with create_tempdir():
+
+        # These system calls are needed when cleaning up tempdir.
+        import os
+        import shutil
+
+        rmtree = shutil.rmtree
+        rmdir = os.rmdir
+        chdir = os.chdir
+
+        # Disable functionalities that can make destructive changes to the test.
+        reliability_guard()
+
+        # Run program.
+        try:
+            exec_globals = {}
+            with swallow_io():
+                with time_limit(timeout):
+                    exec(check_program, exec_globals)
+            result.append("passed")
+        except TimeoutException:
+            result.append("timed out")
+        except BaseException as e:
+            result.append(f"failed: {e}")
+
+        # Needed for cleaning up.
+        shutil.rmtree = rmtree
+        os.rmdir = rmdir
+        os.chdir = chdir
+
+
+def check_execution_correctness(check_program, timeout=3):
+    """
+    Evaluates the functional correctness of a completion by running the test
+    suite provided in the problem.
+
+    :param completion_id: an optional completion ID so we can match
+        the results later even if execution finishes asynchronously.
+    """
+    manager = multiprocessing.Manager()
+    result = manager.list()
+
+    p = multiprocessing.Process(target=unsafe_execute, args=(check_program, result, timeout))
+    p.start()
+    p.join(timeout=timeout + 1)
+    if p.is_alive():
+        p.kill()
+
+    if not result:
+        result.append("timed out")
+
+    return result[0] == "passed"
+
+
+def evaluate_score(args) -> list[bool]:
+    gs, (c, i, o) = args
+
+    execution_results = []
+    for g in gs:
+        if i in g:
+            pass
+        else:
+            code_to_execute = f"{BASE_IMPORTS}\n{c}\nassert {o} == {g}"
+            execution_results.append(check_execution_correctness(code_to_execute, 3))
+    if len(execution_results) == 0:
+        execution_results = [False] * len(gs)
+    return execution_results
+
+
+def pass_at_k(n, c, k):
+    if n - c < k: return 1.0
+    return 1.0 - np.prod(1.0 - k / np.arange(n - c + 1, n + 1))
+
+
+def code_execution_metrics(
+    samples,
+    generations,
+):
+    # execute the code
+    references = [(doc["code"], doc["input"], doc["output"]) for doc in samples]
+    with ProcessPoolExecutor() as executor:
+        args_list = zip(generations, references)
+        results = executor.map(evaluate_score, args_list)
+    all_results = list(results)
+
+    # serial version
+    # all_results = []
+    # for i in range(len(generations)):
+    #     generation = generations[i]
+    #     result = evaluate_score([generation, references[i]])
+    #     all_results.append(result)
+
+    # compute pass@1
+    pass_at_1s = []
+    for execution_result in all_results:
+        c, n = execution_result.count(True), len(execution_result)
+        pass_at_1s.append(pass_at_k(n, c, 1))
+    metrics = {"pass@1": sum(pass_at_1s) / len(pass_at_1s)}
+
+    results = {}
+    for i, r in enumerate(all_results):
+        r_new = []
+        for _r in r:
+            r_new.append([_r])
+        results[i] = r_new
+    return [metrics, results]
