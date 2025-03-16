@@ -1,10 +1,12 @@
 import random
+import numpy as np
 from abc import ABC, abstractmethod
 from typing import Tuple, Optional, List, Dict, Any
 
 from ..core.logging import logger
 from ..core.callbacks import timeout, TimeoutException
 from ..utils.sanitize import sanitize
+from .lcb_utils.evaluation import estimate_pass_at_k 
 
 
 class Benchmark(ABC):
@@ -266,3 +268,16 @@ class CodingBenchmark(Benchmark):
             result = (self.FAILED, error_msg)
         
         return result
+    
+    def compute_pass_at_k(self, results: List[bool], k_list: List[int]) -> Dict[str, float]:
+        """
+        Compute the pass@k for the given results.
+        """
+        pass_at_k = {}
+        n = len(results)
+        c = sum(results)
+        for k in k_list:
+            if n >= k:
+                pass_at_k[f"pass@{k}"] = float(estimate_pass_at_k(np.array([n]), np.array([c]), k)[0])
+        
+        return pass_at_k

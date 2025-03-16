@@ -153,9 +153,7 @@ class MBPP(CodingBenchmark):
             results.append(len(solution_states)==len(label) and all(state==self.SUCCESS for state in solution_states))
         
         k_list = [self.k] if isinstance(self.k, int) else self.k
-        pass_at_k = {}
-        for k in k_list:
-            pass_at_k[f"pass@{k}"] = sum(results[:min(k, len(results))]) / min(k, len(results))
+        pass_at_k = self.compute_pass_at_k(results, k_list)
         
         return pass_at_k
     
