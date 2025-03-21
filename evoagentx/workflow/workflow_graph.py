@@ -11,7 +11,6 @@ from typing import Union, Optional, Tuple, Dict, List
 from ..core.logging import logger
 from ..core.module import BaseModule
 from ..core.base_config import Parameter
-from ..core.decorators import atomic_method
 from .action_graph import ActionGraph
 from ..models.base_model import BaseLLM
 from ..models.model_configs import LLMConfig
@@ -302,7 +301,6 @@ class WorkFlowGraph(BaseModule):
         
         return all_loops
 
-    @atomic_method
     def add_node(self, node: WorkFlowNode, update_graph: bool = True, **kwargs):
 
         if not isinstance(node, WorkFlowNode):
@@ -315,7 +313,6 @@ class WorkFlowGraph(BaseModule):
         if update_graph:
             self.update_graph()
 
-    @atomic_method
     def add_edge(self, edge: WorkFlowEdge, update_graph: bool = True, **kwargs):
 
         if not isinstance(edge, WorkFlowEdge):
@@ -481,8 +478,14 @@ class WorkFlowGraph(BaseModule):
         if all(node_complete_list):
             return True
         return False
+    
+    def reset_graph(self):
+        """
+        set the status of all nodes to pending
+        """
+        for node in self.nodes:
+            node.set_status(WorkFlowNodeState.PENDING)
 
-    @atomic_method
     def set_node_status(self, node: Union[str, WorkFlowNode], new_state: WorkFlowNodeState) -> bool:
         """
         Update the state of a specific node. 
