@@ -55,17 +55,17 @@ class Evaluator:
         self._evaluation_records = {}
         self.kwargs = kwargs
 
-    def _get_eval_data(self, benchmark: Benchmark, eval_mode: str = "test", indices: Optional[List[int]] = None, sample_k: Optional[int] = None) -> List[dict]:
+    def _get_eval_data(self, benchmark: Benchmark, eval_mode: str = "test", indices: Optional[List[int]] = None, sample_k: Optional[int] = None, seed: Optional[int] = None) -> List[dict]:
         """
         Get the evaluation data from the benchmark.
         """
         assert eval_mode in ["test", "dev", "train"], f"Invalid eval_mode: {eval_mode}. Choices: ['test', 'dev', 'train']"
         if eval_mode == "test":
-            data = benchmark.get_test_data(indices=indices, sample_k=sample_k)
+            data = benchmark.get_test_data(indices=indices, sample_k=sample_k, seed=seed)
         elif eval_mode == "dev":
-            data = benchmark.get_dev_data(indices=indices, sample_k=sample_k)
+            data = benchmark.get_dev_data(indices=indices, sample_k=sample_k, seed=seed)
         else:
-            data = benchmark.get_train_data(indices=indices, sample_k=sample_k)
+            data = benchmark.get_train_data(indices=indices, sample_k=sample_k, seed=seed)
         return data
     
     def evaluate(
@@ -75,6 +75,7 @@ class Evaluator:
         eval_mode: str = "test", 
         indices: Optional[List[int]] = None, 
         sample_k: Optional[int] = None, 
+        seed: Optional[int] = None, 
         verbose: Optional[bool] = None,
         **kwargs
     ) -> dict:
@@ -94,7 +95,7 @@ class Evaluator:
         """
         # clear the evaluation records
         self._evaluation_records.clear()
-        data = self._get_eval_data(benchmark=benchmark, eval_mode=eval_mode, indices=indices, sample_k=sample_k)
+        data = self._get_eval_data(benchmark=benchmark, eval_mode=eval_mode, indices=indices, sample_k=sample_k, seed=seed)
         results = self._evaluate_graph(graph=graph, data=data, benchmark=benchmark, verbose=verbose, **kwargs)
         return results
     
@@ -114,7 +115,9 @@ class Evaluator:
             raise ValueError("`agent_manager` is not provided. Please provide an agent manager when evaluating a WorkFlowGraph.")
         
         # create a WorkFlow instance
-        workflow = WorkFlow(llm=self.llm, graph=graph, agent_manager=self.agent_manager, **kwargs)
+        graph_copy = WorkFlowGraph(goal=graph.goal, graph=graph)
+        graph_copy.reset_graph() # reset the status of all nodes to pending
+        workflow = WorkFlow(llm=self.llm, graph=graph_copy, agent_manager=self.agent_manager, **kwargs)
         output: str = workflow.execute(inputs=inputs, **kwargs)
         if return_trajectory:
             return output, workflow.environment.get()

@@ -34,22 +34,6 @@ class WorkFlow(BaseModule):
             self.workflow_manager = WorkFlowManager(llm=self.llm)
 
     def execute(self, inputs: dict = {}, **kwargs) -> str:
-        """
-        Execute the workflow in a loop:
-            - Check whether the workflow is completed. If the workflow is completed or there is failed task, stop execution.
-            - Use self.workflow_manager.schedule_next_task to get the next task. 
-            - Use self.graph.set_node_state to set the state of that task node as WorkFlowNodeState.RUNNING.
-            - Use self.workflow_manager.schedule_next_action to execute (multiple) action(s) to finish this task:
-                - schedule_next_action will return an NextAction object
-                - Obtain the agent from self.agent_manager, set the agent state to AgentState.RUNNING, 
-                    initialize a new short_term_memory if the agent is new in current ``workflow''. 
-                    retrieve all relevant context from environment and execute the action.
-                - Publish the action result to self.environment
-                - Set the agent state to AgentState.AVAILABLE. 
-            - Use self.graph.set_node_state to update the state of the task.
-            - If the state of the current task is WorkFlowNodeState.FAILED, stop execution and return the error message. 
-        If the workflow is successfully executed, update the agent's long_term_memory based on the short_term_memory.
-        """
 
         goal = self.graph.goal
         inputs.update({"goal": goal})
