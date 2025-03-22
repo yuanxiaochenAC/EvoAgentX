@@ -1,7 +1,8 @@
+import contextvars
 from tqdm import tqdm
 # from time import time
 from typing import Callable, Optional, Any, List, Union, Tuple
-# from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from ..core.logging import logger
 from ..core.message import Message
@@ -220,7 +221,31 @@ class Evaluator:
         return results
 
     def _parallel_evaluate(self, graph: Union[WorkFlowGraph, ActionGraph], data: List[dict], benchmark: Benchmark, verbose: Optional[bool] = None, **kwargs) -> List[dict]:
-        raise NotImplementedError("Parallel evaluation is not implemented yet.")
+        # raise NotImplementedError("Parallel evaluation is not implemented yet.")
+        if not data:
+            logger.warning("No data to evaluate. Return an empty list.")
+            return []
+        
+        results = [] 
+        with ThreadPoolExecutor(max_workers=self.num_workers) as executor:
+            futures = {
+                executor.submit(contextvars.copy_context().run, self._evaluate_single_example, graph, example, benchmark, **kwargs): example
+                for example in data
+            }
+            
+            if verbose:
+                progress_bar = tqdm(desc="Evaluating workflow", total=len(futures))
+                
+            for future in as_completed(futures):
+                result = future.result()
+                if result is not None:
+                    results.append(result)
+                if verbose:
+                    progress_bar.update(1)
+                
+        if verbose:
+            progress_bar.close()
+        return results
 
     def _calculate_average_score(self, scores: List[dict]) -> dict:
         """
