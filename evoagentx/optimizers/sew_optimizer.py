@@ -13,7 +13,7 @@ from ..core.logging import logger
 from ..models.base_model import BaseLLM 
 from ..benchmark.benchmark import Benchmark
 from ..workflow.action_graph import ActionGraph
-from evoagentx.core.callbacks import suppress_logger_info
+from ..core.callbacks import suppress_logger_info
 from ..workflow.workflow_graph import SequentialWorkFlowGraph
 from ..prompts.workflow.sew_optimizer import mutation_prompts, thinking_styles
 
