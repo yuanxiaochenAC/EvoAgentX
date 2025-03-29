@@ -137,7 +137,7 @@ def get_function(compiled_sol, fn_name: str):  # type: ignore
     try:
         assert hasattr(compiled_sol, fn_name)
         return getattr(compiled_sol, fn_name)
-    except Exception as e:
+    except Exception:
         return
 
 
@@ -265,7 +265,7 @@ def clean_if_name(code: str) -> str:
                 code = (
                     ast.unparse(astree.body[:-1]) + "\n" + ast.unparse(last_block.body)  # type: ignore
                 )
-    except:
+    except Exception:
         pass
 
     return code
@@ -299,7 +299,7 @@ def make_function(code: str) -> str:
             + ast.unparse(function_ast)  # type: ignore
         )
         return main_code
-    except Exception as e:
+    except Exception:
         return code
     
 
@@ -339,7 +339,7 @@ def call_method(method, inputs):
     def _inner_call_method(_method):
         try:
             return _method()
-        except SystemExit as e:
+        except SystemExit:
             pass
         finally:
             pass
@@ -357,7 +357,7 @@ def get_stripped_lines(val: str):
 def convert_line_to_decimals(line: str) -> tuple[bool, list[Decimal]]:
     try:
         decimal_line = [Decimal(elem) for elem in line.split()]
-    except:
+    except Exception:
         return False, []
     return True, decimal_line
 
@@ -517,7 +517,7 @@ def run_test(sample, test=None, debug=False, timeout=6):
         return in_outs, {"error": "no test code provided"}
     elif test is not None:
         results = []
-        sol = import_string
+        # sol = import_string
         if debug:
             print(f"loading test code = {datetime.now().time()}")
 
@@ -590,7 +590,7 @@ def check_correctness(sample, generation, timeout, debug=True):
         # consider that all tests failed
         result = [[-1 for i in range(len(in_outs["inputs"]))]]
         if debug:
-            print(f"global timeout")
+            print("global timeout")
     return result[0], metadata_list[0]
 
 
@@ -874,14 +874,14 @@ def check_testcase_output(testcase_str, expected_output):
 
     try:
         testcase_output_eval = eval(testcase_output_str)
-    except:
+    except Exception:
         global_result = False
         # print("Failed to eval testcase output", testcase_output_str)
         # breakpoint()
 
     try:
         expected_output_eval = json.loads(expected_output)
-    except:
+    except Exception:
         global_result = False
         print("Failed to eval expected testcase output", expected_output)
 
@@ -1094,7 +1094,8 @@ def evaluate_score(args) -> list[bool]:
 
 
 def pass_at_k(n, c, k):
-    if n - c < k: return 1.0
+    if n - c < k: 
+        return 1.0
     return 1.0 - np.prod(1.0 - k / np.arange(n - c + 1, n + 1))
 
 

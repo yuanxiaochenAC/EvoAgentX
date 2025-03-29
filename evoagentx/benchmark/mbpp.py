@@ -1,6 +1,6 @@
 import os 
 import regex
-from typing import Union, Dict, Any, List
+from typing import Union, Any, List
 from ..core.logging import logger
 from .benchmark import CodingBenchmark 
 from ..utils.utils import download_file
