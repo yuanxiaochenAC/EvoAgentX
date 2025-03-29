@@ -112,19 +112,23 @@ class WorkFlow(BaseModule):
         
         while next_action:
             agent: Agent = self.agent_manager.get_agent(agent_name=next_action.agent)
-            while self.agent_manager.get_agent_state(agent_name=agent.name) != AgentState.AVAILABLE:
-                sleep(5)
+            # while self.agent_manager.get_agent_state(agent_name=agent.name) != AgentState.AVAILABLE:
+            #     sleep(5)
+            if not self.agent_manager.wait_for_agent_available(agent_name=agent.name, timeout=300):
+                raise TimeoutError(f"Timeout waiting for agent {agent.name} to become available")
             self.agent_manager.set_agent_state(agent_name=next_action.agent, new_state=AgentState.RUNNING)
-            message = agent.execute(
-                action_name=next_action.action,
-                action_input_data=self.environment.get_all_execution_data(),
-                return_msg_type=MessageType.RESPONSE, 
-                wf_goal=self.graph.goal,
-                wf_task=task.name, 
-                wf_task_desc=task.description
-            )
-            self.agent_manager.set_agent_state(agent_name=next_action.agent, new_state=AgentState.AVAILABLE)
-            self.environment.update(message=message, state=TrajectoryState.COMPLETED)
+            try:
+                message = agent.execute(
+                    action_name=next_action.action,
+                    action_input_data=self.environment.get_all_execution_data(),
+                    return_msg_type=MessageType.RESPONSE, 
+                    wf_goal=self.graph.goal,
+                    wf_task=task.name, 
+                    wf_task_desc=task.description
+                )
+                self.environment.update(message=message, state=TrajectoryState.COMPLETED)
+            finally:
+                self.agent_manager.set_agent_state(agent_name=next_action.agent, new_state=AgentState.AVAILABLE)
             if self.is_task_completed(task=task):
                 break
             next_action: NextAction = self.workflow_manager.schedule_next_action(
