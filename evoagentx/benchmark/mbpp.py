@@ -1,6 +1,6 @@
 import os 
 import regex
-from typing import Union, Dict, Any, List
+from typing import Union, Any, List
 from ..core.logging import logger
 from .benchmark import CodingBenchmark 
 from ..utils.utils import download_file
@@ -131,10 +131,7 @@ class MBPP(CodingBenchmark):
         Returns:
             dict: The evaluation metrics (pass@k).
         """
-        assert isinstance(prediction, str) or isinstance(prediction, list), "prediction must be a string or a list of strings, but got {}".format(type(prediction))
-        assert isinstance(label, dict) or isinstance(label, list), "label must be a string or a list of strings, but got {}".format(type(label))
-        prediction = [prediction] if isinstance(prediction, str) else prediction
-        label = [label] if isinstance(label, dict) else label
+        prediction, label = self._check_evaluation_inputs(prediction, label)
 
         results = []
         for solution in prediction:
@@ -156,9 +153,7 @@ class MBPP(CodingBenchmark):
             results.append(len(solution_states)==len(label) and all(state==self.SUCCESS for state in solution_states))
         
         k_list = [self.k] if isinstance(self.k, int) else self.k
-        pass_at_k = {}
-        for k in k_list:
-            pass_at_k[f"pass@{k}"] = sum(results[:min(k, len(results))]) / min(k, len(results))
+        pass_at_k = self.compute_pass_at_k(results, k_list)
         
         return pass_at_k
     
