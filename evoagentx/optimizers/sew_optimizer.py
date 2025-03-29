@@ -22,7 +22,7 @@ VALID_SCHEMES = ["python", "yaml", "code", "core", "bpmn"]
 class SEWWorkFlowScheme:
 
     """
-    The scheme of the workflow for SEM optimizer.
+    The scheme of the workflow for SEW optimizer.
     """
     def __init__(self, graph: SequentialWorkFlowGraph, **kwargs):
         self.graph = graph # the workflow graph to be transformed
@@ -602,7 +602,7 @@ class SEWWorkFlowScheme:
 
 class SimplePromptBreeder:
     """
-    The simple prompt breeder for SEM optimizer.
+    The simple prompt breeder for SEW optimizer.
     """
     def __init__(self, llm: BaseLLM, **kwargs):
         self.llm = llm

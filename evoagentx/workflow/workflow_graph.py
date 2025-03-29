@@ -989,6 +989,7 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
                     "inputs": [param.to_dict(ignore=["class_name"]) for param in node.inputs],
                     "outputs": [param.to_dict(ignore=["class_name"]) for param in node.outputs],
                     "prompt": node.agents[0].get("prompt", None),
+                    "system_prompt": node.agents[0].get("system_prompt", None),
                     "llm_config": node.agents[0].get("llm_config", None).to_dict(exclude_none=True) \
                         if node.agents[0].get("llm_config", None) is not None else \
                             node.agents[0]["llm"].config.to_dict(exclude_none=True),
