@@ -12,10 +12,14 @@ This repository provides a set of benchmarks to facilitate the evaluation of dif
 | Math                      | GSM8K           | 7,473     | /       | 1,319  |
 | Math                      | MATH            | 7,500     | /       | 5,000  |
 | Code Generation           | HumanEval       | /         | /       | 164    |
-| Code Generation           | HumanEvalu+     | /         | /       | 164    |
 | Code Generation           | MBPP            | /         | /       | 427    |
-| Code Generation           | MBPPP+          | /         | /       | 427    |
-| Code Generation           | LiveCodeBench   | /         | /       | /      |
+| Code Generation           | LiveCodeBench(v1) | /         | /       | 400    |
+| Code Generation           | LiveCodeBench(v2) | /         | /       | 511    |
+| Code Generation           | LiveCodeBench(v3) | /         | /       | 612    |
+| Code Generation           | LiveCodeBench(v4) | /         | /       | 713    |
+| Code Generation           | LiveCodeBench(v5) | /         | /       | 880    |
+| Code Execution            | LiveCodeBench   | /         | /       | 479      |
+| Test Output Prediction    | LiveCodeBench   | /         | /       | 442      |
 
 
 Below, we introduce the preprocessing steps and evaluation metrics for each benchmark. 
@@ -143,8 +147,6 @@ Each example in the dataset is in the following format:
 }
 ```
 
-#### HumanEvalu+
-
 #### MBPP 
 [Mostly Basic Python Problems (MBPP)](https://github.com/google-research/google-research/tree/master/mbpp) consists of hundreds of entry-level Python programming problems. Each problem consists of a task description, code solution and 3 automated test cases. We use the [sanitized subset](https://github.com/google-research/google-research/blob/master/mbpp/sanitized-mbpp.json) of the MBPP dataset, which consists of 427 problems with data that are hand-verfied by the authors. To facilitate the evaluation, we convert the MBPP dataset into the HumanEval format. 
 
@@ -168,4 +170,13 @@ You can also access the original MBPP attributes such as "code", "test_list" in 
 
 
 #### LiveCodeBench 
+[LiveCodeBench](https://livecodebench.github.io/) is a contamination-free evaluation benchmark of LLMs for code that continuously collects new problems over time. Particularly, LiveCodeBench also focuses on broader code-related capabilities, such as code execution, and test output prediction, beyond mere code generation. Currently, LiveCodeBench hosts over three hundred high-quality coding problems published between May 2023 and February 2024. 
+
+You can load the dataset using the following code, where `scenario` can be one of [`code_generation`, `test_output_prediction`, `code_execution`] indicating different tasks. `version` denotes different versions of the code generation datasets, which is only available for `code_generation` scenario, and can be one of `["release_v1", "release_v2", "release_v3", "release_v4", "release_v5", "release_latest"]`. Please refer to the [LiveCodeBench](https://livecodebench.github.io/) repository for more details. 
+
+```python
+from evoagentx.benchmark import LiveCodeBench
+livecodebench_dataset = LiveCodeBench(scenario="code_generation", version="release_v1") # optional: path="/path/to/save_data"
+test_data = livecodebench_dataset.get_test_data() 
+```
 

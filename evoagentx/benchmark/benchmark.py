@@ -1,10 +1,12 @@
 import random
+import numpy as np
 from abc import ABC, abstractmethod
 from typing import Tuple, Optional, List, Dict, Any
 
 from ..core.logging import logger
 from ..core.callbacks import timeout, TimeoutException
 from ..utils.sanitize import sanitize
+from .lcb_utils.evaluation import estimate_pass_at_k 
 
 
 class Benchmark(ABC):
@@ -211,6 +213,16 @@ class CodingBenchmark(Benchmark):
 
     def handle_special_cases(self, task_id: str, solution: str, test: str) -> bool:
         return solution, test 
+    
+    def _check_evaluation_inputs(self, prediction: Any, label: Any) -> bool:
+        """
+        Check if the inputs are valid for evaluation.
+        """
+        assert isinstance(prediction, str) or isinstance(prediction, list), "prediction must be a string or a list of strings, but got {}".format(type(prediction))
+        assert isinstance(label, dict) or isinstance(label, list), "label must be a string or a list of strings, but got {}".format(type(label))
+        prediction = [prediction] if isinstance(prediction, str) else prediction
+        label = [label] if isinstance(label, dict) else label
+        return prediction, label
 
     def check_solution(self, task_id: str, solution: str, test: str, entry_point: Optional[str] = None) -> bool:
         """
@@ -256,3 +268,16 @@ class CodingBenchmark(Benchmark):
             result = (self.FAILED, error_msg)
         
         return result
+    
+    def compute_pass_at_k(self, results: List[bool], k_list: List[int]) -> Dict[str, float]:
+        """
+        Compute the pass@k for the given results.
+        """
+        pass_at_k = {}
+        n = len(results)
+        c = sum(results)
+        for k in k_list:
+            if n >= k:
+                pass_at_k[f"pass@{k}"] = float(estimate_pass_at_k(np.array([n]), np.array([c]), k)[0])
+        
+        return pass_at_k
