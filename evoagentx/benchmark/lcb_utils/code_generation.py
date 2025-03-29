@@ -66,7 +66,7 @@ class CodeGenerationProblem:
 
         try:
             self.private_test_cases = json.loads(self.private_test_cases)  # type: ignore
-        except:
+        except Exception:
             self.private_test_cases = json.loads(
                 pickle.loads(
                     zlib.decompress(

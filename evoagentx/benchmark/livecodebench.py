@@ -1,10 +1,8 @@
 import os 
-import regex
-from typing import Union, Dict, Any, List
+# import regex
+from typing import Union, Any, List
 from ..core.logging import logger
 from .benchmark import CodingBenchmark 
-from ..utils.utils import download_file
-from ..core.module_utils import load_json
 from ..core.module_utils import extract_code_blocks
 from .lcb_utils.code_generation import (
     CodeGenerationProblem, 
