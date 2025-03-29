@@ -1,3 +1,5 @@
+import copy
+import threading
 import contextvars
 from tqdm import tqdm
 # from time import time
@@ -49,6 +51,7 @@ class Evaluator:
         self.llm = llm
         self.num_workers = num_workers
         self.agent_manager = agent_manager
+        self._thread_agent_managers = {}
         self.collate_func = collate_func or (lambda x: x)
         self.output_postprocess_func = output_postprocess_func or (lambda x: x)
         self.verbose = verbose
@@ -220,8 +223,41 @@ class Evaluator:
             progress_bar.close()
         return results
 
+    def _create_new_agent_manager(self) -> AgentManager:
+        """Create a new agent manager with the same configuration but new locks"""
+        if self.agent_manager is None:
+            return None
+        # Create a new agent manager
+        new_manager = AgentManager(agents=self.agent_manager.agents)
+        return new_manager
+
+    def _get_thread_agent_manager(self) -> AgentManager:
+        """Get or create thread-specific agent manager"""
+        if self.agent_manager is None:
+            return None
+        thread_id = threading.get_ident()
+        if thread_id not in self._thread_agent_managers:
+            new_manager = self._create_new_agent_manager()
+            self._thread_agent_managers[thread_id] = new_manager
+        return self._thread_agent_managers[thread_id]
+
+    def _evaluate_single_example_with_context(self, graph: Union[WorkFlowGraph, ActionGraph], example: dict, benchmark: Benchmark, **kwargs) -> Optional[dict]:
+        """Wrapper that sets up thread-specific context before running evaluation"""
+        thread_agent_manager = self._get_thread_agent_manager()
+        if thread_agent_manager is None:
+            return self._evaluate_single_example(graph, example, benchmark, **kwargs)
+        
+        # Store original agent manager
+        original_agent_manager = self.agent_manager
+        try:
+            # Use thread-specific agent manager
+            self.agent_manager = thread_agent_manager
+            return self._evaluate_single_example(graph, example, benchmark, **kwargs)
+        finally:
+            # Restore original agent manager
+            self.agent_manager = original_agent_manager
+
     def _parallel_evaluate(self, graph: Union[WorkFlowGraph, ActionGraph], data: List[dict], benchmark: Benchmark, verbose: Optional[bool] = None, **kwargs) -> List[dict]:
-        # raise NotImplementedError("Parallel evaluation is not implemented yet.")
         if not data:
             logger.warning("No data to evaluate. Return an empty list.")
             return []
@@ -229,7 +265,11 @@ class Evaluator:
         results = [] 
         with ThreadPoolExecutor(max_workers=self.num_workers) as executor:
             futures = {
-                executor.submit(contextvars.copy_context().run, self._evaluate_single_example, graph, example, benchmark, **kwargs): example
+                executor.submit(
+                    contextvars.copy_context().run,
+                    self._evaluate_single_example_with_context,
+                    graph, example, benchmark, **kwargs
+                ): example
                 for example in data
             }
             
