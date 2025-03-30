@@ -87,7 +87,7 @@ In short, **preprocessing prepares benchmark examples for the workflow**, while 
 
 In the following example, we define a `collate_func` to format the raw examples into a prompt for the workflow, and a `output_postprocess_func` to extract the final answer from the workflow output.
 
-Each example in the benchmark can be formatted using a collate_func, which transforms raw examples into a prompt or structured input for the agent.
+Each example in the benchmark can be formatted using a `collate_func`, which transforms raw examples into a prompt or structured input for the agent.
 
 ```python
 def collate_func(example: dict) -> dict:
@@ -109,7 +109,7 @@ def collate_func(example: dict) -> dict:
     return {"problem": problem}
 ```
 
-After the agent generates an output, you can define how to extract the final answer using output_postprocess_func. 
+After the agent generates an output, you can define how to extract the final answer using `output_postprocess_func`. 
 ```python
 def output_postprocess_func(output: dict) -> dict:
     """
@@ -140,13 +140,6 @@ If `num_workers` is greater than 1, the evaluation will be parallelized across m
 You can now run the evaluation by providing the workflow and benchmark to the evaluator:
 
 ```python
-results = evaluator.evaluate(
-    graph=workflow, 
-    benchmark=benchmark, 
-    eval_mode="dev", # Evaluation split: train / dev / test 
-    sample_k=10 # If set, randomly sample k examples from the benchmark for evaluation  
-)
-
 with suppress_logger_info():
     results = evaluator.evaluate(
         graph=workflow, 
@@ -157,6 +150,7 @@ with suppress_logger_info():
     
 print("Evaluation metrics: ", results)
 ```
+where `suppress_logger_info` is used to suppress the logger info.
 
 Please refer to the [benchmark_and_evaluation.py](../../examples/benchmark_and_evaluation.py) for a complete example.
 
