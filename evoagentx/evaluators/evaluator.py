@@ -227,7 +227,7 @@ class Evaluator:
         if self.agent_manager is None:
             return None
         # Create a new agent manager
-        new_manager = AgentManager(agents=self.agent_manager.agents)
+        new_manager = AgentManager(agents=self.agent_manager.agents, storage_handler=self.agent_manager.storage_handler)
         return new_manager
 
     def _get_thread_agent_manager(self) -> AgentManager:
