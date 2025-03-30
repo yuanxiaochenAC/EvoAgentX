@@ -156,3 +156,27 @@ Please refer to the [benchmark_and_evaluation.py](../../examples/benchmark_and_e
 
 
 ## Custom Benchmark 
+
+To define a custom benchmark, you need to extend the `Benchmark` class and implement the following methods:
+
+- `_load_data(self)`: 
+    
+    Load the benchmark data, and set the `self._train_data`, `self._dev_data` and `self._test_data` attributes.
+
+
+- `_get_id(self, example: Any) -> Any`: 
+
+    Return the unique identifier of an example.
+
+- `_get_label(self, example: Any) -> Any`:
+
+    Return the label or ground truth associated with a given example.
+
+    This is used to compare predictions against the correct answer during evaluation. The output will be directly passed to the `evaluate` method. 
+
+
+- `evaluate(self, prediction: Any, label: Any) -> dict`: 
+    Compute the evaluation metrics for a single example, based on its prediction and ground-truth label (obtained from `_get_label`).
+    This method should return a dictionary of metric name(s) and value(s).
+
+For a complete example of a benchmark implementation, please refer to the [HotPotQA](../../evoagentx/benchmark/hotpotqa.py#L23) class.
