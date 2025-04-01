@@ -138,7 +138,7 @@ class MBPP(CodingBenchmark):
             solution_states = []
             for label_data in label:
                 task_id = label_data["task_id"]
-                prompt = self.get_example_by_id(task_id, "test")["prompt"]
+                prompt = self.get_example_by_id(task_id)["prompt"]
                 unit_test = label_data["test"]
                 entry_point = label_data["entry_point"]
                 state, message = self.check_solution(

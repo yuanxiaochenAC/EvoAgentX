@@ -117,18 +117,31 @@ class Benchmark(ABC):
             data = self._test_data
         return data
     
-    def get_example_by_id(self, example_id: Any, mode: str = "test") -> Optional[Any]:
+    def get_example_by_id(self, example_id: Any, mode: str = None) -> Optional[Any]:
         """
         Get an example from the benchmark by its id.
 
         Args:
             example_id (Any): The id of the example to retrieve.
-            mode (str): The mode to retrieve the example from, choices: ["train", "dev", "test"]
+            mode (str): The mode to retrieve the example from, choices: ["train", "dev", "test", "all"]
         
         Returns:
             Optional[Any]: The example if found, otherwise None.
         """
-        data = self.get_data_by_mode(mode=mode)
+        # data = self.get_data_by_mode(mode=mode)
+        if mode is not None and mode not in ["train", "dev", "test", "all"]:
+            raise ValueError(f"Invalid value for mode: {mode}. Available choices: ['train', 'dev', 'test', 'all']")
+        
+        if mode is None or mode == "all":
+            data = []
+            if self._train_data is not None:
+                data.extend(self._train_data)
+            if self._dev_data is not None:
+                data.extend(self._dev_data)
+            if self._test_data is not None:
+                data.extend(self._test_data)
+        else:
+            data = self.get_data_by_mode(mode=mode)
         for example in data:
             if self._get_id(example=example) == example_id:
                 return example
