@@ -1,0 +1,16 @@
+site_name: EvoAgentX
+theme:
+  name: material
+
+nav:
+  - About: index.md
+  - API: api.md
+  - Tutorials:
+      - "Install": tutorials/installation.md
+      - "Quickstart": tutorials/quickstart.md
+
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
