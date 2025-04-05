@@ -1,9 +1,10 @@
+import asyncio
 from tenacity import (
     retry,
     stop_after_attempt,
     wait_random_exponential,
 )
-from openai import OpenAI, Stream 
+from openai import OpenAI, Stream
 from openai.types.chat import ChatCompletion
 from typing import Optional, List
 from litellm import token_counter, cost_per_token
@@ -96,6 +97,52 @@ class OpenAILLM(BaseLLM):
         
     def batch_generate(self, batch_messages: List[List[dict]], **kwargs) -> List[str]:
         return [self.single_generate(messages=one_messages, **kwargs) for one_messages in batch_messages]
+    
+    async def single_generate_async(self, messages: List[dict], **kwargs) -> str:
+
+        stream = kwargs.get("stream", self.config.stream)
+        output_response = kwargs.get("output_response", self.config.output_response)
+
+        try:
+            # Create a completely new client instance to avoid thread-local storage issues
+            # This is a more aggressive approach than using a lock
+            isolated_client = OpenAI(api_key=self.config.openai_key)
+            completion_params = self.get_completion_params(**kwargs)
+
+            # Use synchronous client in async context to avoid issues
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None, 
+                lambda: isolated_client.chat.completions.create(
+                    messages=messages, 
+                    **completion_params
+                )
+            )
+
+            if stream:
+                # Process stream in synchronous context
+                if hasattr(response, "__aiter__"):
+                    # It's an async stream, convert to synchronous
+                    output = ""
+                    async for chunk in response:
+                        content = chunk.choices[0].delta.content
+                        if content:
+                            if output_response:
+                                print(content, end="", flush=True)
+                            output += content
+                else:
+                    # It's a synchronous stream
+                    output = self.get_stream_output(response, output_response=output_response)
+                cost = self._stream_cost(messages=messages, output=output)
+            else:
+                output: str = self.get_completion_output(response=response, output_response=output_response)
+                cost = self._completion_cost(response) # calculate completion cost
+            self._update_cost(cost=cost)
+        
+        except Exception as e:
+            raise RuntimeError(f"Error during single_generate_async of OpenAILLM: {str(e)}")
+
+        return output
     
     def _completion_cost(self, response: ChatCompletion) -> Cost:
         input_tokens = response.usage.prompt_tokens
