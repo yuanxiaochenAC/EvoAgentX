@@ -40,14 +40,14 @@ def main():
         return {"question": example["prompt"]}
     
     # obtain Evaluator
-    evaluator = Evaluator(llm=llm, agent_manager=agent_manager, collate_func=collate_func, num_workers=1, verbose=True)
+    evaluator = Evaluator(llm=llm, agent_manager=agent_manager, collate_func=collate_func, num_workers=5, verbose=True)
 
     # obtain SEWOptimizer
     optimizer = SEWOptimizer(
         graph=sew_graph, 
         evaluator=evaluator, 
         llm=llm, 
-        max_steps=20, 
+        max_steps=10,
         eval_rounds=1, 
         repr_scheme="python", 
         optimize_mode="prompt", 
@@ -59,8 +59,11 @@ def main():
 
     # evaluate the optimized SEW workflow
     with suppress_logger_info():
-        optimizer.evaluate(dataset=humaneval, eval_mode="test") 
+        metrics = optimizer.evaluate(dataset=humaneval, eval_mode="test")
+    print("Evaluation metrics: ", metrics)
     
+    # save the optimized SEW workflow
+    optimizer.save("debug/optimized_sew_workflow.json")
 
 if __name__ == "__main__":
     main()
