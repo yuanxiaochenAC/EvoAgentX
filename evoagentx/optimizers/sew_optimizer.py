@@ -936,9 +936,17 @@ class SEWOptimizer(Optimizer):
 
         if self._convergence_check_counter >= self.convergence_threshold:
             logger.info(f"Early stopping triggered: No improvement for {self.convergence_threshold} iterations")
-            logger.info(f"Score history: {scores[-self.convergence_threshold:]}")
+            # logger.info(f"Score history: {scores[-self.convergence_threshold:]}")
             return True
         return False
 
-    
+    def save(self, path: str, ignore: List[str] = []):
+        """
+        Save the (optimized) workflow graph to a file. 
+
+        Args:
+            path (str): The path to save the workflow graph.
+            ignore (List[str]): The keys to ignore when saving the workflow graph.
+        """
+        self.graph.save_module(path, ignore=ignore)
     
