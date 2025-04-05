@@ -5,9 +5,11 @@ theme:
 nav:
   - About: index.md
   - API: api.md
+  - Install: installation.md 
+  - Quickstart: quickstart.md
   - Tutorials:
-      - "Install": tutorials/installation.md
-      - "Quickstart": tutorials/quickstart.md
+      - "Benchmark and Evaluation": tutorial/benchmark_and_evaluation.md
+      - "SEW Optimizer": tutorial/sew_optimizer.md
 
 
 plugins:
