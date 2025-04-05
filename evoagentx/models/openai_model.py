@@ -19,10 +19,14 @@ class OpenAILLM(BaseLLM):
 
     def init_model(self):
         config: OpenAILLMConfig = self.config
-        self._client = OpenAI(api_key=config.openai_key)
+        self._client = self._init_client(config) # OpenAI(api_key=config.openai_key)
         self._default_ignore_fields = ["llm_type", "output_response", "openai_key", "deepseek_key", "anthropic_key"] # parameters in OpenAILLMConfig that are not OpenAI models' input parameters 
         if self.config.model not in get_openai_model_cost():
             raise KeyError(f"'{self.config.model}' is not a valid OpenAI model name!")
+    
+    def _init_client(self, config: OpenAILLMConfig):
+        client = OpenAI(api_key=config.openai_key)
+        return client
 
     def formulate_messages(self, prompts: List[str], system_messages: Optional[List[str]] = None) -> List[List[dict]]:
         
@@ -138,7 +142,8 @@ class OpenAILLM(BaseLLM):
         try:
             # Create a completely new client instance to avoid thread-local storage issues
             # This is a more aggressive approach than using a lock
-            isolated_client = OpenAI(api_key=self.config.openai_key)
+            # isolated_client = OpenAI(api_key=self.config.openai_key)
+            isolated_client = self._init_client(self.config)
             completion_params = self.get_completion_params(**kwargs)
 
             # Use synchronous client in async context to avoid issues
