@@ -17,7 +17,7 @@ class LLMConfig(BaseConfig):
 class OpenAILLMConfig(LLMConfig):
 
     llm_type: str = "OpenAILLM"
-    openai_key: str 
+    openai_key: Optional[str] = Field(default=None, description="the API key used to authenticate OpenAI requests")
 
     # generation parameters
     temperature: Optional[float] = Field(default=None, description="the temperature used to scaling logits")
@@ -87,8 +87,8 @@ class LiteLLMConfig(LLMConfig):
 class SiliconFlowConfig(LLMConfig):
 
     # LLM keys
-    llm_type: str = "SiliconFlow"
-    siliconflow_key: Optional[str] = Field(default=None, description="the API key used to authenticate SiliconFlow requests")
+    llm_type: str = "SiliconFlowLLM"
+    siliconflow_key: Optional[str] = Field(default=None, description="the API key used to authenticate SiliconFlow requests") 
 
     # generation parameters 
     temperature: Optional[float] = Field(default=None, description="the temperature used to scaling logits")
