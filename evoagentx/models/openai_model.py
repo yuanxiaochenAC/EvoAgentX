@@ -57,8 +57,40 @@ class OpenAILLM(BaseLLM):
         return completion_params
     
     def get_stream_output(self, response: Stream, output_response: bool=True) -> str:
+        """
+        Process stream response and return the complete output.
+
+        Args:
+            response: The stream response from OpenAI
+            output_response: Whether to print the response in real-time
+            
+        Returns:
+            str: The complete output text
+        """
         output = ""
         for chunk in response:
+            content = chunk.choices[0].delta.content
+            if content:
+                if output_response:
+                    print(content, end="", flush=True)
+                output += content
+        if output_response:
+            print("")
+        return output
+    
+    async def get_stream_output_async(self, response, output_response: bool = False) -> str:
+        """
+        Process async stream response and return the complete output.
+        
+        Args:
+            response: The async stream response from OpenAI
+            output_response: Whether to print the response in real-time
+            
+        Returns:
+            str: The complete output text
+        """
+        output = ""
+        async for chunk in response:
             content = chunk.choices[0].delta.content
             if content:
                 if output_response:
@@ -97,7 +129,7 @@ class OpenAILLM(BaseLLM):
         
     def batch_generate(self, batch_messages: List[List[dict]], **kwargs) -> List[str]:
         return [self.single_generate(messages=one_messages, **kwargs) for one_messages in batch_messages]
-    
+
     async def single_generate_async(self, messages: List[dict], **kwargs) -> str:
 
         stream = kwargs.get("stream", self.config.stream)
@@ -120,18 +152,9 @@ class OpenAILLM(BaseLLM):
             )
 
             if stream:
-                # Process stream in synchronous context
                 if hasattr(response, "__aiter__"):
-                    # It's an async stream, convert to synchronous
-                    output = ""
-                    async for chunk in response:
-                        content = chunk.choices[0].delta.content
-                        if content:
-                            if output_response:
-                                print(content, end="", flush=True)
-                            output += content
+                    output = await self.get_stream_output_async(response, output_response=output_response)
                 else:
-                    # It's a synchronous stream
                     output = self.get_stream_output(response, output_response=output_response)
                 cost = self._stream_cost(messages=messages, output=output)
             else:
