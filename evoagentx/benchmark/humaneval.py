@@ -1,8 +1,7 @@
 import os 
 import gzip 
 import shutil
-import asyncio
-from typing import Union, Any, Callable, List
+from typing import Union, Any, Callable
 from .benchmark import CodingBenchmark
 from ..core.logging import logger 
 from ..utils.utils import download_file 
