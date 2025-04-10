@@ -1,6 +1,7 @@
 # Acknowledgement: 
 # This file is modified from the original AFlow repository: https://github.com/geekan/MetaGPT/blob/main/metagpt/ext/aflow/scripts/optimizer.py 
 import os 
+import re 
 import shutil
 import asyncio
 from tqdm import tqdm
@@ -162,8 +163,15 @@ class AFlowOptimizer(BaseModule):
             graph_optimize_prompt = self.graph_utils.create_graph_optimize_prompt(
                 experience, sample["score"], graph[0], prompt, operator_description, self.question_type, log_data
             )
-            response = await self.optimizer_llm.generate_async(prompt=graph_optimize_prompt, parser=GraphOptimizeOutput, parse_mode="xml")
-            response = response.get_structured_data()
+            # response = await self.optimizer_llm.generate_async(prompt=graph_optimize_prompt, parser=GraphOptimizeOutput, parse_mode="xml")
+            # response = response.get_structured_data()
+            response = await self.optimizer_llm.generate_async(prompt=graph_optimize_prompt, parse_mode="str")
+            print(response.content)
+            try:
+                parsed_response = GraphOptimizeOutput.parse(response.content, parse_mode="xml")
+                response = parsed_response.get_structured_data()
+            except Exception:
+                response = self._parse_optimizer_llm_output(response.content, orig_graph=graph[0], orig_prompt=prompt)
 
             if self.experience_utils.check_modification(processed_experience, response['modification'], sample["round"]):
                 break
@@ -176,6 +184,37 @@ class AFlowOptimizer(BaseModule):
         top_rounds = self.data_utils.get_top_rounds(self.sample)
         return self.data_utils.select_round(top_rounds)
 
+    def _parse_optimizer_llm_output(self, content: str, orig_graph: str, orig_prompt: str) -> dict:
+        """Parse optimizer LLM output"""
+        response = {"modification": "", "graph": "", "prompt": ""}
+
+        # Extract content between <modification> tags
+        modification_pattern = r'<modification>(.*?)</modification>'
+        modification_match = re.search(modification_pattern, content, re.DOTALL)
+        if modification_match:
+            response["modification"] = modification_match.group(1).strip()
+        
+        # extract code block
+        code_block_pattern = r'```(?:python)?(.*?)```'
+        code_blocks = re.finditer(code_block_pattern, content, re.DOTALL)
+
+        # Process found code blocks
+        for block in code_blocks:
+            code = block.group(1).strip()
+            # If code contains graph-related content, store in graph
+            if 'class' in code or 'workflow' in code.lower():
+                response["graph"] = code
+            # If code contains prompt-related content, store in prompt
+            elif 'PROMPT' in code or 'prompt' in code.lower():
+                response["prompt"] = code
+        
+        if not response["graph"] and not response["prompt"]:
+            response["modification"] = "No modification due to error in LLM output"
+            response["graph"] = orig_graph
+            response["prompt"] = orig_prompt 
+        
+        return response
+    
     async def _evaluate_and_save_optimization_results(self, directory: str, response: dict, sample: dict, data: list, validation_n: int):
 
         """Save optimization results"""

@@ -16,6 +16,7 @@ from ..prompts.operators import (
 from ..utils.sanitize import sanitize
 from ..benchmark.benchmark import Benchmark
 from ..benchmark.humaneval import AFlowHumanEval
+from ..benchmark.mbpp import AFlowMBPP
 from ..utils.aflow_utils.data_utils import test_case_2_test_function
 
 class OperatorOutput(LLMOutputParser):
@@ -214,8 +215,7 @@ class TestOutput(OperatorOutput):
         return super().model_validate(obj, **kwargs)
     
 
-# TODO: add MBPP benchmark 
-TEST_SUPPORTED_BENCHMARKS = (AFlowHumanEval, )
+TEST_SUPPORTED_BENCHMARKS = (AFlowHumanEval, AFlowMBPP)
 
 class Test(Operator):
 

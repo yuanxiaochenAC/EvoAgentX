@@ -125,7 +125,8 @@ class GraphUtils:
         with open(os.path.join(directory, "graph.py"), "w", encoding="utf-8") as file:
             file.write(graph)
         with open(os.path.join(directory, "prompt.py"), "w", encoding="utf-8") as file:
-            file.write(response["prompt"])
+            prompt = response["prompt"].replace("prompt_custom.", "")
+            file.write(prompt)
         with open(os.path.join(directory, "__init__.py"), "w", encoding="utf-8") as file:
             file.write("")
         self.update_prompt_import(os.path.join(directory, "graph.py"), directory)
