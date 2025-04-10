@@ -1,3 +1,4 @@
+import asyncio
 import random
 import numpy as np
 from abc import ABC, abstractmethod
@@ -82,6 +83,19 @@ class Benchmark(ABC):
             dict: A dictionary containing evaluation metrics.
         """
         pass 
+
+    async def evaluate_async(self, prediction: Any, label: Any) -> dict:
+        """
+        Asynchronous version of evaluate method that internally calls the synchronous evaluate.
+        
+        Args:
+            prediction (Any): The predicted output.
+            label (Any): The actual ground-truth label.
+        
+        Returns:
+            dict: A dictionary containing evaluation metrics.
+        """
+        return await asyncio.to_thread(self.evaluate, prediction, label)
     
     def get_label(self, example: List[Any]) -> Any:
         return self._get_label(example=example)

@@ -1,11 +1,13 @@
 import os 
 import gzip 
 import shutil
-from typing import Union, Any
+import asyncio
+from typing import Union, Any, Callable, List
 from .benchmark import CodingBenchmark
 from ..core.logging import logger 
 from ..utils.utils import download_file 
 from ..core.module_utils import load_json
+from ..utils.aflow_utils.data_utils import AFLOW_DATASET_FILES_MAP, download_aflow_benchmark_data
 
 
 def download_raw_humaneval_data(save_folder: str): 
@@ -138,3 +140,70 @@ class HumanEvaluPlus(HumanEval):
     }
     """
     pass 
+
+
+class AFlowHumanEval(HumanEval):
+
+    def __init__(self, path: str = None, mode: str = "all", timeout: int = 60, k: Union[int, list] = 1, **kwargs):
+        path = os.path.expanduser(path or "~/.evoagentx/data/aflow/humaneval")
+        super().__init__(path=path, mode=mode, timeout=timeout, k=k, **kwargs)
+
+    def _load_data_from_file(self, file_name: str):
+        if file_name is None:
+            return None
+        file_path = os.path.join(self.path, file_name)
+        if not os.path.exists(file_path):
+            download_aflow_benchmark_data(dataset="humaneval", save_folder=self.path)
+        
+        return load_json(path=file_path, type="jsonl")
+
+    def _load_data(self):
+
+        if self.mode == "train" or self.mode == "all":
+            logger.info(f"Loading train data from {AFLOW_DATASET_FILES_MAP['humaneval']['train']}")
+            self._train_data = self._load_data_from_file(file_name=AFLOW_DATASET_FILES_MAP["humaneval"]["train"])
+        if self.mode == "dev" or self.mode == "all":
+            logger.info(f"Loading dev data from {AFLOW_DATASET_FILES_MAP['humaneval']['dev']}")
+            self._dev_data = self._load_data_from_file(file_name=AFLOW_DATASET_FILES_MAP["humaneval"]["dev"])
+        if self.mode == "test" or self.mode == "all":
+            logger.info(f"Loading test data from {AFLOW_DATASET_FILES_MAP['humaneval']['test']}")
+            self._test_data = self._load_data_from_file(file_name=AFLOW_DATASET_FILES_MAP["humaneval"]["test"])
+        
+        # load test cases 
+        self._test_cases = self._load_data_from_file(file_name=AFLOW_DATASET_FILES_MAP["humaneval"]["test_cases"])
+    
+    def extract_test_cases_with_entry_point(self, entry_point: str):
+        """
+        Extract test cases with the given entry point.
+        """
+
+        hardcoded_cases = {
+            "find_zero": "",
+            "decode_cyclic": "",
+            "decode_shift": "",
+            "by_length": "",
+            "add": "",
+            "triangle_area": "",
+            "correct_bracketing": "",
+            "solve": "",
+            "sum_squares": "",
+            "starts_one_ends": "",
+        }
+        if entry_point in hardcoded_cases:
+            return hardcoded_cases[entry_point]
+        
+        for case in self._test_cases:
+            if case["entry_point"] == entry_point:
+                return case["test"]
+        
+        return None
+    
+    async def evaluate_async(self, graph: Callable, example: Any) -> float:
+
+        # generate solution 
+        prompt, entry_point = example["prompt"], example["entry_point"]
+        solution = await graph(prompt, entry_point)
+        label = self._get_label(example)
+        metrics = await super().evaluate_async(prediction=solution, label=label)
+        return metrics["pass@1"]
+    
