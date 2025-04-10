@@ -11,7 +11,7 @@ class LLMConfig(BaseConfig):
 
     llm_type: str
     model: str 
-    output_response: bool = Field(default=True, description="Whether to output LLM response.")
+    output_response: bool = Field(default=False, description="Whether to output LLM response.")
 
 
 class OpenAILLMConfig(LLMConfig):
