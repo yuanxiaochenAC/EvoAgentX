@@ -5,9 +5,6 @@ from dataclasses import dataclass
 from ..core.logging import logger
 from ..core.decorators import atomic_method
 from ..core.callbacks import suppress_cost_logs
-from ..core.registry import MODEL_REGISTRY
-from .model_configs import LLMConfig
-from ..models.base_model import BaseLLM 
 
 def get_openai_model_cost() -> dict:
     import json 
@@ -103,19 +100,5 @@ class CostManager:
         
         print(df.to_string(index=False))
 
-    def get_total_cost(self):
-        
-        total_cost = 0.0
-        for model in self.total_cost.keys():
-            total_cost += self.total_cost[model]
-        return total_cost
-
 
 cost_manager = CostManager()
-
-
-def create_llm_instance(llm_config: LLMConfig) -> BaseLLM:
-
-    llm_cls = MODEL_REGISTRY.get_model(llm_config.llm_type)
-    llm = llm_cls(config=llm_config)
-    return llm 

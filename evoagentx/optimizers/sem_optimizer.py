@@ -13,16 +13,16 @@ from ..core.logging import logger
 from ..models.base_model import BaseLLM 
 from ..benchmark.benchmark import Benchmark
 from ..workflow.action_graph import ActionGraph
-from ..core.callbacks import suppress_logger_info
+from evoagentx.core.callbacks import suppress_cost_logging
 from ..workflow.workflow_graph import SequentialWorkFlowGraph
-from ..prompts.workflow.sew_optimizer import mutation_prompts, thinking_styles
+from ..prompts.workflow.sem_optimizer import mutation_prompts, thinking_styles
 
 VALID_SCHEMES = ["python", "yaml", "code", "core", "bpmn"]
 
-class SEWWorkFlowScheme:
+class SEMWorkFlowScheme:
 
     """
-    The scheme of the workflow for SEW optimizer.
+    The scheme of the workflow for SEM optimizer.
     """
     def __init__(self, graph: SequentialWorkFlowGraph, **kwargs):
         self.graph = graph # the workflow graph to be transformed
@@ -602,7 +602,7 @@ class SEWWorkFlowScheme:
 
 class SimplePromptBreeder:
     """
-    The simple prompt breeder for SEW optimizer.
+    The simple prompt breeder for SEM optimizer.
     """
     def __init__(self, llm: BaseLLM, **kwargs):
         self.llm = llm
@@ -655,7 +655,7 @@ class SimplePromptBreeder:
         return new_prompt
 
 
-class SEWOptimizer(Optimizer):
+class SEMOptimizer(Optimizer):
 
     graph: Union[SequentialWorkFlowGraph, ActionGraph] = Field(description="The workflow to optimize.")
     repr_scheme: str = Field(default="python", description="The scheme to represent the workflow.")
@@ -684,7 +684,7 @@ class SEWOptimizer(Optimizer):
             logger.info(f"Optimizing the {type(self.graph).__name__} graph ...")
         graph: Union[SequentialWorkFlowGraph, ActionGraph] = self.graph 
         logger.info("Run initial evaluation on the original workflow ...")
-        with suppress_logger_info():
+        with suppress_cost_logging():
             metrics = self.evaluate(dataset, eval_mode="dev", graph=graph)
         logger.info(f"Initial metrics: {metrics}")
         self.log_snapshot(graph=graph, metrics=metrics)
@@ -696,7 +696,7 @@ class SEWOptimizer(Optimizer):
                 # evaluate the workflow
                 if (i + 1) % self.eval_every_n_steps == 0:
                     logger.info(f"Evaluate the workflow at step {i+1} ...")
-                    with suppress_logger_info():
+                    with suppress_cost_logging():
                         metrics = self.evaluate(dataset, eval_mode="dev")
                     logger.info(f"Step {i+1} metrics: {metrics}")
                     self.log_snapshot(graph=graph, metrics=metrics)
@@ -833,7 +833,7 @@ class SEWOptimizer(Optimizer):
         Returns:
             SequentialWorkFlowGraph: The optimized workflow graph.  
         """
-        graph_scheme = SEWWorkFlowScheme(graph=graph)
+        graph_scheme = SEMWorkFlowScheme(graph=graph)
         graph_repr = graph_scheme.convert_to_scheme(scheme=self.repr_scheme)
         if self.repr_scheme == "python":
             output_format = "\n\nALWAYS wrap the refined workflow in ```python\n``` format and DON'T include any other text within the code block!"
@@ -857,7 +857,7 @@ class SEWOptimizer(Optimizer):
         optinize the prompt of the workflow graph and return the optimized graph.
         """
         task_description = graph.goal
-        graph_scheme = SEWWorkFlowScheme(graph=graph)
+        graph_scheme = SEMWorkFlowScheme(graph=graph)
         graph_repr = graph_scheme.convert_to_scheme(scheme=self.repr_scheme)
         graph_info = graph.get_graph_info()
         for i, task in enumerate(graph_info["tasks"]):
@@ -936,17 +936,9 @@ class SEWOptimizer(Optimizer):
 
         if self._convergence_check_counter >= self.convergence_threshold:
             logger.info(f"Early stopping triggered: No improvement for {self.convergence_threshold} iterations")
-            # logger.info(f"Score history: {scores[-self.convergence_threshold:]}")
+            logger.info(f"Score history: {scores[-self.convergence_threshold:]}")
             return True
         return False
 
-    def save(self, path: str, ignore: List[str] = []):
-        """
-        Save the (optimized) workflow graph to a file. 
-
-        Args:
-            path (str): The path to save the workflow graph.
-            ignore (List[str]): The keys to ignore when saving the workflow graph.
-        """
-        self.graph.save_module(path, ignore=ignore)
+    
     
