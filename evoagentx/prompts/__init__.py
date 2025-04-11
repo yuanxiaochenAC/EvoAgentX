@@ -1,3 +1,3 @@
-from .tool_caller import TOOL_CALLER
+from .tool_caller import TOOL_CALLER_PROMPT
 
-__all__ = ["TOOL_CALLER"]
+__all__ = ["TOOL_CALLER_PROMPT"]

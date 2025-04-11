@@ -116,3 +116,9 @@ outputs/
 debug/
 debug*.py
 
+
+
+
+
+## custom files
+tests/.
