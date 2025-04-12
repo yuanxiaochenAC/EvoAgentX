@@ -411,6 +411,7 @@ class MCPToolkit:
             self.servers.extend(MCPClient.from_config_file(config_path))
             
         self._connected = False
+        self._tools_cache = {}  # Cache mapping tool names to server indices
             
     async def connect(self):
         """Connect to all servers
@@ -424,8 +425,15 @@ class MCPToolkit:
             
         try:
             # Connect to each server sequentially
-            for server in self.servers:
+            for i, server in enumerate(self.servers):
                 await server.connect()
+                
+                # Cache the tools available on this server
+                tools_info = server.tools_info()
+                for tool in tools_info:
+                    tool_name = tool["name"]
+                    if tool_name not in self._tools_cache:
+                        self._tools_cache[tool_name] = i
                 
             self._connected = True
             return self
@@ -444,9 +452,12 @@ class MCPToolkit:
             try:
                 await server.cleanup()
             except Exception as e:
-                print(f"Error disconnecting from server: {e}")
+                # Suppress the specific cancel scope error
+                if "cancel scope" not in str(e).lower():
+                    print(f"Error disconnecting from server: {e}")
                 
         self._connected = False
+        self._tools_cache = {}  # Clear the cache on disconnect
         
     @asynccontextmanager
     async def connection(self):
@@ -468,28 +479,6 @@ class MCPToolkit:
             bool: True if all connected, False otherwise
         """
         return self._connected and all(server.is_connected() for server in self.servers)
-            
-    async def get_all_tools(self) -> List[Dict[str, Any]]:
-        """Get all tools from all connected servers
-        
-        Returns:
-            List of tool definitions
-        """
-        if not self.is_connected():
-            raise RuntimeError("MCPToolkit is not connected. Call connect() first.")
-            
-        all_tools = []
-        for server in self.servers:
-            if server.is_connected():
-                tools_result = await server.list_tools()
-                for tool in tools_result.tools:
-                    all_tools.append({
-                        "name": tool.name,
-                        "description": tool.description,
-                        "input_schema": tool.inputSchema
-                    })
-                    
-        return all_tools
         
     def get_all_openai_tool_schemas(self) -> List[Dict[str, Any]]:
         """Get OpenAI-compatible tool schemas for all tools from all servers
@@ -542,3 +531,48 @@ class MCPToolkit:
                 result[server_name] = server.tools_info()
                 
         return result
+        
+    async def call_tool(self, tool_name: str, tool_args: Dict[str, Any]) -> Dict[str, Any]:
+        """Call a specific tool with the given arguments across all servers
+        
+        Args:
+            tool_name: Name of the tool to call
+            tool_args: Arguments to pass to the tool
+            
+        Returns:
+            Result from the tool execution
+            
+        Raises:
+            ValueError: If not connected or if the tool is not found on any server
+        """
+        if not self.is_connected():
+            raise ValueError("Not connected to any servers. Call connect() first.")
+        
+        # Use the cache to find the server with the requested tool
+        if tool_name in self._tools_cache:
+            server_index = self._tools_cache[tool_name]
+            server = self.servers[server_index]
+            
+            if server.is_connected():
+                result = await server.call_tool(tool_name, tool_args)
+                return result
+        
+        # Fallback: search all servers if not in cache
+        for i, server in enumerate(self.servers):
+            if not server.is_connected():
+                continue
+                
+            # Check if this server has the tool
+            tools_info = server.tools_info()
+            tool_names = [tool["name"] for tool in tools_info]
+            
+            if tool_name in tool_names:
+                # Update the cache
+                self._tools_cache[tool_name] = i
+                
+                # Call the tool on this server
+                result = await server.call_tool(tool_name, tool_args)
+                return result
+                
+        # If we get here, the tool wasn't found on any server
+        raise ValueError(f"Tool '{tool_name}' not found on any connected server")
