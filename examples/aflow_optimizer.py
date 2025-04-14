@@ -2,8 +2,8 @@ from evoagentx.optimizers import AFlowOptimizer
 from evoagentx.models import LiteLLMConfig, LiteLLM, OpenAILLMConfig, OpenAILLM 
 from evoagentx.benchmark import AFlowHumanEval
 
-OPENAI_API_KEY = "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" # OpenAI's KEY 
-ANTHROPIC_API_KEY = "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" 
+OPENAI_API_KEY = "OPENAI_API_KEY" 
+ANTHROPIC_API_KEY = "ANTHROPIC_API_KEY"
 
 def main():
 

@@ -8,8 +8,6 @@ from ..models.model_utils import cost_manager
 
 
 # If you want to customize tasks, add task types here and provide evaluation functions, just like the ones given above
-DatasetType = Literal["HumanEval", "MBPP", "GSM8K", "MATH", "HotpotQA", "DROP"]
-
 
 class AFlowEvaluator:
 
