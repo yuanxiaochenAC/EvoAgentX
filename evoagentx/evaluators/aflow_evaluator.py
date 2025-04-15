@@ -1,6 +1,6 @@
 import asyncio
 from tqdm.asyncio import tqdm_asyncio
-from typing import Literal, Tuple, Optional, Callable
+from typing import Tuple, Optional, Callable
 from ..benchmark.benchmark import Benchmark
 from ..models.base_model import BaseLLM
 from ..core.logging import logger
@@ -57,6 +57,7 @@ class AFlowEvaluator:
 
         # Replace failed evaluations (None results) with 0
         valid_results = [0.0 if r is None else r for r in results]
+        all_failed = all(r is None for r in results)
 
         # get total cost after evaluation
         total_cost = cost_manager.get_total_cost() - cost_before
@@ -68,7 +69,7 @@ class AFlowEvaluator:
         else:
             avg_metrics = sum(valid_results) / len(valid_results)
         
-        return avg_metrics, avg_cost, total_cost
+        return avg_metrics, avg_cost, total_cost, all_failed 
         
         
 

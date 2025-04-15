@@ -39,7 +39,8 @@ class AFlowOptimizer(BaseModule):
     operators: List[str] = Field(default_factory=lambda: list(OPERATOR_MAP.keys()), description="The operators to use for optimization. If not provided, will use all operators in OPERATOR_MAP.")
     sample: int = Field(default=4, description="The number of rounds to sample from the top scores.")
     max_rounds: int = Field(default=20, description="The maximum number of rounds to optimize the workflow.")
-    eval_rounds: int = Field(default=3, description="Run the workflow for `eval_rounds` times to evaluate the performance.")
+    validation_rounds: int = Field(default=5, description="Run the workflow for `validation_rounds` times to evaluate the performance on the validation set.")
+    eval_rounds: int = Field(default=3, description="Run the workflow for `eval_rounds` times to evaluate the performance on the test set.")
     check_convergence: bool = Field(default=True, description="Whether to check for convergence.")
 
     def init_module(self, **kwargs):
@@ -81,7 +82,7 @@ class AFlowOptimizer(BaseModule):
             score = loop.run_until_complete(self._execute_with_retry(self._optimize_graph))
             self.round += 1
             logger.info(f"Score for round {self.round}: {score}")
-            if self._check_convergence(): # todo 
+            if self._check_convergence():
                 break
             if self.round >= self.max_rounds:
                 logger.info(f"Max rounds reached: {self.max_rounds}, stopping optimization.")
@@ -99,7 +100,7 @@ class AFlowOptimizer(BaseModule):
             asyncio.set_event_loop(loop)
             loop.run_until_complete(self._run_test(test_rounds))
     
-    async def _execute_with_retry(self, func: callable, max_retries: int = 1) -> Any:
+    async def _execute_with_retry(self, func: callable, max_retries: int = 3) -> Any:
 
         """Execute a function with retry logic"""
         retry_count = 0
@@ -121,7 +122,7 @@ class AFlowOptimizer(BaseModule):
         if not self.check_convergence:
             return False
 
-        converged, convergence_round, final_round = self.convergence_utils.check_convergence(top_k=3) # todo 
+        converged, convergence_round, final_round = self.convergence_utils.check_convergence(top_k=3)
         if converged:
             logger.info(
                 f"Convergence detected, occurred in round {convergence_round}, final round is {final_round}"
@@ -133,7 +134,7 @@ class AFlowOptimizer(BaseModule):
     async def _optimize_graph(self) -> float:
 
         """Optimize the graph for one round"""
-        validation_n = self.eval_rounds
+        validation_n = self.validation_rounds
         graph_path = self.root_path
         data = self.data_utils.load_results(graph_path)
 
@@ -146,7 +147,7 @@ class AFlowOptimizer(BaseModule):
         """Handle the initial round of optimization"""
         self.graph_utils.create_round_directory(graph_path, self.round)
         self.graph = self.graph_utils.load_graph(self.round, graph_path)
-        return await self.evaluation_utils.evaluate_graph_async(self, validation_n, data)
+        return await self.evaluation_utils.evaluate_graph_async(self, validation_n, data, initial=True)
 
     async def _handle_optimization_round(self, graph_path: str, validation_n: int, data: list) -> float:
         """Handle subsequent optimization rounds"""
@@ -177,8 +178,9 @@ class AFlowOptimizer(BaseModule):
                 break
         
         # Save and evaluate results
-        return await self._evaluate_and_save_optimization_results(directory, response, sample, data, validation_n)
-
+        avg_score = await self._evaluate_and_save_optimization_results(directory, response, sample, data, validation_n)
+        return avg_score
+    
     def _get_optimization_sample(self) -> dict:
         """Get sample data for optimization"""
         top_rounds = self.data_utils.get_top_rounds(self.sample)
@@ -205,7 +207,9 @@ class AFlowOptimizer(BaseModule):
             if 'class' in code or 'workflow' in code.lower():
                 response["graph"] = code
             # If code contains prompt-related content, store in prompt
-            elif 'PROMPT' in code or 'prompt' in code.lower():
+            # elif 'PROMPT' in code or 'prompt' in code.lower():
+            #     response["prompt"] = code
+            else:
                 response["prompt"] = code
         
         if not response["graph"] and not response["prompt"]:
@@ -225,7 +229,7 @@ class AFlowOptimizer(BaseModule):
         self.graph = self.graph_utils.load_graph(self.round + 1, self.root_path)
 
         # evaluate the graph 
-        avg_score = await self.evaluation_utils.evaluate_graph_async(self, validation_n, data)
+        avg_score = await self.evaluation_utils.evaluate_graph_async(self, validation_n, data, initial=False)
         self.experience_utils.update_experience(directory, experience, avg_score)
 
         return avg_score

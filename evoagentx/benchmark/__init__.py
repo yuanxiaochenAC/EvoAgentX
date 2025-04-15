@@ -1,7 +1,7 @@
 from .nq import NQ 
-from .hotpotqa import HotPotQA
-from .gsm8k import GSM8K
-from .mbpp import MBPP
+from .hotpotqa import HotPotQA, AFlowHotPotQA
+from .gsm8k import GSM8K, AFlowGSM8K
+from .mbpp import MBPP, AFlowMBPP
 from .math import MATH
 from .humaneval import HumanEval, AFlowHumanEval
 from .livecodebench import LiveCodeBench
@@ -14,5 +14,8 @@ __all__ = [
     "MATH", 
     "HumanEval", 
     "LiveCodeBench", 
-    "AFlowHumanEval"
+    "AFlowHumanEval", 
+    "AFlowMBPP", 
+    "AFlowHotPotQA", 
+    "AFlowGSM8K"
 ]

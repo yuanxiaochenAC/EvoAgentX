@@ -1,10 +1,11 @@
 import os
 import regex 
-from typing import Any, List
+from typing import Any, List, Callable
 from ..core.logging import logger
 from .benchmark import Benchmark
 from ..utils.utils import download_file
 from ..core.module_utils import load_json
+from ..utils.aflow_utils.data_utils import AFLOW_DATASET_FILES_MAP, download_aflow_benchmark_data
 
 
 GSM8K_FILES_MAP = {"train": "train.jsonl", "dev": None, "test": "test.jsonl"}
@@ -94,4 +95,38 @@ class GSM8K(Benchmark):
             return {"solve_rate": 0.0}
         solve_rate = 1.0 if abs(predicted_answer - ground_truth_answer) < 1e-6 else 0.0
         return {"solve_rate": solve_rate}
-         
+
+
+class AFlowGSM8K(GSM8K): 
+
+    def __init__(self, path: str = None, mode: str = "all", **kwargs):
+        path = os.path.expanduser(path or "~/.evoagentx/data/aflow/gsm8k")
+        super().__init__(path=path, mode=mode, **kwargs)
+
+    def _load_data_from_file(self, file_name: str):
+        if file_name is None:
+            return None
+        file_path = os.path.join(self.path, file_name)
+        if not os.path.exists(file_path):
+            download_aflow_benchmark_data(dataset="gsm8k", save_folder=self.path)
+        return load_json(path=file_path, type="jsonl")
+        
+    def _load_data(self):
+
+        if self.mode == "train" or self.mode == "all":
+            logger.info(f"Loading train data from {AFLOW_DATASET_FILES_MAP['gsm8k']['train']}")
+            self._train_data = self._load_data_from_file(file_name=AFLOW_DATASET_FILES_MAP["gsm8k"]["train"])
+        if self.mode == "dev" or self.mode == "all":
+            logger.info(f"Loading dev data from {AFLOW_DATASET_FILES_MAP['gsm8k']['dev']}")
+            self._dev_data = self._load_data_from_file(file_name=AFLOW_DATASET_FILES_MAP["gsm8k"]["dev"])
+        if self.mode == "test" or self.mode == "all":
+            logger.info(f"Loading test data from {AFLOW_DATASET_FILES_MAP['gsm8k']['test']}")
+            self._test_data = self._load_data_from_file(file_name=AFLOW_DATASET_FILES_MAP["gsm8k"]["test"])       
+    
+    async def evaluate_async(self, graph: Callable, example: Any) -> float:
+
+        input_text = example["question"] 
+        label = self._get_label(example) 
+        output = await graph(input_text)
+        metrics = await super().evaluate_async(prediction=output, label=label)
+        return metrics["solve_rate"]

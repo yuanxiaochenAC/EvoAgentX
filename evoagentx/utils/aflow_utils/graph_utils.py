@@ -12,14 +12,19 @@ from ...prompts.optimizers.aflow_optimizer import (
     WORKFLOW_TEMPLATE
 )
 from ...models.base_model import BaseLLM 
-from ...workflow.operators import Operator, Custom, CustomCodeGenerate, ScEnsemble, Test, AnswerGenerate
+from ...workflow.operators import (
+    Operator, Custom, CustomCodeGenerate, 
+    ScEnsemble, Test, AnswerGenerate, QAScEnsemble, Programmer
+)
 
 OPERATOR_MAP = {
     "Custom": Custom,
     "CustomCodeGenerate": CustomCodeGenerate,
     "ScEnsemble": ScEnsemble,
     "Test": Test,
-    "AnswerGenerate": AnswerGenerate
+    "AnswerGenerate": AnswerGenerate,
+    "QAScEnsemble": QAScEnsemble,
+    "Programmer": Programmer
 }
 
 

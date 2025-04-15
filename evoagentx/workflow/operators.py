@@ -2,16 +2,20 @@ import sys
 import json
 import asyncio
 import traceback
+import concurrent 
 from pydantic import Field
-from typing import Type, Optional, List, Any
+from typing import Type, Optional, List, Any, Tuple
 
+from ..core.logging import logger
 from ..core.module import BaseModule
 from ..models.base_model import BaseLLM
 from ..models.base_model import LLMOutputParser
 from ..prompts.operators import (
     ANSWER_GENERATION_PROMPT,
+    QA_SC_ENSEMBLE_PROMPT,
+    REFLECTION_ON_PUBLIC_TEST_PROMPT,
     SC_ENSEMBLE_PROMPT,
-    REFLECTION_ON_PUBLIC_TEST_PROMPT
+    PYTHON_CODE_VERIFIER_PROMPT
 )
 from ..utils.sanitize import sanitize
 from ..benchmark.benchmark import Benchmark
@@ -129,39 +133,75 @@ class ScEnsembleOutput(OperatorOutput):
     solution_letter: str = Field(default="", description="The letter of most consistent solution.")
 
 
-class ScEnsemble(Operator):
+class QAScEnsemble(Operator):
 
     def __init__(self, llm: BaseLLM, **kwargs):
-        name = "ScEnsemble"
+        name = "QAScEnsemble"
         description = "Uses self-consistency to select the solution that appears most frequently in the solution list, improve the selection to enhance the choice of the best solution."
         interface = "sc_ensemble(solutions: List[str]) -> dict with key 'response' of type str"
-        prompt = kwargs.pop("prompt", SC_ENSEMBLE_PROMPT)
+        prompt = kwargs.pop("prompt", QA_SC_ENSEMBLE_PROMPT)
         super().__init__(name=name, description=description, interface=interface, llm=llm, outputs_format=ScEnsembleOutput, prompt=prompt, **kwargs)
     
-    def execute(self, solutions: List[str]) -> dict:
+    def _prepare_solutions(self, solutions: List[str]) -> Tuple[dict, str]:
         answer_mapping = {} 
         solution_text = "" 
         for index, solution in enumerate(solutions):
             answer_mapping[chr(65+index)] = index
             solution_text += f"{chr(65 + index)}: \n{str(solution)}\n\n\n"
-        # prompt = SC_ENSEMBLE_PROMPT.format(solutions=solution_text)
-        prompt = self.prompt.format(solutions=solution_text)
-        response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
+        return answer_mapping, solution_text
+        
+    def _process_response(self, response: LLMOutputParser, answer_mapping: dict, solutions: List[str]) -> dict:
         answer: str = response.get_structured_data().get("solution_letter", "")
         answer = answer.strip().upper()
         return {"response": solutions[answer_mapping[answer]]}
+    
+    def execute(self, solutions: List[str]) -> dict:
+        answer_mapping, solution_text = self._prepare_solutions(solutions)
+        prompt = self.prompt.format(solutions=solution_text)
+        response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
+        return self._process_response(response, answer_mapping, solutions)
 
     async def execute_async(self, solutions: List[str]) -> dict:
+        answer_mapping, solution_text = self._prepare_solutions(solutions)
+        prompt = self.prompt.format(solutions=solution_text)
+        response = await self.llm.generate_async(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
+        return self._process_response(response, answer_mapping, solutions)
+
+
+class ScEnsemble(Operator):
+
+    def __init__(self, llm: BaseLLM, **kwargs):
+        name = "ScEnsemble" 
+        description = "Uses self-consistency to select the solution that appears most frequently in the solution list, improve the selection to enhance the choice of the best solution."
+        interface = "sc_ensemble(solutions: List[str], problem: str) -> dict with key 'response' of type str"
+        prompt = kwargs.pop("prompt", SC_ENSEMBLE_PROMPT) 
+        super().__init__(name=name, description=description, interface=interface, llm=llm, outputs_format=ScEnsembleOutput, prompt=prompt, **kwargs)
+    
+    def _prepare_solutions(self, solutions: List[str]) -> Tuple[dict, str]:
         answer_mapping = {}
         solution_text = ""
         for index, solution in enumerate(solutions):
-            answer_mapping[chr(65+index)] = index
+            answer_mapping[chr(65 + index)] = index
             solution_text += f"{chr(65 + index)}: \n{str(solution)}\n\n\n"
-        prompt = self.prompt.format(solutions=solution_text)
-        response = await self.llm.generate_async(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
+        return answer_mapping, solution_text
+    
+    def _process_response(self, response: LLMOutputParser, answer_mapping: dict, solutions: List[str]) -> dict:
         answer: str = response.get_structured_data().get("solution_letter", "")
         answer = answer.strip().upper()
         return {"response": solutions[answer_mapping[answer]]}
+    
+    def execute(self, solutions: List[str], problem: str) -> dict:
+        answer_mapping, solution_text = self._prepare_solutions(solutions)
+        prompt = self.prompt.format(problem=problem, solutions=solution_text)
+        response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
+        return self._process_response(response, answer_mapping, solutions)
+
+    async def execute_async(self, solutions: List[str], problem: str) -> dict:
+        answer_mapping, solution_text = self._prepare_solutions(solutions)
+        prompt = self.prompt.format(problem=problem, solutions=solution_text)
+        response = await self.llm.generate_async(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
+        return self._process_response(response, answer_mapping, solutions)
+
 
 
 class CustomCodeGenerate(Operator):
@@ -215,6 +255,11 @@ class TestOutput(OperatorOutput):
         return super().model_validate(obj, **kwargs)
     
 
+class ReflectionTestOp(OperatorOutput):
+
+    reflection_and_solution: str = Field(default="", description="Corrective solution for code execution errors or test case failures")
+
+
 TEST_SUPPORTED_BENCHMARKS = (AFlowHumanEval, AFlowMBPP)
 
 class Test(Operator):
@@ -223,7 +268,7 @@ class Test(Operator):
 
         name = "Test"
         description = "Tests the solution using public test cases. If the solution fails, it reflects on the errors and attempts to modify the solution. Returns True and the solution if all tests pass after modifications. Returns False and the current solution if it still fails after modifications."
-        interface = "test(problem: str, solution: str, entry_point: str, benchmark = self.benchmark) -> dict with key 'result' of type bool and key 'solution' of type str"
+        interface = "test(problem: str, solution: str, entry_point: str, benchmark = self.benchmark) -> dict with key 'result' of type bool and key 'solution' of type str. Always include 'benchmark = self.benchmark' in the input."
         super().__init__(name=name, description=description, interface=interface, llm=llm, outputs_format=TestOutput, **kwargs)
     
     def exec_code(self, solution: str, entry_point: str, benchmark: Benchmark):
@@ -262,7 +307,7 @@ class Test(Operator):
         else:
             return "no error"
 
-    async def __call__(self, problem, solution, entry_point, benchmark: Benchmark, test_loop: int = 3):
+    async def execute_async(self, problem, solution, entry_point, benchmark: Benchmark, test_loop: int = 3):
         """
         "Test": {
         "description": "Test the solution with test cases, if the solution is correct, return 'no error', if the solution is incorrect, return reflect on the soluion and the error information",
@@ -283,8 +328,11 @@ class Test(Operator):
                 )
                 # response = await self._fill_node(ReflectionTestOp, prompt, mode="code_fill")
                 # solution = response["reflection_and_solution"]
-                response = await self.llm.generate_async(prompt=prompt, parser=None, parse_mode="str")
-                solution = sanitize(response.content, entrypoint=entry_point)
+                response = await self.llm.generate_async(prompt=prompt, parser=ReflectionTestOp, parse_mode="json")
+                solution = sanitize(
+                    response.get_structured_data().get("reflection_and_solution", response.content), 
+                    entrypoint=entry_point
+                )
             else:
                 prompt = REFLECTION_ON_PUBLIC_TEST_PROMPT.format(
                     problem=problem,
@@ -294,8 +342,11 @@ class Test(Operator):
                 )
                 # response = await self._fill_node(ReflectionTestOp, prompt, mode="code_fill")
                 # solution = response["reflection_and_solution"]
-                response = await self.llm.generate_async(prompt=prompt, parser=None, parse_mode="str")
-                solution = sanitize(response.content, entrypoint=entry_point)
+                response = await self.llm.generate_async(prompt=prompt, parser=ReflectionTestOp, parse_mode="json")
+                solution = sanitize(
+                    response.get_structured_data().get("reflection_and_solution", response.content), 
+                    entrypoint=entry_point
+                )
         
         result = self.exec_code(solution, entry_point, benchmark)
 
@@ -304,3 +355,100 @@ class Test(Operator):
         else:
             return {"result": False, "solution": solution}
         
+
+def run_code(code):
+    try:
+        # Create a new global namespace
+        global_namespace = {}
+
+        disallowed_imports = [
+            "os", "sys", "subprocess", "multiprocessing",
+            "matplotlib", "seaborn", "plotly", "bokeh", "ggplot",
+            "pylab", "tkinter", "PyQt5", "wx", "pyglet"
+        ]
+
+        # Check for prohibited imports
+        for lib in disallowed_imports:
+            if f"import {lib}" in code or f"from {lib}" in code:
+                logger.info("Detected prohibited import: %s", lib)
+                return "Error", f"Prohibited import: {lib} and graphing functionalities"
+
+        # Use exec to execute the code
+        exec(code, global_namespace)
+        # Assume the code defines a function named 'solve'
+        if 'solve' in global_namespace and callable(global_namespace['solve']):
+            result = global_namespace['solve']()
+            return "Success", str(result)
+        else:
+            return "Error", "Function 'solve' not found"
+    except Exception as e:
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        tb_str = traceback.format_exception(exc_type, exc_value, exc_traceback)
+        return "Error", f"Execution error: {str(e)}\n{''.join(tb_str)}"
+    
+
+class CodeGenerateOutput(OperatorOutput):
+    code: str = Field(default="", description="Your complete code solution for this problem") 
+
+
+class Programmer(Operator):
+
+    def __init__(self, llm: BaseLLM, **kwargs):
+        name = "Programmer"
+        description = "Automatically writes, executes Python code, and returns the solution based on the provided problem description and analysis. The `output` only contains the final answer. If you want to see the detailed solution process, it's recommended to retrieve the `code`."
+        interface = "programmer(problem: str, analysis: str = 'None') -> dict with keys 'code' and 'output' of type str"
+        prompt = kwargs.pop("prompt", PYTHON_CODE_VERIFIER_PROMPT)
+        super().__init__(name=name, description=description, interface=interface, llm=llm, outputs_format=CodeGenerateOutput, prompt=prompt, **kwargs)
+
+    async def exec_code(self, code, timeout=30):
+        """
+        Asynchronously execute code and return an error if timeout occurs.
+        """
+        loop = asyncio.get_running_loop()
+        with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
+            try:
+                # Submit run_code task to the process pool
+                future = loop.run_in_executor(executor, run_code, code)
+                # Wait for the task to complete or timeout
+                result = await asyncio.wait_for(future, timeout=timeout)
+                return result
+            except asyncio.TimeoutError:
+                # Timeout, attempt to shut down the process pool
+                executor.shutdown(wait=False, cancel_futures=True)
+                return "Error", "Code execution timed out"
+            except Exception as e:
+                return "Error", f"Unknown error: {str(e)}"
+    
+    async def code_generate(self, problem, analysis, feedback):
+        """
+        Asynchronous method to generate code.
+        """
+        prompt = PYTHON_CODE_VERIFIER_PROMPT.format(
+            problem=problem,
+            analysis=analysis,
+            feedback=feedback
+        )
+        response = await self.llm.generate_async(prompt=prompt, parser=None, parse_mode="str")
+        code = sanitize(response.content, entrypoint="solve")
+        return {"code": code}
+    
+    async def execute_async(self, problem: str, analysis: str = "None"): 
+
+        code = None 
+        output = None 
+        feedback = ""
+        for i in range(3):
+            code_response = await self.code_generate(problem, analysis, feedback)
+            code = code_response.get("code")
+            if not code:
+                return {"code": code, "output": "No code generated"}
+            status, output = await self.exec_code(code)
+            if status == "Success":
+                return {"code": code, "output": output}
+            else:
+                print(f"Execution error on attempt {i + 1}, error message: {output}")
+                feedback = (
+                    f"\nThe result of the error from the code you wrote in the previous round:\n"
+                    f"Code: {code}\n\nStatus: {status}, {output}"
+                )
+        return {"code": code, "output": output}
