@@ -29,7 +29,7 @@ If you want to contribute to EvoAgentX or need the latest development version, y
 
 ```bash
 # Clone the repository
-git clone https://github.com/clayxai/EvoAgentX.git
+git clone https://github.com/EvoAgentX/EvoAgentX/
 
 # Navigate to the project directory
 cd EvoAgentX
@@ -55,7 +55,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-## Configuration Setup
+<!-- ## Configuration Setup
 
 ### API Keys Configuration
 
@@ -99,7 +99,7 @@ openai_config = OpenAILLMConfig(
     temperature=0.7
 )
 model = OpenAILLM(config=openai_config)
-```
+``` -->
 
 ## Verifying Installation
 
@@ -114,7 +114,7 @@ print(evoagentx.__version__)
 
 You should see the current version of EvoAgentX printed to the console.
 
-## Running a Simple Test
+<!-- ## Running a Simple Test
 
 Here's a simple test to ensure everything is working correctly:
 
@@ -178,14 +178,14 @@ pip install evoagentx
 
 If you continue to experience issues:
 
-1. Check the [GitHub Issues](https://github.com/clayxai/EvoAgentX/issues) page for similar problems
+1. Check the [GitHub Issues](https://github.com/EvoAgentX/EvoAgentX/issues) page for similar problems
 2. Join our [Discord community](https://discord.gg/q5hBjHVz) for real-time help
-3. Email us at clayx.ai.co@gmail.com
+3. Email us at evoagentx.ai@gmail.com -->
 
-## Next Steps
+<!-- ## Next Steps
 
 Now that you have EvoAgentX installed, check out the following resources:
 
 - [Basic Usage Guide](../tutorials/basic_usage.md) - Learn how to create your first workflow
 - [API Reference](../api.md) - Explore the full API documentation
-- [Examples](../examples/index.md) - See practical examples of EvoAgentX in action
+- [Examples](../examples/index.md) - See practical examples of EvoAgentX in action -->
