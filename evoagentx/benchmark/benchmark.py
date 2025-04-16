@@ -251,7 +251,7 @@ class CodingBenchmark(Benchmark):
         label = [label] if isinstance(label, dict) else label
         return prediction, label
 
-    def check_solution(self, task_id: str, solution: str, test: str, entry_point: Optional[str] = None) -> bool:
+    def check_solution(self, task_id: str, solution: str, test: str, entry_point: Optional[str] = None, use_entrypoint_as_input: bool = True) -> bool:
         """
         Execute the solution code and check if it passes the unit test.
 
@@ -284,7 +284,10 @@ class CodingBenchmark(Benchmark):
             unit_test_func = global_dict["check"] # check is the function name in the test code
             # run the unit test within the timeout
             with timeout(seconds=self.timeout):
-                unit_test_func(global_dict[entry_point])
+                if use_entrypoint_as_input:
+                    unit_test_func(global_dict[entry_point])
+                else:
+                    unit_test_func()
             result = (self.SUCCESS, "The solution passed the unit test.")
         
         except TimeoutException:

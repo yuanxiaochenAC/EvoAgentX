@@ -1,4 +1,3 @@
-from evoagentx.config import Config
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.workflow import SEWWorkFlowGraph 
 from evoagentx.agents import AgentManager
@@ -7,6 +6,8 @@ from evoagentx.evaluators import Evaluator
 from evoagentx.optimizers import SEWOptimizer 
 from evoagentx.core.callbacks import suppress_logger_info
 
+
+OPENAI_API_KEY = "OPENAI_API_KEY" 
 
 class HumanEvalSplits(HumanEval):
 
@@ -23,9 +24,8 @@ class HumanEvalSplits(HumanEval):
 
 
 def main():
-
-    config = Config.from_file("debug/config_template.json")
-    llm_config = OpenAILLMConfig.from_dict(config.llm_config)
+    
+    llm_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY)
     llm = OpenAILLM(config=llm_config)
 
     # obtain SEW workflow 

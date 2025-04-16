@@ -27,11 +27,10 @@ from evoagentx.core.callbacks import suppress_logger_info
 
 ### Configure the LLM Model
 
-Similar to other components in EvoAgentX, you'll need a valid OpenAI API key to initialize the LLM. The configuration should be stored in a JSON file containing your API credentials and other settings.
+Similar to other components in EvoAgentX, you'll need a valid OpenAI API key to initialize the LLM. 
 
 ```python
-config = Config.from_file("path/to/config.json")
-llm_config = OpenAILLMConfig.from_dict(config.llm_config)
+llm_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY)
 llm = OpenAILLM(config=llm_config)
 ```
 
