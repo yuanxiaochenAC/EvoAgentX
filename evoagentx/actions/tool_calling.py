@@ -244,19 +244,49 @@ class ToolCalling(Action):
         ## 3. Add the tool call results to the query and continue the conversation
         results = {"result": results, "error": errors}
         
-        # print("results:")
-        # print(results)
         inputs = inputs.copy()
-        # Use proper JSON serialization to handle complex objects like TextContent
+        
+        ##### ___________ Custom Object Serializer ___________
+        # Define a custom object serializer that can handle various types
+        def object_serializer(obj):
+            # Handle Pydantic models
+            if hasattr(obj, "model_dump"):
+                return obj.model_dump()
+            # Handle objects with __dict__ attribute
+            elif hasattr(obj, "__dict__"):
+                return obj.__dict__
+            # Handle objects with custom __str__ method
+            elif hasattr(obj, "__str__"):
+                return str(obj)
+            # Default fallback
+            else:
+                return repr(obj)
+        
+        
+        ##### ___________ Converting results to string ___________
         try:
-            print("Dumping to json...")
-            # Try to serialize with json
-            results_str = json.dumps(results, default=lambda obj: obj.__dict__ if hasattr(obj, "__dict__") else str(obj))
-        except:
-            # Fallback to string representation
-            print("Fallback to string representation...")
-            results_str = str(results)
+            print("Serializing results...")
+            results_str = json.dumps(results, default=object_serializer)
+        except TypeError as e:
+            # If JSON serialization fails, use a more direct approach
+            print(f"JSON serialization failed: {e}")
             
+            # Build a more controlled string representation
+            result_parts = []
+            result_parts.append("Results:")
+            
+            # Process the actual results
+            for i, res in enumerate(results.get("result", [])):
+                result_parts.append(f"  Result {i+1}: {object_serializer(res)}")
+                
+            # Process any errors
+            for i, err in enumerate(results.get("error", [])):
+                result_parts.append(f"  Error {i+1}: {err}")
+                
+            # Join all parts with newlines
+            results_str = "\n".join(result_parts)
+            
+        ##### ___________ Adding tool call results to the query ___________
         inputs["query"] += "\n\n ### Tool Call Results \n\n" + results_str
         
         print("\nContinue after tool call? :")

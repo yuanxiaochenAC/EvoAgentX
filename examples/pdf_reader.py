@@ -94,6 +94,11 @@ You MUST respond with a valid JSON object in the following format. Do not includ
 }
 ```
 All your response should be put into the `summary` field as a long string. The string should be able to form a .md markdown file.
+
+Required servers: Hirebase, PDF Reader
+Links: 
+- https://github.com/jhgaylor/hirebase-mcp
+- https://github.com/sylphlab/pdf-reader-mcp
 """
 
 async def main():

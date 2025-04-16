@@ -14,6 +14,9 @@ python examples/mcp_example.py
 ```
 
 Note: You need to have an MCP server running or accessible before using this example.
+
+Required servers: GitHub
+Links: https://github.com/modelcontextprotocol/servers/tree/main/src/github
 """
 
 import asyncio
@@ -61,18 +64,18 @@ async def main():
         print(toolkit.get_all_openai_tool_schemas())
         
         # Create ToolCaller agent
-        tool_caller_agent = ToolCaller(llm_config=llm_config, max_tool_try=1)
+        tool_caller_agent = ToolCaller(llm_config=llm_config, max_tool_try=2)
         tool_caller_agent.add_mcp_toolkit(toolkit)
         
         # Create a user message to process
         logger.info("Creating user message for the ToolCaller agent")
         
         ## ___________ PDF Summarizer Agent ___________
-        project_name = "camel-ai/camel"
+        project_name = "camel-ai/owl"
         user_query = f"""
         Assume you are a tech lead and is looking for open projects that might be useful for your task.
         We are currently looking into {project_name} project. 
-        Please look into this project and provide a short summary.
+        Please look into this project and provide a comprehensive summary.
         """
         input_message = Message(content=user_query, msg_type=MessageType.REQUEST, agent="user")
         

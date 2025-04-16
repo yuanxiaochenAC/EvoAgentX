@@ -410,8 +410,18 @@ class MCPClient:
     async def disconnect(self):
         """Disconnect from the server"""
         self._is_connected = False
-        await self.exit_stack.aclose()
-        self.session = None
+        try:
+            await self.exit_stack.aclose()
+        except (asyncio.CancelledError, RuntimeError) as e:
+            # Suppress cancellation errors during shutdown
+            if "cancel scope" in str(e).lower():
+                # This is a common error when shutting down anyio tasks
+                # No need to print this as it's expected behavior
+                pass
+            else:
+                print(f"Suppressed error during disconnect: {e}")
+        finally:
+            self.session = None
         
     async def cleanup(self):
         """Clean up resources and disconnect from the server"""
@@ -497,13 +507,17 @@ class MCPToolkit:
         if not self._connected:
             return
             
+        disconnect_errors = []
         for server in self.servers:
             try:
                 await server.disconnect()
             except Exception as e:
-                # Suppress the specific cancel scope error
+                # Only log non-cancel scope errors
                 if "cancel scope" not in str(e).lower():
-                    print(f"Error disconnecting from server: {e}")
+                    disconnect_errors.append(str(e))
+                
+        if disconnect_errors and len(disconnect_errors) > 0:
+            print(f"Encountered {len(disconnect_errors)} errors during disconnect")
                 
         self._connected = False
         self._tools_cache = {}  # Clear the cache on disconnect
