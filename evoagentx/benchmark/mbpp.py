@@ -1,10 +1,11 @@
 import os 
 import regex
-from typing import Union, Any, List
+from typing import Union, Any, List, Callable
 from ..core.logging import logger
 from .benchmark import CodingBenchmark 
 from ..utils.utils import download_file
 from ..core.module_utils import load_json
+from ..utils.aflow_utils.data_utils import AFLOW_DATASET_FILES_MAP, download_aflow_benchmark_data
 
 
 def download_raw_mbpp_data(name: str, save_folder: str):
@@ -143,7 +144,7 @@ class MBPP(CodingBenchmark):
                 entry_point = label_data["entry_point"]
                 state, message = self.check_solution(
                     task_id=task_id, 
-                    solution=prompt + solution,
+                    solution=prompt + "\n" + solution,
                     test=unit_test, 
                     entry_point=entry_point
                 )
@@ -157,4 +158,111 @@ class MBPP(CodingBenchmark):
         
         return pass_at_k
     
+
+
+class AFlowMBPP(MBPP):
+
+    def __init__(self, path: str = None, mode: str = "all", timeout: int = 60, k: Union[int, list] = 1,**kwargs):
+        path = os.path.expanduser(path or "~/.evoagentx/data/aflow/mbpp")
+        super().__init__(path=path, mode=mode, timeout=timeout, k=k, **kwargs)
+
+    def _load_data_from_file(self, file_name: str):
+        if file_name is None:
+            return None
+        file_path = os.path.join(self.path, file_name)
+        if not os.path.exists(file_path):
+            download_aflow_benchmark_data(dataset="mbpp", save_folder=self.path)
+        
+        return load_json(path=file_path, type="jsonl")
+
+    def _load_data(self):
+
+        if self.mode == "train" or self.mode == "all":
+            logger.info(f"Loading train data from {AFLOW_DATASET_FILES_MAP['mbpp']['train']}")
+            self._train_data = self._load_data_from_file(file_name=AFLOW_DATASET_FILES_MAP["mbpp"]["train"])
+        if self.mode == "dev" or self.mode == "all":
+            logger.info(f"Loading dev data from {AFLOW_DATASET_FILES_MAP['mbpp']['dev']}")
+            self._dev_data = self._load_data_from_file(file_name=AFLOW_DATASET_FILES_MAP["mbpp"]["dev"])
+        if self.mode == "test" or self.mode == "all":
+            logger.info(f"Loading test data from {AFLOW_DATASET_FILES_MAP['mbpp']['test']}")
+            self._test_data = self._load_data_from_file(file_name=AFLOW_DATASET_FILES_MAP["mbpp"]["test"])
+        
+        # load test cases 
+        self._test_cases = self._load_data_from_file(file_name=AFLOW_DATASET_FILES_MAP["mbpp"]["test_cases"])
+    
+    def _get_label(self, example: Any):
+        return {
+            "task_id": example["task_id"], 
+            "canonical_solution": example["code"], 
+            "test": example["test"], 
+            "entry_point": example["entry_point"]
+        }
+    
+    def extract_test_cases_with_entry_point(self, entry_point: str):
+
+        hardcoded_cases = {
+            "remove_odd": "",
+            "replace_spaces": "",
+            "snake_to_camel": "",
+            "Split": "",
+            "swap_List": "",
+            "square_Sum": "",
+            "sort_sublists": "",
+            "unique_sublists": "",
+        }
+        if entry_point in hardcoded_cases:
+            return hardcoded_cases[entry_point]
+        
+        for case in self._test_cases:
+            if case["entry_point"] == entry_point:
+                return case["test"]
+        
+        return None
+    
+    async def evaluate_async(self, graph: Callable, example: Any) -> float:
+
+        # generate solution 
+        prompt, entry_point = example["prompt"], example["entry_point"]
+        solution = await graph(prompt, entry_point)
+        label = self._get_label(example)
+        metrics = await super().evaluate_async(prediction=solution, label=label)
+        return metrics["pass@1"]
+    
+    def evaluate(self, prediction: Any, label: Any) -> dict:
+        """
+        Evaluate the solution code.
+
+        Args:
+            prediction (str | List[str]): The solution code(s).
+            label (dict | List[dict]): The unit test code(s).
+
+        Returns:
+            dict: The evaluation metrics (pass@k).
+        """
+        prediction, label = self._check_evaluation_inputs(prediction, label)
+
+        results = []
+        for solution in prediction:
+            solution_states = []
+            for label_data in label:
+                task_id = label_data["task_id"]
+                prompt = self.get_example_by_id(task_id)["prompt"]
+                unit_test = label_data["test"]
+                entry_point = label_data["entry_point"]
+                state, message = self.check_solution(
+                    task_id=task_id, 
+                    solution=prompt + "\n" + solution,
+                    test=unit_test, 
+                    entry_point=entry_point,
+                    use_entrypoint_as_input=False
+                )
+                if state != self.SUCCESS:
+                    break 
+                solution_states.append(state)
+            results.append(len(solution_states)==len(label) and all(state==self.SUCCESS for state in solution_states))
+        
+        k_list = [self.k] if isinstance(self.k, int) else self.k
+        pass_at_k = self.compute_pass_at_k(results, k_list)
+        
+        return pass_at_k
     

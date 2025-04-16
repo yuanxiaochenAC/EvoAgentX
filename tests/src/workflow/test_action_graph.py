@@ -12,7 +12,7 @@ class TestModule(unittest.TestCase):
         self.qa_action_graph = QAActionGraph(llm_config=self.llm_config, name="QAActionGraph", description="This workflow aims to address multi-hop QA tasks.") 
     
     @patch('evoagentx.workflow.operators.AnswerGenerate.execute')
-    @patch('evoagentx.workflow.operators.ScEnsemble.execute')
+    @patch('evoagentx.workflow.operators.QAScEnsemble.execute')
     def test_execute(self, mock_sc_ensemble, mock_answer_generate):
         """Test execute method with mocked operators"""
         # Set up mock return values
@@ -35,7 +35,7 @@ class TestModule(unittest.TestCase):
         self.assertEqual(graph_info["description"], "This workflow aims to address multi-hop QA tasks.")
         self.assertEqual(len(graph_info["operators"]), 2)
         self.assertEqual(graph_info["operators"]["answer_generate"]["name"], "AnswerGenerate")
-        self.assertEqual(graph_info["operators"]["sc_ensemble"]["name"], "ScEnsemble")
+        self.assertEqual(graph_info["operators"]["sc_ensemble"]["name"], "QAScEnsemble")
     
     def test_from_dict(self):
         graph_info = self.qa_action_graph.get_graph_info()
@@ -45,7 +45,7 @@ class TestModule(unittest.TestCase):
         self.assertEqual(loaded_graph.description, "This workflow aims to address multi-hop QA tasks.")
         self.assertEqual(loaded_graph.answer_generate.name, "AnswerGenerate")
         self.assertEqual(loaded_graph.answer_generate.prompt, "This is a mocked prompt")
-        self.assertEqual(loaded_graph.sc_ensemble.name, "ScEnsemble")
+        self.assertEqual(loaded_graph.sc_ensemble.name, "QAScEnsemble")
 
     def test_save_and_load(self):
         self.qa_action_graph.save_module("tests/src/workflow/saved_qa_action_graph.json")
@@ -53,7 +53,7 @@ class TestModule(unittest.TestCase):
         self.assertEqual(loaded_graph.name, "QAActionGraph")
         self.assertEqual(loaded_graph.description, "This workflow aims to address multi-hop QA tasks.")
         self.assertEqual(loaded_graph.answer_generate.name, "AnswerGenerate")
-        self.assertEqual(loaded_graph.sc_ensemble.name, "ScEnsemble")
+        self.assertEqual(loaded_graph.sc_ensemble.name, "QAScEnsemble")
 
     def tearDown(self):
         if os.path.exists("tests/src/workflow/saved_qa_action_graph.json"):

@@ -1,5 +1,5 @@
 import os 
-from typing import Any
+from typing import Any, Callable
 from .benchmark import Benchmark
 from .measures import exact_match_score, f1_score, acc_score
 from ..core.logging import logger
@@ -86,4 +86,16 @@ class AFlowHotPotQA(HotPotQA):
             self._dev_data = self._load_data_from_file(file_name=AFLOW_DATASET_FILES_MAP["hotpotqa"]["dev"])
         if self.mode == "test" or self.mode == "all":
             self._test_data = self._load_data_from_file(file_name=AFLOW_DATASET_FILES_MAP["hotpotqa"]["test"])
+    
+    async def evaluate_async(self, graph: Callable, example: Any) -> float:
+
+        # generate solution 
+        prompt = example["question"]
+        paragraphs = [item[1] for item in example["context"] if isinstance(item[1], list)]
+        context_str = "\n".join(" ".join(paragraph) for paragraph in paragraphs)
+        inputs = f"Context: {context_str}\n\nQuestion: {prompt}\n\nAnswer:"
+        solution = await graph(inputs)
+        label = self._get_label(example)
+        metrics = await super().evaluate_async(prediction=solution, label=label)
+        return metrics["f1"]
     

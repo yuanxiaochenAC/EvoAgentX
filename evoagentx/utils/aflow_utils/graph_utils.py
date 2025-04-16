@@ -12,14 +12,19 @@ from ...prompts.optimizers.aflow_optimizer import (
     WORKFLOW_TEMPLATE
 )
 from ...models.base_model import BaseLLM 
-from ...workflow.operators import Operator, Custom, CustomCodeGenerate, ScEnsemble, Test, AnswerGenerate
+from ...workflow.operators import (
+    Operator, Custom, CustomCodeGenerate, 
+    ScEnsemble, Test, AnswerGenerate, QAScEnsemble, Programmer
+)
 
 OPERATOR_MAP = {
     "Custom": Custom,
     "CustomCodeGenerate": CustomCodeGenerate,
     "ScEnsemble": ScEnsemble,
     "Test": Test,
-    "AnswerGenerate": AnswerGenerate
+    "AnswerGenerate": AnswerGenerate,
+    "QAScEnsemble": QAScEnsemble,
+    "Programmer": Programmer
 }
 
 
@@ -125,7 +130,8 @@ class GraphUtils:
         with open(os.path.join(directory, "graph.py"), "w", encoding="utf-8") as file:
             file.write(graph)
         with open(os.path.join(directory, "prompt.py"), "w", encoding="utf-8") as file:
-            file.write(response["prompt"])
+            prompt = response["prompt"].replace("prompt_custom.", "")
+            file.write(prompt)
         with open(os.path.join(directory, "__init__.py"), "w", encoding="utf-8") as file:
             file.write("")
         self.update_prompt_import(os.path.join(directory, "graph.py"), directory)

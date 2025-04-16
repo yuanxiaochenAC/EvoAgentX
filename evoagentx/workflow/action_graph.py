@@ -6,7 +6,7 @@ from ..core.logging import logger
 from ..core.module import BaseModule
 from ..core.registry import MODEL_REGISTRY, MODULE_REGISTRY
 from ..models.model_configs import LLMConfig
-from .operators import Operator, AnswerGenerate, ScEnsemble
+from .operators import Operator, AnswerGenerate, QAScEnsemble 
 
 
 class ActionGraph(BaseModule):
@@ -95,7 +95,7 @@ class QAActionGraph(ActionGraph):
             "This is a simple QA workflow that use self-consistency to make predictions."
         super().__init__(name=name, description=description, llm_config=llm_config, **kwargs)
         self.answer_generate = AnswerGenerate(self._llm)
-        self.sc_ensemble = ScEnsemble(self._llm)
+        self.sc_ensemble = QAScEnsemble(self._llm)
         
     def execute(self, problem: str) -> dict:
 
