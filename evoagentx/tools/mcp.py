@@ -1,3 +1,10 @@
+"""
+This tool is inspired by MCP Python SDK and MCP toolkit from the Camel-AI project. You may find more information about by visiting the following links:
+- https://github.com/modelcontextprotocol/python-sdk
+- https://github.com/camel-ai/camel/blob/master/camel/toolkits/mcp_toolkit.py
+
+"""
+
 import asyncio
 import json
 import os
