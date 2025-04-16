@@ -1,3 +1,5 @@
+# Acknowledgement: Modified from AFlow (https://github.com/geekan/MetaGPT/blob/main/metagpt/ext/aflow/scripts/prompts/prompt.py) under MIT License
+
 ANSWER_GENERATION_PROMPT = """
 Think step by step and solve the problem.
 1. In the "thought" field, explain your thinking process in detail.
