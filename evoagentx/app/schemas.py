@@ -2,8 +2,8 @@
 Pydantic models for request/response validation in the EvoAgentX API.
 """
 from datetime import datetime
-from typing import Optional, List, Dict, Any, Union
-from pydantic import BaseModel, Field, validator
+from typing import Optional, List, Dict, Any # , Union
+from pydantic import BaseModel, Field # , validator
 from bson import ObjectId
 from evoagentx.app.db import AgentStatus, WorkflowStatus, ExecutionStatus
 
