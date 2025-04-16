@@ -115,10 +115,10 @@ async def main():
         max_tokens=3000,
     )
     
-    pdf_file_path = "./tests/test_pdf.pdf"
-    config_path = "tests/mcp.config"
+    pdf_file_path = "./examples/test_pdf.pdf"
+    config_path = "./examples/mcp.config"
     toolkit = MCPToolkit(config_path=config_path)
-    output_file = "job_recommendations.md"
+    output_file = "./examples/job_recommendations.md"
     
     # Create MCP client and toolkit
     
