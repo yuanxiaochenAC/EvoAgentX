@@ -1,3 +1,5 @@
+# Acknowledgement: Modified from AFlow (https://github.com/geekan/MetaGPT/blob/main/metagpt/ext/aflow/scripts/evaluator.py) under MIT License
+
 import asyncio
 from tqdm.asyncio import tqdm_asyncio
 from typing import Tuple, Optional, Callable

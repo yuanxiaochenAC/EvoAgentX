@@ -1,5 +1,5 @@
-# Acknowledgement: 
-# This file is modified from the original AFlow repository: https://github.com/geekan/MetaGPT/blob/main/metagpt/ext/aflow/scripts/optimizer.py 
+# Acknowledgement: Modified from AFlow (https://github.com/geekan/MetaGPT/blob/main/metagpt/ext/aflow/scripts/optimizer.py) under MIT License 
+
 import os 
 import re 
 import shutil

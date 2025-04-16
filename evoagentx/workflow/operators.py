@@ -1,3 +1,5 @@
+# Acknowledgement: Modified from AFlow (https://github.com/geekan/MetaGPT/tree/main/metagpt/ext/aflow) under MIT License
+
 import sys
 import json
 import asyncio

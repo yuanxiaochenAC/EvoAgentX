@@ -1,3 +1,5 @@
+# Acknowledgement: Modified from AFlow (https://github.com/geekan/MetaGPT/blob/main/metagpt/ext/aflow/scripts/optimizer_utils/experience_utils.py) under MIT License 
+
 import os
 from collections import defaultdict
 

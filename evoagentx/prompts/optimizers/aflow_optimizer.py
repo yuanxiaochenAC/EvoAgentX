@@ -1,3 +1,5 @@
+# Acknowledgement: Modified from AFlow (https://github.com/geekan/MetaGPT/blob/main/metagpt/ext/aflow/scripts/prompts/optimize_prompt.py) under MIT License 
+
 WORKFLOW_OPTIMIZE_PROMPT = """You are building a Graph and corresponding Prompt to jointly solve {type} problems. 
 Referring to the given graph and prompt, which forms a basic example of a {type} solution approach, 
 please reconstruct and optimize them. You can add, modify, or delete nodes, parameters, or prompts. Include your 

@@ -1,3 +1,5 @@
+# Acknowledgement: Modified from AFlow (https://github.com/geekan/MetaGPT/blob/main/metagpt/ext/aflow/scripts/optimizer_utils/graph_utils.py) under MIT License 
+
 import os 
 import re
 import time
