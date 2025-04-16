@@ -1,26 +1,38 @@
 from pydantic import Field
 from typing import Optional, Any, Callable, Dict
 import json
+import time
+import asyncio
 from ..core.logging import logger
 from ..models.base_model import BaseLLM
 from .action import Action, ActionInput, ActionOutput
 from ..core.message import Message
+from typing import List
 from ..prompts.tool_caller import TOOL_CALLER_PROMPT
 
+
 SUMMARIZING_PROMPT = """
-You are a helpful assistant that summarizes the results of tool calls.
-You may judge whether the problem is solved. If it is not solved, you may explain why.
+You are an expert AI assistant tasked with summarizing tool execution results and answering the user's query.
 
-The result should be in the following format:
+### Task Completion
+- You should give a short summary of the tool call results
+- You should also provide a comprehensive summary of your suggestions based on the client's background and past experiences.
 
+### Question Answering
+- You should give a clear, concise answer based on the tool call results
+- If the problem is not solved, explain why and what additional information might be needed
+
+### Response Format
+You MUST respond with a valid JSON object in the following format. Do not include any text before or after the JSON object:
+```json
 {
-    "summary": "The summary of the tool call"
+    "summary": "Your clear and concise answer based on the tool call results goes here..."
 }
-
+```
 """
 
 class ToolCallSummarizingInput(ActionInput):
-    query: str = Field(description="The query to generate a tool call for")
+    answer: str = Field(description="The answer produced")
 
 class ToolCallSummarizingOutput(ActionOutput):
     summary: str = Field(description="A summary of the tool call")
@@ -34,27 +46,61 @@ class ToolCallSummarizing(Action):
         outputs_format = kwargs.pop("outputs_format", ToolCallSummarizingOutput)
         super().__init__(name=name, description=description, inputs_format=inputs_format, outputs_format=outputs_format, **kwargs)
     
-    async def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, **kwargs) -> ToolCallSummarizingOutput:
+    async def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, history: Optional[List[Message]] = None, **kwargs) -> ToolCallSummarizingOutput:
         if not inputs:
             logger.error("ToolCalling action received invalid `inputs`: None or empty.")
             raise ValueError('The `inputs` to ToolCalling action is None or empty.')
 
-        print("_______________________ Start Tool Calling _______________________")
-        ## 1. Generate tool call args
-        prompt_params_values = inputs.get("query")
+        print("\n\n_______________________ Start Tool Summarizing _______________________")
+        prompt_params_values = inputs.get("answer")
+        print(prompt_params_values)
+        
+        # Use the provided system message if available, otherwise use the default
+        system_message = sys_msg if sys_msg else SUMMARIZING_PROMPT
+        history = history if history else []
+        
+        # Convert Message history to OpenAI format
+        messages = []
+        
+        # Add system message
+        messages.append({"role": "system", "content": system_message})
+        
+        # Add history messages in OpenAI format
+        for msg in history:
+            content = str(msg.content)
+            # Skip empty messages
+            if not content.strip():
+                continue
+                
+            if msg.agent == "user":
+                messages.append({"role": "user", "content": content})
+            else:
+                messages.append({"role": "assistant", "content": content})
+        
+        # Add the current query as a user message
+        messages.append({"role": "user", "content": prompt_params_values})
+        
+        # Remove history from kwargs to avoid passing it as an unknown param
+        kwargs_copy = kwargs.copy()
+        if 'history' in kwargs_copy:
+            del kwargs_copy['history']
+        
         output = llm.generate(
-            prompt = prompt_params_values, 
-            system_message = SUMMARIZING_PROMPT, 
+            messages=messages,
             parser=self.outputs_format,
-            parse_mode="json"
+            system_message=system_message,
+            parse_mode="json",
+            **kwargs_copy
         )
         
+        print("Tool call summarizing output:")
         print(output)
         
         if return_prompt:
             return output, prompt_params_values
         
         return output
+
 
 
 class ToolCallingInput(ActionInput):
@@ -69,11 +115,11 @@ class ToolCallingOutput(ActionOutput):
 
 
 class ToolCalling(Action):
+    max_tool_try: int = 2
     tools_schema: Optional[dict] = None
     tools_caller: Optional[dict[str, Callable]] = None
     conversation: Optional[Message] = None
     tool_generating_output_format: Optional[Any] = None
-    max_tool_try: int = 6
 
     def __init__(self, **kwargs):
         name = kwargs.pop("name", "tool_calling")
@@ -82,6 +128,8 @@ class ToolCalling(Action):
         outputs_format = kwargs.pop("outputs_format", ToolCallingOutput)
         super().__init__(name=name, description=description, inputs_format=inputs_format, outputs_format=outputs_format, **kwargs)
         self.tool_generating_output_format = kwargs.pop("intermediate_output_format", ToolGeneratingOutput)
+        # Allow max_tool_try to be configured through kwargs
+        self.max_tool_try = kwargs.pop("max_tool_try", 2)
     
     def add_tool(self, tools_schema: dict, tools_caller: Callable):
         if self.tools_schema is None:
@@ -90,21 +138,53 @@ class ToolCalling(Action):
         self.tools_schema[tools_schema["name"]] = tools_schema
         self.tools_caller[tools_schema["name"]] = tools_caller
     
-    async def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, time_out = 0, **kwargs) -> ToolCallingOutput:
+    async def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, time_out = 0, history: Optional[List[Message]] = None, **kwargs) -> ToolCallingOutput:
         if not inputs:
             logger.error("ToolCalling action received invalid `inputs`: None or empty.")
             raise ValueError('The `inputs` to ToolCalling action is None or empty.')
 
-        if time_out >= self.max_tool_try:
-            return inputs["query"] + f"Tool executino passing max deepth: {self.max_tool_try}"
+        time_out += 1
+        if time_out > self.max_tool_try:
+            return {"answer": inputs["query"] + f"\n\nTool execution passing max depth: {self.max_tool_try}"}, prompt_params_values
         
         print("_______________________ Start Tool Calling _______________________")
         ## 1. Generate tool call args
         prompt_params_values = inputs.get("query")
+        
+        # Make sure we use the provided system message
+        system_message = sys_msg if sys_msg else TOOL_CALLER_PROMPT["system_prompt"]
+        history = history if history else []
+        
+        # Convert Message history to OpenAI format
+        messages = []
+        
+        # Add system message
+        messages.append({"role": "system", "content": system_message})
+        
+        # Add history messages in OpenAI format
+        for msg in history:
+            content = str(msg.content)
+            # Skip empty messages
+            if not content.strip():
+                continue
+                
+            if msg.agent == "user":
+                messages.append({"role": "user", "content": content})
+            else:
+                messages.append({"role": "assistant", "content": content})
+        
+        # Add the current query as a user message
+        messages.append({"role": "user", "content": prompt_params_values})
+        
+        # Remove history from kwargs to avoid passing it as an unknown param
+        kwargs_copy = kwargs.copy()
+        if 'history' in kwargs_copy:
+            del kwargs_copy['history']
+        
         tool_call_args = llm.generate(
-            prompt = prompt_params_values, 
-            system_message = sys_msg, 
+            messages=messages,
             parser=self.tool_generating_output_format,
+            history = history,
             parse_mode="json"
         )
         
@@ -117,59 +197,86 @@ class ToolCalling(Action):
         errors = []
         results  =[]
         for function_param in function_params:
-            function_name = function_param.get("function_name")
-            function_args = function_param.get("function_args") or {}
-        
-            # Check if we have a valid function to call
-            if not function_name:
-               errors.append("No function name provided")
-               break
-                
-            # Try to get the callable from our tools_caller dictionary
-            callable_fn = None
-            if self.tools_caller and function_name in self.tools_caller:
-                callable_fn = self.tools_caller[function_name]
-            elif callable(function_name):
-                callable_fn = function_name
-                
-            if not callable_fn:
-                errors.append(f"Function '{function_name}' not found or not callable")
-                break
-            
             try:
-                # Determine if the function is async or not
-                import inspect
-                if inspect.iscoroutinefunction(callable_fn):
-                    # Handle async function
-                    result = await callable_fn(**function_args)
-                else:
-                    # Handle regular function
-                    result = callable_fn(**function_args)
-                    
-            except Exception as e:
-                logger.error(f"Error executing tool {function_name}: {e}")
-                errors.append(f"Error executing tool {function_name}: {str(e)}")
-                break
+                function_name = function_param.get("function_name")
+                function_args = function_param.get("function_args") or {}
         
-            results.append(result)
+                # Check if we have a valid function to call
+                if not function_name:
+                    errors.append("No function name provided")
+                    break
+                    
+                # Try to get the callable from our tools_caller dictionary
+                callable_fn = None
+                if self.tools_caller and function_name in self.tools_caller:
+                    callable_fn = self.tools_caller[function_name]
+                elif callable(function_name):
+                    callable_fn = function_name
+                        
+                if not callable_fn:
+                    errors.append(f"Function '{function_name}' not found or not callable")
+                    break
+                
+                try:
+                    # Determine if the function is async or not
+                    import inspect
+                    print("_____________________ Start Function Calling _____________________")
+                    print(f"Executing function calling: {function_name} with {function_args}")
+                    if inspect.iscoroutinefunction(callable_fn):
+                        print("____ Start Async Function Calling ____")
+                        result = await callable_fn(**function_args)
+                    else:
+                        # Handle regular function
+                        print("____ Start Regular Function Calling ____")
+                        result = callable_fn(**function_args)
+                        
+                except Exception as e:
+                    logger.error(f"Error executing tool {function_name}: {e}")
+                    errors.append(f"Error executing tool {function_name}: {str(e)}")
+                    break
+            
+                results.append(result)
+            except Exception as e:
+                logger.error(f"Error executing tool: {e}")
+                errors.append(f"Error executing tool: {str(e)}")
+        
 
         ## 3. Add the tool call results to the query and continue the conversation
         results = {"result": results, "error": errors}
         
-        inputs["query"] += "\n\n ### Tool Call Results \n\n" + str(results)
+        # print("results:")
+        # print(results)
+        inputs = inputs.copy()
+        # Use proper JSON serialization to handle complex objects like TextContent
+        try:
+            print("Dumping to json...")
+            # Try to serialize with json
+            results_str = json.dumps(results, default=lambda obj: obj.__dict__ if hasattr(obj, "__dict__") else str(obj))
+        except:
+            # Fallback to string representation
+            print("Fallback to string representation...")
+            results_str = str(results)
+            
+        inputs["query"] += "\n\n ### Tool Call Results \n\n" + results_str
         
-        print("\n\n\n\n\n\n\n\nContinue after tool call? :")
+        print("\nContinue after tool call? :")
         print(tool_call_args.continue_after_tool_call)
         if tool_call_args.continue_after_tool_call:
-            answer = await self.execute(llm, inputs, sys_msg, return_prompt, **kwargs)
-            print(answer)
+            # Only continue if we haven't exceeded max_tool_try
+            if time_out < self.max_tool_try:
+                print(f"Continuing with tool call execution (attempt {time_out+1}/{self.max_tool_try})")
+                answer = await self.execute(llm, inputs, sys_msg, return_prompt, **kwargs, time_out=time_out)
+            else:
+                print(f"Maximum tool call depth ({self.max_tool_try}) reached, stopping execution")
+                answer = {"answer": inputs["query"] + f"\n\nTool execution reached maximum depth ({self.max_tool_try})."}
         else:
-            answer = "Tool call results: " + str(results)
+            answer = {"answer": inputs["query"]}
+            
+        print("answer:")
+        print(answer)
+        
         
         if return_prompt:
-            return str(answer), prompt_params_values
-        
-        return str(answer)
-        
-        
-        
+            return answer, prompt_params_values
+        return answer
+

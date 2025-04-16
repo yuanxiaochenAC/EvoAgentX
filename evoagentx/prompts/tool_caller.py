@@ -47,6 +47,7 @@ You are a helpful assistant with access to a set of tools. Your task is to analy
 
 ### Response Format
 You MUST respond with a valid JSON object in the following format. Do not include any text before or after the JSON object:
+Comments in the json object is not allowed. (They are just for demonstration)
 
 ```json
 {{
@@ -97,6 +98,7 @@ You MUST respond with a valid JSON object in the following format. Do not includ
    - NEVER provide a direct answer. You MUST ALWAYS use a tool from the available list
    - Set "continue_after_tool_call" to false when the selected tool can fully answer the query
    - Set "continue_after_tool_call" to true when further tool calls will be needed to complete the task
+
 
 """
 

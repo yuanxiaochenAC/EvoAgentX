@@ -122,3 +122,4 @@ debug*.py
 
 ## custom files
 tests/.
+examples/.

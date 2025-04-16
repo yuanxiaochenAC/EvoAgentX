@@ -28,9 +28,11 @@ class ToolCaller(Agent):
         name = kwargs.pop("name", TOOL_CALLER_PROMPT["name"])
         description = kwargs.pop("description", TOOL_CALLER_PROMPT["description"])
         system_prompt = kwargs.pop("system_prompt", TOOL_CALLER_PROMPT["system_prompt"])
-        actions = kwargs.pop("actions", [ToolCalling(), ToolCallSummarizing()])
+        max_tool_try = kwargs.pop("max_tool_try", 2)
+        actions = kwargs.pop("actions", [ToolCalling(max_tool_try=max_tool_try), ToolCallSummarizing()])
         
         super().__init__(name=name, description=description, system_prompt=system_prompt, actions=actions, **kwargs)
+        self.max_tool_try = max_tool_try
         self.tool_calling_action = self._action_map[self.tool_calling_action_name]
     
     @property

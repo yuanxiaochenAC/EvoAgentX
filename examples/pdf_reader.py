@@ -142,7 +142,8 @@ async def main():
         Assume you are a tech lead and I am seeking for your advice on employment.
         Please read and summarize my resume at {pdf_file_path}, interms of pros, cons, and suggestions for titled jobs.
         It should be a very technical summary, so that if I give the summary to another person, he/she can find a right job for me.
-        If you already have the summary, please find way to find real jobs and then recommend me 5 jobs from these jobs (actual jobs to join a company, with job title, company name, location, job description, job requirements, job salary, job posting link) for our friend based on the summary.
+        If you already have the summary, please find way to find real jobs and then recommend me 10 jobs from these jobs (actual jobs to join a company, with job title, company name, location, job description, job requirements, job salary, job posting link, etc) for our friend based on the summary.
+        You should also provide a comprehensive summary of your suggestions based on the client's background and past experiences.
         """
         input_message = Message(content=user_query, msg_type=MessageType.REQUEST, agent="user")
         
@@ -168,7 +169,7 @@ async def main():
         job_recommender_agent.add_mcp_toolkit(toolkit)
         
         # user_query = f"""
-        #     Please recommend me 5 jobs (actual jobs to join a company) for our friend based on the following information: {message_out_summarizing.content}
+        #     Please recommend 5 jobs (actual jobs to join a company) to our friend based on the following information: {message_out_summarizing.content}
         #     """
         input_message = Message(content=user_query, msg_type=MessageType.REQUEST, agent="user")
         

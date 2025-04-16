@@ -7,6 +7,7 @@ import inspect
 from contextlib import AsyncExitStack, asynccontextmanager
 from urllib.parse import urlparse
 
+import mcp
 from mcp import ClientSession, StdioServerParameters, Tool, ListToolsResult
 from mcp.client.stdio import stdio_client
 from mcp.client.sse import sse_client
@@ -208,7 +209,44 @@ class MCPClient:
             raise ValueError("Not connected to a server. Call connect() first.")
             
         result = await self.session.call_tool(tool_name, tool_args)
-        return result.content
+        text_content_only = [
+            content for content in result.content 
+            if isinstance(content, mcp.types.TextContent) and content.type == "text"
+        ]
+        return self.ensure_json_serializable(text_content_only)
+    
+    def ensure_json_serializable(self, obj: Any) -> Any:
+        """Ensure that the given object can be serialized to JSON
+        
+        Args:
+            obj: The object to convert
+            
+        Returns:
+            A JSON serializable version of the object
+        """
+        if isinstance(obj, list):
+            return [self.ensure_json_serializable(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {k: self.ensure_json_serializable(v) for k, v in obj.items()}
+        elif hasattr(obj, "model_dump"):
+            # For Pydantic v2 models
+            return self.ensure_json_serializable(obj.model_dump())
+        elif hasattr(obj, "dict") and callable(getattr(obj, "dict")):
+            # For Pydantic v1 models
+            return self.ensure_json_serializable(obj.dict())
+        elif hasattr(obj, "__dict__") and not isinstance(obj, type):
+            # For custom classes with __dict__ attribute
+            return self.ensure_json_serializable(obj.__dict__)
+        # For MCP TextContent objects, extract the text property
+        elif hasattr(obj, "text") and isinstance(getattr(obj, "text"), str):
+            return obj.text
+        # Try to verify if the object is JSON serializable
+        try:
+            json.dumps(obj)
+            return obj
+        except (TypeError, OverflowError):
+            # If serialization fails, convert to string
+            return str(obj)
         
     def generate_function_from_mcp_tool(self, mcp_tool: Tool) -> Callable:
         """Dynamically generates a Python callable function from an MCP tool
@@ -362,11 +400,15 @@ class MCPClient:
             )
             for mcp_tool in self._mcp_tools]
 
-    async def cleanup(self):
-        """Clean up resources"""
+    async def disconnect(self):
+        """Disconnect from the server"""
         self._is_connected = False
         await self.exit_stack.aclose()
         self.session = None
+        
+    async def cleanup(self):
+        """Clean up resources and disconnect from the server"""
+        await self.disconnect()
         
     def is_connected(self) -> bool:
         """Check if the client is connected
@@ -450,7 +492,7 @@ class MCPToolkit:
             
         for server in self.servers:
             try:
-                await server.cleanup()
+                await server.disconnect()
             except Exception as e:
                 # Suppress the specific cancel scope error
                 if "cancel scope" not in str(e).lower():
