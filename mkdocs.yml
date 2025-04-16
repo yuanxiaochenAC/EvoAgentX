@@ -1,0 +1,18 @@
+site_name: EvoAgentX
+theme:
+  name: material
+
+nav:
+  - About: index.md
+  - API: api.md
+  - Install: installation.md 
+  - Quickstart: quickstart.md
+  - Tutorials:
+      - "Benchmark and Evaluation": tutorial/benchmark_and_evaluation.md
+      - "SEW Optimizer": tutorial/sew_optimizer.md
+
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
