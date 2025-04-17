@@ -247,7 +247,7 @@ class ToolCalling(Action):
         inputs = inputs.copy()
         
         ##### ___________ Custom Object Serializer ___________
-        # Define a custom object serializer that can handle various types
+        # Define a custom object   that can handle various types
         def object_serializer(obj):
             # Handle Pydantic models
             if hasattr(obj, "model_dump"):
@@ -309,4 +309,5 @@ class ToolCalling(Action):
         if return_prompt:
             return answer, prompt_params_values
         return answer
+    
 

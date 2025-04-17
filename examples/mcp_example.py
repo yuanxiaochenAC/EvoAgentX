@@ -22,6 +22,8 @@ Links: https://github.com/modelcontextprotocol/servers/tree/main/src/github
 import asyncio
 import json
 import os
+import sys
+import signal
 import traceback
 import dotenv
 from evoagentx.tools import MCPToolkit
@@ -32,6 +34,26 @@ from evoagentx.core.message import Message, MessageType
 from evoagentx.actions.tool_calling import SUMMARIZING_PROMPT
 dotenv.load_dotenv()
 
+# Set up signal handlers for graceful shutdown
+def handle_exit_signal(signum, frame):
+    """Handle exit signals to cleanly terminate the process"""
+    print(f"\nReceived signal {signum}, shutting down...")
+    # Force exit without running any more async code
+    os._exit(0)
+
+# Register signal handlers
+signal.signal(signal.SIGINT, handle_exit_signal)
+signal.signal(signal.SIGTERM, handle_exit_signal)
+
+# For Windows, we need a different approach
+if os.name == 'nt':
+    try:
+        import win32api
+        def windows_handler(sig):
+            handle_exit_signal(0, None)
+        win32api.SetConsoleCtrlHandler(windows_handler, True)
+    except ImportError:
+        pass
 
 # Example for multiple MCP servers
 async def main():
@@ -95,8 +117,6 @@ async def main():
         )
         print(f"Summarizing output: {message_out_summarizing}")
         
-        
-        
     except Exception as e:
         logger.error(f"Error: {e}")
         logger.error(f"Traceback: {traceback.format_exc()}")
@@ -104,11 +124,67 @@ async def main():
         # Clean up resources
         print("Disconnecting from MCP server")
         try:
-            await toolkit.disconnect()
+            # Set a short timeout for disconnect to avoid hanging
+            disconnect_task = asyncio.create_task(toolkit.disconnect())
+            try:
+                # Wait for disconnect with a timeout
+                await asyncio.wait_for(disconnect_task, timeout=2.0)
+                print("Successfully disconnected from MCP server")
+            except asyncio.TimeoutError:
+                print("Disconnect timed out, forcing termination")
+                # Force cancel the task if it's taking too long
+                disconnect_task.cancel()
+                
+                # Give a moment for cancellation to propagate
+                await asyncio.sleep(0.1)
+                
+                # Force kill any servers that might be hanging by getting the current event loop and stopping it
+                loop = asyncio.get_running_loop()
+                for task in asyncio.all_tasks(loop=loop):
+                    if task is not asyncio.current_task():
+                        task.cancel()
+                
+                # Try to terminate subprocesses directly (works on both Windows and Unix)
+                for server in toolkit.servers:
+                    try:
+                        # Access internal process objects
+                        if hasattr(server, '_process') and server._process:
+                            # Try to kill the process directly
+                            server._process.kill()
+                            print(f"Killed server process")
+                        # Check for stdio client with subprocess
+                        elif hasattr(server, 'exit_stack') and hasattr(server.exit_stack, '_exit_callbacks'):
+                            # Try to find and kill any subprocesses in the exit callbacks
+                            for callback in server.exit_stack._exit_callbacks:
+                                if hasattr(callback, '__self__') and hasattr(callback.__self__, '_process'):
+                                    callback.__self__._process.kill()
+                                    print(f"Killed subprocess from exit stack")
+                    except Exception as kill_error:
+                        print(f"Error killing subprocess: {kill_error}")
+                
+                # If we're still having issues, suggest OS-level process termination
+                print("If process hangs, you may need to terminate it manually (Ctrl+C)")
         except asyncio.CancelledError as e:
             # Safely handle the cancellation error
             print(f"Caught cancellation during disconnect: {e}")
-    
+            raise Exception(f"Disconnect error: {e}")
+        except Exception as e:
+            # Handle any other exceptions during disconnect
+            print(f"Error during disconnect: {e}")
+            logger.error(f"Disconnect error: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise Exception(f"Disconnect error: {e}")
+            
+        # Ensure any remaining tasks are cleaned up
+        for task in asyncio.all_tasks():
+            if task is not asyncio.current_task():
+                task.cancel()
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("KeyboardInterrupt received, terminating...")
+    except Exception as e:
+        print(f"Error in main: {e}")
+        traceback.print_exc() 
