@@ -502,26 +502,34 @@ class MCPToolkit:
             print(f"Failed to connect to one or more MCP servers: {e}")
             raise RuntimeError(f"Failed to connect to one or more MCP servers: {e}") from e
             
-    async def disconnect(self):
-        """Disconnect from all servers"""
+    async def disconnect(self, timeout=120.0):
+        """Disconnect from all servers silently"""
         if not self._connected:
             return
             
-        disconnect_errors = []
+        # Simple direct disconnect without tracking errors
         for server in self.servers:
             try:
-                await server.disconnect()
-            except Exception as e:
-                # Only log non-cancel scope errors
-                if "cancel scope" not in str(e).lower():
-                    disconnect_errors.append(str(e))
+                # Just attempt to disconnect each server directly
+                disconnect_task = asyncio.create_task(server.disconnect())
                 
-        if disconnect_errors and len(disconnect_errors) > 0:
-            print(f"Encountered {len(disconnect_errors)} errors during disconnect")
+                # Only wait for the timeout period, then move on regardless
+                try:
+                    await asyncio.wait_for(disconnect_task, timeout)
+                except (asyncio.TimeoutError, asyncio.CancelledError):
+                    # Silently ignore timeouts and cancellations
+                    pass
+                except Exception:
+                    # Suppress all other exceptions
+                    pass
+            except Exception:
+                # Catch absolutely any errors at the outermost level
+                pass
                 
+        # Mark as disconnected regardless of success/failure
         self._connected = False
-        self._tools_cache = {}  # Clear the cache on disconnect
-        
+        self._tools_cache = {}
+            
     @asynccontextmanager
     async def connection(self):
         """Async context manager for toolkit connections

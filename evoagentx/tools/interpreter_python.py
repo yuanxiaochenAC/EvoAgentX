@@ -9,6 +9,35 @@ from typing import List, Set, Optional, Union, Dict, Any
 from .interpreter_base import BaseInterpreter
 
 class InterpreterPython(BaseInterpreter):
+    def get_tool_schema(self) -> Dict[str, Any]:
+        """
+        Returns the OpenAI-compatible function schema for the Python interpreter.
+        
+        Returns:
+            Dict[str, Any]: Function schema in OpenAI format
+        """
+        return {
+            "type": "function",
+            "function": {
+                "name": "execute_code",
+                "description": "The Python Interpreter Tool provides a secure execution environment for running Python code. It performs static analysis using AST to detect unauthorized imports and security risks before execution.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "code": {
+                            "type": "string",
+                            "description": "The code to execute"
+                        },
+                        "language": {
+                            "type": "string",
+                            "description": "The programming language of the code"
+                        }
+                    },
+                    "required": ["code", "language"]
+                }
+            }
+        }
+
     def get_tool_info(self):
         return {
             "description": """The Python Interpreter Tool provides a secure execution environment for running Python code. 
@@ -296,15 +325,21 @@ class InterpreterPython(BaseInterpreter):
 
         return violations
 
-    def execute(self, code: str) -> None:
-        """Analyzes and executes the provided Python code in a controlled environment.
+    def execute(self, code: str, language: str = "python") -> str:
+        """
+        Analyzes and executes the provided Python code in a controlled environment.
 
         Args:
             code (str): The Python code to execute.
+            language (str, optional): The programming language of the code. Defaults to "python".
 
         Returns:
             str: The output of the executed code, or a list of violations if found.
         """
+        # Verify language is python
+        if language.lower() != "python":
+            return f"Error: This interpreter only supports Python language. Received: {language}"
+            
         self.visited_modules = {}
         self.namespace = {}
 
@@ -332,12 +367,14 @@ class InterpreterPython(BaseInterpreter):
         # Retrieve and return the captured output
         return stdout_capture.getvalue().strip()
 
-    def execute_script(self, file_path: str, codetype: str) -> str:
+    def execute_script(self, file_path: str, language: str = "python") -> str:
         """
         Reads Python code from a file and executes it using the `execute` method.
         
         Args:
             file_path (str): The path to the Python file to be executed.
+            language (str, optional): The programming language of the code. Defaults to "python".
+            
         Returns:
             str: The output of the executed code, or an error message if the execution fails.
         """
@@ -351,4 +388,4 @@ class InterpreterPython(BaseInterpreter):
         except Exception as e:
             return f"Error reading file: {e}"
         
-        return self.execute(code, codetype)
+        return self.execute(code, language)

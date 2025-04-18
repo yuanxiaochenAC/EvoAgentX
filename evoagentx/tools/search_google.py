@@ -1,7 +1,43 @@
 import requests
+import os
+from typing import Dict, Any, List
 from .search_base import SearchBase
 
 class SearchGoogle(SearchBase):
+    def get_tool_schema(self) -> Dict[str, Any]:
+        """
+        Returns the OpenAI-compatible function schema for the Google search tool.
+        
+        Returns:
+            Dict[str, Any]: Function schema in OpenAI format
+        """
+        return {
+            "type": "function",
+            "function": {
+                "name": "search",
+                "description": "Search Google using the Custom Search API and retrieve detailed search results with content snippets.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query to execute on Google"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        }
+        
+    def get_tool_description(self) -> str:
+        """
+        Returns a brief description of the Google search tool.
+        
+        Returns:
+            str: Tool description
+        """
+        return "Google Search Tool that utilizes the Google Custom Search API to perform structured search queries."
+
     def get_tool_info(self):
         return {
             "description": """The Google Search Tool utilizes the Google Custom Search API to perform structured search queries. 
@@ -61,7 +97,27 @@ class SearchGoogle(SearchBase):
     
     num_search_pages:int = 5
     max_content_words:int = 500
-
+    
+    def execute(self, query: str) -> Dict[str, Any]:
+        """
+        Executes a search with the given query using Google Custom Search API.
+        
+        Args:
+            query (str): The search query
+            
+        Returns:
+            Dict[str, Any]: Search results with keys 'results' and 'error'
+        """
+        # Get API key and search engine ID from environment variables or use defaults
+        api_key = os.getenv('GOOGLE_API_KEY', '')
+        search_engine_id = os.getenv('GOOGLE_SEARCH_ENGINE_ID', '')
+        
+        search_params = {
+            "api_key": api_key, 
+            "search_engine_id": search_engine_id
+        }
+        
+        return self.search(query, search_params)
     
     def search(self, query: str, search_params:dict) -> dict:
         results = []

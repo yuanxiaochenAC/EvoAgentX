@@ -32,6 +32,24 @@ class TestDockerInterpreter(unittest.TestCase):
     def tearDown(self):
         # Clean up the temporary directory
         self.temp_dir.cleanup()
+        
+    def test_get_tool_schema(self):
+        """Test the get_tool_schema method returns the correct schema"""
+        schema = self.interpreter.get_tool_schema()
+        
+        self.assertIsInstance(schema, dict)
+        self.assertEqual(schema["type"], "function")
+        self.assertIn("function", schema)
+        self.assertEqual(schema["function"]["name"], "execute_code")
+        
+        # Check parameters
+        params = schema["function"]["parameters"]
+        self.assertIn("properties", params)
+        self.assertIn("code", params["properties"])
+        self.assertIn("language", params["properties"])
+        self.assertIn("required", params)
+        self.assertIn("code", params["required"])
+        self.assertIn("language", params["required"])
 
     def test_execute_valid_code(self):
         # Sample code that imports from AGTChart
@@ -40,17 +58,18 @@ import os
 
 print('Hello from Docker!')
 """
-        result = self.interpreter.execute(test_code, "python")
+        # Using the new execute interface
+        result = self.interpreter.execute(code=test_code, language="python")
         self.assertIn("Hello from Docker!", result)
 
     def test_syntax_error(self):
         test_code = "print('Hello World'"
-        result = self.interpreter.execute(test_code, "python")
+        result = self.interpreter.execute(code=test_code, language="python")
         self.assertIn("SyntaxError", result)
 
     def test_runtime_error(self):
         test_code = "print(1/0)"
-        result = self.interpreter.execute(test_code, "python")
+        result = self.interpreter.execute(code=test_code, language="python")
         self.assertIn("ZeroDivisionError", result)
 
 if __name__ == '__main__':

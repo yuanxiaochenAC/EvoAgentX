@@ -1,7 +1,42 @@
 from .search_base import SearchBase
 from googlesearch import search as google_f_search
+from typing import Dict, Any, List
 
 class SearchGoogleFree(SearchBase):
+
+    def get_tool_schema(self) -> Dict[str, Any]:
+        """
+        Returns the OpenAI-compatible function schema for the free Google search tool.
+        
+        Returns:
+            Dict[str, Any]: Function schema in OpenAI format
+        """
+        return {
+            "type": "function",
+            "function": {
+                "name": "search",
+                "description": "Search Google without requiring an API key and retrieve content from search results.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query to execute on Google"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        }
+        
+    def get_tool_description(self) -> str:
+        """
+        Returns a brief description of the free Google search tool.
+        
+        Returns:
+            str: Tool description
+        """
+        return "Free Google Search Tool that queries Google without requiring an API key."
 
     def get_tool_info(self):
         return {
@@ -50,9 +85,8 @@ class SearchGoogleFree(SearchBase):
 
     num_search_pages:int = 5
     max_content_words:int = 500
-
     
-    def search(self, query: str) -> list:
+    def search(self, query: str) -> Dict[str, Any]:
         """
         Searches Google for the given query and retrieves content from multiple pages.
 
@@ -60,14 +94,14 @@ class SearchGoogleFree(SearchBase):
             query (str): The search query.
 
         Returns:
-            dict: Contains a list of search results (title, truncated content, and source URL).
+            Dict[str, Any]: Contains a list of search results and optional error message.
         """
         results = []
         try:
             # Step 1: Get top search result links
             search_results = list(google_f_search(query, num_results=self.num_search_pages))
             if not search_results:
-                return {"error": "No search results found."}
+                return {"results": [], "error": "No search results found."}
 
             # Step 2: Fetch content from each page
             for url in search_results:
@@ -82,7 +116,7 @@ class SearchGoogleFree(SearchBase):
                 except Exception:
                     continue  # Skip pages that cannot be processed
 
-            return results
+            return {"results": results, "error": None}
         
         except Exception as e:
-            return {"error": str(e)}
+            return {"results": [], "error": str(e)}

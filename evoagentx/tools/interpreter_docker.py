@@ -4,13 +4,42 @@ import tarfile
 import uuid
 import docker
 from pathlib import Path
-from typing import ClassVar, Dict, Set, Optional
+from typing import ClassVar, Dict, Set, Optional, Any
 from .interpreter_base import BaseInterpreter
 
 class DockerInterpreter(BaseInterpreter):
     """
     A Docker-based interpreter for executing Python, Bash, and R scripts in an isolated environment.
     """
+
+    def get_tool_schema(self) -> Dict[str, Any]:
+        """
+        Returns the OpenAI-compatible function schema for the Docker interpreter.
+        
+        Returns:
+            Dict[str, Any]: Function schema in OpenAI format
+        """
+        return {
+            "type": "function",
+            "function": {
+                "name": "execute_code",
+                "description": "The Docker Interpreter Tool provides a secure and isolated environment for executing code inside a Docker container.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "code": {
+                            "type": "string",
+                            "description": "The code to execute"
+                        },
+                        "language": {
+                            "type": "string",
+                            "description": "The programming language of the code (e.g., python, py, python3)"
+                        }
+                    },
+                    "required": ["code", "language"]
+                }
+            }
+        }
 
     def get_tool_info(self):
         return {
@@ -66,7 +95,7 @@ class DockerInterpreter(BaseInterpreter):
                     "description": "The Python code snippet to be executed inside the Docker container.",
                     "required": True
                 },
-                "code_type": {
+                "language": {
                     "type": "str",
                     "description": "The programming language of the code being executed. Currently supports Python ('python', 'py', 'py3', 'python3').",
                     "required": True
@@ -88,11 +117,11 @@ class DockerInterpreter(BaseInterpreter):
             - `_initialize_if_needed()`: Ensures the Docker container is initialized and the required image is available.
             - `_upload_directory_to_container(host_directory: str)`: Transfers files from a given host directory into the container.
             - `_create_file_in_container(content: str)`: Generates a temporary file inside the container for execution.
-            - `_run_file_in_container(file: Path, code_type: str)`: Executes the specified file inside the container and retrieves output.
-            - `execute(code: str, code_type: str)`: Runs Python code inside the Docker container, optionally confirming execution.
-            - `_check_code_type(code_type: str)`: Validates and maps supported programming languages to the correct Docker execution command.""",
+            - `_run_file_in_container(file: Path, language: str)`: Executes the specified file inside the container and retrieves output.
+            - `execute(code: str, language: str)`: Runs Python code inside the Docker container, optionally confirming execution.
+            - `_check_language(language: str)`: Validates and maps supported programming languages to the correct Docker execution command.""",
             
-            "interface": "execute(code: str, code_type: str) -> dict with key 'execution_result' (str) or 'error' (str)"
+            "interface": "execute(code: str, language: str) -> dict with key 'execution_result' (str) or 'error' (str)"
         }
 
     _CODE_EXECUTE_CMD_MAPPING: ClassVar[Dict[str, str]] = {
@@ -199,9 +228,9 @@ class DockerInterpreter(BaseInterpreter):
         self._container.put_archive("/tmp", tar_stream)
         return Path(f"/tmp/{filename}")
 
-    def _run_file_in_container(self, file: Path, code_type: str) -> str:
-        code_type = self._check_code_type(code_type)
-        command = shlex.split(self._CODE_EXECUTE_CMD_MAPPING[code_type].format(file_name=file.as_posix()))
+    def _run_file_in_container(self, file: Path, language: str) -> str:
+        language = self._check_language(language)
+        command = shlex.split(self._CODE_EXECUTE_CMD_MAPPING[language].format(file_name=file.as_posix()))
         if self._container is None:
             raise RuntimeError("Container is not initialized.")
         result = self._container.exec_run(command, demux=True)
@@ -214,23 +243,33 @@ class DockerInterpreter(BaseInterpreter):
 
         return stdout.decode() if stdout else "" + (stderr.decode() if stderr else "")
 
-    def execute(self, code: str, code_type: str) -> str:
+    def execute(self, code: str, language: str) -> str:
+        """
+        Executes code in a Docker container.
+        
+        Args:
+            code (str): The code to execute
+            language (str): The programming language to use
+            
+        Returns:
+            str: The execution output
+        """
         if self.host_directory:
             code = f"import sys; sys.path.insert(0, '{self.container_directory}');" + code
-        code_type = self._check_code_type(code_type)
+        language = self._check_language(language)
         if self.require_confirm:
-            confirmation = input(f"Confirm execution of {code_type} code? [Y/n]: ")
+            confirmation = input(f"Confirm execution of {language} code? [Y/n]: ")
             if confirmation.lower() not in ["y", "yes", ""]:
                 raise RuntimeError("Execution aborted by user.")
         
         
         file_path = self._create_file_in_container(code)
-        return self._run_file_in_container(file_path, code_type)
+        return self._run_file_in_container(file_path, language)
 
-    def _check_code_type(self, code_type: str) -> str:
-        if code_type not in self._CODE_TYPE_MAPPING:
-            raise ValueError(f"Unsupported code type: {code_type}")
-        return self._CODE_TYPE_MAPPING[code_type]
+    def _check_language(self, language: str) -> str:
+        if language not in self._CODE_TYPE_MAPPING:
+            raise ValueError(f"Unsupported language: {language}")
+        return self._CODE_TYPE_MAPPING[language]
 
     _CODE_EXECUTE_CMD_MAPPING: ClassVar[Dict[str, str]] = {
         "python": "python {file_name}",

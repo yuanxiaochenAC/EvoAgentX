@@ -118,67 +118,23 @@ async def main():
         print(f"Summarizing output: {message_out_summarizing}")
         
     except Exception as e:
+        import traceback
         logger.error(f"Error: {e}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise Exception(f"Traceback: {traceback.format_exc()}")
     finally:
         # Clean up resources
         print("Disconnecting from MCP server")
         try:
-            # Set a short timeout for disconnect to avoid hanging
-            disconnect_task = asyncio.create_task(toolkit.disconnect())
-            try:
-                # Wait for disconnect with a timeout
-                await asyncio.wait_for(disconnect_task, timeout=2.0)
-                print("Successfully disconnected from MCP server")
-            except asyncio.TimeoutError:
-                print("Disconnect timed out, forcing termination")
-                # Force cancel the task if it's taking too long
-                disconnect_task.cancel()
-                
-                # Give a moment for cancellation to propagate
-                await asyncio.sleep(0.1)
-                
-                # Force kill any servers that might be hanging by getting the current event loop and stopping it
-                loop = asyncio.get_running_loop()
-                for task in asyncio.all_tasks(loop=loop):
-                    if task is not asyncio.current_task():
-                        task.cancel()
-                
-                # Try to terminate subprocesses directly (works on both Windows and Unix)
-                for server in toolkit.servers:
-                    try:
-                        # Access internal process objects
-                        if hasattr(server, '_process') and server._process:
-                            # Try to kill the process directly
-                            server._process.kill()
-                            print(f"Killed server process")
-                        # Check for stdio client with subprocess
-                        elif hasattr(server, 'exit_stack') and hasattr(server.exit_stack, '_exit_callbacks'):
-                            # Try to find and kill any subprocesses in the exit callbacks
-                            for callback in server.exit_stack._exit_callbacks:
-                                if hasattr(callback, '__self__') and hasattr(callback.__self__, '_process'):
-                                    callback.__self__._process.kill()
-                                    print(f"Killed subprocess from exit stack")
-                    except Exception as kill_error:
-                        print(f"Error killing subprocess: {kill_error}")
-                
-                # If we're still having issues, suggest OS-level process termination
-                print("If process hangs, you may need to terminate it manually (Ctrl+C)")
+            await toolkit.disconnect()
         except asyncio.CancelledError as e:
             # Safely handle the cancellation error
             print(f"Caught cancellation during disconnect: {e}")
-            raise Exception(f"Disconnect error: {e}")
+            print("This is expected behavior with the MCP client and can be safely ignored.")
         except Exception as e:
-            # Handle any other exceptions during disconnect
             print(f"Error during disconnect: {e}")
-            logger.error(f"Disconnect error: {e}")
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            raise Exception(f"Disconnect error: {e}")
-            
-        # Ensure any remaining tasks are cleaned up
-        for task in asyncio.all_tasks():
-            if task is not asyncio.current_task():
-                task.cancel()
+        logger.info("Disconnected from MCP server")
+    
+    logger.info("\nExample completed!")
 
 if __name__ == "__main__":
     try:

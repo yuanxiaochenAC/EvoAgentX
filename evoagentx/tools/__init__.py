@@ -1,3 +1,4 @@
+from .tool import Tool
 from .interpreter_base import BaseInterpreter
 from .interpreter_docker import DockerInterpreter
 from .interpreter_python import InterpreterPython
@@ -8,7 +9,7 @@ from .search_google import SearchGoogle
 from .mcp import MCPClient, MCPToolkit
 
 
-__all__ = ["BaseInterpreter", "DockerInterpreter", 
+__all__ = ["Tool", "BaseInterpreter", "DockerInterpreter", 
            "InterpreterPython", "SearchBase", "SearchGoogleFree", "SearchWiki", "SearchGoogle",
            "MCPClient", "MCPToolkit"]
 
