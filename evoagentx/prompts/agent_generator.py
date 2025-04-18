@@ -271,6 +271,7 @@ You should STRICTLY use the above template to generate the `prompt` field of the
 - Ensure that ALL `inputs` defined in the sub-task are used by at least on created agent. 
 - Ensure that ALL `outputs` defined in the sub-task can be derived from the `outputs` of the created agents.
 - Ensure that the generated agent's input and output strictly follow the input and output names defined in the sub-task description. Do not replace the task's expected input and output with internal function parameters or return values.  
+- If only one agent is needed, you should ensure that ALLL `inputs` are used in the `prompt` of the agent. 
 - You must use a SINGLE pair of curly brace warpped by "<input>xxx</input>" to reference inputs in the "### Instructions" of an agent's prompt.
 - Below is **a generated agent** that follows the given instructions:
 ```json

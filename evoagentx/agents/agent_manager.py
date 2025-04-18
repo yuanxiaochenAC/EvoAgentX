@@ -8,7 +8,7 @@ from .customize_agent import CustomizeAgent
 from ..core.module import BaseModule
 from ..core.decorators import atomic_method
 from ..storages.base import StorageHandler
-
+from ..models.model_configs import LLMConfig
 
 class AgentState(str, Enum):
     AVAILABLE = "available"
@@ -103,7 +103,7 @@ class AgentManager(BaseModule):
         """
         pass 
     
-    def create_customize_agent(self, agent_data: dict, **kwargs) -> Agent:
+    def create_customize_agent(self, agent_data: dict, llm_config: Optional[LLMConfig]=None, **kwargs) -> Agent:
         """
         create a customized agent from the provided `agent_data`. 
 
@@ -116,6 +116,13 @@ class AgentManager(BaseModule):
         Notes: 
             - use CustomizeAgent.from_dict() to create the agent instance.
         """
+        if llm_config:
+            if isinstance(llm_config, dict):
+                agent_data["llm_config"] = llm_config
+            elif isinstance(llm_config, LLMConfig):
+                agent_data["llm_config"] = llm_config.to_dict()
+            else:
+                raise ValueError(f"llm_config must be a dictionary or an instance of LLMConfig. Got {type(llm_config)}.")
         return CustomizeAgent.from_dict(data=agent_data)
     
     def get_agent_name(self, agent: Union[str, dict, Agent]):
@@ -130,12 +137,12 @@ class AgentManager(BaseModule):
             raise ValueError(f"{type(agent)} is not a supported type for ``get_agent_name``. Supported types: [str, dict, Agent].")
         return agent_name
     
-    def create_agent(self, agent: Union[str, dict, Agent], **kwargs) -> Agent:
+    def create_agent(self, agent: Union[str, dict, Agent], llm_config: Optional[LLMConfig]=None, **kwargs) -> Agent:
 
         if isinstance(agent, str):
             agent_instance = self.load_agent(agent_name=agent)
         elif isinstance(agent, dict):
-            agent_instance = self.create_customize_agent(agent_data=agent)
+            agent_instance = self.create_customize_agent(agent_data=agent, llm_config=llm_config, **kwargs)
         elif isinstance(agent, Agent):
             agent_instance = agent
         else:
@@ -143,7 +150,7 @@ class AgentManager(BaseModule):
         return agent_instance
     
     @atomic_method
-    def add_agent(self, agent: Union[str, dict, Agent], **kwargs):
+    def add_agent(self, agent: Union[str, dict, Agent], llm_config: Optional[LLMConfig]=None, **kwargs):
         """
         add a single agent, ignore if the agent already exists (judged by the name of an agent).
 
@@ -160,26 +167,27 @@ class AgentManager(BaseModule):
         agent_name = self.get_agent_name(agent=agent)
         if self.has_agent(agent_name=agent_name):
             return
-        agent_instance = self.create_agent(agent=agent)
+        agent_instance = self.create_agent(agent=agent, llm_config=llm_config, **kwargs)
         self.agents.append(agent_instance)
         self.agent_states[agent_instance.name] = AgentState.AVAILABLE
         if agent_instance.name not in self._state_conditions:
             self._state_conditions[agent_instance.name] = threading.Condition()
         self.check_agents()
 
-    def add_agents(self, agents: List[Union[str, dict, Agent]], **kwargs):
+    def add_agents(self, agents: List[Union[str, dict, Agent]], llm_config: Optional[LLMConfig]=None, **kwargs):
         """
         add several agents by using self.add_agent().
         """
         for agent in agents:
-            self.add_agent(agent=agent, **kwargs)
+            self.add_agent(agent=agent, llm_config=llm_config, **kwargs)
     
-    def add_agents_from_workflow(self, workflow_graph, **kwargs):
+    def add_agents_from_workflow(self, workflow_graph, llm_config: Optional[LLMConfig]=None, **kwargs):
         """
         Initialize agents from the nodes of a given WorkFlowGraph and add these agents to self.agents. 
 
         Args:
             workflow_graph (WorkFlowGraph): The workflow graph containing nodes with agents information.
+            llm_config (Optional[LLMConfig]): The LLM configuration to be used for the agents.
         
         Notes:
             - The agent information is in workflow_graph.nodes: List[WorkFlowNode].
@@ -190,7 +198,7 @@ class AgentManager(BaseModule):
         for node in workflow_graph.nodes:
             if node.agents:
                 for agent in node.agents:
-                    self.add_agent(agent=agent, **kwargs)
+                    self.add_agent(agent=agent, llm_config=llm_config, **kwargs)
 
     def get_agent(self, agent_name: str, **kwargs) -> Agent:
         """
