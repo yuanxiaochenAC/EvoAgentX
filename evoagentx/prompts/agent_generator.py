@@ -253,7 +253,7 @@ provide a description for this output
 You should STRICTLY use the above template to generate the `prompt` field of the agent. You should follow these principles to formuate the prompt: 
 - In the '### Objective' section, you should provide a clear description of the agent's goal. 
 - In the '### Instructions' section, you should generate step-by-step instructions based on the following principles: 
-    - Provide a clear and logical sequence of actions the agent should follow to complete its task. 
+    - Provide a clear and logical sequence of actions the agent should follow to complete its task. You should provide **meaningful, insightful, and detailed instructions** that can help the agent to achieve the objective. 
     - Reference the input variables using placeholders (e.g., <input>{{input_name}}</input>) that match the agent's `inputs`. You MUST use a SINGLE pair of curly brace warpped by "<input>xxx</input>" to reference the inputs.
     - Include instructions on how the agent can use relevant tools from the "### Tools" section to assist with its task if applicable. 
 - In the '### Output Format' section, 

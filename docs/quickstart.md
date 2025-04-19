@@ -101,8 +101,7 @@ from evoagentx.agents import AgentManager
 ### Step 1: Generate WorkFlow and Agents 
 Use the `WorkFlowGenerator` to automatically create a workflow based on a natural language goal:
 ```python
-goal = "Generate code for the greedy snake game that can be played in the browser."
-
+goal = "Generate html code for the Tetris game that can be played in the browser."
 wf_generator = WorkFlowGenerator(llm=llm)
 workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal=goal)
 ```
@@ -123,7 +122,7 @@ workflow_graph = WorkFlowGraph.from_file("/path/to/save/workflow_demo.json")
 
 ### Step 2: Create and Manage Executable Agents 
 
-Use `AgentManager` to to instantiate and manage agents based on the workflow graph:
+Use `AgentManager` to instantiate and manage agents based on the workflow graph:
 ```python
 agent_manager = AgentManager()
 agent_manager.add_agents_from_workflow(workflow_graph)

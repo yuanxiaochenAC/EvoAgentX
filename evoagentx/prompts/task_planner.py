@@ -168,8 +168,8 @@ Each sub-task should follow the structure below:
 
 ### Special Instructions for Programming Tasks
 - **Environment Setup and Deployment**: For programming-related tasks, **do not** include sub-tasks related to setting up environments or deployment unless explicitly requested.
-- Ensure that sub-tasks reflect standard coding practices like analysis, design, coding, reviewing, and refinement. 
-
+- **Complete Code Generation**: For programming-related tasks, ensure that the final sub-task outputs a complete and working solution.
+- **IMPORTANT - Include Full Requirements**: For EVERY code generation tasks, in addition to the outputs from previous sub-tasks, the overall goal (and analysed requirements if any) MUST be included as inputs. This ensures each code generation step maintains full context of what's being built, even when split across multiple steps.
 
 ### Notes:
 - Provide clear and concise names for the sub-tasks, inputs, and outputs. 
@@ -261,6 +261,12 @@ Explanation: The minimum window substring "BANC" includes 'A', 'B', and 'C' from
             "description": "Generate a Python function that finds the minimum window substring.", 
             "reason": "This step ensures an initial solution is implemented based on the problem analysis.", 
             "inputs": [
+                {{
+                    "name": "goal",
+                    "type": "string", 
+                    "required": true, 
+                    "description": "The original full programming task requirements."
+                }},
                 {{
                     "name": "problem_analysis",
                     "type": "string", 

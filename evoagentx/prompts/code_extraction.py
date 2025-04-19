@@ -17,6 +17,7 @@ I need you to analyze the following text that contains code blocks and extract t
 4. Make sure the extracted files will run correctly when saved together
 5. Follow language-specific conventions for filenames (e.g., main.py for Python entry points, index.html for web pages)
 6. Ensure ALL code is extracted completely - do not modify, add to, or delete ANY of the original code content
+7. Save a code block as a separate file. Preserve the **EXACT** original content of the code block -- NO formatting or content changes (e.g., modifications, additions, deletions, summarizations, splits, etc.) whatsoever
 
 ## Source Text:
 {code_string}
