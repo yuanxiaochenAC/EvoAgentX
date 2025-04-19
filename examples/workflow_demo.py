@@ -27,12 +27,12 @@ def main():
     # [optional] display workflow
     workflow_graph.display()
     # [optional] save workflow 
-    # workflow_graph.save_module(f"{target_directory}/workflow_demo_4o_mini.json")
+    workflow_graph.save_module(f"{target_directory}/workflow_demo_4o_mini.json")
     #[optional] load saved workflow 
-    # workflow_graph: WorkFlowGraph = WorkFlowGraph.from_file(f"{target_directory}/workflow_demo_4o_mini.json")
-    
+    workflow_graph: WorkFlowGraph = WorkFlowGraph.from_file(f"{target_directory}/workflow_demo_4o_mini.json")
+
     agent_manager = AgentManager()
-    agent_manager.add_agents_from_workflow(workflow_graph)
+    agent_manager.add_agents_from_workflow(workflow_graph, llm_config=openai_config)
 
     workflow = WorkFlow(graph=workflow_graph, agent_manager=agent_manager, llm=llm)
     output = workflow.execute()
