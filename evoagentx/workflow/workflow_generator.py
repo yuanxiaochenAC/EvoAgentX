@@ -96,7 +96,7 @@ class WorkFlowGenerator(BaseModule):
             generated_agents = []
             for agent in agents.generated_agents:
                 agent_dict = agent.to_dict(ignore=["class_name"])
-                agent_dict["llm_config"] = self.llm.config.to_dict()
+                # agent_dict["llm_config"] = self.llm.config.to_dict()
                 generated_agents.append(agent_dict)
             subtask.set_agents(agents=generated_agents)
         return workflow
