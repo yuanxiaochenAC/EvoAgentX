@@ -115,7 +115,7 @@ workflow_graph.display()
 # Save the workflow to a JSON file (optional)
 workflow_graph.save_module("/path/to/save/workflow_demo.json")
 ```
-You can also **reload** a previously saved workflow:
+We provide an example generated workflow [here](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/output/tetris_game/workflow_demo_4o_mini.json). You can **reload** the saved workflow:
 ```python
 workflow_graph = WorkFlowGraph.from_file("/path/to/save/workflow_demo.json")
 ```
@@ -125,11 +125,11 @@ workflow_graph = WorkFlowGraph.from_file("/path/to/save/workflow_demo.json")
 Use `AgentManager` to instantiate and manage agents based on the workflow graph:
 ```python
 agent_manager = AgentManager()
-agent_manager.add_agents_from_workflow(workflow_graph)
+agent_manager.add_agents_from_workflow(workflow_graph, llm_config=openai_config)
 ```
 
 ### Step 3: Execute the Workflow 
-Once agents are ready, you can create a `WorkFlow` instance and run it end-to-end:
+Once agents are ready, you can create a `WorkFlow` instance and run it:
 ```python
 workflow = WorkFlow(graph=workflow_graph, agent_manager=agent_manager, llm=llm)
 output = workflow.execute()
