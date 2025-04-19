@@ -44,8 +44,10 @@ class CodeExtraction(Action):
         name = kwargs.pop("name") if "name" in kwargs else CODE_EXTRACTION["name"]
         description = kwargs.pop("description") if "description" in kwargs else CODE_EXTRACTION["description"]
         prompt = kwargs.pop("prompt") if "prompt" in kwargs else CODE_EXTRACTION["prompt"]
-        inputs_format = kwargs.pop("inputs_format") if "inputs_format" in kwargs else CodeExtractionInput
-        outputs_format = kwargs.pop("outputs_format") if "outputs_format" in kwargs else CodeExtractionOutput
+        # inputs_format = kwargs.pop("inputs_format") if "inputs_format" in kwargs else CodeExtractionInput
+        # outputs_format = kwargs.pop("outputs_format") if "outputs_format" in kwargs else CodeExtractionOutput
+        inputs_format = kwargs.pop("inputs_format", None) or CodeExtractionInput
+        outputs_format = kwargs.pop("outputs_format", None) or CodeExtractionOutput
         super().__init__(name=name, description=description, prompt=prompt, inputs_format=inputs_format, outputs_format=outputs_format, **kwargs)
 
     def identify_main_file(self, saved_files: Dict[str, str]) -> Optional[str]:

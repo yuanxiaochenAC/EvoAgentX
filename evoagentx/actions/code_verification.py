@@ -30,8 +30,10 @@ class CodeVerification(Action):
         name = kwargs.pop("name") if "name" in kwargs else CODE_VERIFICATION_ACTION["name"]
         description = kwargs.pop("description") if "description" in kwargs else CODE_VERIFICATION_ACTION["description"]
         prompt = kwargs.pop("prompt") if "prompt" in kwargs else CODE_VERIFICATION_ACTION["prompt"]
-        inputs_format = kwargs.pop("inputs_format") if "inputs_format" in kwargs else CodeVerificationInput
-        outputs_format = kwargs.pop("outputs_format") if "outputs_format" in kwargs else CodeVerificationOutput
+        # inputs_format = kwargs.pop("inputs_format") if "inputs_format" in kwargs else CodeVerificationInput
+        # outputs_format = kwargs.pop("outputs_format") if "outputs_format" in kwargs else CodeVerificationOutput
+        inputs_format = kwargs.pop("inputs_format", None) or CodeVerificationInput
+        outputs_format = kwargs.pop("outputs_format", None) or CodeVerificationOutput
         super().__init__(name=name, description=description, prompt=prompt, inputs_format=inputs_format, outputs_format=outputs_format, **kwargs)
     
     def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, **kwargs) -> CodeVerificationOutput:
