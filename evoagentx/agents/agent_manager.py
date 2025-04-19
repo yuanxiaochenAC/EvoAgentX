@@ -149,7 +149,7 @@ class AgentManager(BaseModule):
                 # if self.storage_handler is not None, the agent (str) must exist in the storage and will be loaded from the storage.
                 agent_instance = self.load_agent(agent_name=agent)
         elif isinstance(agent, dict):
-            if llm_config is None and "llm_config" not in agent:
+            if not agent.get("is_human", False) and (llm_config is None and "llm_config" not in agent):
                 raise ValueError("When providing an agent as a dictionary, you must either include 'llm_config' in the dictionary or provide it as a parameter.")
             agent_instance = self.create_customize_agent(agent_data=agent, llm_config=llm_config, **kwargs)
         elif isinstance(agent, Agent):
