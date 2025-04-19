@@ -140,7 +140,14 @@ class AgentManager(BaseModule):
     def create_agent(self, agent: Union[str, dict, Agent], llm_config: Optional[LLMConfig]=None, **kwargs) -> Agent:
 
         if isinstance(agent, str):
-            agent_instance = self.load_agent(agent_name=agent)
+            if self.storage_handler is None:
+                # if self.storage_handler is None, the agent (str) must exist in self.agents. Otherwise, a dictionary or an Agent instance should be provided.
+                if not self.has_agent(agent_name=agent):
+                    raise ValueError(f"Agent ``{agent}`` does not exist! You should provide a dictionary or an Agent instance when ``self.storage_handler`` is not provided.")
+                return self.get_agent(agent_name=agent)
+            else:
+                # if self.storage_handler is not None, the agent (str) must exist in the storage and will be loaded from the storage.
+                agent_instance = self.load_agent(agent_name=agent)
         elif isinstance(agent, dict):
             agent_instance = self.create_customize_agent(agent_data=agent, llm_config=llm_config, **kwargs)
         elif isinstance(agent, Agent):

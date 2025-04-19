@@ -128,7 +128,7 @@ class LLMOutputParser(Parser):
                             return {attrs[0]: data}
                         else:
                             # if there are multiple attributes, raise an error
-                            raise ValueError(f"The generated content is a list of JSON strings, but the attribute name for the list is not specified. You should instruct the LLM to specify the attribute name for the list.")
+                            raise ValueError("The generated content is a list of JSON strings, but the attribute name for the list is not specified. You should instruct the LLM to specify the attribute name for the list.")
                     else:
                         raise ValueError(f"The generated content is not a valid JSON string:\n{json_str}")
             except Exception:
