@@ -1,5 +1,4 @@
-# This code is copied from:
-# https://github.com/LiveCodeBench/LiveCodeBench/blob/main/lcb_runner/benchmarks/code_generation.py
+# copied from: https://github.com/LiveCodeBench/LiveCodeBench/blob/main/lcb_runner/benchmarks/code_generation.py
 
 import json
 import zlib

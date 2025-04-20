@@ -1,16 +1,49 @@
 site_name: EvoAgentX
 theme:
   name: material
+  features:
+    - navigation.sections 
+    - navigation.expand 
+  palette:
+    - scheme: default 
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/EvoAgentX/EvoAgentX
+repo_name: EvoAgentX
+repo_type: github
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/EvoAgentX/EvoAgentX
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
 
 nav:
-  - About: index.md
-  - API: api.md
-  - Install: installation.md 
-  - Quickstart: quickstart.md
+  - Getting Started:
+    - About: index.md
+    - Install: installation.md 
+    - Quickstart: quickstart.md
   - Tutorials:
-      - "Benchmark and Evaluation": tutorial/benchmark_and_evaluation.md
-      - "SEW Optimizer": tutorial/sew_optimizer.md
-
+    - Build Your First Agent: tutorial/first_agent.md
+    - Build Your First Workflow: tutorial/first_workflow.md
+    - Benchmark and Evaluation: tutorial/benchmark_and_evaluation.md
+    - SEW Optimizer: tutorial/sew_optimizer.md
+  - Key Modules:
+    - LLM: modules/llm.md 
+    - Agent: modules/agent.md
+  - API: api.md
 
 plugins:
   - search

@@ -176,14 +176,32 @@ def parse_json_from_llm_output(text: str) -> dict:
         raise ValueError(f"The follwoing generated text does not contain JSON string!\n{text}")
     return data
 
-def extract_code_blocks(text):
-
+def extract_code_blocks(text: str, return_type: bool = False) -> Union[List[str], List[tuple]]:
+    """
+    Extract code blocks from text enclosed in triple backticks.
+    
+    Args:
+        text (str): The text containing code blocks
+        return_type (bool): If True, returns tuples of (language, code), otherwise just code
+        
+    Returns:
+        Union[List[str], List[tuple]]: Either list of code blocks or list of (language, code) tuples
+    """
     # Regular expression to match code blocks enclosed in triple backticks
-    code_block_pattern = r"```(?:[a-zA-Z]*)?\n*(.*?)\n*```"
+    code_block_pattern = r"```((?:[a-zA-Z]*)?)\n*(.*?)\n*```"
     # Find all matches in the text
-    code_blocks = regex.findall(code_block_pattern, text, regex.DOTALL)
+    matches = regex.findall(code_block_pattern, text, regex.DOTALL)
 
-    return code_blocks
+    # if no code blocks are found, return the text itself 
+    if not matches:
+        return [(None, text.strip())] if return_type else [text.strip()]
+    
+    if return_type:
+        # Return tuples of (language, code)
+        return [(lang.strip() or None, code.strip()) for lang, code in matches]
+    else:
+        # Return just the code blocks
+        return [code.strip() for _, code in matches]
 
 def remove_repr_quotes(json_string):
     pattern = r'"([A-Za-z_]\w*\(.*\))"'
@@ -310,5 +328,4 @@ def get_base_module_init_error_message(cls, data: Dict[str, Any], errors: List[U
     message += formatted_data
     message += "\n\n" + get_error_message(errors)
     return message
-
 

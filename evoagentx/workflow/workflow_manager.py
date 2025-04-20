@@ -47,6 +47,7 @@ class TaskScheduler(Action):
         description = kwargs.pop("description", None) if "description" in kwargs else DEFAULT_TASK_SCHEDULER["description"]
         prompt = kwargs.pop("prompt", None) if "prompt" in kwargs else DEFAULT_TASK_SCHEDULER["prompt"]
         super().__init__(name=name, description=description, prompt=prompt, outputs_format=TaskSchedulerOutput, **kwargs)
+        self.max_num_turns = kwargs.get("max_num_turns", DEFAULT_TASK_SCHEDULER["max_num_turns"])
 
     def get_predecessor_tasks(self, graph: WorkFlowGraph, tasks: List[WorkFlowNode]) -> List[str]:
         predecessors = [] 
@@ -95,7 +96,8 @@ class TaskScheduler(Action):
             "workflow_graph_representation": workflow_graph_representation, 
             "execution_history": execution_history,
             "execution_outputs": execution_outputs, 
-            "candidate_tasks": candidate_tasks_info
+            "candidate_tasks": candidate_tasks_info,
+            "max_num_turns": self.max_num_turns
         }
         prompt = self.prompt.format(**prompt_inputs)
         scheduled_task = llm.generate(prompt=prompt, system_message=sys_msg, parser=self.outputs_format)

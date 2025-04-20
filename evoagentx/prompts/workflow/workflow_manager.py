@@ -3,8 +3,8 @@ DEFAULT_TASK_SCHEDULER_DESC = "This action selects the next subtask to execute f
 DEFAULT_TASK_SCHEDULER_PROMPT = """
 ### objective
 Your task is to analyze the given workflow graph, current execution information, and candidate subtasks to decide one of the following actions:
-- Re-execute a previous subtask to correct errors or gather missing information (if a previous subtask's result is erroneous or incomplete).
-- Select a subtask for iterative execution (if there is a loop or iterative context in the workflow).
+- Re-execute a previous subtask to correct errors or gather missing information (if a previous subtask's result is erroneous or incomplete). You may only re-execute each task up to {max_num_turns} times, based on the `Workflow Execution History`. 
+- Select a subtask for iterative execution (if there is a loop or iterative context in the workflow). You may only iterate on each task up to {max_num_turns} times, also determined by the `Workflow Execution History`. 
 - Select a new subtask from the candidates to move the workflow forward (if the workflow should proceed without re-executing or iterating).
 
 ### Instructions
@@ -55,6 +55,7 @@ DEFAULT_TASK_SCHEDULER = {
     "name": "TaskScheduler", 
     "description": DEFAULT_TASK_SCHEDULER_DESC, 
     "prompt": DEFAULT_TASK_SCHEDULER_PROMPT, 
+    "max_num_turns": 3
 }
 
 

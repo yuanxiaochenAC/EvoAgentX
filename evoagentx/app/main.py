@@ -2,7 +2,7 @@
 Main application entry point for EvoAgentX.
 """
 import logging
-import asyncio
+# import asyncio
 from contextlib import asynccontextmanager
 
 import uvicorn

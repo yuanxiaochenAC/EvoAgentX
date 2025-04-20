@@ -87,6 +87,7 @@ class CustomizeAgent(Agent):
         "outputs": [
             {name: str, type: str, description: str, [required: bool]}
         ],
+        "system_prompt" (optional): str, default is DEFAULT_SYSTEM_PROMPT
         "output_parser" (optional): Type[ActionOutput],
         "parse_mode" (optional): str, default is "title"
         "parse_func" (optional): Callable, default is None
@@ -101,7 +102,7 @@ class CustomizeAgent(Agent):
         prompt = kwargs.pop("prompt", None)
         inputs = kwargs.pop("inputs", [])
         outputs = kwargs.pop("outputs", [])
-        system_prompt = kwargs.pop("system_prompt") if "system_prompt" in kwargs else DEFAULT_SYSTEM_PROMPT
+        system_prompt = kwargs.pop("system_prompt", None) or DEFAULT_SYSTEM_PROMPT 
 
         parse_mode = kwargs.pop("parse_mode", "title") # default is 'title'
         if parse_mode not in PARSER_VALID_MODE:
@@ -241,6 +242,19 @@ class CustomizeAgent(Agent):
             required = field.get("required", True)
             self._action_output_types[field["name"]] = field["type"]
             self._action_output_required[field["name"]] = required
+    
+    def __call__(self, inputs: dict, **kwargs) -> ActionOutput:
+        """
+        Call the customize action.
+
+        Args:
+            inputs (dict): The inputs to the customize action.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            ActionOutput: The output of the customize action.
+        """
+        return self.execute(action_name=self.customize_action_name, action_input_data=inputs, **kwargs) 
     
     def save_module(self, path: str, ignore: List[str] = [], **kwargs)-> str:
         """

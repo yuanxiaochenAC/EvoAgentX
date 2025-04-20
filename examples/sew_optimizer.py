@@ -1,4 +1,3 @@
-from evoagentx.config import Config
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.workflow import SEWWorkFlowGraph 
 from evoagentx.agents import AgentManager
@@ -7,6 +6,12 @@ from evoagentx.evaluators import Evaluator
 from evoagentx.optimizers import SEWOptimizer 
 from evoagentx.core.callbacks import suppress_logger_info
 
+
+# OPENAI_API_KEY = "OPENAI_API_KEY" 
+import os 
+from dotenv import load_dotenv
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 class HumanEvalSplits(HumanEval):
 
@@ -23,9 +28,8 @@ class HumanEvalSplits(HumanEval):
 
 
 def main():
-
-    config = Config.from_file("debug/config_template.json")
-    llm_config = OpenAILLMConfig.from_dict(config.llm_config)
+    
+    llm_config = OpenAILLMConfig(model="gpt-4o-mini-2024-07-18", openai_key=OPENAI_API_KEY, top_p=0.85, temperature=0.2, frequency_penalty=0.0, presence_penalty=0.0)
     llm = OpenAILLM(config=llm_config)
 
     # obtain SEW workflow 
@@ -40,7 +44,7 @@ def main():
         return {"question": example["prompt"]}
     
     # obtain Evaluator
-    evaluator = Evaluator(llm=llm, agent_manager=agent_manager, collate_func=collate_func, num_workers=5, verbose=True)
+    evaluator = Evaluator(llm=llm, agent_manager=agent_manager, collate_func=collate_func, num_workers=20, verbose=True)
 
     # obtain SEWOptimizer
     optimizer = SEWOptimizer(
@@ -53,6 +57,10 @@ def main():
         optimize_mode="prompt", 
         order="zero-order"
     )
+
+    with suppress_logger_info():
+        metrics = optimizer.evaluate(dataset=humaneval, eval_mode="test")
+    print("Evaluation metrics: ", metrics)
 
     # optimize the SEW workflow
     optimizer.optimize(dataset=humaneval)

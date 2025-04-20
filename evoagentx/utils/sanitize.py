@@ -1,8 +1,4 @@
-"""
-@Time    : 2025/3/12 18:37
-@File    : sanitize.py
-@Acknowledgement: https://github.com/geekan/MetaGPT/blob/main/metagpt/utils/sanitize.py 
-"""
+# Acknowledgement: Modified from MetaGPT (https://github.com/geekan/MetaGPT/blob/main/metagpt/utils/sanitize.py) under MIT License 
 
 import ast
 import traceback

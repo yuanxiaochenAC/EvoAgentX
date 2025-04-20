@@ -1,7 +1,7 @@
 """
 Configuration settings for the EvoAgentX application.
 """
-import os
+# import os
 from pydantic import BaseModel, Field, validator
 from pydantic_settings import BaseSettings
 from typing import Optional, Dict, Any, List

@@ -1,24 +1,5 @@
-<<<<<<< HEAD
-ANSWER_GENERATION_PROMPT = """
-Think step by step and solve the problem.
-1. In the "thought" field, explain your thinking process in detail.
-2. In the "answer" field, provide the final answer concisely and clearly. The answer should be a direct response to the question, without including explanations or reasoning.
-You should format your output in xml format. For example, ouptut the thoughts in <thought>xxx</thought> format. 
+# Acknowledgement: Modified from AFlow (https://github.com/geekan/MetaGPT/blob/main/metagpt/ext/aflow/scripts/prompts/prompt.py) under MIT License
 
-Your task: {input}
-"""
-
-SC_ENSEMBLE_PROMPT = """
-Several answers have been generated to a same question. They are as follows:
-{solutions}
-
-Identify the concise answer that appears most frequently across them. This consistency in answers is crucial for determining the most reliable solution.
-
-In the "thought" field, provide a detailed explanation of your thought process. In the "solution_letter" field, output only the single letter ID (A, B, C, etc.) corresponding to the most consistent solution. Do not include any additional text or explanation in the "solution_letter" field.
-
-You should format your output in xml format. For example, ouptut the thoughts in <thought>xxx</thought> format. 
-"""
-=======
 ANSWER_GENERATION_PROMPT = """
 Think step by step and solve the problem.
 1. In the "thought" field, explain your thinking process in detail.
@@ -91,4 +72,3 @@ Your code should:
 
 Please ensure your code is efficient, well-commented, and follows Python best practices. The output should be limited to basic data types such as strings, integers, and floats. It is prohibited to transmit images or other file formats. The code output is intended for a text-based language model.
 """
->>>>>>> bd11260716480b0ca259ebda80436f098aa61869

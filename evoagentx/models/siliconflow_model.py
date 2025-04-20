@@ -19,8 +19,12 @@ class SiliconFlowLLM(OpenAILLM):
 
     def init_model(self):
         config: SiliconFlowConfig = self.config
-        self._client = OpenAI(api_key=config.siliconflow_key, base_url="https://api.siliconflow.cn/v1")
+        self._client = self._init_client(config) # OpenAI(api_key=config.siliconflow_key, base_url="https://api.siliconflow.cn/v1")
         self._default_ignore_fields = ["llm_type", "siliconflow_key", "output_response"] # parameters in SiliconFlowConfig that are not OpenAI models' input parameters 
+
+    def _init_client(self, config: SiliconFlowConfig):
+        client = OpenAI(api_key=config.siliconflow_key, base_url="https://api.siliconflow.cn/v1")
+        return client
 
     @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(5))
     def single_generate(self, messages: List[dict], **kwargs) -> str:

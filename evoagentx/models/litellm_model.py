@@ -5,7 +5,7 @@ from tenacity import (
     stop_after_attempt,
     wait_random_exponential,
 )
-from litellm import completion, token_counter, cost_per_token
+from litellm import completion, acompletion, token_counter, cost_per_token
 from typing import List
 from ..core.registry import register_model
 from .model_configs import LiteLLMConfig
@@ -51,9 +51,13 @@ class LiteLLM(OpenAILLM):
 
         """
         Generate a single response using the completion function.
-        :param messages: A list of dictionaries representing the conversation history.
-        :param kwargs: Additional parameters to be passed to the `completion` function.
-        :return: A string containing the model's response.
+
+        Args: 
+            messages (List[dict]): A list of dictionaries representing the conversation history.
+            **kwargs: Additional parameters to be passed to the `completion` function.
+        
+        Returns: 
+            str: A string containing the model's response.
         """
         stream = kwargs["stream"] if "stream" in kwargs else self.config.stream
         output_response = kwargs["output_response"] if "output_response" in kwargs else self.config.output_response
@@ -76,9 +80,13 @@ class LiteLLM(OpenAILLM):
     def batch_generate(self, batch_messages: List[List[dict]], **kwargs) -> List[str]:
         """
         Generate responses for a batch of messages.
-        :param batch_messages: A list of message lists, where each sublist represents a conversation.
-        :param kwargs: Additional parameters to be passed to the `completion` function.
-        :return: A list of responses for each conversation.
+
+        Args: 
+            batch_messages (List[List[dict]]): A list of message lists, where each sublist represents a conversation.
+            **kwargs: Additional parameters to be passed to the `completion` function.
+        
+        Returns: 
+            List[str]: A list of responses for each conversation.
         """
         results = []
         for messages in batch_messages:
@@ -86,6 +94,38 @@ class LiteLLM(OpenAILLM):
             results.append(response)
         return results
     
+    async def single_generate_async(self, messages: List[dict], **kwargs) -> str:
+        """
+        Generate a single response using the async completion function.
+
+        Args: 
+            messages (List[dict]): A list of dictionaries representing the conversation history.
+            **kwargs: Additional parameters to be passed to the `completion` function.
+        
+        Returns: 
+            str: A string containing the model's response.
+        """
+        stream = kwargs["stream"] if "stream" in kwargs else self.config.stream
+        output_response = kwargs["output_response"] if "output_response" in kwargs else self.config.output_response
+
+        try:
+            completion_params = self.get_completion_params(**kwargs)
+            response = await acompletion(messages=messages, **completion_params)
+            if stream:
+                if hasattr(response, "__aiter__"):
+                    output = await self.get_stream_output_async(response, output_response=output_response)
+                else:
+                    output = self.get_stream_output(response, output_response=output_response)
+                cost = self._stream_cost(messages=messages, output=output)
+            else:
+                output: str = self.get_completion_output(response=response, output_response=output_response)
+                cost = self._completion_cost(response=response)
+            self._update_cost(cost=cost)
+        except Exception as e:
+            raise RuntimeError(f"Error during single_generate_async: {str(e)}")
+        
+        return output
+
     def completion_cost(
         self,
         completion_response=None,
@@ -100,7 +140,8 @@ class LiteLLM(OpenAILLM):
     ) -> float:
         """
         Calculate the cost of a given completion or other supported tasks.
-        Parameters:
+        
+        Args:
             completion_response (dict): The response received from a LiteLLM completion request.
             prompt (str): Input prompt text.
             messages (list): Conversation history.
@@ -110,6 +151,7 @@ class LiteLLM(OpenAILLM):
             size (str): Image size for image generation.
             quality (str): Image quality for image generation.
             n (int): Number of generated images.
+        
         Returns:
             float: The cost in USD.
         """

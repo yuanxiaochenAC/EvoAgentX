@@ -3,7 +3,7 @@ API routes for EvoAgentX application.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
-from typing import List, Optional, Dict, Any
+from typing import List, Dict, Any # , Optional
 from fastapi import Response
 
 from datetime import timedelta
@@ -14,7 +14,7 @@ from evoagentx.app.schemas import (
     WorkflowCreate, WorkflowUpdate, WorkflowResponse,
     ExecutionCreate, ExecutionResponse,
     PaginationParams, SearchParams,
-    Token, UserCreate, UserLogin, UserResponse
+    Token, UserCreate, UserResponse, # UserLogin, 
 )
 from evoagentx.app.services import AgentService, WorkflowService, WorkflowExecutionService
 from evoagentx.app.security import (
@@ -24,7 +24,7 @@ from evoagentx.app.security import (
     get_current_active_user,
     get_current_admin_user
 )
-from evoagentx.app.db import Database
+from evoagentx.app.db import Database, ExecutionStatus 
 
 # Create routers for different route groups
 auth_router = APIRouter(prefix=settings.API_PREFIX)
