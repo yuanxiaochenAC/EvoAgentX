@@ -85,6 +85,7 @@ It is allowed (and expected) to recommend more than 1 actual opportunities for e
         - Job requirements (Complete requirements from the job posting)
         - Job salary
         - Job posting link
+    - Your response must be in a valid JSON format. To reduce confusion, you may try to avoid using "'" and other special characters in your response.
 
 ### Response Format
 You MUST respond with a valid JSON object in the following format. Do not include any text before or after the JSON object:
