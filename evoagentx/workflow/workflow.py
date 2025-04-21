@@ -32,7 +32,7 @@ class WorkFlow(BaseModule):
                 raise ValueError("Must provide `llm` when `workflow_manager` is None")
             self.workflow_manager = WorkFlowManager(llm=self.llm)
 
-    def execute(self, inputs: dict = {}, **kwargs) -> str:
+    async def execute(self, inputs: dict = {}, **kwargs) -> str:
 
         goal = self.graph.goal
         inputs.update({"goal": goal})
@@ -46,7 +46,7 @@ class WorkFlow(BaseModule):
                 if task is None:
                     break
                 logger.info(f"Executing subtask: {task.name}")
-                self.execute_task(task=task)
+                await self.execute_task(task=task)
             except Exception as e:
                 failed = True
                 error_message = Message(
@@ -73,7 +73,7 @@ class WorkFlow(BaseModule):
         logger.info(f"The next subtask to be executed is: {task.name}")
         return task
         
-    def execute_task(self, task: WorkFlowNode):
+    async def execute_task(self, task: WorkFlowNode):
 
         last_executed_task = self.environment.get_last_executed_task()
         self.graph.step(source_node=last_executed_task, target_node=task)
@@ -84,12 +84,12 @@ class WorkFlow(BaseModule):
             env=self.environment
         )
         if next_action.action_graph is not None:
-            self._execute_task_by_action_graph(task=task, next_action=next_action)
+            await self._execute_task_by_action_graph(task=task, next_action=next_action)
         else:
-            self._execute_task_by_agents(task=task, next_action=next_action)
+            await self._execute_task_by_agents(task=task, next_action=next_action)
         self.graph.completed(node=task)
 
-    def _execute_task_by_action_graph(self, task: WorkFlowNode, next_action: NextAction):
+    async def _execute_task_by_action_graph(self, task: WorkFlowNode, next_action: NextAction):
 
         action_graph: ActionGraph = next_action.action_graph
         execute_signature = inspect.signature(type(action_graph).execute)
@@ -107,7 +107,7 @@ class WorkFlow(BaseModule):
         )
         self.environment.update(message=message, state=TrajectoryState.COMPLETED)
     
-    def _execute_task_by_agents(self, task: WorkFlowNode, next_action: NextAction):
+    async def _execute_task_by_agents(self, task: WorkFlowNode, next_action: NextAction):
         
         while next_action:
             agent: Agent = self.agent_manager.get_agent(agent_name=next_action.agent)
@@ -117,14 +117,24 @@ class WorkFlow(BaseModule):
                 raise TimeoutError(f"Timeout waiting for agent {agent.name} to become available")
             self.agent_manager.set_agent_state(agent_name=next_action.agent, new_state=AgentState.RUNNING)
             try:
-                message = agent.execute(
-                    action_name=next_action.action,
-                    action_input_data=self.environment.get_all_execution_data(),
-                    return_msg_type=MessageType.RESPONSE, 
-                    wf_goal=self.graph.goal,
-                    wf_task=task.name, 
-                    wf_task_desc=task.description
-                )
+                if inspect.iscoroutinefunction(agent.execute):
+                    message = await agent.execute(
+                        action_name=next_action.action,
+                        action_input_data=self.environment.get_all_execution_data(),
+                        return_msg_type=MessageType.RESPONSE, 
+                        wf_goal=self.graph.goal,
+                        wf_task=task.name, 
+                        wf_task_desc=task.description
+                    )
+                else:
+                    message = agent.execute(
+                        action_name=next_action.action,
+                        action_input_data=self.environment.get_all_execution_data(),
+                        return_msg_type=MessageType.RESPONSE, 
+                        wf_goal=self.graph.goal,
+                        wf_task=task.name, 
+                        wf_task_desc=task.description
+                    )
                 self.environment.update(message=message, state=TrajectoryState.COMPLETED)
             finally:
                 self.agent_manager.set_agent_state(agent_name=next_action.agent, new_state=AgentState.AVAILABLE)

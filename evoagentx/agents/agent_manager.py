@@ -1,10 +1,13 @@
 import threading
 from enum import Enum
 from typing import Union, Optional, Dict, List
+import time
+import asyncio
 
 from .agent import Agent
 # from .agent_generator import AgentGenerator
 from .customize_agent import CustomizeAgent
+from .cus_tool_caller import CusToolCaller
 from ..core.module import BaseModule
 from ..core.decorators import atomic_method
 from ..storages.base import StorageHandler
@@ -24,6 +27,7 @@ class AgentManager(BaseModule):
         agents (List[Agent]): A list to keep track of all managed Agent instances.
         agent_states (Dict[str, AgentState]): A dictionary to track the state of each Agent by name.
     """
+    mcp_connection_time: int = 8
     agents: List[Agent] = []
     agent_states: Dict[str, AgentState] = {} # agent_name to AgentState mapping
     storage_handler: Optional[StorageHandler] = None # used to load and save agent from storage.
@@ -80,7 +84,7 @@ class AgentManager(BaseModule):
     def size(self):
         return len(self.agents)
     
-    def load_agent(self, agent_name: str, **kwargs) -> Agent:
+    async def load_agent(self, agent_name: str, **kwargs) -> Agent:
 
         """
         load an agent from local storage through self.storage_handler
@@ -94,16 +98,16 @@ class AgentManager(BaseModule):
         if not self.storage_handler:
             raise ValueError("must provide ``self.storage_handler`` to use ``load_agent``")
         agent_data = self.storage_handler.load_agent(agent_name=agent_name)
-        agent: Agent = self.create_customize_agent(agent_data=agent_data)
+        agent: Agent = await self.create_agent(agent=agent_data)
         return agent
 
-    def load_all_agents(self, **kwargs):
+    async def load_all_agents(self, **kwargs):
         """
         load all agents from storage and add them to self.agents. 
         """
         pass 
     
-    def create_customize_agent(self, agent_data: dict, llm_config: Optional[LLMConfig]=None, **kwargs) -> Agent:
+    async def create_customize_agent(self, agent_data: dict, llm_config: Optional[LLMConfig]=None, **kwargs) -> Agent:
         """
         create a customized agent from the provided `agent_data`. 
 
@@ -116,6 +120,8 @@ class AgentManager(BaseModule):
         Notes: 
             - use CustomizeAgent.from_dict() to create the agent instance.
         """
+        agent_data = agent_data.copy()
+        
         if llm_config:
             if isinstance(llm_config, dict):
                 agent_data["llm_config"] = llm_config
@@ -123,7 +129,37 @@ class AgentManager(BaseModule):
                 agent_data["llm_config"] = llm_config.to_dict()
             else:
                 raise ValueError(f"llm_config must be a dictionary or an instance of LLMConfig. Got {type(llm_config)}.")
+        
+        # Check if this should be a CusToolCaller agent
+        if "mcp_config_path" in agent_data:
+            # Set class_name to ensure proper processing during instantiation
+            agent_data["class_name"] = "CusToolCaller"
+            agent = CusToolCaller.from_dict(data=agent_data)
+            # Initialize the agent (connects to MCP toolkit)
+            await agent.initialize()
+            return agent
+        
+        # Set class_name to ensure proper processing during instantiation
+        agent_data["class_name"] = "CustomizeAgent"
         return CustomizeAgent.from_dict(data=agent_data)
+    
+    async def create_cus_tool_caller_agent(self, agent_data: dict) -> Agent:
+        """
+        Create a CusToolCaller agent from the provided agent_data.
+        
+        Args:
+            agent_data (dict): The data used to create a CusToolCaller instance.
+                Must contain 'name', 'description', and 'mcp_config_path' keys.
+                
+        Returns:
+            Agent: The instantiated CusToolCaller agent.
+        """
+        agent_data = agent_data.copy()
+        agent_data["class_name"] = "CusToolCaller"
+        agent = CusToolCaller.from_dict(data=agent_data)
+        # Initialize the agent (connects to MCP toolkit)
+        await agent.initialize()
+        return agent
     
     def get_agent_name(self, agent: Union[str, dict, Agent]):
 
@@ -137,7 +173,7 @@ class AgentManager(BaseModule):
             raise ValueError(f"{type(agent)} is not a supported type for ``get_agent_name``. Supported types: [str, dict, Agent].")
         return agent_name
     
-    def create_agent(self, agent: Union[str, dict, Agent], llm_config: Optional[LLMConfig]=None, **kwargs) -> Agent:
+    async def create_agent(self, agent: Union[str, dict, Agent], llm_config: Optional[LLMConfig]=None, **kwargs) -> Agent:
 
         if isinstance(agent, str):
             if self.storage_handler is None:
@@ -147,11 +183,14 @@ class AgentManager(BaseModule):
                 return self.get_agent(agent_name=agent)
             else:
                 # if self.storage_handler is not None, the agent (str) must exist in the storage and will be loaded from the storage.
-                agent_instance = self.load_agent(agent_name=agent)
+                agent_instance = await self.load_agent(agent_name=agent)
         elif isinstance(agent, dict):
             if not agent.get("is_human", False) and (llm_config is None and "llm_config" not in agent):
                 raise ValueError("When providing an agent as a dictionary, you must either include 'llm_config' in the dictionary or provide it as a parameter.")
-            agent_instance = self.create_customize_agent(agent_data=agent, llm_config=llm_config, **kwargs)
+            
+            # Use create_customize_agent for all dict-based agents
+            # This method already handles CusToolCaller creation when mcp_config_path is present
+            agent_instance = await self.create_customize_agent(agent_data=agent, llm_config=llm_config, **kwargs)
         elif isinstance(agent, Agent):
             agent_instance = agent
         else:
@@ -159,7 +198,7 @@ class AgentManager(BaseModule):
         return agent_instance
     
     @atomic_method
-    def add_agent(self, agent: Union[str, dict, Agent], llm_config: Optional[LLMConfig]=None, **kwargs):
+    async def add_agent(self, agent: Union[str, dict, Agent], llm_config: Optional[LLMConfig]=None, **kwargs):
         """
         add a single agent, ignore if the agent already exists (judged by the name of an agent).
 
@@ -176,21 +215,21 @@ class AgentManager(BaseModule):
         agent_name = self.get_agent_name(agent=agent)
         if self.has_agent(agent_name=agent_name):
             return
-        agent_instance = self.create_agent(agent=agent, llm_config=llm_config, **kwargs)
+        agent_instance = await self.create_agent(agent=agent, llm_config=llm_config, **kwargs)
         self.agents.append(agent_instance)
         self.agent_states[agent_instance.name] = AgentState.AVAILABLE
         if agent_instance.name not in self._state_conditions:
             self._state_conditions[agent_instance.name] = threading.Condition()
         self.check_agents()
 
-    def add_agents(self, agents: List[Union[str, dict, Agent]], llm_config: Optional[LLMConfig]=None, **kwargs):
+    async def add_agents(self, agents: List[Union[str, dict, Agent]], llm_config: Optional[LLMConfig]=None, **kwargs):
         """
         add several agents by using self.add_agent().
         """
         for agent in agents:
-            self.add_agent(agent=agent, llm_config=llm_config, **kwargs)
+            await self.add_agent(agent=agent, llm_config=llm_config, **kwargs)
     
-    def add_agents_from_workflow(self, workflow_graph, llm_config: Optional[LLMConfig]=None, **kwargs):
+    async def add_agents_from_workflow(self, workflow_graph, llm_config: Optional[LLMConfig]=None, **kwargs):
         """
         Initialize agents from the nodes of a given WorkFlowGraph and add these agents to self.agents. 
 
@@ -207,7 +246,9 @@ class AgentManager(BaseModule):
         for node in workflow_graph.nodes:
             if node.agents:
                 for agent in node.agents:
-                    self.add_agent(agent=agent, llm_config=llm_config, **kwargs)
+                    # Use add_agent which calls create_agent, which calls create_customize_agent
+                    # This will handle CusToolCaller creation when mcp_config_path is present
+                    await self.add_agent(agent=agent, llm_config=llm_config, **kwargs)
 
     def get_agent(self, agent_name: str, **kwargs) -> Agent:
         """

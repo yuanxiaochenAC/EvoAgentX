@@ -76,6 +76,10 @@ Your task is to analyze the given subtask, its input data, execution history, an
    - Whether an agent has the necessary capabilities to perform the next step.
    - Whether an agent has successfully performed a similar action before.
    - Whether selecting this action helps in progressing toward subtask completion.
+   - **IMPORTANT**: For MCP (Model Context Protocol) enabled agents that interact with external services:
+     - Those agents have tool_calling action available and they really need to call this action.
+     - This only applies to MCP agents, other agents should not use tool_calling action and should not follow these rules.
+     - Summary or cleaning the output from tool calling is not necessary.
 5. Select the Best Agent and Action for the next execution step.
 6. Output the decision in the required format.
 
@@ -83,7 +87,7 @@ Your task is to analyze the given subtask, its input data, execution history, an
 Your final output should ALWAYS be in the following format:
 
 ## Thought  
-Provide a brief explanation of your reasoning for selecting the agent and action.
+Provide a brief explanation of your reasoning for selecting the agent and action. When dealing with an MCP agent, explicitly mention that you're choosing the tool_calling action to enable it to use external tools for the task.
 
 ## Scheduled Execution  
 Produce your answer in valid JSON with the following structure:

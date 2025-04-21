@@ -32,7 +32,7 @@ You MUST respond with a valid JSON object in the following format. Do not includ
 """
 
 class ToolCallSummarizingInput(ActionInput):
-    answer: str = Field(description="The answer produced")
+    content: str = Field(description="The content produced")
 
 class ToolCallSummarizingOutput(ActionOutput):
     summary: str = Field(description="A summary of the tool call")
@@ -52,7 +52,7 @@ class ToolCallSummarizing(Action):
             raise ValueError('The `inputs` to ToolCalling action is None or empty.')
 
         print("\n\n_______________________ Start Tool Summarizing _______________________")
-        prompt_params_values = inputs.get("answer")
+        prompt_params_values = inputs.get("content")
         print(prompt_params_values)
         
         # Use the provided system message if available, otherwise use the default
@@ -111,7 +111,7 @@ class ToolGeneratingOutput(ActionOutput):
     continue_after_tool_call: bool = Field(description="Whether to continue the conversation after the tool call")
     
 class ToolCallingOutput(ActionOutput):
-    answer: str = Field(description="The answer to the query")
+    content: str = Field(description="The answer to the query")
 
 
 class ToolCalling(Action):
@@ -145,7 +145,7 @@ class ToolCalling(Action):
 
         time_out += 1
         if time_out > self.max_tool_try:
-            return {"answer": inputs["query"] + f"\n\nTool execution passing max depth: {self.max_tool_try}"}, prompt_params_values
+            return {"content": inputs["query"] + f"\n\nTool execution passing max depth: {self.max_tool_try}"}, prompt_params_values
         
         print("_______________________ Start Tool Calling _______________________")
         ## 1. Generate tool call args
@@ -295,19 +295,19 @@ class ToolCalling(Action):
             # Only continue if we haven't exceeded max_tool_try
             if time_out < self.max_tool_try:
                 print(f"Continuing with tool call execution (attempt {time_out+1}/{self.max_tool_try})")
-                answer = await self.execute(llm, inputs, sys_msg, return_prompt, **kwargs, time_out=time_out)
+                content = await self.execute(llm, inputs, sys_msg, return_prompt, **kwargs, time_out=time_out)
             else:
                 print(f"Maximum tool call depth ({self.max_tool_try}) reached, stopping execution")
-                answer = {"answer": inputs["query"] + f"\n\nTool execution reached maximum depth ({self.max_tool_try})."}
+                content = {"content": inputs["query"] + f"\n\nTool execution reached maximum depth ({self.max_tool_try})."}
         else:
-            answer = {"answer": inputs["query"]}
+            content = {"content": inputs["query"]}
             
-        print("answer:")
-        print(answer)
+        print("content:")
+        print(content)
         
         
         if return_prompt:
-            return answer, prompt_params_values
-        return answer
+            return content, prompt_params_values
+        return content
     
 

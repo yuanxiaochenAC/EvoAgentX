@@ -23,6 +23,7 @@ class WorkFlowGenerator(BaseModule):
     agent_generator: Optional[AgentGenerator] = Field(default=None, description="Assigns or generates the appropriate agent(s) to handle each sub-task.")
     workflow_reviewer: Optional[WorkFlowReviewer] = Field(default=None, description="Provides feedback and reflections to improve the generated workflow.")
     num_turns: Optional[PositiveInt] = Field(default=0, description="Specifies the number of refinement iterations for the generated workflow.")
+    mcp_config_path: Optional[str] = Field(default=None, description="The path to the MCP configuration file.")
 
     def init_module(self):
 
@@ -34,7 +35,7 @@ class WorkFlowGenerator(BaseModule):
         if self.agent_generator is None:
             if self.llm is None:
                 raise ValueError("Must provide `llm` when `agent_generator` is None")
-            self.agent_generator = AgentGenerator(llm=self.llm)
+            self.agent_generator = AgentGenerator(llm=self.llm, mcp_config_path=self.mcp_config_path)
         
         # TODO add WorkFlowReviewer
         # if self.workflow_reviewer is None:
@@ -42,7 +43,7 @@ class WorkFlowGenerator(BaseModule):
         #         raise ValueError(f"Must provide `llm` when `workflow_reviewer` is None")
         #     self.workflow_reviewer = WorkFlowReviewer(llm=self.llm)
 
-    def generate_workflow(self, goal: str, existing_agents: Optional[List[Agent]] = None, **kwargs) -> WorkFlowGraph:
+    def generate_workflow(self, goal: str, existing_agents: Optional[List[Agent]] = None, mcp_config_path: Optional[str] = None, **kwargs) -> WorkFlowGraph:
 
         plan_history, plan_suggestion = "", ""
         # generate the initial workflow
@@ -52,7 +53,7 @@ class WorkFlowGenerator(BaseModule):
         logger.info(f"Successfully generate the following workflow:\n{workflow.get_workflow_description()}")
         # generate / assigns the initial agents
         logger.info("Generating agents for the workflow ...")
-        workflow = self.generate_agents(goal=goal, workflow=workflow, existing_agents=existing_agents)
+        workflow = self.generate_agents(goal=goal, workflow=workflow, existing_agents=existing_agents, mcp_config_path=mcp_config_path)
         return workflow
     
     def generate_plan(self, goal: str, history: Optional[str] = None, suggestion: Optional[str] = None) -> TaskPlanningOutput:
@@ -74,6 +75,7 @@ class WorkFlowGenerator(BaseModule):
         goal: str, 
         workflow: WorkFlowGraph,
         existing_agents: Optional[List[Agent]] = None,
+        mcp_config_path: Optional[str] = None,
         # history: Optional[str] = None, 
         # suggestion: Optional[str] = None
     ) -> WorkFlowGraph:

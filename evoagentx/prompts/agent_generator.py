@@ -362,7 +362,6 @@ Let's begin.
 ### Sub-Task:
 {task}
 
-Output: 
 """
 
 AGENT_GENERATION_ACTION = {

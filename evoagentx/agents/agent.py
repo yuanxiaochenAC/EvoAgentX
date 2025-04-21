@@ -1,5 +1,6 @@
 from pydantic import Field
 from typing import Type, Optional, Union, Tuple, List
+import asyncio
 
 from ..core.module import BaseModule
 from ..core.module_utils import generate_id
@@ -14,8 +15,6 @@ from ..memory.memory_manager import MemoryManager
 from ..storages.base import StorageHandler
 from ..actions.action import Action
 from ..actions.action import ContextExtraction
-
-
 class Agent(BaseModule):
 
     name: str # should be unique
@@ -132,13 +131,21 @@ class Agent(BaseModule):
         history = history if history else self.short_term_memory.get(n=self.n)
         sys_msg = sys_msg if sys_msg else self.system_prompt
         # execute action
-        execution_results: Tuple[Parser, str] = await action.execute(
-            llm=self.llm, 
-            inputs=action_input_data, 
-            sys_msg=sys_msg,
-            history=history,
-            return_prompt=True
-        )
+        if asyncio.iscoroutinefunction(action.execute):
+            execution_results: Tuple[Parser, str] = await action.execute(
+                llm=self.llm, 
+                inputs=action_input_data, 
+                sys_msg=sys_msg,
+                history=history,
+                return_prompt=True
+            )
+        else:
+            execution_results: Tuple[Parser, str] = action.execute(
+                llm=self.llm, 
+                inputs=action_input_data, 
+                sys_msg=sys_msg,
+                return_prompt=True
+            )
         action_output, prompt = execution_results
 
         # formulate a message

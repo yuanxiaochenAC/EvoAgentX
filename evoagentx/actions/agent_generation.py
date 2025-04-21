@@ -8,6 +8,7 @@ from ..core.base_config import Parameter
 from ..models.base_model import BaseLLM
 from .action import Action, ActionInput, ActionOutput
 from ..prompts.agent_generator import AGENT_GENERATION_ACTION
+from ..prompts.tool_caller import MCP_AGENT_GENERATION_PROMPT
 from ..utils.utils import normalize_text
 
 class AgentGenerationInput(ActionInput):
@@ -30,6 +31,7 @@ class GeneratedAgent(BaseModule):
     outputs: List[Parameter]
     prompt: str
     tools: Optional[List[str]] = None
+    mcp_config_path: Optional[str] = None
 
     @classmethod
     def find_output_name(cls, text: str, outputs: List[str]):
@@ -101,6 +103,8 @@ class AgentGenerationOutput(ActionOutput):
 
 class AgentGeneration(Action):
 
+    mcp_config_path: Optional[str] = Field(default=None, description="The path to the MCP configuration file.")
+
     def __init__(self, **kwargs):
 
         name = kwargs.pop("name") if "name" in kwargs else AGENT_GENERATION_ACTION["name"]
@@ -111,7 +115,9 @@ class AgentGeneration(Action):
         inputs_format = kwargs.pop("inputs_format", None) or AgentGenerationInput
         outputs_format = kwargs.pop("outputs_format", None) or AgentGenerationOutput 
         super().__init__(name=name, description=description, prompt=prompt, inputs_format=inputs_format, outputs_format=outputs_format, **kwargs)
-    
+
+        self.mcp_config_path = kwargs.pop("mcp_config_path", None)
+        
     def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, **kwargs) -> AgentGenerationOutput:
         
         if not inputs:
@@ -124,6 +130,11 @@ class AgentGeneration(Action):
         prompt_params_names = inputs_format.get_attrs()
         prompt_params_values = {param: inputs.get(param, "") for param in prompt_params_names}
         prompt = self.prompt.format(**prompt_params_values)
+        if self.mcp_config_path:
+            mcp_server = ""
+            with open(self.mcp_config_path, "r") as f:
+                mcp_server = f.read()
+            prompt += MCP_AGENT_GENERATION_PROMPT.format(mcp_config_path=self.mcp_config_path, mcp_server=mcp_server)
         agents = llm.generate(
             prompt = prompt, 
             system_message = sys_msg, 

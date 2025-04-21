@@ -1,225 +1,118 @@
 # Job Recommendations for Junhua Liu
 
-## 1. Data Platforms Analyst
-**Company:** Nasdaq  
-**Location:** Taguig City, National Capital Region, Philippines  
+## 1. Lead, Quality Engineering
+**Company:** S&P Global - Internal  
+**Location:** Hyderabad, Telangana, India  
 **Job Description:**  
-Join Nasdaq as a Data Platforms Analyst and contribute to building a more diverse and inclusive workforce. Enjoy a fast-paced work environment with opportunities to learn and grow.
-
+We are seeking a Lead Quality Engineer to join our S&P EDO Technology Quality Engineering team. As a Lead Quality Engineer, you will be responsible for developing, executing, and improving application test suites, designing and performing hands-on test automation solutions, and managing QA and UAT environments.  
 **Requirements:**  
-- 1-3 years of professional experience in understanding data products and data management  
-- Able to communicate professionally with internal and external stakeholders  
-- Eager to learn about new data services and continuously improving existing processes  
+- Bachelor's degree in computer science, Information Systems or Engineering  
+- 8+ years of experience in complete software/database testing activities  
+- Hands on experience working with testing frameworks, Cucumber, Carina and/or equivalent specifically for Web applications  
+- Work as a hybrid QA professional with experience in both manual & automation testing  
+- Experience with Object oriented language like Java or Python  
+- Experience in SQL, knowledge of PL/SQL, No SQL DB, Linux/UNIX, Jenkins  
+- Demonstrated skills to work in cross functional teams, and proactively resolves issues and escalate appropriately  
+- Experience with DevOps practices and CI/CD pipelines such as Azure DevOps or Jenkins  
+- Knowledge of cloud technologies like AWS/Azure, containers, dockers, RDS  
+- Experience in refactoring and extending test automation/performance frameworks and suites as necessary  
+- Experience with creating test automation frameworks of with REST, micro services  
+- Experience with distributed source control systems such as Git, Github  
+**Application Link:** [Apply Here](https://spgi.wd5.myworkdayjobs.com/SPGI_Careers/job/Hyderabad-Telangana/Lead---Quality-Engineering_314948-1)  
 
-**Benefits:**  
-- HMO coverage for you and your dependents  
-- Employee stock purchase plan  
-- Equity grant  
-- Retirement plan  
-- Annual bonus  
-- Free counseling sessions  
-- Subscription to e-learning platforms  
-- Fitness, wellness, and more  
+## 2. Optimization Client Services Analyst
+**Company:** S&P Global - Internal  
+**Location:** Stockholm, Sweden  
+**Job Description:**  
+The Client Services Analyst is responsible for delivering the triReduce and triBalance service to clients, running cycles, and ensuring successful execution. The role involves supporting clients, testing output, and supporting the Sales team.  
+**Requirements:**  
+- Banking and Finance – Basic knowledge of OTC derivatives and Options in one or many of the following asset classes Rates, FX, Credit, Equity and Commodities  
+- IT/Technical - This role must have basic IT skills including the ability to work with raw client data using editors and spreadsheet tools. Basic knowledge of MySQL databases and basic Python programming  
+- Ability to engage and communicate with clients in a number of different regions  
+**Application Link:** [Apply Here](https://spgi.wd5.myworkdayjobs.com/SPGI_Careers/job/Stockholm-SWE/Optimization-Client-Services-Analyst_314082-2)  
 
-**Application Link:** [Apply Here](https://nasdaq.wd1.myworkdayjobs.com/Global_External_Site/job/Philippines---Taguig-City---National-Capital-Region/Data-Platforms-Analyst_R0022298)  
-
----
-
-## 2. Python Developer
+## 3. Senior Engineer, Software Development
 **Company:** S&P Global - Internal  
 **Location:** Bangalore, Karnataka, India  
 **Job Description:**  
-A data collections analyst is responsible for gathering, organizing, and analyzing data from various sources. They work closely with different teams to understand their data needs and develop efficient data collection processes. The analyst must have strong technical skills in data harvesting, data science, and automation. They should also be proficient in programming languages like Python and have experience with data structures and multi-threading.
-
+We are seeking a Senior Engineer, Software Development to join our team. The successful candidate will play a key role in developing high-quality, high-performance code and work collaboratively with business partners to understand and clarify requirements.  
 **Requirements:**  
-- BE degree in Computer Science or related field  
-- 1-2 years of experience in programming skills  
-- Strong Python skills, AI, ML, Data harvesting, Data science, Data capture, NLP, Automation, JavaScript, Typescript, Html, JSON, OOPS, Data Structures, Multi-threading  
+- C# and SQL SERVER skills  
+- XML, Amazon AWS, and Microsoft ADO (preferred)  
+- Strong written and verbal communication and presentation skills  
+- Knowledge of OOP/OOD  
+- Experience working with global teams  
+**Application Link:** [Apply Here](https://spgi.wd5.myworkdayjobs.com/SPGI_Careers/job/Banglore-Karnatak/Engineer-I--Software-Development_314177-2)  
 
-**Benefits:**  
-- Health & Wellness  
-- Flexible Downtime  
-- Continuous Learning  
-- Invest in Your Future  
-- Family Friendly Perks  
-
-**Application Link:** [Apply Here](https://spgi.wd5.myworkdayjobs.com/SPGI_Careers/job/IN---BANGALORE-PRIMECO-UNION-CITY/Python-Developer_312522-1)  
-
----
-
-## 3. Cash Application Junior Specialist
-**Company:** Philips  
-**Location:** Lodz, Poland  
-**Job Description:**  
-As Cash Application Junior Specialist, you will join Philips’ Accounting Operations team and help form a new centralized cash applications team. You will be responsible for daily retrieval of bank activity, daily and monthly reconciliations, and providing indirect leadership to cash applications and internal finance leadership.
-
-**Requirements:**  
-- Cash Application experience (desirable)  
-- Background in F&A, Economics, or Business Administration  
-- Fluent English  
-- Customer service focus  
-- Determination to achieve excellent results  
-- SAP and Customer Master data processing knowledge  
-
-**Benefits:**  
-- Annual bonus based on performance achieved  
-- Private medical care with the option to extend it to family members  
-- Benefit System cards  
-- Discount for Philips’ products  
-- Wide variety of training & learning opportunities  
-- Promotion of a healthy lifestyle in the office  
-- Employee Assistance Program  
-
-**Application Link:** [Apply Here](https://philips.wd3.myworkdayjobs.com/Internal-Job-Postings-List-for-Philips-Contingent-Workers/job/Lodz/Cash-Application-Junior-Specialist_553784)  
-
----
-
-## 4. Infrastructure Solution Architect
+## 4. Engineer, Platform Engineering
 **Company:** S&P Global - Internal  
 **Location:** Gurgaon, Haryana, India  
 **Job Description:**  
-The Infrastructure Solution Architect will lead business stakeholders and technology teams on strategic initiatives to integrate or divest companies in a structured way. They will design or consult on solutions that ensure the continued stability, resilience, and security of data and processing for any entity being acquired or divested.
-
+We are seeking a bright, self-motivated DevOps Engineer to join our Engineering team. The DevOps Engineer is responsible for hands-on build-out, configuration, deploy, scale, orchestration and monitoring in supporting infrastructure and our release pipeline for global commercial software platforms.  
 **Requirements:**  
-- 15+ years of progressive technology experience  
-- 5+ years of experience in Infrastructure Architecture  
-- Experience with M&A integration / divestiture processes  
-- Proven experience in Infrastructure Solution Architecture  
-- AWS certified Associate or Professional Architect  
+- 5+ years of experience building enterprise DevOps pipelines in a commercial environment  
+- Expert in Continuous Integration and Continuous Delivery using Tools such as GitLab, Azure DevOps, or similar  
+- Expert knowledge of AWS Services  
+- Experienced in at least one scripting language such as Python, Bash, JavaScript, PowerShell, etc.  
+**Application Link:** [Apply Here](https://spgi.wd5.myworkdayjobs.com/SPGI_Careers/job/Gurgaon-Haryana/Senior-Specialist-Platform-Engineering_311978-1)  
 
-**Benefits:**  
-- Health & Wellness  
-- Flexible Downtime  
-- Continuous Learning  
-- Invest in Your Future  
-- Family Friendly Perks  
-
-**Application Link:** [Apply Here](https://spgi.wd5.myworkdayjobs.com/SPGI_Internal/job/Gurgaon-Haryana/Infrastructure-Solution-Architect_313419-1)  
-
----
-
-## 5. Marketing Analyst-Snr
-**Company:** FedEx Freight  
-**Location:** Kuala Lumpur, Selangor, Malaysia  
+## 5. Software Engineer III
+**Company:** Walmart - Internal  
+**Location:** Bangalore, Karnataka, India  
 **Job Description:**  
-FedEx is seeking an experienced Marketing Project Manager with strong analytical skills to lead projects in the Pricing team. The ideal candidate will have 5-10 years of industry experience and a deep understanding of system development, launch, and management.
-
+The job requires a Software Engineer III to develop intuitive software that meets and exceeds customer and company needs. The engineer will collaborate with team members, maintain codes, create updates, analyze and test programs, troubleshoot coding problems, and improve software effectiveness.  
 **Requirements:**  
-- 5-10 years industry experience  
-- Strong analytical skills  
-- Knowledge of system development, launch, and management  
-- Problem-solving skills  
+- B.E./B. Tech/MS/MCA in Computer Science or related technical field  
+- Minimum 3 years of object-oriented programming experience in Java  
+- Excellent computer systems fundamentals, DS/Algorithms and problem solving skills  
+**Application Link:** [Apply Here](https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/IN-KA-BANGALORE-Home-Office-Building-10/Software-Engineer-III_R-2135033)  
 
-**Benefits:**  
-- Career Mobility and Development  
-- Total Compensation and Benefits Package  
-- Equal Opportunities  
-
-**Application Link:** [Apply Here](https://fedex.wd1.myworkdayjobs.com/FXE_APAC_External/job/FXE_APACMYSMYKULBCKUL-Business-Centre/MY048D--Marketing-Analyst-Snr_RC747817-1)  
-
----
-
-## 6. Shopper Marketing Intern
-**Company:** Haleon  
-**Location:** Shanghai, China  
+## 6. Global Customer Master Data Lead
+**Company:** MSD  
+**Location:** Boxmeer, North Brabant, Netherlands  
 **Job Description:**  
-Participate in shopper marketing related activities, including shopper insight, channel insight, data analysis, channel product strategy, and shopper activity planning. Perform cross-functional communication with various departments, interface with external agencies, and assist in project execution.
-
+Driving business success through strategic leadership in customer experience enhancement and stakeholder collaboration, ensuring our customer data initiatives deliver exceptional value.  
 **Requirements:**  
-- Strong sense of responsibility, attention to detail, strong communication skills  
-- Available for at least 3 days a week, with a minimum commitment of 3 months or more  
-- Proficient in Office skills, including PPT, Excel, Teams, and Outlook  
+- Strong experience in data management and business analysis, specializing in Master Data Management (MDM) and data governance  
+- Passionate and experienced leader with a proven ability to effectively influence executives in a global context  
+**Application Link:** [Apply Here](https://msd.wd5.myworkdayjobs.com/SearchJobs/job/NLD---North-Brabant---Boxmeer/Global-Customer-Master-Data-Lead_R346239-1)  
 
-**Benefits:**  
-- Global leading consumer health company  
-- Harmonious and cohesive work environment  
-- High-quality office environment and location  
+## 7. Client Service Rep 3
+**Company:** IQVIA  
+**Location:** Bangalore, Karnataka, India  
+**Job Description:**  
+Perform data analysis, investigation, and deliver accurate data to clients. Plan projects, track deliverables, and establish timelines during transitions.  
+**Requirements:**  
+- Bachelor’s degree  
+- 3-5 years of experience in operations management, project management, reporting, and transitions.  
+**Application Link:** [Apply Here](https://iqvia.wd1.myworkdayjobs.com/IQVIA/job/Bangalore-India/Client-Service-Rep-3_R1471016-1)  
 
-**Application Link:** [Apply Here](https://gsknch.wd3.myworkdayjobs.com/GSKCareers/job/China---Shanghai---HuangPu-District---The-Headquarters-Building/Shopper-Marketing-Intern_531317)  
-
----
-
-## 7. Senior Analyst, Climate Risk and Opportunity
+## 8. Optimization Client Services Analyst
 **Company:** S&P Global - Internal  
-**Location:** London, England, United Kingdom  
+**Location:** Stockholm, Sweden  
 **Job Description:**  
-The Senior Analyst, Climate Risk and Opportunity role supports research, design, prototyping, and implementation of new analytical methodologies on climate risk and opportunities topics.
-
+The Optimization Client Services Analyst is responsible for delivering the triReduce and triBalance service to clients.  
 **Requirements:**  
-- Strong quantitative background, with favorable experience in data science and geospatial analysis  
-- Skills in data and project management  
-- Excellent communication skills  
+- Basic knowledge of OTC derivatives and Options in one or many of the following asset classes: Rates, FX, Credit, Equity, and Commodities  
+- Basic IT skills including the ability to work with raw client data using editors and spreadsheet tools  
+**Application Link:** [Apply Here](https://spgi.wd5.myworkdayjobs.com/OSTTRA_Careers/job/Stockholm-SWE/Optimization-Client-Services-Analyst_314087-3)  
 
-**Benefits:**  
-- Health & Wellness  
-- Flexible Downtime  
-- Continuous Learning  
-- Invest in Your Future  
-- Family Friendly Perks  
-
-**Application Link:** [Apply Here](https://spgi.wd5.myworkdayjobs.com/SPGI_Careers/job/London-UK/Senior-Analyst--Climate-Risk-and-Opportunity_313375-2)  
-
----
-
-## 8. Director – Sales, Issuer Solutions, Japan
+## 9. Optimization Client Services Analyst
 **Company:** S&P Global - Internal  
-**Location:** Tokyo, Japan  
+**Location:** Stockholm, Sweden  
 **Job Description:**  
-The Director – Sales, Issuer Solutions, Japan will be responsible for acquiring new clients and managing and upselling to existing clients within investor relations, corporate strategy, business development, corporate treasury, and C-suite functions at publicly traded corporations.
-
+The Optimization Client Services Analyst is responsible for delivering the triReduce and triBalance service to clients.  
 **Requirements:**  
-- Minimum of 8 years of B2B consultative selling experience  
-- Significant experience in client services or sales  
-- Strong interpersonal and communication skills  
+- Basic knowledge of OTC derivatives and Options in one or many of the following asset classes: Rates, FX, Credit, Equity, and Commodities  
+- Basic IT skills including the ability to work with raw client data using editors and spreadsheet tools  
+**Application Link:** [Apply Here](https://spgi.wd5.myworkdayjobs.com/OSTTRA_Careers/job/Stockholm-SWE/Optimization-Client-Services-Analyst_314082)  
 
-**Benefits:**  
-- Health & Wellness  
-- Flexible Downtime  
-- Continuous Learning  
-- Invest in Your Future  
-- Family Friendly Perks  
-
-**Application Link:** [Apply Here](https://spgi.wd5.myworkdayjobs.com/SPGI_Internal/job/Tokyo-JP/Director---Sales--Issuer-Solutions--Japan_311757)  
-
----
-
-## 9. Marketing Project Manager
-**Company:** FedEx  
-**Location:** Kuala Lumpur, Malaysia  
+## 10. Optimization Client Services Analyst
+**Company:** S&P Global - Internal  
+**Location:** Stockholm, Sweden  
 **Job Description:**  
-Lead projects in the Pricing team with strong analytical skills and a deep understanding of system development, launch, and management.
-
+The Optimization Client Services Analyst is responsible for delivering the triReduce and triBalance service to clients.  
 **Requirements:**  
-- 5-10 years of industry experience  
-- Strong analytical skills  
-- Problem-solving skills  
-
-**Benefits:**  
-- Career Mobility and Development  
-- Total Compensation and Benefits Package  
-- Equal Opportunities  
-
-**Application Link:** [Apply Here](https://fedex.wd1.myworkdayjobs.com/FXE_APAC_External/job/FXE_APACMYSMYKULBCKUL-Business-Centre/MY048D--Marketing-Analyst-Snr_RC747817-1)  
-
----
-
-## 10. Machine Vision Engineer Intern
-**Company:** Vision  
-**Location:** Nanjing, Jiangsu, China  
-**Job Description:**  
-Assisted in setting up software environment and took main responsibility in testing existing robotic arm system’s accuracy in three locations.
-
-**Requirements:**  
-- Experience in data collection and testing  
-- Knowledge of robotic systems  
-- Strong problem-solving skills  
-
-**Benefits:**  
-- Hands-on experience in a growing field  
-- Opportunity to work with advanced technologies  
-
-**Application Link:** [Apply Here](https://example.com)  
-
----
-
-These job recommendations align with your background in data science, machine learning, and software engineering. They offer a range of opportunities across various industries, allowing you to leverage your skills in programming, data analysis, and project management.
+- Basic knowledge of OTC derivatives and Options in one or many of the following asset classes: Rates, FX, Credit, Equity, and Commodities  
+- Basic IT skills including the ability to work with raw client data using editors and spreadsheet tools  
+**Application Link:** [Apply Here](https://spgi.wd5.myworkdayjobs.com/OSTTRA_Careers/job/Stockholm-SWE/Optimization-Client-Services-Analyst_314087-1)
