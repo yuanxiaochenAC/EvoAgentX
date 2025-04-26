@@ -9,7 +9,7 @@ import asyncio
 import json
 import os
 import shlex
-from typing import Optional, Dict, Any, List, Union, Set, Callable
+from typing import Optional, Dict, Any, List, Callable
 import inspect
 from contextlib import AsyncExitStack, asynccontextmanager
 from urllib.parse import urlparse
@@ -53,6 +53,8 @@ class MCPClient:
         """
         clients = []
         mcp_servers = config.get("mcpServers", {})
+        if isinstance(mcp_servers, str):
+            mcp_servers = json.loads(mcp_servers)
         
         if not isinstance(mcp_servers, dict):
             raise ValueError("'mcpServers' must be a dictionary")
@@ -256,15 +258,17 @@ class MCPClient:
             return str(obj)
         
     def generate_function_from_mcp_tool(self, mcp_tool: Tool) -> Callable:
-        """Dynamically generates a Python callable function from an MCP tool
+        """
+        Generates a Python function from an MCP tool definition
         
         Args:
-            mcp_tool: The MCP tool definition
+            mcp_tool: MCP tool definition
             
         Returns:
             Callable: A dynamically created Python function that wraps the MCP tool
         """
-        schema = self._build_tool_schema(mcp_tool)
+        # Build the tool schema but we don't use it in this method
+        # schema = self._build_tool_schema(mcp_tool)
         
         func_name = mcp_tool.name
         func_desc = mcp_tool.description or "No description provided."
@@ -457,17 +461,18 @@ class MCPToolkit:
         self,
         servers: Optional[List[MCPClient]] = None,
         config_path: Optional[str] = None,
+        config: Optional[Dict[str, Any]] = None,
     ):
-        if not servers and not config_path:
-            raise ValueError("Either servers or config_path must be provided")
-            
-        if servers and config_path:
-            print("Both servers and config_path are provided. Servers from both sources will be combined.")
+        if not servers and not config_path and not config:
+            raise ValueError("Either servers or config_path or config must be provided")
             
         self.servers: List[MCPClient] = servers or []
         
         if config_path:
             self.servers.extend(MCPClient.from_config_file(config_path))
+            
+        if config:
+            self.servers.extend(MCPClient.from_config(config))
             
         self._connected = False
         self._tools_cache = {}  # Cache mapping tool names to server indices

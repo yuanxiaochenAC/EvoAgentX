@@ -20,9 +20,7 @@ Links: https://github.com/modelcontextprotocol/servers/tree/main/src/github
 """
 
 import asyncio
-import json
 import os
-import sys
 import signal
 import traceback
 import dotenv

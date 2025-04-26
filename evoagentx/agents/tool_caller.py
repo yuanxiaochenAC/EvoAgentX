@@ -1,13 +1,10 @@
-from typing import List, Dict, Any, Optional, Tuple
-from pydantic import Field
+from typing import List, Optional, Callable
 
 from .agent import Agent
 from ..actions.tool_calling import ToolCalling, ToolCallSummarizing
 from ..prompts.tool_caller import TOOL_CALLER_PROMPT
-from ..core.message import Message, MessageType
+from ..core.message import Message
 from ..tools.mcp import MCPToolkit
-from typing import Type, Optional, Union, Tuple, List, Callable
-from ..core.module_utils import parse_json_from_text
 
 
 class ToolCaller(Agent):

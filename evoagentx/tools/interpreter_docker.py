@@ -4,7 +4,7 @@ import tarfile
 import uuid
 import docker
 from pathlib import Path
-from typing import ClassVar, Dict, Set, Optional, Any
+from typing import ClassVar, Dict, Any
 from .interpreter_base import BaseInterpreter
 
 class DockerInterpreter(BaseInterpreter):
@@ -270,14 +270,3 @@ class DockerInterpreter(BaseInterpreter):
         if language not in self._CODE_TYPE_MAPPING:
             raise ValueError(f"Unsupported language: {language}")
         return self._CODE_TYPE_MAPPING[language]
-
-    _CODE_EXECUTE_CMD_MAPPING: ClassVar[Dict[str, str]] = {
-        "python": "python {file_name}",
-    }
-
-    _CODE_TYPE_MAPPING: ClassVar[Dict[str, str]] = {
-        "python": "python",
-        "py3": "python",
-        "python3": "python",
-        "py": "python",
-    }

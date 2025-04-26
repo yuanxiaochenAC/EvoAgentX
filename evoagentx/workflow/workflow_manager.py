@@ -250,6 +250,7 @@ class ActionScheduler(Action):
             "agent_action_list": agent_actions_info,
         }
         prompt = self.prompt.format(**prompt_inputs)
+        
         next_action = llm.generate(prompt=prompt, system_message=sys_msg, parser=self.outputs_format)
         if return_prompt:
             return next_action, prompt

@@ -1,6 +1,6 @@
 import requests
 import os
-from typing import Dict, Any, List
+from typing import Dict, Any
 from .search_base import SearchBase
 
 class SearchGoogle(SearchBase):

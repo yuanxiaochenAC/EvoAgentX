@@ -2,7 +2,6 @@ import unittest
 from evoagentx.tools.interpreter_docker import DockerInterpreter
 import os
 import tempfile
-import shutil
 
 class TestDockerInterpreter(unittest.TestCase):
     def setUp(self):

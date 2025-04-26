@@ -1,8 +1,6 @@
 import threading
 from enum import Enum
 from typing import Union, Optional, Dict, List
-import time
-import asyncio
 
 from .agent import Agent
 # from .agent_generator import AgentGenerator
@@ -131,7 +129,7 @@ class AgentManager(BaseModule):
                 raise ValueError(f"llm_config must be a dictionary or an instance of LLMConfig. Got {type(llm_config)}.")
         
         # Check if this should be a CusToolCaller agent
-        if "mcp_config_path" in agent_data:
+        if "mcp_config_path" in agent_data or "mcp_config" in agent_data:
             # Set class_name to ensure proper processing during instantiation
             agent_data["class_name"] = "CusToolCaller"
             agent = CusToolCaller.from_dict(data=agent_data)

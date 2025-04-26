@@ -1,6 +1,6 @@
 import re
 from pydantic import Field, model_validator
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 from ..core.logging import logger
 from ..core.module import BaseModule
@@ -32,6 +32,7 @@ class GeneratedAgent(BaseModule):
     prompt: str
     tools: Optional[List[str]] = None
     mcp_config_path: Optional[str] = None
+    mcp_config: Optional[Dict[str, Any]] = None
 
     @classmethod
     def find_output_name(cls, text: str, outputs: List[str]):
@@ -130,6 +131,8 @@ class AgentGeneration(Action):
         prompt_params_names = inputs_format.get_attrs()
         prompt_params_values = {param: inputs.get(param, "") for param in prompt_params_names}
         prompt = self.prompt.format(**prompt_params_values)
+        # from pdb import set_trace; set_trace()
+        
         if self.mcp_config_path:
             mcp_server = ""
             with open(self.mcp_config_path, "r") as f:

@@ -1,13 +1,13 @@
-from typing import List, Dict, Any, Optional, Tuple, Callable
-from pydantic import Field
+from typing import Dict, Any, Optional, Callable
 import asyncio
-
-from .customize_agent import CustomizeAgent
+import json
+from .customize_agent import CustomizeAgent, OUTPUT_EXTRACTION_PROMPT
 from ..actions.tool_calling import ToolCalling
-from ..prompts.tool_caller import TOOL_CALLER_PROMPT, CUSTOM_TOOL_CALLER_PROMPT
+from ..prompts.tool_caller import CUSTOM_TOOL_CALLER_PROMPT
 from ..core.message import Message, MessageType
 from ..tools.mcp import MCPToolkit
-from ..core.module_utils import parse_json_from_text
+from ..core.module_utils import parse_json_from_llm_output
+from ..models.base_model import LLMOutputParser
 
 
 class CusToolCaller(CustomizeAgent):
@@ -28,36 +28,48 @@ class CusToolCaller(CustomizeAgent):
     
     def __init__(self, **kwargs):
         # Extract our specific parameters before passing to parent
-        max_tool_try = kwargs.pop("max_tool_try", 1)
+        max_tool_try = kwargs.pop("max_tool_try", 2)
         mcp_config_path = kwargs.pop("mcp_config_path", None)
-        
+        mcp_config = kwargs.pop("mcp_config", None)
         # Create actions with the max_tool_try value
         # Don't add to kwargs - let CustomizeAgent handle action creation
         tool_actions = [ToolCalling(max_tool_try=max_tool_try)]
         
         # Initialize as CustomizeAgent - all other parameters should be passed by the caller
         super().__init__(**kwargs)
+        self.outputs_format = self.actions[0].outputs_format
+        self.actions = []
+        self._action_map = {}
         
         # Now add our tool actions (after CustomizeAgent has created its action)
-        self.ori_prompt = self.system_prompt
-        self.mcp_prompt = self.ori_prompt + CUSTOM_TOOL_CALLER_PROMPT
+        self.ori_prompt = self.system_prompt + kwargs.get("prompt", "")
+        self.mcp_prompt = self.ori_prompt
         for action in tool_actions:
             self.add_action(action)
         
         # Store values as instance attributes after parent initialization
         self.max_tool_try = max_tool_try
         self.mcp_config_path = mcp_config_path
-        
+        self.mcp_config = mcp_config
         # Store the tool calling action for easy access
         self.tool_calling_action = self._action_map[self.tool_calling_action_name]
         
         # Initialize MCP toolkit if a config path is provided
         if self.mcp_config_path:
             self._init_mcp_toolkit_from_path(self.mcp_config_path)
+        elif self.mcp_config:
+            self._init_mcp_toolkit_from_config(self.mcp_config)
+            
     
     def _init_mcp_toolkit_from_path(self, config_path: str) -> None:
         """Initialize MCP toolkit from a configuration file path"""
         self.mcp_toolkit = MCPToolkit(config_path=config_path)
+        # Just create the toolkit, don't connect yet
+        # Connection will happen in the async initialize method
+    
+    def _init_mcp_toolkit_from_config(self, config: Dict[str, Any]) -> None:
+        """Initialize MCP toolkit from a configuration dictionary"""
+        self.mcp_toolkit = MCPToolkit(config=config)
         # Just create the toolkit, don't connect yet
         # Connection will happen in the async initialize method
     
@@ -78,14 +90,13 @@ class CusToolCaller(CustomizeAgent):
                 for tool in tools:
                     self.add_tool(tool[1]["function"], tool[0])
                 self._initialized = True
-            except Exception as e:
+            except Exception:
                 import traceback
                 traceback.print_exc()
                 raise
         
         if self.tools_schema:
-            
-            self.mcp_prompt = CUSTOM_TOOL_CALLER_PROMPT + "\n### Tools Available\n" + str(self.tools_schema)
+            self.mcp_prompt = self.ori_prompt + CUSTOM_TOOL_CALLER_PROMPT + "\n### Tools Available\n" + str(self.tools_schema)
     
     async def cleanup(self) -> None:
         """Clean up resources, particularly disconnecting MCP toolkit"""
@@ -153,9 +164,6 @@ class CusToolCaller(CustomizeAgent):
         # return await super().execute_async(**kwargs)
     
         try:
-            print(f"CusToolCaller.execute called for agent: {self.name}")
-            print(f"Kwargs: {kwargs}")
-            
             if not self._initialized and self.mcp_toolkit:
                 print(f"Agent {self.name} not initialized yet, initializing...")
                 await self.initialize()
@@ -173,16 +181,60 @@ class CusToolCaller(CustomizeAgent):
                         action_input_data["query"] = f"Task: {task_desc}\nGoal: {goal}"
                     elif goal:
                         action_input_data["query"] = goal
-                        
+                    
+                    # action_input_data["query"] += "\n\n current query/goal and config: \n" + json.dumps(kwargs.get("action_input_data", {}), indent=4)
                 kwargs["action_input_data"] = action_input_data
+                
+                additional_info = Message(
+                    content=json.dumps(kwargs.get("action_input_data", {}), indent=4),
+                    agent=self.name,
+                    action=action_name,
+                    msg_type=MessageType.RESPONSE,
+                    wf_goal=kwargs.get("wf_goal", ""),
+                    wf_task=kwargs.get("wf_task", ""),
+                    wf_task_desc=kwargs.get("wf_task_desc", "")
+                )
+                kwargs["history"] = [additional_info]
                 
             else:
                 self.system_prompt = self.ori_prompt
             
+            # from pdb import set_trace; set_trace()
+            
             # # Execute using the parent's execute_async method
-            result = await super().execute_async(**kwargs)
+            llm_output = await super().execute_async(**kwargs)
             print(f"Agent {self.name} execution completed successfully")
-            return result
+            
+            
+            if action_name != self.tool_calling_action_name:
+                return llm_output
+            
+            print("_____________________ Start Extracting Output _____________________")
+            attr_descriptions: dict = self.outputs_format.get_attr_descriptions()
+            output_description_list = [] 
+            for i, (name, desc) in enumerate(attr_descriptions.items()):
+                output_description_list.append(f"{i+1}. {name}\nDescription: {desc}")
+            output_description = "\n\n".join(output_description_list)
+            extraction_prompt = self.system_prompt + "\n\n" + OUTPUT_EXTRACTION_PROMPT.format(text=llm_output.content, output_description=output_description)
+            llm_extracted_output: LLMOutputParser = self.llm.generate(prompt=extraction_prompt, history=kwargs.get("history", []) + [llm_output])
+            llm_extracted_data: dict = parse_json_from_llm_output(llm_extracted_output.content)
+            output = self.outputs_format.from_dict(llm_extracted_data)
+            
+            # Create a proper Message with the output
+            return_msg_type = kwargs.get("return_msg_type", MessageType.RESPONSE)
+            
+            # Create a message with the extracted output as content
+            message = Message(
+                content=output,
+                agent=self.name,
+                action=action_name,
+                msg_type=return_msg_type,
+                wf_goal=kwargs.get("wf_goal", ""),
+                wf_task=kwargs.get("wf_task", ""),
+                wf_task_desc=kwargs.get("wf_task_desc", "")
+            )
+            
+            return message
             
         except Exception as e:
             print(f"Error in CusToolCaller.execute for agent {self.name}: {str(e)}")
@@ -190,7 +242,6 @@ class CusToolCaller(CustomizeAgent):
             traceback.print_exc()
             
             # Create an error message to return
-            from ..core.message import Message, MessageType
             error_message = Message(
                 content=f"Error executing agent {self.name}: {str(e)}",
                 agent=self.name,

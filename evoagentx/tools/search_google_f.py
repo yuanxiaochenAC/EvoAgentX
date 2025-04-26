@@ -1,6 +1,6 @@
 from .search_base import SearchBase
 from googlesearch import search as google_f_search
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 class SearchGoogleFree(SearchBase):
 

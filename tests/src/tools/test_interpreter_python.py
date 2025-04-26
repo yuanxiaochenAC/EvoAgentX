@@ -1,7 +1,6 @@
 import unittest
 from evoagentx.tools.interpreter_python import InterpreterPython
 import os
-import shutil
 import tempfile
 
 class TestInterpreterPython(unittest.TestCase):

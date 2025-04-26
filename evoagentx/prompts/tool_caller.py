@@ -28,6 +28,7 @@ While calling the tools, follow the following instructions (They are in highest 
    - ONLY choose tools with different purposes
    - ONLY choose tools when it is necessary
    - If you have the information, you should not call the tool
+   - You may use the same call but with different parameters
 
 2. **Continue After Tool Call**:
    - Should be false all the time
@@ -72,26 +73,20 @@ Comments in the json object is not allowed. (They are just for demonstration)
 
 MCP_AGENT_GENERATION_PROMPT = """
 
-### MCP server
+### MCP enabled agents
 MCP provides various toolkits to assist with the task. An agent along might not be able to access the internet, accessing local files, or reading pdf, but with the help of MCP, it can do so.
 When you designing agents, some agents might be designed to use the MCP toolkits to assist with the task. 
 
-You may inlcude the path (mcp_config_path) while creating these mcp-enabled agents, the value of mcp_config_path is fixed to be:
-{mcp_config_path}
-
-Agent should be given the mcp config when the agent could use at least one of the mcp servers provided in the mcp config. Here are the available mcp servers:
+Agent should be given the mcp_config when the agent could use at least one of the mcp servers provided in the following available mcp servers:
+-----Available MCP servers-----
 {mcp_server}
 
+
 Key points:
-1. The input and output of the agent should be a string.
-2. The agent should only use the mcp servers provided in the mcp config.
-3. Other tools other than mcp servers should not be used.
-4. You may create multiple agents to use the mcp servers.
-5. The mcp-enabled agent relies on one action to call the mcp server, which take a string as input and return a string as output. You may consider this in the design of the agent.
-      - This means there is no additional parameter passing into the agent while using the mcp servers, the agent is able to extract usefull information from the goal.
-      - The input name is fixed to be "query", the output name is fixed to be "content". It should only have one input and one output.
-      - Ideally the mcp agent should only have one action, which is related to calling the mcp server.
-6. For mcp-enabled agents, if there are other actions, they should be designed to work with the output from the mcp server.
+ - Not all servers are required to be used in the agent, you should only choose those are task related instead of workflow related.
+ - You may create multiple agents to use different mcp servers.
+ - You should only pick servers listed in the "Available MCP servers" section. You must strictly follow that format.
+ - There is no other different between the mcp-enabled agent and other agents apart from the "mcp_config"
 
 Here is an example for such an agent:
 ```json
@@ -104,18 +99,32 @@ Here is an example for such an agent:
             "type": "string",
             "required": true, 
             "description": "Description of the input's purpose and usage."
-        }}
+        }}，
+        ...
     ], 
     "outputs": [
         {{
-            "name": "content", 
+            "name": "answer", 
             "type": "string",
             "required": true, 
             "description": "Description of the output produced by this agent."
-        }}
+        }}，
+        ...
     ],
     "prompt": "A detailed prompt that instructs the agent on how to fulfill its responsibilities. Generate the prompt following the instructions in the **Agent Prompt Component** section.", 
-    "mcp_config_path": "{mcp_config_path}"
+    "mcp_config": {{
+        "mcpServers": {{
+            "hirebase (Hiring information requesting service)": {{
+                "command": "uvx",
+                "args": [
+                    "hirebase-mcp" 
+                ],
+                "env": {{
+                        "HIREBASE_API_KEY": "" 
+                }}
+            }}
+        }}
+    }}
 }}
 ```
 

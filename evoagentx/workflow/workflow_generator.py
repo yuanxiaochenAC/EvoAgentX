@@ -43,17 +43,17 @@ class WorkFlowGenerator(BaseModule):
         #         raise ValueError(f"Must provide `llm` when `workflow_reviewer` is None")
         #     self.workflow_reviewer = WorkFlowReviewer(llm=self.llm)
 
-    def generate_workflow(self, goal: str, existing_agents: Optional[List[Agent]] = None, mcp_config_path: Optional[str] = None, **kwargs) -> WorkFlowGraph:
+    def generate_workflow(self, goal: str, existing_agents: Optional[List[Agent]] = None, mcp_config_path: Optional[str] = None, agent_suggestion: Optional[str] = None, **kwargs) -> WorkFlowGraph:
 
         plan_history, plan_suggestion = "", ""
         # generate the initial workflow
-        logger.info(f"Generating a workflow for: {goal} ...")
+        logger.info("Generating workflow ...")
         plan = self.generate_plan(goal=goal, history=plan_history, suggestion=plan_suggestion)
         workflow = self.build_workflow_from_plan(goal=goal, plan=plan)
         logger.info(f"Successfully generate the following workflow:\n{workflow.get_workflow_description()}")
         # generate / assigns the initial agents
         logger.info("Generating agents for the workflow ...")
-        workflow = self.generate_agents(goal=goal, workflow=workflow, existing_agents=existing_agents, mcp_config_path=mcp_config_path)
+        workflow = self.generate_agents(goal=goal, workflow=workflow, existing_agents=existing_agents, mcp_config_path=mcp_config_path, suggestion=agent_suggestion)
         return workflow
     
     def generate_plan(self, goal: str, history: Optional[str] = None, suggestion: Optional[str] = None) -> TaskPlanningOutput:
@@ -77,7 +77,7 @@ class WorkFlowGenerator(BaseModule):
         existing_agents: Optional[List[Agent]] = None,
         mcp_config_path: Optional[str] = None,
         # history: Optional[str] = None, 
-        # suggestion: Optional[str] = None
+        suggestion: Optional[str] = None
     ) -> WorkFlowGraph:
         
         agent_generator: AgentGenerator = self.agent_generator
@@ -88,11 +88,16 @@ class WorkFlowGenerator(BaseModule):
             subtask_data = {key: value for key, value in subtask.to_dict(ignore=["class_name"]).items() if key in subtask_fields}
             subtask_desc = json.dumps(subtask_data, indent=4)
             agent_generation_action_data = {"goal": goal, "workflow": workflow_desc, "task": subtask_desc}
+            if suggestion:
+                agent_generation_action_data["suggestion"] = suggestion
+            
             logger.info(f"Generating agents for subtask: {subtask_data['name']}")
+            
             agents: AgentGenerationOutput = agent_generator.execute(
                 action_name=agent_generation_action_name, 
                 action_input_data=agent_generation_action_data,
-                return_msg_type=MessageType.RESPONSE
+                return_msg_type=MessageType.RESPONSE,
+                suggestion = suggestion
             ).content
             # todo I only handle generated agents
             generated_agents = []

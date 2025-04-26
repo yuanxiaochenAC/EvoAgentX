@@ -8,11 +8,6 @@ Links:
 import asyncio
 import os
 import json
-import http.server
-import socketserver
-import threading
-from pathlib import Path
-from typing import Dict, Any, List
 from dotenv import load_dotenv
 
 from evoagentx.agents.tool_caller import ToolCaller
@@ -20,7 +15,6 @@ from evoagentx.models.model_configs import OpenAILLMConfig
 from evoagentx.tools.mcp import MCPToolkit
 from evoagentx.core.logging import logger
 from evoagentx.core.message import Message, MessageType
-from evoagentx.prompts.tool_caller import TOOL_CALLER_PROMPT
 load_dotenv()
 
 # =================== PROMPTS ===================

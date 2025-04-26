@@ -77,9 +77,11 @@ Your task is to analyze the given subtask, its input data, execution history, an
    - Whether an agent has successfully performed a similar action before.
    - Whether selecting this action helps in progressing toward subtask completion.
    - **IMPORTANT**: For MCP (Model Context Protocol) enabled agents that interact with external services:
-     - Those agents have tool_calling action available and they really need to call this action.
-     - This only applies to MCP agents, other agents should not use tool_calling action and should not follow these rules.
+     - Those agents have tool_calling action available and they should only call tool_calling action to interact with external services.
+     - The tool_calling action should keep calling until all required information is retrieved.
      - Summary or cleaning the output from tool calling is not necessary.
+     - The tool_calling should only consider the current task.
+     - This only applies to MCP agents, other agents should not use tool_calling action and should not follow these rules.
 5. Select the Best Agent and Action for the next execution step.
 6. Output the decision in the required format.
 

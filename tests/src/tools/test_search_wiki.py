@@ -1,4 +1,3 @@
-from evoagentx.tools.search_base import Search_Tool
 import unittest
 from unittest.mock import patch
 from evoagentx.tools.search_wiki import SearchWiki

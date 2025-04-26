@@ -1,8 +1,6 @@
 from pydantic import Field
-from typing import Optional, Any, Callable, Dict
+from typing import Optional, Any, Callable
 import json
-import time
-import asyncio
 from ..core.logging import logger
 from ..models.base_model import BaseLLM
 from .action import Action, ActionInput, ActionOutput
@@ -145,7 +143,10 @@ class ToolCalling(Action):
 
         time_out += 1
         if time_out > self.max_tool_try:
-            return {"content": inputs["query"] + f"\n\nTool execution passing max depth: {self.max_tool_try}"}, prompt_params_values
+            if return_prompt:
+                prompt_params_values = inputs.get("query")
+                return {"content": inputs["query"] + f"\n\nTool execution passing max depth: {self.max_tool_try}"}, prompt_params_values
+            return {"content": inputs["query"] + f"\n\nTool execution passing max depth: {self.max_tool_try}"}
         
         print("_______________________ Start Tool Calling _______________________")
         ## 1. Generate tool call args
@@ -298,11 +299,11 @@ class ToolCalling(Action):
                 content = await self.execute(llm, inputs, sys_msg, return_prompt, **kwargs, time_out=time_out)
             else:
                 print(f"Maximum tool call depth ({self.max_tool_try}) reached, stopping execution")
-                content = {"content": inputs["query"] + f"\n\nTool execution reached maximum depth ({self.max_tool_try})."}
+                content = {"answer": inputs["query"] + f"\n\nTool execution reached maximum depth ({self.max_tool_try})."}
         else:
-            content = {"content": inputs["query"]}
+            content = {"answer": inputs["query"]}
             
-        print("content:")
+        print("answer:")
         print(content)
         
         

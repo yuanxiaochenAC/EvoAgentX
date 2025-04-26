@@ -1,5 +1,5 @@
 from ..core.module import BaseModule
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 class Tool(BaseModule):
     """

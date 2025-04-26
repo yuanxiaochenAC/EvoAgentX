@@ -74,7 +74,6 @@ class WorkFlow(BaseModule):
         return task
         
     async def execute_task(self, task: WorkFlowNode):
-
         last_executed_task = self.environment.get_last_executed_task()
         self.graph.step(source_node=last_executed_task, target_node=task)
         next_action: NextAction = self.workflow_manager.schedule_next_action(
