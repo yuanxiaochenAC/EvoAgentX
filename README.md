@@ -15,7 +15,7 @@
 [![Discord](https://img.shields.io/badge/Chat-Discord-5865F2?&logo=discord&logoColor=white)](https://discord.gg/EvoAgentX)
 [![Twitter](https://img.shields.io/badge/Follow-@EvoAgentX-e3dee5?&logo=x&logoColor=white)](https://x.com/EvoAgentX)
 [![Wechat](https://img.shields.io/badge/WeChat-EvoAgentX-brightgreen?logo=wechat&logoColor=white)]()
-[![hf_space](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-EvoAgentX-ffc107?color=ffc107&logoColor=whitee)](https://huggingface.co/EvoAgentX)
+[![hf_space](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-EvoAgentX-ffc107?color=ffc107&logoColor=white)](https://huggingface.co/EvoAgentX)
 [![GitHub star chart](https://img.shields.io/github/stars/EvoAgentX/EvoAgentX?style=social)](https://star-history.com/#EvoAgentX/EvoAgentX)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?)](https://github.com/EvoAgentX/EvoAgentX/blob/main/LICENSE)
 
@@ -104,8 +104,7 @@ Todos
 
 💡 Check out the links below to see how EvoAgentX can be used in real-life scenarios:
 - [Build Your First Agent ](./docs//tutorial/first_agent.md)
-- [Building Workflows Manually ](./docs//tutorial/first_workflow.md)
-- [Benchmark and Evaluation Tutorial](./docs/tutorial/benchmark_and_evaluation.md)
+- [Building Workflows Manually ](./docs/tutorial/first_workflow.md)
 
 
 ## 🙋 Support
