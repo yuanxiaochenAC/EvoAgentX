@@ -44,6 +44,9 @@ English | [简体中文](./README-zh.md)
 - [Tutorial and Use Cases](#tutorial-and-use-cases)
 
 ### Installation
+
+Refer to the [Installation Guide for EvoAgentX](./docs/installation.md) for detailed instructions on how to install EvoAgentX.
+
 Create environment: 
 1. Clone this repository and navigate to EvoAgentX folder
 ```bash
@@ -97,15 +100,22 @@ print(output)
 ### QuickStart & Demo Video
 Todos
 
+Refer to the [Quickstart Guide](./docs/quickstart.md) for a step-by-step guide to get started with EvoAgentX.
+
 ### Tutorial and Use Cases
-Todos
 
-🛠️ Feel free to follow user tutorial to build your EvoAgentX.
+Explore how to effectively use EvoAgentX with the following resources:
 
-💡 Check out the links below to see how EvoAgentX can be used in real-life scenarios:
-- [Build Your First Agent ](./docs//tutorial/first_agent.md)
-- [Building Workflows Manually ](./docs/tutorial/first_workflow.md)
+| Cookbook | Description |
+|:---|:---|
+| **[Build Your First Agent](./docs/tutorial/first_agent.md)** | A comprehensive guide to creating your first agent step-by-step. |
+| **[Building Workflows Manually](./docs/tutorial/first_workflow.md)** | Learn how to design and implement collaborative agent workflows. |
+| **[Benchmark and Evaluation Tutorial](./docs/tutorial/benchmark_and_evaluation.md)** | Guidelines for evaluating and benchmarking agent performance. |
+| **[SEW Optimizer Tutorial](./docs/tutorial/sew_optimizer.md)** | Learn optimization techniques for enhancing agent workflows. |
 
+🛠️ Follow the tutorials to build and optimize your EvoAgentX workflows.
+
+💡 Discover real-world applications and unleash the potential of EvoAgentX in your projects!
 
 ## 🙋 Support
 
