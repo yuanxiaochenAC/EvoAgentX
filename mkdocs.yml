@@ -29,6 +29,7 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
+  - admonition
 
 nav:
   - Getting Started:
@@ -45,20 +46,16 @@ nav:
     - Agent: modules/agent.md
   - API:
     - Core: api/core.md
-    - Actions: api/actions.md
-    - App: api/app.md
-    - Evaluators: api/evaluators.md
-    - Agents: api/agents.md
-    - Memory: api/memory.md
-    - Workflow: api/workflow.md
     - Models: api/models.md
-    - Tools: api/tools.md
-    - RAG: api/rag.md
+    - Agents: api/agents.md
+    - Workflow: api/workflow.md
     - Storages: api/storages.md
+    - Memory: api/memory.md
+    - Tools: api/tools.md 
+    - Actions: api/actions.md
     - Benchmark: api/benchmark.md
+    - Evaluators: api/evaluators.md
     - Optimizers: api/optimizers.md
-    - Prompts: api/prompts.md
-    - Utils: api/utils.md
 
 # plugins:
 #   - search
@@ -79,10 +76,3 @@ plugins:
             show_docstring: true
             separate_signature: true
             members_order: source
-
-markdown_extensions:
-  - admonition
-  - pymdownx.superfences
-  - pymdownx.inlinehilite
-  - pymdownx.highlight
-  - pymdownx.snippets
