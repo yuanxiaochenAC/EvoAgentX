@@ -28,18 +28,18 @@ async def main(goal=None):
             goal = """Read and analyze the pdf resume at examples/test_pdf.pdf, then find 5 real job opportunities to this client by search the website."""
     goal = formulate_goal(goal)
     
-    ## _______________ Workflow Creation _______________
-    wf_generator = WorkFlowGenerator(llm=llm, mcp_config_path=mcp_config_path)
-    workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal=goal, agent_suggestion=PDF_AGENT_SUGGESTION)
-    # [optional] display workflow
-    workflow_graph.display()
-    # [optional] save workflow 
-    workflow_graph.save_module(f"{target_directory}/v2_demo_4o_mini.json")
+    # ## _______________ Workflow Creation _______________
+    # wf_generator = WorkFlowGenerator(llm=llm, mcp_config_path=mcp_config_path)
+    # workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal=goal, agent_suggestion=PDF_AGENT_SUGGESTION)
+    # # [optional] display workflow
+    # workflow_graph.display()
+    # # [optional] save workflow 
+    # workflow_graph.save_module(f"{target_directory}/v4_demo_4o_mini.json")
     
     
     ## _______________ Workflow Execution _______________
     #[optional] load saved workflow 
-    workflow_graph: WorkFlowGraph = WorkFlowGraph.from_file(f"{target_directory}/v2_demo_4o_mini.json")
+    workflow_graph: WorkFlowGraph = WorkFlowGraph.from_file(f"{target_directory}/v4_demo_4o_mini.json")
 
     agent_manager = AgentManager()
     await agent_manager.add_agents_from_workflow(workflow_graph, llm_config=openai_config)
