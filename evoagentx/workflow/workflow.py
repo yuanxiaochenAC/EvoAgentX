@@ -16,6 +16,9 @@ from .action_graph import ActionGraph
 
 
 class WorkFlow(BaseModule):
+    """
+    A workflow is a collection of tasks and actions that are executed in a specific order.
+    """
 
     graph: WorkFlowGraph
     llm: Optional[BaseLLM] = None
@@ -27,6 +30,9 @@ class WorkFlow(BaseModule):
     version: int = 0 
 
     def init_module(self):
+        """
+        Initialize the module by setting up the workflow manager.
+        """
         if self.workflow_manager is None:
             if self.llm is None:
                 raise ValueError("Must provide `llm` when `workflow_manager` is None")

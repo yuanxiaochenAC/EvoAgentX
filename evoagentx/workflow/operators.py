@@ -26,12 +26,27 @@ from ..benchmark.mbpp import AFlowMBPP
 from ..utils.aflow_utils.data_utils import test_case_2_test_function
 
 class OperatorOutput(LLMOutputParser):
+    """
+    Base class for operator outputs that can be converted to a string representation.
+    """
 
     def to_str(self) -> str:
+        """
+        Convert the structured data to a formatted string.
+        
+        Returns:
+            str: JSON-formatted string representation of the structured data.
+        """
         return json.dumps(self.get_structured_data(), indent=4)
 
 
 class Operator(BaseModule):
+    """
+    Base class for all operators in the workflow.
+    
+    An operator is a module that performs a specific task using a language model.
+    It defines a standard interface for execution and can be configured with prompts.
+    """
 
     name: str = Field(description="The name of the operator.")
     description: str = Field(description="The description of the operator.")
@@ -43,10 +58,25 @@ class Operator(BaseModule):
     prompt: Optional[str] = Field(default="", description="The prompt for calling the operator.")
 
     def init_module(self):
+        """
+        Initialize the module by setting up save ignore fields.
+        """
         self._save_ignore_fields = ["llm"]
 
     def __call__(self, *args: Any, **kwargs: Any) -> dict:
-        """Make the operator callable and automatically choose between sync and async execution"""
+        """
+        Make the operator callable and automatically choose between sync and async execution.
+        
+        This method determines whether to use synchronous or asynchronous execution
+        based on the current environment and operator implementation.
+        
+        Args:
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+            
+        Returns:
+            dict: The result of the operator execution.
+        """
         if asyncio.iscoroutinefunction(self.execute_async) and asyncio.get_event_loop().is_running():
             # If the operator is in an asynchronous environment and has an execute_async method, return a coroutine
             return self.execute_async(*args, **kwargs)
@@ -54,22 +84,83 @@ class Operator(BaseModule):
         return self.execute(*args, **kwargs)
     
     def execute(self, *args, **kwargs) -> dict:
+        """
+        Execute the operator synchronously.
+        
+        This method should be implemented by subclasses to define the specific
+        execution logic for the operator.
+        
+        Args:
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+            
+        Returns:
+            dict: The result of the operator execution.
+            
+        Raises:
+            NotImplementedError: If the method is not implemented by a subclass.
+        """
         raise NotImplementedError(f"The execute function for {type(self).__name__} is not implemented!")
     
     async def execute_async(self, *args, **kwargs) -> dict:
+        """
+        Execute the operator asynchronously.
+        
+        This method should be implemented by subclasses to define the specific
+        asynchronous execution logic for the operator.
+        
+        Args:
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+            
+        Returns:
+            dict: The result of the operator execution.
+            
+        Raises:
+            NotImplementedError: If the method is not implemented by a subclass.
+        """
         raise NotImplementedError(f"The execute function for {type(self).__name__} is not implemented!")
     
     def save_module(self, path: str, ignore: List[str] = [], **kwargs)-> str:
+        """
+        Save the operator to a module file.
+        
+        Args:
+            path: The file path where the module will be saved.
+            ignore: A list of keys to ignore when saving the module.
+            **kwargs: Additional keyword arguments.
+            
+        Returns:
+            str: The path where the module was saved.
+        """
         ignore_fields = self._save_ignore_fields + ignore
         super().save_module(path=path, ignore=ignore_fields, **kwargs)
 
     def get_prompt(self, **kwargs) -> str:
+        """
+        Get the prompt for the operator.
+        
+        Returns:
+            str: The prompt for the operator.
+        """
         return self.prompt 
     
     def set_prompt(self, prompt: str):
+        """
+        Set the prompt for the operator.
+        
+        Args:
+            prompt: The prompt to set.
+        """
         self.prompt = prompt
 
     def set_operator(self, data: dict):
+        """
+        Set the operator properties from a dictionary.
+        
+        Args:
+            data: A dictionary containing the operator properties.
+        """
         self.name = data.get("name", self.name)
         self.description = data.get("description", self.description)
         self.interface = data.get("interface", self.interface)      
@@ -79,24 +170,57 @@ class Operator(BaseModule):
 ## The following operators are inspired by AFlow's predefined operators: https://github.com/geekan/MetaGPT/blob/main/metagpt/ext/aflow/scripts/operator.py 
 
 class CustomOutput(OperatorOutput):
+    """
+    Output format for the Custom operator.
+    """
     response: str = Field(default="", description="Your solution for this problem")
 
 
 class Custom(Operator):
+    """
+    A custom operator that generates responses based on input and instructions.
+    """
 
     def __init__(self, llm: BaseLLM, **kwargs):
+        """
+        Initialize the Custom operator.
+        
+        Args:
+            llm: The language model to use.
+            **kwargs: Additional keyword arguments.
+        """
         name = "Custom"
         description = "Generates anything based on customized input and instruction"
         interface = "custom(input: str, instruction: str) -> dict with key 'response' of type str"
         super().__init__(name=name, description=description, interface=interface, llm=llm, outputs_format=CustomOutput, **kwargs)
     
     def execute(self, input: str, instruction: str) -> dict: 
+        """
+        Execute the Custom operator synchronously.
+        
+        Args:
+            input: The input text.
+            instruction: The instruction for generating the response.
+            
+        Returns:
+            dict: A dictionary containing the response.
+        """
         prompt = instruction + input
         response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="str")
         output =response.get_structured_data()
         return output 
     
     async def execute_async(self, input: str, instruction: str) -> dict:
+        """
+        Execute the Custom operator asynchronously.
+        
+        Args:
+            input: The input text.
+            instruction: The instruction for generating the response.
+            
+        Returns:
+            dict: A dictionary containing the response.
+        """
         prompt = instruction + input
         response = await self.llm.generate_async(prompt=prompt, parser=self.outputs_format, parse_mode="str")
         output = response.get_structured_data()
@@ -104,13 +228,26 @@ class Custom(Operator):
 
 
 class AnswerGenerateOutput(OperatorOutput):
+    """
+    Output format for the AnswerGenerate operator.
+    """
     thought: str = Field(default="", description="The step by step thinking process")
     answer: str = Field(default="", description="The final answer to the question")
 
 
 class AnswerGenerate(Operator):
+    """
+    An operator that generates answers with step-by-step thinking.
+    """
 
     def __init__(self, llm: BaseLLM, **kwargs):
+        """
+        Initialize the AnswerGenerate operator.
+        
+        Args:
+            llm: The language model to use.
+            **kwargs: Additional keyword arguments.
+        """
         name = "AnswerGenerate"
         description = "Generate step by step based on the input. The step by step thought process is in the field of 'thought', and the final answer is in the field of 'answer'."
         interface = "answer_generate(input: str) -> dict with key 'thought' of type str, 'answer' of type str"
@@ -118,12 +255,30 @@ class AnswerGenerate(Operator):
         super().__init__(name=name, description=description, interface=interface, llm=llm, outputs_format=AnswerGenerateOutput, prompt=prompt, **kwargs)
     
     def execute(self, input: str) -> dict:
+        """
+        Execute the AnswerGenerate operator synchronously.
+        
+        Args:
+            input: The input question.
+            
+        Returns:
+            dict: A dictionary containing the thought process and answer.
+        """
         # prompt = ANSWER_GENERATION_PROMPT.format(input=input)
         prompt = self.prompt.format(input=input)
         response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
     
     async def execute_async(self, input: str) -> dict:
+        """
+        Execute the AnswerGenerate operator asynchronously.
+        
+        Args:
+            input: The input question.
+            
+        Returns:
+            dict: A dictionary containing the thought process and answer.
+        """
         # prompt = ANSWER_GENERATION_PROMPT.format(input=input)
         prompt = self.prompt.format(input=input)
         response = await self.llm.generate_async(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
@@ -131,13 +286,26 @@ class AnswerGenerate(Operator):
     
 
 class ScEnsembleOutput(OperatorOutput):
+    """
+    Output format for the ScEnsemble operator.
+    """
     thought: str = Field(default="", description="The thought of the most consistent solution.")
     solution_letter: str = Field(default="", description="The letter of most consistent solution.")
 
 
 class QAScEnsemble(Operator):
+    """
+    An operator that uses self-consistency to select the best answer from multiple solutions.
+    """
 
     def __init__(self, llm: BaseLLM, **kwargs):
+        """
+        Initialize the QAScEnsemble operator.
+        
+        Args:
+            llm: The language model to use.
+            **kwargs: Additional keyword arguments.
+        """
         name = "QAScEnsemble"
         description = "Uses self-consistency to select the solution that appears most frequently in the solution list, improve the selection to enhance the choice of the best solution."
         interface = "sc_ensemble(solutions: List[str]) -> dict with key 'response' of type str"
@@ -145,6 +313,15 @@ class QAScEnsemble(Operator):
         super().__init__(name=name, description=description, interface=interface, llm=llm, outputs_format=ScEnsembleOutput, prompt=prompt, **kwargs)
     
     def _prepare_solutions(self, solutions: List[str]) -> Tuple[dict, str]:
+        """
+        Prepare solutions for the ensemble process.
+        
+        Args:
+            solutions: A list of solution strings.
+            
+        Returns:
+            Tuple[dict, str]: A tuple containing the answer mapping and formatted solution text.
+        """
         answer_mapping = {} 
         solution_text = "" 
         for index, solution in enumerate(solutions):
@@ -153,17 +330,46 @@ class QAScEnsemble(Operator):
         return answer_mapping, solution_text
         
     def _process_response(self, response: LLMOutputParser, answer_mapping: dict, solutions: List[str]) -> dict:
+        """
+        Process the LLM response to get the best solution.
+        
+        Args:
+            response: The LLM response.
+            answer_mapping: The mapping from letters to solution indices.
+            solutions: The list of solutions.
+            
+        Returns:
+            dict: A dictionary containing the best solution.
+        """
         answer: str = response.get_structured_data().get("solution_letter", "")
         answer = answer.strip().upper()
         return {"response": solutions[answer_mapping[answer]]}
     
     def execute(self, solutions: List[str]) -> dict:
+        """
+        Execute the QAScEnsemble operator synchronously.
+        
+        Args:
+            solutions: A list of solution strings.
+            
+        Returns:
+            dict: A dictionary containing the best solution.
+        """
         answer_mapping, solution_text = self._prepare_solutions(solutions)
         prompt = self.prompt.format(solutions=solution_text)
         response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return self._process_response(response, answer_mapping, solutions)
 
     async def execute_async(self, solutions: List[str]) -> dict:
+        """
+        Execute the QAScEnsemble operator asynchronously.
+        
+        Args:
+            solutions: A list of solution strings.
+            
+        Returns:
+            dict: A dictionary containing the best solution.
+        """
         answer_mapping, solution_text = self._prepare_solutions(solutions)
         prompt = self.prompt.format(solutions=solution_text)
         response = await self.llm.generate_async(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
@@ -171,8 +377,18 @@ class QAScEnsemble(Operator):
 
 
 class ScEnsemble(Operator):
+    """
+    An operator that uses self-consistency to select the best solution from multiple solutions.
+    """
 
     def __init__(self, llm: BaseLLM, **kwargs):
+        """
+        Initialize the ScEnsemble operator.
+        
+        Args:
+            llm: The language model to use.
+            **kwargs: Additional keyword arguments.
+        """
         name = "ScEnsemble" 
         description = "Uses self-consistency to select the solution that appears most frequently in the solution list, improve the selection to enhance the choice of the best solution."
         interface = "sc_ensemble(solutions: List[str], problem: str) -> dict with key 'response' of type str"
@@ -180,6 +396,15 @@ class ScEnsemble(Operator):
         super().__init__(name=name, description=description, interface=interface, llm=llm, outputs_format=ScEnsembleOutput, prompt=prompt, **kwargs)
     
     def _prepare_solutions(self, solutions: List[str]) -> Tuple[dict, str]:
+        """
+        Prepare solutions for the ensemble process.
+        
+        Args:
+            solutions: A list of solution strings.
+            
+        Returns:
+            Tuple[dict, str]: A tuple containing the answer mapping and formatted solution text.
+        """
         answer_mapping = {}
         solution_text = ""
         for index, solution in enumerate(solutions):
@@ -188,40 +413,101 @@ class ScEnsemble(Operator):
         return answer_mapping, solution_text
     
     def _process_response(self, response: LLMOutputParser, answer_mapping: dict, solutions: List[str]) -> dict:
+        """
+        Process the LLM response to get the best solution.
+        
+        Args:
+            response: The LLM response.
+            answer_mapping: The mapping from letters to solution indices.
+            solutions: The list of solutions.
+            
+        Returns:
+            dict: A dictionary containing the best solution.
+        """
         answer: str = response.get_structured_data().get("solution_letter", "")
         answer = answer.strip().upper()
         return {"response": solutions[answer_mapping[answer]]}
     
     def execute(self, solutions: List[str], problem: str) -> dict:
+        """
+        Execute the ScEnsemble operator synchronously.
+        
+        Args:
+            solutions: A list of solution strings.
+            problem: The problem description.
+            
+        Returns:
+            dict: A dictionary containing the best solution.
+        """
         answer_mapping, solution_text = self._prepare_solutions(solutions)
         prompt = self.prompt.format(problem=problem, solutions=solution_text)
         response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return self._process_response(response, answer_mapping, solutions)
 
     async def execute_async(self, solutions: List[str], problem: str) -> dict:
+        """
+        Execute the ScEnsemble operator asynchronously.
+        
+        Args:
+            solutions: A list of solution strings.
+            problem: The problem description.
+            
+        Returns:
+            dict: A dictionary containing the best solution.
+        """
         answer_mapping, solution_text = self._prepare_solutions(solutions)
         prompt = self.prompt.format(problem=problem, solutions=solution_text)
         response = await self.llm.generate_async(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return self._process_response(response, answer_mapping, solutions)
 
 
-
 class CustomCodeGenerate(Operator):
+    """
+    An operator that generates code based on problem description and instructions.
+    """
 
     def __init__(self, llm: BaseLLM, **kwargs):
-
+        """
+        Initialize the CustomCodeGenerate operator.
+        
+        Args:
+            llm: The language model to use.
+            **kwargs: Additional keyword arguments.
+        """
         name = "CustomCodeGenerate"
         description = "Generates code based on customized input and instruction"
         interface = "custom_code_generate(problem: str, entry_point: str, instruction: str) -> dict with key 'response' of type str"
         super().__init__(name=name, description=description, interface=interface, llm=llm, outputs_format=CustomOutput, **kwargs)
     
     def execute(self, problem: str, entry_point: str, instruction: str) -> dict:
+        """
+        Execute the CustomCodeGenerate operator synchronously.
+        
+        Args:
+            problem: The problem description.
+            entry_point: The entry point function name.
+            instruction: The instruction for generating the code.
+            
+        Returns:
+            dict: A dictionary containing the generated code.
+        """
         prompt = instruction + problem
         response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="str")
         code = sanitize(response.content, entrypoint=entry_point)
         return {"response": code}
     
     async def execute_async(self, problem: str, entry_point: str, instruction: str) -> dict:
+        """
+        Execute the CustomCodeGenerate operator asynchronously.
+        
+        Args:
+            problem: The problem description.
+            entry_point: The entry point function name.
+            instruction: The instruction for generating the code.
+            
+        Returns:
+            dict: A dictionary containing the generated code.
+        """
         prompt = instruction + problem
         response = await self.llm.generate_async(prompt=prompt, parser=self.outputs_format, parse_mode="str")
         code = sanitize(response.content, entrypoint=entry_point)
@@ -229,13 +515,23 @@ class CustomCodeGenerate(Operator):
 
 
 class TestOutput(OperatorOutput):
-    
+    """
+    Output format for the Test operator.
+    """
     result: bool = Field(default=False, description="The result of the test")
     solution: str = Field(default="", description="The solution to the problem")
     
     @classmethod
     def validate_result(cls, value):
-        """Validate the result field, ensuring it is a boolean value"""
+        """
+        Validate the result field, ensuring it is a boolean value.
+        
+        Args:
+            value: The value to validate.
+            
+        Returns:
+            bool: The validated boolean value.
+        """
         if isinstance(value, bool):
             return value
         elif isinstance(value, str):
@@ -251,30 +547,60 @@ class TestOutput(OperatorOutput):
     
     @classmethod
     def model_validate(cls, obj, **kwargs):
-        """Override model_validate method to ensure result field is boolean"""
+        """
+        Override model_validate method to ensure result field is boolean.
+        
+        Args:
+            obj: The object to validate.
+            **kwargs: Additional keyword arguments.
+            
+        Returns:
+            The validated object.
+        """
         if isinstance(obj, dict) and "result" in obj:
             obj["result"] = cls.validate_result(obj["result"])
         return super().model_validate(obj, **kwargs)
     
 
 class ReflectionTestOp(OperatorOutput):
-
+    """
+    Output format for the ReflectionTest operator.
+    """
     reflection_and_solution: str = Field(default="", description="Corrective solution for code execution errors or test case failures")
 
 
 TEST_SUPPORTED_BENCHMARKS = (AFlowHumanEval, AFlowMBPP)
 
 class Test(Operator):
+    """
+    An operator that tests code solutions against test cases.
+    """
 
     def __init__(self, llm: BaseLLM, **kwargs):
-
+        """
+        Initialize the Test operator.
+        
+        Args:
+            llm: The language model to use.
+            **kwargs: Additional keyword arguments.
+        """
         name = "Test"
         description = "Tests the solution using public test cases. If the solution fails, it reflects on the errors and attempts to modify the solution. Returns True and the solution if all tests pass after modifications. Returns False and the current solution if it still fails after modifications."
         interface = "test(problem: str, solution: str, entry_point: str, benchmark = self.benchmark) -> dict with key 'result' of type bool and key 'solution' of type str. Always include 'benchmark = self.benchmark' in the input."
         super().__init__(name=name, description=description, interface=interface, llm=llm, outputs_format=TestOutput, **kwargs)
     
     def exec_code(self, solution: str, entry_point: str, benchmark: Benchmark):
-
+        """
+        Execute the code solution against test cases.
+        
+        Args:
+            solution: The code solution to test.
+            entry_point: The entry point function name.
+            benchmark: The benchmark to use for testing.
+            
+        Returns:
+            The result of the test execution.
+        """
         if isinstance(benchmark, TEST_SUPPORTED_BENCHMARKS):
             test_cases = benchmark.extract_test_cases_with_entry_point(entry_point)
         else:
@@ -390,12 +716,25 @@ def run_code(code):
     
 
 class CodeGenerateOutput(OperatorOutput):
+    """
+    Output format for the Programmer operator.
+    """
     code: str = Field(default="", description="Your complete code solution for this problem") 
 
 
 class Programmer(Operator):
+    """
+    An operator that generates, executes, and returns solutions for programming problems.
+    """
 
     def __init__(self, llm: BaseLLM, **kwargs):
+        """
+        Initialize the Programmer operator.
+        
+        Args:
+            llm: The language model to use.
+            **kwargs: Additional keyword arguments.
+        """
         name = "Programmer"
         description = "Automatically writes, executes Python code, and returns the solution based on the provided problem description and analysis. The `output` only contains the final answer. If you want to see the detailed solution process, it's recommended to retrieve the `code`."
         interface = "programmer(problem: str, analysis: str = 'None') -> dict with keys 'code' and 'output' of type str"
@@ -405,6 +744,13 @@ class Programmer(Operator):
     async def exec_code(self, code, timeout=30):
         """
         Asynchronously execute code and return an error if timeout occurs.
+        
+        Args:
+            code: The Python code to execute.
+            timeout: The timeout in seconds.
+            
+        Returns:
+            Tuple[str, str]: A tuple containing the status and result of the execution.
         """
         loop = asyncio.get_running_loop()
         with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
@@ -424,6 +770,14 @@ class Programmer(Operator):
     async def code_generate(self, problem, analysis, feedback):
         """
         Asynchronous method to generate code.
+        
+        Args:
+            problem: The problem description.
+            analysis: The analysis of the problem.
+            feedback: Feedback from previous execution attempts.
+            
+        Returns:
+            dict: A dictionary containing the generated code.
         """
         prompt = PYTHON_CODE_VERIFIER_PROMPT.format(
             problem=problem,
@@ -435,7 +789,16 @@ class Programmer(Operator):
         return {"code": code}
     
     async def execute_async(self, problem: str, analysis: str = "None"): 
-
+        """
+        Execute the Programmer operator asynchronously.
+        
+        Args:
+            problem: The problem description.
+            analysis: The analysis of the problem.
+            
+        Returns:
+            dict: A dictionary containing the generated code and output.
+        """
         code = None 
         output = None 
         feedback = ""
