@@ -9,94 +9,6 @@ from typing import List, Set, Optional, Union, Dict, Any
 from .interpreter_base import BaseInterpreter
 
 class InterpreterPython(BaseInterpreter):
-    def get_tool_schema(self) -> Dict[str, Any]:
-        """
-        Returns the OpenAI-compatible function schema for the Python interpreter.
-        
-        Returns:
-            Dict[str, Any]: Function schema in OpenAI format
-        """
-        return {
-            "type": "function",
-            "function": {
-                "name": "execute_code",
-                "description": "The Python Interpreter Tool provides a secure execution environment for running Python code. It performs static analysis using AST to detect unauthorized imports and security risks before execution.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "code": {
-                            "type": "string",
-                            "description": "The code to execute"
-                        },
-                        "language": {
-                            "type": "string",
-                            "description": "The programming language of the code"
-                        }
-                    },
-                    "required": ["code", "language"]
-                }
-            }
-        }
-
-    def get_tool_info(self):
-        return {
-            "description": """The Python Interpreter Tool provides a secure execution environment for running Python code. 
-            It performs static analysis using AST to detect unauthorized imports and security risks before execution. 
-            The tool allows execution of both inline code snippets and external script files while enforcing strict security policies.
-            
-            The tool ensures:
-            - Python code is analyzed using AST to detect and restrict unauthorized imports.
-            - Scripts are executed in a controlled environment with predefined security constraints.
-            - Only explicitly allowed imports are permitted, blocking unsafe system-wide libraries.
-            - Project-specific modules can be dynamically loaded, ensuring local accessibility.
-            - Execution output, including potential security violations or runtime errors, is captured and returned.
-            """,
-            
-            "inputs": {
-                "project_path": {
-                    "type": "str",
-                    "description": "The root directory of the project where Python scripts are located.",
-                    "required": True
-                },
-                "allowed_imports": {
-                    "type": "Optional[Set[str]]",
-                    "description": "A set of module names that are explicitly allowed for import. If not provided, only local project modules are accessible.",
-                    "required": False
-                },
-                "code": {
-                    "type": "str",
-                    "description": "The Python code snippet to be executed after safety checks.",
-                    "required": True
-                },
-                "file_path": {
-                    "type": "str",
-                    "description": "The file path of the Python script to be executed.",
-                    "required": True
-                }
-            },
-            
-            "outputs": {
-                "execution_result": {
-                    "type": "str",
-                    "description": "The output of the executed code or an error message if execution fails."
-                },
-                "violations": {
-                    "type": "list[str]",
-                    "description": "A list of detected security violations, if any."
-                }
-            },
-            
-            "functionality": """Methods and their functionality:
-            - `_analyze_code(code: str)`: Parses and analyzes the code using AST to detect restricted imports.
-            - `_execute_import(import_module: ast.Import)`: Handles `import` statements, enforcing security policies.
-            - `_execute_import_from(import_from: ast.ImportFrom)`: Manages `from module import name` statements securely.
-            - `_check_project(module: Union[ast.Import, ast.ImportFrom])`: Verifies and imports project-specific modules.
-            - `_extract_definitions(module_name: str, path: str, potential_names: Optional[Set[str]])`: Extracts functions and classes from a given module while ensuring safety.
-            - `execute(code: str)`: Runs Python code after security checks, capturing output or errors.
-            - `execute_script(file_path: str)`: Reads a script file and executes it securely.""",
-            
-            "interface": "execute(code: str) -> dict with key 'execution_result' (str) or 'violations' (list of str)"
-        }
 
 
     project_path:str = ""
@@ -370,11 +282,11 @@ class InterpreterPython(BaseInterpreter):
     def execute_script(self, file_path: str, language: str = "python") -> str:
         """
         Reads Python code from a file and executes it using the `execute` method.
-        
+
         Args:
             file_path (str): The path to the Python file to be executed.
             language (str, optional): The programming language of the code. Defaults to "python".
-            
+
         Returns:
             str: The output of the executed code, or an error message if the execution fails.
         """
@@ -387,5 +299,43 @@ class InterpreterPython(BaseInterpreter):
                 code = file.read()
         except Exception as e:
             return f"Error reading file: {e}"
-        
+            
         return self.execute(code, language)
+    
+    def get_tool_schemas(self) -> list[Dict[str, Any]]:
+        """
+        Returns the OpenAI-compatible function schema for the Python interpreter.
+        
+        Returns:
+            list[Dict[str, Any]]: Function schema in OpenAI format
+        """
+        return [{
+            "name": "execute",
+            "description": "The Python Interpreter Tool provides a secure execution environment for running Python code. It performs static analysis using AST to detect unauthorized imports and security risks before execution.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "description": "The code to execute"
+                    },
+                    "language": {
+                        "type": "string",
+                        "description": "The programming language of the code"
+                    }
+                },
+                "required": ["code", "language"]
+            }
+        }]
+    
+    def get_tools(self):
+        return [self.execute]
+
+    def get_tool_description(self) -> str:
+        """
+        Returns a brief description of the Python interpreter tool.
+        
+        Returns:
+            str: Tool description
+        """
+        return "Python Interpreter Tool that provides a secure execution environment for running Python code with safety checks."

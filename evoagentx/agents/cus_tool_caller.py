@@ -40,6 +40,7 @@ class CusToolCaller(CustomizeAgent):
         self.outputs_format = self.actions[0].outputs_format
         self.actions = []
         self._action_map = {}
+        self.init_module()
         
         # Now add our tool actions (after CustomizeAgent has created its action)
         self.ori_prompt = self.system_prompt + kwargs.get("prompt", "")
@@ -95,6 +96,7 @@ class CusToolCaller(CustomizeAgent):
                 traceback.print_exc()
                 raise
         
+        print(self.tools_schema)
         if self.tools_schema:
             self.mcp_prompt = self.ori_prompt + CUSTOM_TOOL_CALLER_PROMPT + "\n### Tools Available\n" + str(self.tools_schema)
     
@@ -137,14 +139,18 @@ class CusToolCaller(CustomizeAgent):
     
     def add_tool(self, tool_schema: dict, tools_caller: Callable) -> None:
         """Add a tool to the tool caller agent"""
-        if self.tools_schema is None:
+        
+        if not self.tools_schema:
             self.tools_schema = {}
             self.tools_caller = {}
         
         self.tools_schema[tool_schema["name"]] = tool_schema
         self.tools_caller[tool_schema["name"]] = tools_caller
         self.tool_calling_action.add_tool(tool_schema, tools_caller)
-        
+    
+    def add_tools(self, tool_schemas: list[dict], tools_callers: list[Callable]):
+        for tool_schema, tools_caller in zip(tool_schemas, tools_callers):
+            self.add_tool(tool_schema, tools_caller)
 
     async def add_mcp_toolkit(self, mcp_toolkit: MCPToolkit) -> None:
         """Add MCP toolkit to the tool caller agent"""

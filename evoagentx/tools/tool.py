@@ -8,7 +8,7 @@ class Tool(BaseModule):
     - execute: Executes the tool with the provided parameters
     """
 
-    def get_tool_schema(self) -> Dict[str, Any]:
+    def get_tool_schemas(self) -> Dict[str, Any]:
         """
         Returns the OpenAI-compatible function schema for this tool.
         The schema follows the format used by MCP servers and OpenAI function calling.

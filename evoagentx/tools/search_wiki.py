@@ -1,65 +1,11 @@
 import wikipedia
 from .search_base import SearchBase
+from typing import Dict, Any
 
 
 class SearchWiki(SearchBase):
 
-    def get_tool_info(self):
-        return {
-            "description": """The Wikipedia Search Tool enables querying Wikipedia to find relevant articles and extract key information. 
-            It searches for Wikipedia pages based on a given query, retrieves article summaries, and extracts content in a structured format.
-            
-            The tool ensures:
-            - Reliable Wikipedia search results based on the provided query.
-            - Extraction of key details such as article title, summary, truncated full content, and the Wikipedia page link.
-            - Filtering of ambiguous or non-existent pages to return the most relevant information.
-            - Flexible result customization, allowing control over the number of search results, content length, and summary size.""",
-            
-            "inputs": {
-                "query": {
-                    "type": "str",
-                    "description": "The search query to look up on Wikipedia.",
-                    "required": True
-                },
-                "num_search_pages": {
-                    "type": "int",
-                    "description": "The number of Wikipedia search results to retrieve (default is 5).",
-                    "required": False
-                },
-                "max_content_words": {
-                    "type": "int",
-                    "description": "The maximum number of words to retain from the full Wikipedia page content (default is 500).",
-                    "required": False
-                },
-                "max_sentences": {
-                    "type": "int",
-                    "description": "The maximum number of sentences in the summary returned from Wikipedia (default is 15).",
-                    "required": False
-                }
-            },
-            
-            "outputs": {
-                "results": {
-                    "type": "list[dict]",
-                    "description": "A list of search results, each containing 'title', 'summary', 'content' (truncated), and 'url'."
-                },
-                "error": {
-                    "type": "str",
-                    "description": "An error message if the search fails (optional)."
-                }
-            },
-            
-            "functionality": """Methods and their functionality:
-            - `search(query: str, max_sentences: int)`: Searches Wikipedia and retrieves structured results.
-            - `__init__(num_search_pages: int, max_content_words: int)`: Initializes default search parameters, including the number of results and content length limits.""",
-            
-            "interface": "search(query: str, max_sentences: int) -> dict with key 'results' (list of dicts) or 'error' (str)"
-        }
-
-    num_search_pages:int = 5
-    max_content_words:int = 500
-
-    def search(self, query: str, max_sentences: int = 15) -> list:
+    def search(self, query: str, max_sentences: int = 15, num_search_pages: int = 5, max_content_words: int = 500) -> list:
         """
         Searches Wikipedia for the given query and returns the summary and truncated full content.
 
@@ -71,8 +17,10 @@ class SearchWiki(SearchBase):
             dict: A dictionary with the title, summary, truncated content, and Wikipedia page link.
         """
         try:
+            print("searching wikipedia: ", query, max_sentences, num_search_pages, max_content_words)
             # Search for top matching titles
-            search_results = wikipedia.search(query, results=self.num_search_pages)
+            search_results = wikipedia.search(query, results=num_search_pages)
+            print("search_results: ", search_results)
             if not search_results:
                 return {"error": "No search results found."}
 
@@ -84,7 +32,7 @@ class SearchWiki(SearchBase):
                     summary = wikipedia.summary(title, sentences=max_sentences)
 
                     # Truncate the full content to the first max_content_words words
-                    content = ' '.join(page.content.split()[:self.max_content_words])
+                    content = ' '.join(page.content.split()[:max_content_words])
 
                     results.append({
                         "title": page.title,
@@ -98,9 +46,50 @@ class SearchWiki(SearchBase):
                 except wikipedia.exceptions.PageError:
                     # Skip non-existing pages and try the next
                     continue
-
+            
+            print("get results from wikipedia: ", results)
             return {"results": results}
         
         except Exception as e:
             return {"error": str(e)}
     
+    def get_tools(self):
+        return [self.search]
+
+    def get_tool_schemas(self) -> list[Dict[str, Any]]:
+        """
+        Returns the OpenAI-compatible function schema for the Wikipedia search tool.
+        
+        Returns:
+            Dict[str, Any]: Function schema in OpenAI format
+        """
+        return [{
+            "name": "search",
+            "description": "Search Wikipedia for relevant articles and extract key information including titles, summaries, and content.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query to look up on Wikipedia."
+                    },
+                    "num_search_pages": {
+                        "type": "integer",
+                        "description": "The number of Wikipedia search results to retrieve (default is 5)."
+                    },
+                    "max_content_words": {
+                        "type": "integer",
+                        "description": "The maximum number of words to retain from the full Wikipedia page content (default is 500)."
+                    },
+                    "max_sentences": {
+                        "type": "integer",
+                        "description": "The maximum number of sentences in the summary returned from Wikipedia (default is 15)."
+                    }
+                },
+                "required": ["query"]
+            }
+        }]
+        
+    def get_tool_description(self) -> str:
+        return "Search Wikipedia for relevant articles and extract key information including titles, summaries, and content."
+

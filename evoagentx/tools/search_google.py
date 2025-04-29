@@ -4,31 +4,7 @@ from typing import Dict, Any
 from .search_base import SearchBase
 
 class SearchGoogle(SearchBase):
-    def get_tool_schema(self) -> Dict[str, Any]:
-        """
-        Returns the OpenAI-compatible function schema for the Google search tool.
-        
-        Returns:
-            Dict[str, Any]: Function schema in OpenAI format
-        """
-        return {
-            "type": "function",
-            "function": {
-                "name": "search",
-                "description": "Search Google using the Custom Search API and retrieve detailed search results with content snippets.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "The search query to execute on Google"
-                        }
-                    },
-                    "required": ["query"]
-                }
-            }
-        }
-        
+    
     def get_tool_description(self) -> str:
         """
         Returns a brief description of the Google search tool.
@@ -38,91 +14,17 @@ class SearchGoogle(SearchBase):
         """
         return "Google Search Tool that utilizes the Google Custom Search API to perform structured search queries."
 
-    def get_tool_info(self):
-        return {
-            "description": """The Google Search Tool utilizes the Google Custom Search API to perform structured search queries. 
-            Unlike free alternatives, this tool requires an API key but provides more reliable and unrestricted access. 
-            It ensures efficient retrieval of search results, extracting and summarizing relevant content from top-ranked pages.
-
-            The tool ensures:
-            - Secure and authenticated search queries using Google Custom Search API.
-            - Structured and precise retrieval of search results based on the provided query.
-            - Summarization and truncation of retrieved content for better readability.
-            - Optimized output formatting, returning structured lists containing titles, URLs, and extracted content.
-            
-            Google Custom Search API: https://developers.google.com/custom-search/v1/overview
-            Google Custom Search Engine: https://cse.google.com/cse/create/new""",
-            
-            "inputs": {
-                "query": {
-                    "type": "str",
-                    "description": "The search query to be executed on Google.",
-                    "required": True
-                },
-                "search_params": {
-                    "type": "dict",
-                    "description": "A dictionary containing API authentication details ('api_key' and 'search_engine_id').",
-                    "required": True
-                },
-                "num_search_pages": {
-                    "type": "int",
-                    "description": "The number of search results to retrieve (default is 5).",
-                    "required": False
-                },
-                "max_content_words": {
-                    "type": "int",
-                    "description": "The maximum number of words extracted from each search result page (default is 500).",
-                    "required": False
-                }
-            },
-            
-            "outputs": {
-                "results": {
-                    "type": "list[dict]",
-                    "description": "A list of search results, each containing 'title', 'content' (truncated), and 'url'."
-                },
-                "error": {
-                    "type": "str",
-                    "description": "An error message if the search fails (optional)."
-                }
-            },
-            
-            "functionality": """Methods and their functionality:
-            - `search(query: str, search_params: dict)`: Sends a query to Google Custom Search API and retrieves structured search results.
-            - `_scrape_page(url: str)`: Extracts content from a given search result page for further processing.
-            - `__init__(num_search_pages: int, max_content_words: int)`: Initializes the default search parameters, including result count and content length restrictions.""",
-            
-            "interface": "search(query: str, search_params: dict) -> dict with key 'results' (list of dicts) or 'error' (str)"
-        }
     
-    num_search_pages:int = 5
-    max_content_words:int = 500
-    
-    def execute(self, query: str) -> Dict[str, Any]:
-        """
-        Executes a search with the given query using Google Custom Search API.
-        
-        Args:
-            query (str): The search query
-            
-        Returns:
-            Dict[str, Any]: Search results with keys 'results' and 'error'
-        """
-        # Get API key and search engine ID from environment variables or use defaults
-        api_key = os.getenv('GOOGLE_API_KEY', '')
-        search_engine_id = os.getenv('GOOGLE_SEARCH_ENGINE_ID', '')
-        
-        search_params = {
-            "api_key": api_key, 
-            "search_engine_id": search_engine_id
-        }
-        
-        return self.search(query, search_params)
-    
-    def search(self, query: str, search_params:dict) -> dict:
+    def search(self, query: str, api_key = None, search_engine_id = None, num_search_pages:int = 5, max_content_words:int = 500) -> dict:
         results = []
-        api_key = search_params["api_key"]
-        search_engine_id = search_params["search_engine_id"]
+        
+        if not api_key :
+            api_key = os.getenv('GOOGLE_API_KEY', '')
+        if not search_engine_id:
+            search_engine_id = os.getenv('GOOGLE_SEARCH_ENGINE_ID', '')
+            
+        if not api_key or not search_engine_id:
+            raise ValueError("API key and search engine ID are required.")
         
         try:
             # Step 1: Query Google Custom Search API
@@ -131,7 +33,7 @@ class SearchGoogle(SearchBase):
                 "key": api_key,
                 "cx": search_engine_id,
                 "q": query,
-                "num": self.num_search_pages,
+                "num": num_search_pages,
             }
             response = requests.get(search_url, params=params)
             data = response.json()
@@ -150,7 +52,7 @@ class SearchGoogle(SearchBase):
                     if content:  # Ensure valid content exists
                         results.append({
                             "title": title,
-                            "content": ' '.join(content.split()[:self.max_content_words]) + " ...",
+                            "content": ' '.join(content.split()[:max_content_words]) + " ...",
                             "url": url,
                         })
                 except Exception:
@@ -160,3 +62,44 @@ class SearchGoogle(SearchBase):
 
         except Exception as e:
             return {"results": [], "error": str(e)}
+
+    def get_tool_schemas(self) -> list[Dict[str, Any]]:
+        """
+        Returns the OpenAI-compatible function schema for the Google search tool.
+        
+        Returns:
+            Dict[str, Any]: Function schema in OpenAI format
+        """
+        return [{
+            "name": "search",
+            "description": "Search Google using the Custom Search API and retrieve detailed search results with content snippets.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query to execute on Google"
+                    },
+                    "api_key": {
+                        "type": "string",
+                        "description": "The Google API key to use (will use environment variable if not provided)"
+                    },
+                    "search_engine_id": {
+                        "type": "string",
+                        "description": "The Google Search Engine ID to use (will use environment variable if not provided)"
+                    },
+                    "num_search_pages": {
+                        "type": "integer",
+                        "description": "The number of search results to retrieve (default is 5)."
+                    },
+                    "max_content_words": {
+                        "type": "integer",
+                        "description": "The maximum number of words to retain from the content (default is 500)."
+                    }
+                },
+                "required": ["query"]
+            }
+        }]
+    
+    def get_tools(self):
+        return [self.search]

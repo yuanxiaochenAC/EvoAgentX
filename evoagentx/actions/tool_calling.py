@@ -130,7 +130,7 @@ class ToolCalling(Action):
         self.max_tool_try = kwargs.pop("max_tool_try", 2)
     
     def add_tool(self, tools_schema: dict, tools_caller: Callable):
-        if self.tools_schema is None:
+        if not self.tools_schema:
             self.tools_schema = {}
             self.tools_caller = {}
         self.tools_schema[tools_schema["name"]] = tools_schema

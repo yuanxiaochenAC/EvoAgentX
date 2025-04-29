@@ -9,7 +9,7 @@ import asyncio
 import json
 import os
 import shlex
-from typing import Optional, Dict, Any, List, Callable
+from typing import Optional, Dict, Any, List, Callable, AsyncGenerator
 import inspect
 from contextlib import AsyncExitStack, asynccontextmanager
 from urllib.parse import urlparse
@@ -176,10 +176,10 @@ class MCPClient:
             return self
         except Exception as e:
             # Clean up on failure
-            await self.cleanup()
             print(f"Failed to connect to MCP server: {e}")
+            await self.cleanup()
             raise RuntimeError(f"Failed to connect to MCP server: {e}") from e
-    
+           
     @asynccontextmanager
     async def connection(self):
         """Async context manager for MCP server connection
@@ -267,7 +267,7 @@ class MCPClient:
         Returns:
             Callable: A dynamically created Python function that wraps the MCP tool
         """
-        # Build the tool schema but we don't use it in this method
+        # Build the tool schema but we don't use  it in this method
         # schema = self._build_tool_schema(mcp_tool)
         
         func_name = mcp_tool.name
@@ -389,7 +389,7 @@ class MCPClient:
         """
         return [self.generate_function_from_mcp_tool(tool) for tool in self._mcp_tools]
         
-    def get_openai_tool_schemas(self) -> List[Dict[str, Any]]:
+    def get_tool_schema(self) -> List[Dict[str, Any]]:
         """Get OpenAI-compatible tool schemas for all MCP tools
         
         Returns:
@@ -424,13 +424,14 @@ class MCPClient:
                 pass
             else:
                 print(f"Suppressed error during disconnect: {e}")
+
         finally:
             self.session = None
-        
+         
     async def cleanup(self):
         """Clean up resources and disconnect from the server"""
         await self.disconnect()
-        
+            
     def is_connected(self) -> bool:
         """Check if the client is connected
         
@@ -512,7 +513,7 @@ class MCPToolkit:
         if not self._connected:
             return
             
-        # Simple direct disconnect without tracking errors
+    # Simple direct disconnect without tracking errors
         for server in self.servers:
             try:
                 # Just attempt to disconnect each server directly
@@ -530,7 +531,6 @@ class MCPToolkit:
             except Exception:
                 # Catch absolutely any errors at the outermost level
                 pass
-                
         # Mark as disconnected regardless of success/failure
         self._connected = False
         self._tools_cache = {}
@@ -547,7 +547,8 @@ class MCPToolkit:
             yield self
         finally:
             await self.disconnect()
-            
+    
+    
     def is_connected(self) -> bool:
         """Check if all servers are connected
         
@@ -556,7 +557,7 @@ class MCPToolkit:
         """
         return self._connected and all(server.is_connected() for server in self.servers)
         
-    def get_all_openai_tool_schemas(self) -> List[Dict[str, Any]]:
+    def get_tool_schema(self) -> List[Dict[str, Any]]:
         """Get OpenAI-compatible tool schemas for all tools from all servers
         
         Returns:
@@ -568,7 +569,7 @@ class MCPToolkit:
         all_schemas = []
         for server in self.servers:
             if server.is_connected():
-                all_schemas.extend(server.get_openai_tool_schemas())
+                all_schemas.extend(server.get_tool_schema())
                 
         return all_schemas
         

@@ -12,117 +12,8 @@ class DockerInterpreter(BaseInterpreter):
     A Docker-based interpreter for executing Python, Bash, and R scripts in an isolated environment.
     """
 
-    def get_tool_schema(self) -> Dict[str, Any]:
-        """
-        Returns the OpenAI-compatible function schema for the Docker interpreter.
-        
-        Returns:
-            Dict[str, Any]: Function schema in OpenAI format
-        """
-        return {
-            "type": "function",
-            "function": {
-                "name": "execute_code",
-                "description": "The Docker Interpreter Tool provides a secure and isolated environment for executing code inside a Docker container.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "code": {
-                            "type": "string",
-                            "description": "The code to execute"
-                        },
-                        "language": {
-                            "type": "string",
-                            "description": "The programming language of the code (e.g., python, py, python3)"
-                        }
-                    },
-                    "required": ["code", "language"]
-                }
-            }
-        }
+    
 
-    def get_tool_info(self):
-        return {
-            "description": """The Docker Interpreter Tool provides a secure and isolated environment for executing Python code inside a Docker container. 
-            It ensures controlled execution by leveraging containerization, allowing scripts to run without affecting the host system. 
-            The tool supports mounting local directories into the container, enabling seamless access to external files.
-            
-            The tool ensures:
-            - Code execution inside a predefined Docker container with restricted access.
-            - Support for executing scripts from inline code snippets or files in a mounted directory.
-            - Standard output and error message capture for debugging and verification.
-            - Optional user confirmation before executing scripts.
-            - Secure transfer of files from the host system into the container environment.""",
-            
-            "inputs": {
-                "require_confirm": {
-                    "type": "bool",
-                    "description": "If True, execution requires user confirmation.",
-                    "required": False
-                },
-                "print_stdout": {
-                    "type": "bool",
-                    "description": "If True, prints standard output from the container execution.",
-                    "required": False
-                },
-                "print_stderr": {
-                    "type": "bool",
-                    "description": "If True, prints standard error from the container execution.",
-                    "required": False
-                },
-                "image_tag": {
-                    "type": "str",
-                    "description": "The Docker image tag used for container execution. Defaults to 'fundingsocietiesdocker/python3.9-slim'.",
-                    "required": False
-                },
-                "dockerfile_path": {
-                    "type": "str",
-                    "description": "The path to the Dockerfile used for building the image if not found.",
-                    "required": False
-                },
-                "host_directory": {
-                    "type": "str",
-                    "description": "A local directory that will be mounted into the container for execution.",
-                    "required": False
-                },
-                "container_directory": {
-                    "type": "str",
-                    "description": "The corresponding directory inside the container where the host directory is mounted.",
-                    "required": False
-                },
-                "code": {
-                    "type": "str",
-                    "description": "The Python code snippet to be executed inside the Docker container.",
-                    "required": True
-                },
-                "language": {
-                    "type": "str",
-                    "description": "The programming language of the code being executed. Currently supports Python ('python', 'py', 'py3', 'python3').",
-                    "required": True
-                }
-            },
-            
-            "outputs": {
-                "execution_result": {
-                    "type": "str",
-                    "description": "The output of the executed code inside the container, including standard output and error messages."
-                },
-                "error": {
-                    "type": "str",
-                    "description": "An error message if execution fails inside the container."
-                }
-            },
-            
-            "functionality": """Methods and their functionality:
-            - `_initialize_if_needed()`: Ensures the Docker container is initialized and the required image is available.
-            - `_upload_directory_to_container(host_directory: str)`: Transfers files from a given host directory into the container.
-            - `_create_file_in_container(content: str)`: Generates a temporary file inside the container for execution.
-            - `_run_file_in_container(file: Path, language: str)`: Executes the specified file inside the container and retrieves output.
-            - `execute(code: str, language: str)`: Runs Python code inside the Docker container, optionally confirming execution.
-            - `_check_language(language: str)`: Validates and maps supported programming languages to the correct Docker execution command.""",
-            
-            "interface": "execute(code: str, language: str) -> dict with key 'execution_result' (str) or 'error' (str)"
-        }
 
     _CODE_EXECUTE_CMD_MAPPING: ClassVar[Dict[str, str]] = {
         "python": "python {file_name}",
@@ -270,3 +161,54 @@ class DockerInterpreter(BaseInterpreter):
         if language not in self._CODE_TYPE_MAPPING:
             raise ValueError(f"Unsupported language: {language}")
         return self._CODE_TYPE_MAPPING[language]
+
+    def get_tool_schemas(self) -> list[Dict[str, Any]]:
+        """
+        Returns the OpenAI-compatible function schema for the Docker interpreter.
+        
+        Returns:
+            list[Dict[str, Any]]: Function schema in OpenAI format
+        """
+        return [{
+            "name": "execute",
+            "description": "The Docker Interpreter Tool provides a secure and isolated environment for executing code inside a Docker container.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "description": "The code to execute"
+                    },
+                    "language": {
+                        "type": "string",
+                        "description": "The programming language of the code (e.g., python, py, python3)"
+                    }
+                },
+                "required": ["code", "language"]
+            }
+        }]
+        
+    def get_tool_schema(self) -> Dict[str, Any]:
+        """Legacy method for backward compatibility. Use get_tool_schemas instead."""
+        schemas = self.get_tool_schemas()
+        if schemas and len(schemas) > 0:
+            return schemas[0]
+        return {}
+
+    def get_tool_description(self) -> str:
+        """
+        Returns a brief description of the Docker interpreter tool.
+        
+        Returns:
+            str: Tool description
+        """
+        return "Docker Interpreter Tool that provides a secure and isolated environment for executing code inside Docker containers."
+        
+    def get_tools(self):
+        """
+        Returns a list of callable methods provided by this tool.
+        
+        Returns:
+            list: List of callable methods
+        """
+        return [self.execute]
