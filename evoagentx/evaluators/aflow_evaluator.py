@@ -65,7 +65,7 @@ class AFlowEvaluator:
         async def evaluate_with_semaphore(example):
             async with semaphore:
                 try:
-                    return await benchmark.evaluate_async(configured_graph, example)
+                    return await benchmark.async_evaluate(configured_graph, example)
                 except Exception as e:
                     logger.warning(f"Evaluation failed: {str(e)}")
                     return None

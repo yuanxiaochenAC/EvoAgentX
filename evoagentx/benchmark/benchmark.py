@@ -84,7 +84,7 @@ class Benchmark(ABC):
         """
         pass 
 
-    async def evaluate_async(self, prediction: Any, label: Any) -> dict:
+    async def async_evaluate(self, prediction: Any, label: Any) -> dict:
         """
         Asynchronous version of evaluate method that internally calls the synchronous evaluate.
         

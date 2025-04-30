@@ -143,10 +143,10 @@ class AFlowGSM8K(GSM8K):
             logger.info(f"Loading test data from {AFLOW_DATASET_FILES_MAP['gsm8k']['test']}")
             self._test_data = self._load_data_from_file(file_name=AFLOW_DATASET_FILES_MAP["gsm8k"]["test"])       
     
-    async def evaluate_async(self, graph: Callable, example: Any) -> float:
+    async def async_evaluate(self, graph: Callable, example: Any) -> float:
 
         input_text = example["question"] 
         label = self._get_label(example) 
         output = await graph(input_text)
-        metrics = await super().evaluate_async(prediction=output, label=label)
+        metrics = await super().async_evaluate(prediction=output, label=label)
         return metrics["solve_rate"]

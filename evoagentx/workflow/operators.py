@@ -98,7 +98,7 @@ class Custom(Operator):
     
     async def async_execute(self, input: str, instruction: str) -> dict:
         prompt = instruction + input
-        response = await self.llm.generate_async(prompt=prompt, parser=self.outputs_format, parse_mode="str")
+        response = await self.llm.async_generate(prompt=prompt, parser=self.outputs_format, parse_mode="str")
         output = response.get_structured_data()
         return output 
 
@@ -126,7 +126,7 @@ class AnswerGenerate(Operator):
     async def async_execute(self, input: str) -> dict:
         # prompt = ANSWER_GENERATION_PROMPT.format(input=input)
         prompt = self.prompt.format(input=input)
-        response = await self.llm.generate_async(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
+        response = await self.llm.async_generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
     
 
@@ -166,7 +166,7 @@ class QAScEnsemble(Operator):
     async def async_execute(self, solutions: List[str]) -> dict:
         answer_mapping, solution_text = self._prepare_solutions(solutions)
         prompt = self.prompt.format(solutions=solution_text)
-        response = await self.llm.generate_async(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
+        response = await self.llm.async_generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return self._process_response(response, answer_mapping, solutions)
 
 
@@ -201,7 +201,7 @@ class ScEnsemble(Operator):
     async def async_execute(self, solutions: List[str], problem: str) -> dict:
         answer_mapping, solution_text = self._prepare_solutions(solutions)
         prompt = self.prompt.format(problem=problem, solutions=solution_text)
-        response = await self.llm.generate_async(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
+        response = await self.llm.async_generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return self._process_response(response, answer_mapping, solutions)
 
 
@@ -223,7 +223,7 @@ class CustomCodeGenerate(Operator):
     
     async def async_execute(self, problem: str, entry_point: str, instruction: str) -> dict:
         prompt = instruction + problem
-        response = await self.llm.generate_async(prompt=prompt, parser=self.outputs_format, parse_mode="str")
+        response = await self.llm.async_generate(prompt=prompt, parser=self.outputs_format, parse_mode="str")
         code = sanitize(response.content, entrypoint=entry_point)
         return {"response": code}
 
@@ -330,7 +330,7 @@ class Test(Operator):
                 )
                 # response = await self._fill_node(ReflectionTestOp, prompt, mode="code_fill")
                 # solution = response["reflection_and_solution"]
-                response = await self.llm.generate_async(prompt=prompt, parser=ReflectionTestOp, parse_mode="json")
+                response = await self.llm.async_generate(prompt=prompt, parser=ReflectionTestOp, parse_mode="json")
                 solution = sanitize(
                     response.get_structured_data().get("reflection_and_solution", response.content), 
                     entrypoint=entry_point
@@ -344,7 +344,7 @@ class Test(Operator):
                 )
                 # response = await self._fill_node(ReflectionTestOp, prompt, mode="code_fill")
                 # solution = response["reflection_and_solution"]
-                response = await self.llm.generate_async(prompt=prompt, parser=ReflectionTestOp, parse_mode="json")
+                response = await self.llm.async_generate(prompt=prompt, parser=ReflectionTestOp, parse_mode="json")
                 solution = sanitize(
                     response.get_structured_data().get("reflection_and_solution", response.content), 
                     entrypoint=entry_point
@@ -430,7 +430,7 @@ class Programmer(Operator):
             analysis=analysis,
             feedback=feedback
         )
-        response = await self.llm.generate_async(prompt=prompt, parser=None, parse_mode="str")
+        response = await self.llm.async_generate(prompt=prompt, parser=None, parse_mode="str")
         code = sanitize(response.content, entrypoint="solve")
         return {"code": code}
     

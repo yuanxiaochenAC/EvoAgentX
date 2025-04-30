@@ -565,7 +565,7 @@ class BaseLLM(ABC):
         parsed_outputs = self.parse_generated_texts(texts=generated_texts, parser=parser, parse_mode=parse_mode, parse_func=parse_func, **kwargs)
         return parsed_outputs[0] if single_generate else parsed_outputs
     
-    async def generate_async(
+    async def async_generate(
         self,
         prompt: Optional[Union[str, List[str]]] = None,
         system_message: Optional[Union[str, List[str]]] = None,

@@ -95,7 +95,7 @@ class AFlowHotPotQA(HotPotQA):
         if self.mode == "test" or self.mode == "all":
             self._test_data = self._load_data_from_file(file_name=AFLOW_DATASET_FILES_MAP["hotpotqa"]["test"])
     
-    async def evaluate_async(self, graph: Callable, example: Any) -> float:
+    async def async_evaluate(self, graph: Callable, example: Any) -> float:
 
         # generate solution 
         prompt = example["question"]
@@ -104,6 +104,6 @@ class AFlowHotPotQA(HotPotQA):
         inputs = f"Context: {context_str}\n\nQuestion: {prompt}\n\nAnswer:"
         solution = await graph(inputs)
         label = self._get_label(example)
-        metrics = await super().evaluate_async(prediction=solution, label=label)
+        metrics = await super().async_evaluate(prediction=solution, label=label)
         return metrics["f1"]
     

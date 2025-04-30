@@ -196,9 +196,9 @@ class AFlowOptimizer(BaseModule):
             graph_optimize_prompt = self.graph_utils.create_graph_optimize_prompt(
                 experience, sample["score"], graph[0], prompt, operator_description, self.question_type, log_data
             )
-            # response = await self.optimizer_llm.generate_async(prompt=graph_optimize_prompt, parser=GraphOptimizeOutput, parse_mode="xml")
+            # response = await self.optimizer_llm.async_generate(prompt=graph_optimize_prompt, parser=GraphOptimizeOutput, parse_mode="xml")
             # response = response.get_structured_data()
-            response = await self.optimizer_llm.generate_async(prompt=graph_optimize_prompt, parse_mode="str")
+            response = await self.optimizer_llm.async_generate(prompt=graph_optimize_prompt, parse_mode="str")
             print(response.content)
             try:
                 parsed_response = GraphOptimizeOutput.parse(response.content, parse_mode="xml")

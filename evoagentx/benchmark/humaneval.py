@@ -216,12 +216,12 @@ class AFlowHumanEval(HumanEval):
         
         return None
     
-    async def evaluate_async(self, graph: Callable, example: Any) -> float:
+    async def async_evaluate(self, graph: Callable, example: Any) -> float:
 
         # generate solution 
         prompt, entry_point = example["prompt"], example["entry_point"]
         solution = await graph(prompt, entry_point)
         label = self._get_label(example)
-        metrics = await super().evaluate_async(prediction=solution, label=label)
+        metrics = await super().async_evaluate(prediction=solution, label=label)
         return metrics["pass@1"]
     

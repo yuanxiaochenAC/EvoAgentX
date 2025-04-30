@@ -1,7 +1,7 @@
 import json
 from pydantic import model_validator 
 from pydantic_core import PydanticUndefined
-from typing import Dict, Optional, Type, Tuple, Union, List, Any
+from typing import Optional, Type, Tuple, Union, List, Any
 
 from ..core.module import BaseModule
 from ..core.module_utils import get_type_name
@@ -159,7 +159,7 @@ class Action(BaseModule):
             If `return_prompt` is False, the method returns a Parser object containing the structured result of the action.
             If `return_prompt` is True, the method returns a tuple containing the Parser object and the complete prompt passed to the LLM.
         """
-        pass
+        raise NotImplementedError(f"`execute` function of {type(self).__name__} is not implemented!")
 
     async def async_execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, **kwargs) -> Optional[Union[Parser, Tuple[Parser, str]]]:
         """
@@ -168,7 +168,7 @@ class Action(BaseModule):
         This method is the asynchronous counterpart of the `execute` method.
         It allows the action to be executed asynchronously using an LLM.
         """
-        pass 
+        raise NotImplementedError(f"`async_execute` function of {type(self).__name__} is not implemented!")
 
 class ContextExtraction(Action):
     """Action for extracting structured inputs from context.

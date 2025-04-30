@@ -1,7 +1,7 @@
 from enum import Enum
 from pydantic import Field, model_validator
 from datetime import datetime
-from typing import Dict, Optional, Callable, Any, List
+from typing import Optional, Callable, Any, List
 
 from .module import BaseModule
 from .module_utils import generate_id, get_timestamp
