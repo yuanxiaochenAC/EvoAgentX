@@ -26,6 +26,7 @@ class TestModule(unittest.TestCase):
                     "class_name": "Action", 
                     "name": "test_action_name", 
                     "description": "test_action_desc", 
+                    "prompt": "test_action_prompt", 
                 }
             ]
         }
@@ -33,6 +34,33 @@ class TestModule(unittest.TestCase):
         self.assertEqual(agent.llm_config.model, "gpt-4o-mini")
         self.assertTrue(isinstance(agent.llm, LiteLLM))
         self.assertTrue(isinstance(agent.actions[0], Action))
+
+        # test actions
+        self.assertTrue(len(agent.get_all_actions()) == 1)
+        action = agent.get_action("test_action_name")
+        self.assertEqual(action.name, "test_action_name") 
+        self.assertEqual(action.description, "test_action_desc") 
+
+        # test get_prompts and set_prompts 
+        prompts = agent.get_prompts() 
+        self.assertEqual(len(prompts), 1)
+        self.assertEqual(prompts["test_action_name"]["system_prompt"], None) 
+        self.assertEqual(prompts["test_action_name"]["prompt"], "test_action_prompt")
+
+        agent.set_prompt("test_action_name", "new_test_action_prompt", "new_system_prompt") 
+        self.assertTrue(agent.system_prompt, "new_system_prompt")
+        self.assertEqual(agent.get_action("test_action_name").prompt, "new_test_action_prompt")
+
+        agent.set_prompts(
+            {
+                "test_action_name": {
+                    "system_prompt": "new_system_prompt_v2", 
+                    "prompt": "new_test_action_prompt_v2"
+                }
+            }
+        ) 
+        self.assertTrue(agent.system_prompt, "new_system_prompt_v2")
+        self.assertEqual(agent.get_action("test_action_name").prompt, "new_test_action_prompt_v2")
 
         # test __eq__ & __hash__
         agent2 = Agent.from_dict(agent_data)
@@ -62,7 +90,7 @@ class TestModule(unittest.TestCase):
                 }
             ]
         )
-        agent.save_module(path=self.save_file, ignore=["llm_config"])
+        agent.save_module(path=self.save_file)
         loaded_agent = Agent.from_file(path=self.save_file, llm_config=llm_config)
         self.assertEqual(agent, loaded_agent)
 

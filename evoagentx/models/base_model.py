@@ -267,7 +267,8 @@ class LLMOutputParser(Parser):
                 - 'title': Parses content with Markdown-style headings. Uses the Markdown-style headings to create an instance of LLMOutputParser. The default title format is "## {title}", you can change it by providing `title_format` parameter, which should be a string that contains `{title}` placeholder. 
                 - 'custom': Uses custom parsing logic. Requires providing `parse_func` parameter as a custom parsing function. The `parse_func` must have a parameter named `content` and return a dictionary where the keys are the attribute names and the values are the parsed data. 
             parse_func: The function to parse the content, only valid when `parse_mode` is 'custom'.
-            **kwargs: Additional arguments passed to parsing functions.
+            **kwargs: Additional arguments passed to parsing functions, such as:
+                - `title_format` for `parse_mode="title"`.
             
         Returns:
             An instance of LLMOutputParser containing the parsed data.

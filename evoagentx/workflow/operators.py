@@ -47,16 +47,16 @@ class Operator(BaseModule):
 
     def __call__(self, *args: Any, **kwargs: Any) -> dict:
         """Make the operator callable and automatically choose between sync and async execution"""
-        if asyncio.iscoroutinefunction(self.execute_async) and asyncio.get_event_loop().is_running():
-            # If the operator is in an asynchronous environment and has an execute_async method, return a coroutine
-            return self.execute_async(*args, **kwargs)
+        if asyncio.iscoroutinefunction(self.async_execute) and asyncio.get_event_loop().is_running():
+            # If the operator is in an asynchronous environment and has an async_execute method, return a coroutine
+            return self.async_execute(*args, **kwargs)
         # Otherwise, use the synchronous method
         return self.execute(*args, **kwargs)
     
     def execute(self, *args, **kwargs) -> dict:
         raise NotImplementedError(f"The execute function for {type(self).__name__} is not implemented!")
     
-    async def execute_async(self, *args, **kwargs) -> dict:
+    async def async_execute(self, *args, **kwargs) -> dict:
         raise NotImplementedError(f"The execute function for {type(self).__name__} is not implemented!")
     
     def save_module(self, path: str, ignore: List[str] = [], **kwargs)-> str:
@@ -96,7 +96,7 @@ class Custom(Operator):
         output =response.get_structured_data()
         return output 
     
-    async def execute_async(self, input: str, instruction: str) -> dict:
+    async def async_execute(self, input: str, instruction: str) -> dict:
         prompt = instruction + input
         response = await self.llm.generate_async(prompt=prompt, parser=self.outputs_format, parse_mode="str")
         output = response.get_structured_data()
@@ -123,7 +123,7 @@ class AnswerGenerate(Operator):
         response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
     
-    async def execute_async(self, input: str) -> dict:
+    async def async_execute(self, input: str) -> dict:
         # prompt = ANSWER_GENERATION_PROMPT.format(input=input)
         prompt = self.prompt.format(input=input)
         response = await self.llm.generate_async(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
@@ -163,7 +163,7 @@ class QAScEnsemble(Operator):
         response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return self._process_response(response, answer_mapping, solutions)
 
-    async def execute_async(self, solutions: List[str]) -> dict:
+    async def async_execute(self, solutions: List[str]) -> dict:
         answer_mapping, solution_text = self._prepare_solutions(solutions)
         prompt = self.prompt.format(solutions=solution_text)
         response = await self.llm.generate_async(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
@@ -198,7 +198,7 @@ class ScEnsemble(Operator):
         response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return self._process_response(response, answer_mapping, solutions)
 
-    async def execute_async(self, solutions: List[str], problem: str) -> dict:
+    async def async_execute(self, solutions: List[str], problem: str) -> dict:
         answer_mapping, solution_text = self._prepare_solutions(solutions)
         prompt = self.prompt.format(problem=problem, solutions=solution_text)
         response = await self.llm.generate_async(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
@@ -221,7 +221,7 @@ class CustomCodeGenerate(Operator):
         code = sanitize(response.content, entrypoint=entry_point)
         return {"response": code}
     
-    async def execute_async(self, problem: str, entry_point: str, instruction: str) -> dict:
+    async def async_execute(self, problem: str, entry_point: str, instruction: str) -> dict:
         prompt = instruction + problem
         response = await self.llm.generate_async(prompt=prompt, parser=self.outputs_format, parse_mode="str")
         code = sanitize(response.content, entrypoint=entry_point)
@@ -309,7 +309,7 @@ class Test(Operator):
         else:
             return "no error"
 
-    async def execute_async(self, problem, solution, entry_point, benchmark: Benchmark, test_loop: int = 3):
+    async def async_execute(self, problem, solution, entry_point, benchmark: Benchmark, test_loop: int = 3):
         """
         "Test": {
         "description": "Test the solution with test cases, if the solution is correct, return 'no error', if the solution is incorrect, return reflect on the soluion and the error information",
@@ -434,7 +434,7 @@ class Programmer(Operator):
         code = sanitize(response.content, entrypoint="solve")
         return {"code": code}
     
-    async def execute_async(self, problem: str, analysis: str = "None"): 
+    async def async_execute(self, problem: str, analysis: str = "None"): 
 
         code = None 
         output = None 

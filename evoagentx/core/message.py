@@ -1,7 +1,7 @@
 from enum import Enum
-from pydantic import Field
+from pydantic import Field, model_validator
 from datetime import datetime
-from typing import Optional, Callable, Any, List
+from typing import Dict, Optional, Callable, Any, List
 
 from .module import BaseModule
 from .module_utils import generate_id, get_timestamp
@@ -77,6 +77,22 @@ class Message(BaseModule):
                 
         msg = "\n".join(msg_part)
         return msg 
+
+    def to_dict(self, exclude_none: bool = True, ignore: List[str] = [], **kwargs) -> dict:
+        """
+        Convert the Message to a dictionary for saving. 
+        """
+        data = super().to_dict(exclude_none=exclude_none, ignore=ignore, **kwargs) 
+        if self.msg_type:
+            data["msg_type"] = self.msg_type.value
+        return data 
+    
+    @model_validator(mode="before")
+    @classmethod
+    def validate_data(cls, data: Any) -> Any:
+        if "msg_type" in data and data["msg_type"] and isinstance(data["msg_type"], str):
+            data["msg_type"] = MessageType(data["msg_type"])
+        return data 
 
     @classmethod
     def sort_by_timestamp(cls, messages: List['Message'], reverse: bool = False) -> List['Message']:

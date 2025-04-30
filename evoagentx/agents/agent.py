@@ -1,3 +1,4 @@
+import asyncio
 from pydantic import Field
 from typing import Type, Optional, Union, Tuple, List
 
@@ -5,7 +6,6 @@ from ..core.module import BaseModule
 from ..core.module_utils import generate_id
 from ..core.message import Message, MessageType
 from ..core.registry import MODEL_REGISTRY
-from ..core.parser import Parser
 from ..models.model_configs import LLMConfig
 from ..models.base_model import BaseLLM
 from ..memory.memory import ShortTermMemory
@@ -57,68 +57,88 @@ class Agent(BaseModule):
             self.init_long_term_memory()
         self.actions = [] if self.actions is None else self.actions
         self._action_map = {action.name: action for action in self.actions} if self.actions else dict()
-        self._save_ignore_fields = ["llm"]
+        self._save_ignore_fields = ["llm", "llm_config"]
         self.init_context_extractor()
 
-    def execute(
-        self, 
-        action_name: str, 
-        msgs: Optional[List[Message]] = None, 
-        action_input_data: Optional[dict] = None, 
-        return_msg_type: Optional[MessageType] = MessageType.UNKNOWN,
+    def __call__(self, *args, **kwargs):
+        """Make the agent callable and automatically choose between sync and async execution"""
+        if asyncio.iscoroutinefunction(self.async_execute) and asyncio.get_event_loop().is_running():
+            # If the operator is in an asynchronous environment and has an execute_async method, return a coroutine
+            return self.async_execute(*args, **kwargs)
+        # Otherwise, use the synchronous method
+        return self.execute(*args, **kwargs)
+    
+    def _prepare_execution(
+        self,
+        action_name: str,
+        msgs: Optional[List[Message]] = None,
+        action_input_data: Optional[dict] = None,
         **kwargs
-    ) -> Message:
-        """Execute an action with the given context and return results.
-
-        This is the core method for agent functionality, allowing it to perform actions
-        based on the current conversation context. The method:
-        1. Updates short-term memory with provided messages
-        2. Extracts input data for the action if not provided
-        3. Executes the action using the language model
-        4. Creates a message with the results
-        5. Updates short-term memory with the results
-
+    ) -> Tuple[Action, dict]:
+        """Prepare for action execution by updating memory and getting inputs.
+        
+        Helper method used by both execute and aexecute methods.
+        
         Args:
             action_name: The name of the action to execute
             msgs: Optional list of messages providing context for the action
             action_input_data: Optional pre-extracted input data for the action
-            return_msg_type: Message type for the return message
-            **kwargs: Additional parameters, may include workflow information
-        
+            **kwargs: Additional workflow parameters
+            
         Returns:
-            Message: A message containing the execution results
+            Tuple containing the action object and input data
             
         Raises:
             AssertionError: If neither msgs nor action_input_data is provided
-            KeyError: If the action_name is invalid
-            
-        Notes:
-            - Either msgs or action_input_data must be provided
-            - The action's results are formatted as a Message object
-            - The message is added to short-term memory before being returned
         """
-        assert msgs is not None or action_input_data is not None, "must provide either `msgs` or `action_input_data` in execute(...)"
+        assert msgs is not None or action_input_data is not None, "must provide either `msgs` or `action_input_data`"
         action = self.get_action(action_name=action_name)
 
         # update short-term memory
         if msgs is not None:
+            # directly add messages to short-term memory
             self.short_term_memory.add_messages(msgs)
+        if action_input_data is not None:
+            # create a message from action_input_data and add it to short-term memory
+            input_message = Message(
+                content = action_input_data,
+                next_actions = [action_name],
+                msg_type = MessageType.INPUT, 
+                wf_goal = kwargs.get("wf_goal", None),
+                wf_task = kwargs.get("wf_task", None),
+                wf_task_desc = kwargs.get("wf_task_desc", None)
+            )
+            self.short_term_memory.add_message(input_message)
         
-        # obtain action input data from short term memory
+        # obtain action input data from short term memory if not provided
         action_input_data = action_input_data or self.get_action_inputs(action=action)
-
-        # execute action
-        execution_results: Tuple[Parser, str] = action.execute(
-            llm=self.llm, 
-            inputs=action_input_data, 
-            sys_msg=self.system_prompt,
-            return_prompt=True
-        )
-        action_output, prompt = execution_results
-
+        
+        return action, action_input_data
+    
+    def _create_output_message(
+        self,
+        action_output,
+        prompt: str,
+        action_name: str,
+        return_msg_type: Optional[MessageType] = MessageType.UNKNOWN,
+        **kwargs
+    ) -> Message:
+        """Create a message from execution results and update memory.
+        
+        Helper method used by both execute and aexecute methods.
+        
+        Args:
+            action_output: The output from action execution
+            prompt: The prompt used for execution
+            action_name: The name of the executed action
+            return_msg_type: Message type for the return message
+            **kwargs: Additional workflow parameters
+            
+        Returns:
+            Message object containing execution results
+        """
         # formulate a message
         message = Message(
-            # content=action_output.to_str(),
             content=action_output, 
             agent=self.name,
             action=action_name,
@@ -131,8 +151,104 @@ class Agent(BaseModule):
 
         # update short-term memory
         self.short_term_memory.add_message(message)
-
+        
         return message
+    
+    async def async_execute(
+        self, 
+        action_name: str, 
+        msgs: Optional[List[Message]] = None, 
+        action_input_data: Optional[dict] = None, 
+        return_msg_type: Optional[MessageType] = MessageType.UNKNOWN,
+        **kwargs
+    ) -> Message:
+        """Execute an action asynchronously with the given context and return results.
+
+        This is the async version of the execute method, allowing it to perform actions
+        based on the current conversation context.
+
+        Args:
+            action_name: The name of the action to execute
+            msgs: Optional list of messages providing context for the action
+            action_input_data: Optional pre-extracted input data for the action
+            return_msg_type: Message type for the return message
+            **kwargs: Additional parameters, may include workflow information
+        
+        Returns:
+            Message: A message containing the execution results
+        """
+        action, action_input_data = self._prepare_execution(
+            action_name=action_name,
+            msgs=msgs,
+            action_input_data=action_input_data,
+            **kwargs
+        )
+
+        # execute action asynchronously
+        execution_results = await action.async_execute(
+            llm=self.llm, 
+            inputs=action_input_data, 
+            sys_msg=self.system_prompt,
+            return_prompt=True,
+            **kwargs
+        )
+        action_output, prompt = execution_results
+
+        return self._create_output_message(
+            action_output=action_output,
+            prompt=prompt,
+            action_name=action_name,
+            return_msg_type=return_msg_type,
+            **kwargs
+        )
+    
+    def execute(
+        self, 
+        action_name: str, 
+        msgs: Optional[List[Message]] = None, 
+        action_input_data: Optional[dict] = None, 
+        return_msg_type: Optional[MessageType] = MessageType.UNKNOWN,
+        **kwargs
+    ) -> Message:
+        """Execute an action with the given context and return results.
+
+        This is the core method for agent functionality, allowing it to perform actions
+        based on the current conversation context.
+
+        Args:
+            action_name: The name of the action to execute
+            msgs: Optional list of messages providing context for the action
+            action_input_data: Optional pre-extracted input data for the action
+            return_msg_type: Message type for the return message
+            **kwargs: Additional parameters, may include workflow information
+        
+        Returns:
+            Message: A message containing the execution results
+        """
+        action, action_input_data = self._prepare_execution(
+            action_name=action_name,
+            msgs=msgs,
+            action_input_data=action_input_data,
+            **kwargs
+        )
+
+        # execute action
+        execution_results = action.execute(
+            llm=self.llm, 
+            inputs=action_input_data, 
+            sys_msg=self.system_prompt,
+            return_prompt=True,
+            **kwargs
+        )
+        action_output, prompt = execution_results
+
+        return self._create_output_message(
+            action_output=action_output,
+            prompt=prompt,
+            action_name=action_name,
+            return_msg_type=return_msg_type,
+            **kwargs
+        )
     
     def init_llm(self):
         """
@@ -275,7 +391,64 @@ class Agent(BaseModule):
 
     def __hash__(self):
         return self.agent_id
+    
+    def get_prompts(self) -> dict:
+        """
+        Get all the prompts of the agent.
         
+        Returns:
+            dict: A dictionary with keys in the format 'agent_name::action_name' and values
+                containing the system_prompt and action prompt.
+        """
+        prompts = {}
+        for action in self.get_all_actions():
+            prompts[action.name] = {
+                "system_prompt": self.system_prompt, 
+                "prompt": action.prompt
+            }
+        return prompts
+    
+    def set_prompt(self, action_name: str, prompt: str, system_prompt: Optional[str] = None) -> bool:
+        """
+        Set the prompt for a specific action of this agent.
+        
+        Args:
+            action_name: Name of the action whose prompt should be updated
+            prompt: New prompt text to set for the action
+            system_prompt: Optional new system prompt to set for the agent
+            
+        Returns:
+            bool: True if the prompt was successfully updated, False otherwise
+            
+        Raises:
+            KeyError: If the action_name does not exist for this agent
+        """
+        try:
+            action = self.get_action(action_name)
+            action.prompt = prompt
+            
+            if system_prompt is not None:
+                self.system_prompt = system_prompt
+                
+            return True
+        except KeyError:
+            raise KeyError(f"Action '{action_name}' not found in agent '{self.name}'")
+        
+    def set_prompts(self, prompts: dict) -> bool:
+        """
+        Set the prompts for all actions of this agent.
+        
+        Args:
+            prompts: A dictionary with keys in the format 'action_name' and values
+                containing the system_prompt and action prompt.
+        
+        Returns:
+            bool: True if the prompts were successfully updated, False otherwise
+        """
+        for action_name, prompt_data in prompts.items():
+            self.set_prompt(action_name, prompt_data["prompt"], prompt_data["system_prompt"])
+        return True
+
     def save_module(self, path: str, ignore: List[str] = [], **kwargs)-> str:
         """Save the agent to persistent storage.
                 
@@ -291,7 +464,18 @@ class Agent(BaseModule):
         super().save_module(path=path, ignore=ignore_fields, **kwargs)
 
     @classmethod
-    def load_module(cls, path: str, llm_config: LLMConfig, **kwargs):
+    def load_module(cls, path: str, llm_config: LLMConfig = None, **kwargs):
+        """
+        load the agent from local storage. Must provide `llm_config` when loading the agent from local storage. 
+
+        Args:
+            path: The path of the file
+            llm_config: The LLMConfig instance
+        
+        Returns:
+            Agent: The loaded agent instance
+        """
+        assert llm_config is not None, "must provide `llm_config` when using `load_module` or `from_file` to load the agent from local storage"
         agent = super().load_module(path=path, **kwargs)
         agent["llm_config"] = llm_config.to_dict()
         return agent 

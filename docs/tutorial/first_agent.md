@@ -93,15 +93,15 @@ The raw response from LLM will be parsed into a structured format with attribute
 You can control how the LLM response is parsed by setting the `parse_mode` parameter. `CustomizeAgent` supports different ways to parse the LLM output:
 
 - `parse_mode="str"`: Uses the raw LLM output as the value for each output field
-- `parse_mode="title" (default)`: Extracts content between titles matching output field names, the default title pattern is `## output_name`. If you use this parse_mode, you should instruct the model to output the content in the following format: 
-```
-## output_name that matches the keys in the outputs field
-[content]
+- `parse_mode="title" (default)`: Extracts content between titles matching output field names, the default title pattern is `## {title}`, where `{title}` is the name of the output field. If you use this `parse_mode`, you should instruct the model to output the content in the following format: 
+    ```
+    ## output_name that matches the keys in the outputs field
+    [content]
 
-## another_output_name 
-[content]
-```
-If you want to use a different pattern, you can set the `title_pattern` parameter, such as `title_pattern="# {title}"` (should include `{title}` in the pattern). 
+    ## another_output_name 
+    [content]
+    ```
+    If you want to use a different pattern, you can set the `title_format` parameter (should include `{title}` in the pattern), such as `message = code_writer(..., title_format="### {title}")`.
 
 - `parse_mode="json"`: Parses the LLM output as JSON. The LLM should be instructed to respond with a valid JSON string with keys matching the output field names. 
 
@@ -299,7 +299,7 @@ You can save an agent to a file and load it later:
 
 ```python
 # Save the agent to a file
-developer.save_module("examples/output/developer.json", ignore=["llm_config"]) # ignore the LLM config to avoid saving the API key 
+developer.save_module("examples/output/developer.json") # ignore the LLM config to avoid saving the API key 
 
 # Load the agent from a file
 developer = Agent.from_file("examples/output/developer.json", llm_config=openai_config)

@@ -113,6 +113,8 @@ ENV/
 
 # result or debug files
 outputs/
+examples/output/
+!examples/output/tetris_game/
 debug/
 debug*.py
 

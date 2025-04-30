@@ -117,9 +117,9 @@ def main():
     )
 
     # [optional] save the agent to a file
-    # developer.save_module("examples/output/developer.json", ignore=["llm_config"]) # ignore the LLM config to avoid saving the API key
+    # developer.save_module("examples/output/developer.json")
     # [optional] load the agent from a file
-    developer = Agent.from_file("examples/output/developer.json", llm_config=openai_config)
+    # developer = Agent.from_file("examples/output/developer.json", llm_config=openai_config)
 
     # List all available actions on the agent
     actions = developer.get_all_actions()

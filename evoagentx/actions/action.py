@@ -1,9 +1,11 @@
 import json
+from pydantic import model_validator 
 from pydantic_core import PydanticUndefined
-from typing import Optional, Type, Tuple, Union, List
+from typing import Dict, Optional, Type, Tuple, Union, List, Any
 
 from ..core.module import BaseModule
 from ..core.module_utils import get_type_name
+from ..core.registry import MODULE_REGISTRY
 # from ..core.base_config import Parameter
 from ..core.parser import Parser
 from ..core.message import Message
@@ -115,6 +117,30 @@ class Action(BaseModule):
         """
         pass 
 
+    def to_dict(self, exclude_none: bool = True, ignore: List[str] = [], **kwargs) -> dict:
+        """
+        Convert the action to a dictionary for saving.  
+        """
+        data = super().to_dict(exclude_none=exclude_none, ignore=ignore, **kwargs)
+        if self.inputs_format:
+            data["inputs_format"] = self.inputs_format.__name__ 
+        if self.outputs_format:
+            data["outputs_format"] = self.outputs_format.__name__ 
+        # TODO: customize serialization for the tools 
+        return data 
+    
+    @model_validator(mode="before")
+    @classmethod
+    def validate_data(cls, data: Any) -> Any:
+        if "inputs_format" in data and data["inputs_format"] and isinstance(data["inputs_format"], str):
+            # only used when loading from a file
+            data["inputs_format"] = MODULE_REGISTRY.get_module(data["inputs_format"])
+        if "outputs_format" in data and data["outputs_format"] and isinstance(data["outputs_format"], str):
+            # only used when loading from a file
+            data["outputs_format"] = MODULE_REGISTRY.get_module(data["outputs_format"])
+        # TODO: customize loading for the tools
+        return data 
+    
     def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, **kwargs) -> Optional[Union[Parser, Tuple[Parser, str]]]:
         """Execute the action to produce a result.
         
@@ -135,6 +161,14 @@ class Action(BaseModule):
         """
         pass
 
+    async def async_execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, **kwargs) -> Optional[Union[Parser, Tuple[Parser, str]]]:
+        """
+        Asynchronous execution of the action.
+        
+        This method is the asynchronous counterpart of the `execute` method.
+        It allows the action to be executed asynchronously using an LLM.
+        """
+        pass 
 
 class ContextExtraction(Action):
     """Action for extracting structured inputs from context.
