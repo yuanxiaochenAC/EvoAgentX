@@ -18,6 +18,10 @@ from .action_graph import ActionGraph
 class WorkFlow(BaseModule):
     """
     A workflow is a collection of tasks and actions that are executed in a specific order.
+    
+    The WorkFlow class orchestrates the execution of tasks defined in a workflow graph,
+    managing the interaction between agents, the environment, and the workflow manager.
+    It tracks the execution state and handles the flow of information between components.
     """
 
     graph: WorkFlowGraph
@@ -32,6 +36,10 @@ class WorkFlow(BaseModule):
     def init_module(self):
         """
         Initialize the module by setting up the workflow manager.
+        
+        This method ensures a workflow manager is available, creating one with
+        the provided LLM if none exists. Raises an error if no LLM is provided
+        when a workflow manager needs to be created.
         """
         if self.workflow_manager is None:
             if self.llm is None:
@@ -39,7 +47,15 @@ class WorkFlow(BaseModule):
             self.workflow_manager = WorkFlowManager(llm=self.llm)
 
     def execute(self, inputs: dict = {}, **kwargs) -> str:
-
+        """
+        Execute the workflow with the provided inputs.
+        
+        This is the main method that orchestrates the workflow execution process.
+        It initializes the environment with input data, executes tasks in sequence
+        based on the workflow graph, handles errors, and extracts the final output.
+        
+        The execution continues until either the workflow is complete or fails due to an error.
+        """
         goal = self.graph.goal
         inputs.update({"goal": goal})
         inp_message = Message(content=inputs, msg_type=MessageType.INPUT, wf_goal=goal)
@@ -71,6 +87,13 @@ class WorkFlow(BaseModule):
         return output
     
     def get_next_task(self) -> WorkFlowNode:
+        """
+        Get the next task to be executed in the workflow.
+        
+        This method logs the current task execution history and uses the workflow manager
+        to determine which task should be executed next based on the current state of the
+        environment and workflow graph.
+        """
         task_execution_history = " -> ".join(self.environment.task_execution_history)
         if not task_execution_history:
             task_execution_history = "None"
@@ -80,7 +103,14 @@ class WorkFlow(BaseModule):
         return task
         
     def execute_task(self, task: WorkFlowNode):
-
+        """
+        Execute a specific task in the workflow.
+        
+        This method updates the workflow graph to reflect the current task being executed,
+        schedules the appropriate actions for the task, and executes them either through
+        an action graph or through agents, depending on the workflow manager's decision.
+        Once the task is completed, it marks the task as completed in the graph.
+        """
         last_executed_task = self.environment.get_last_executed_task()
         self.graph.step(source_node=last_executed_task, target_node=task)
         next_action: NextAction = self.workflow_manager.schedule_next_action(
@@ -96,7 +126,9 @@ class WorkFlow(BaseModule):
         self.graph.completed(node=task)
 
     def _execute_task_by_action_graph(self, task: WorkFlowNode, next_action: NextAction):
-
+        """
+        Execute a task using an action graph.
+        """
         action_graph: ActionGraph = next_action.action_graph
         execute_signature = inspect.signature(type(action_graph).execute)
         execute_params = []
@@ -114,7 +146,9 @@ class WorkFlow(BaseModule):
         self.environment.update(message=message, state=TrajectoryState.COMPLETED)
     
     def _execute_task_by_agents(self, task: WorkFlowNode, next_action: NextAction):
-        
+        """
+        Excuste a task using agents.
+        """
         while next_action:
             agent: Agent = self.agent_manager.get_agent(agent_name=next_action.agent)
             # while self.agent_manager.get_agent_state(agent_name=agent.name) != AgentState.AVAILABLE:
