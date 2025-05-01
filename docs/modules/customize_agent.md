@@ -387,9 +387,11 @@ advanced_generator = CustomizeAgent(
 )
 
 # Execute the agent
-result = advanced_generator(inputs={
-    "requirement": "Create a function to validate if a string is a valid email address"
-})
+result = advanced_generator(
+    inputs={
+        "requirement": "Create a function to validate if a string is a valid email address"
+    }
+)
 
 # Access the structured outputs
 print("CODE:")

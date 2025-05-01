@@ -446,7 +446,12 @@ class Agent(BaseModule):
             bool: True if the prompts were successfully updated, False otherwise
         """
         for action_name, prompt_data in prompts.items():
-            self.set_prompt(action_name, prompt_data["prompt"], prompt_data["system_prompt"])
+            # self.set_prompt(action_name, prompt_data["prompt"], prompt_data["system_prompt"])
+            if not isinstance(prompt_data, dict):
+                raise ValueError(f"Invalid prompt data for action '{action_name}'. Expected a dictionary with 'prompt' and 'system_prompt' (optional) keys.")
+            if "prompt" not in prompt_data:
+                raise ValueError(f"Missing 'prompt' key in prompt data for action '{action_name}'.")
+            self.set_prompt(action_name, prompt_data["prompt"], prompt_data.get("system_prompt", None))
         return True
 
     def save_module(self, path: str, ignore: List[str] = [], **kwargs)-> str:
