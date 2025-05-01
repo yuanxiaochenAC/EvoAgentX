@@ -90,6 +90,8 @@ class SearchWiki(SearchBase):
             }
         }]
         
-    def get_tool_description(self) -> str:
-        return "Search Wikipedia for relevant articles and extract key information including titles, summaries, and content."
+    def get_tool_descriptions(self) -> str:
+        return [
+            "Search Wikipedia for relevant articles and extract key information including titles, summaries, and content."
+        ]
 

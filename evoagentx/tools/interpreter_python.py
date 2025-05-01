@@ -331,11 +331,13 @@ class InterpreterPython(BaseInterpreter):
     def get_tools(self):
         return [self.execute]
 
-    def get_tool_description(self) -> str:
+    def get_tool_descriptions(self) -> str:
         """
         Returns a brief description of the Python interpreter tool.
         
         Returns:
             str: Tool description
         """
-        return "Python Interpreter Tool that provides a secure execution environment for running Python code with safety checks."
+        return [
+            "Python Interpreter Tool that provides a secure execution environment for running Python code with safety checks."
+        ]

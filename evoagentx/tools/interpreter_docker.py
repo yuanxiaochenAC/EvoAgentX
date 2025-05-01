@@ -195,14 +195,16 @@ class DockerInterpreter(BaseInterpreter):
             return schemas[0]
         return {}
 
-    def get_tool_description(self) -> str:
+    def get_tool_descriptions(self) -> str:
         """
         Returns a brief description of the Docker interpreter tool.
         
         Returns:
             str: Tool description
         """
-        return "Docker Interpreter Tool that provides a secure and isolated environment for executing code inside Docker containers."
+        return [
+            "Docker Interpreter Tool that provides a secure and isolated environment for executing code inside Docker containers."
+        ]
         
     def get_tools(self):
         """

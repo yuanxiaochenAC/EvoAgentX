@@ -103,3 +103,8 @@ class SearchGoogle(SearchBase):
     
     def get_tools(self):
         return [self.search]
+    
+    def get_tool_descriptions(self) -> str:
+        return [
+            "Google Search Tool that utilizes the Google Custom Search API to perform structured search queries."
+        ]

@@ -72,14 +72,16 @@ class SearchGoogleFree(SearchBase):
             }
         }]
         
-    def get_tool_description(self) -> str:
+    def get_tool_descriptions(self) -> str:
         """
         Returns a brief description of the free Google search tool.
         
         Returns:
             str: Tool description
         """
-        return "Free Google Search Tool that queries Google without requiring an API key."
+        return [
+            "Free Google Search Tool that queries Google without requiring an API key."
+        ]
         
     def get_tools(self):
         return [self.search]

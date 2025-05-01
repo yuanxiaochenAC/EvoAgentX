@@ -1,5 +1,5 @@
 from ..core.module import BaseModule
-from typing import Dict, Any
+from typing import Dict, Any, List, Callable
 
 class Tool(BaseModule):
     """
@@ -7,6 +7,10 @@ class Tool(BaseModule):
     - get_tool_schema: Returns the OpenAI-compatible function schema
     - execute: Executes the tool with the provided parameters
     """
+    name: str
+    descriptions: List[str]
+    schemas: List[dict[str, Any]]
+    tools: List[Callable]
 
     def get_tool_schemas(self) -> Dict[str, Any]:
         """
@@ -16,21 +20,24 @@ class Tool(BaseModule):
         Returns:
             Dict[str, Any]: The function schema in OpenAI format
         """
-        raise NotImplementedError("All tools must implement get_tool_schema")
+        if not self.schemas:
+            raise NotImplementedError("All tools must implement get_tool_schema")
+        return self.schemas
 
-    def execute(self, **kwargs) -> Any:
+    def get_tools(self) -> List[Callable]:
         """
-        Executes the tool with the provided parameters.
+        Returns a list of callable functions for all tools
         
-        Args:
-            **kwargs: Arguments for the tool execution
-            
         Returns:
-            Any: Result of the tool execution
+            List[Callable]: A list of callable functions
         """
-        raise NotImplementedError("All tools must implement execute")
-        
+        if not self.tools:
+            raise NotImplementedError("All tools must implement get_tools")
+        return self.tools
+    
     # Legacy method - to be deprecated
-    def get_tool_info(self) -> dict:
+    def get_tool_descriptions(self) -> List[str]:
         """Legacy method for backward compatibility. Use get_tool_schema instead."""
-        return self.get_tool_schema()
+        if not self.descriptions:
+            raise NotImplementedError("All tools must implement get_tool_descriptions")
+        return self.descriptions
