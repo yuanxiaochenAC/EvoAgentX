@@ -1,5 +1,5 @@
 from typing import List
-
+from functools import wraps
 class ModuleRegistry:
 
     def __init__(self):
@@ -14,6 +14,9 @@ class ModuleRegistry:
         if cls_name not in self.module_dict:
             raise ValueError(f"module `{cls_name}` not Found!")
         return self.module_dict[cls_name]
+    
+    def has_module(self, cls_name: str) -> bool:
+        return cls_name in self.module_dict
 
 MODULE_REGISTRY = ModuleRegistry()
 
@@ -67,3 +70,62 @@ def register_model(config_cls, alias: List[str]=None):
         return cls
     
     return decorator
+
+class ParseFunctionRegistry:
+    
+    def __init__(self):
+        self.functions = {}
+    
+    def register(self, func_name: str, func):
+        """Register a function with a given name.
+        
+        Args:
+            func_name: The name to register the function under
+            func: The function to register
+            
+        Raises:
+            ValueError: If a function with the same name is already registered
+        """
+        if func_name in self.functions:
+            raise ValueError(f"Function name '{func_name}' is already registered!")
+        self.functions[func_name] = func
+    
+    def get_function(self, func_name: str):
+        """Get a registered function by name.
+        
+        Args:
+            func_name: The name of the function to retrieve
+            
+        Returns:
+            The registered function
+            
+        Raises:
+            KeyError: If no function with the given name is registered
+        """
+        if func_name not in self.functions:
+            available_funcs = list(self.functions.keys())
+            raise KeyError(f"Function '{func_name}' not found! Available functions: {available_funcs}")
+        return self.functions[func_name]
+    
+    def has_function(self, func_name: str) -> bool:
+        """Check if a function name is registered.
+        
+        Args:
+            func_name: The name to check
+            
+        Returns:
+            True if the function name is registered, False otherwise
+        """
+        return func_name in self.functions
+
+
+PARSE_FUNCTION_REGISTRY = ParseFunctionRegistry()
+
+
+def register_parse_function(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    PARSE_FUNCTION_REGISTRY.register(func.__name__, wrapper)
+    return wrapper
+    

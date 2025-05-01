@@ -60,7 +60,7 @@ class Agent(BaseModule):
         self._save_ignore_fields = ["llm", "llm_config"]
         self.init_context_extractor()
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> Message:
         """Make the agent callable and automatically choose between sync and async execution"""
         if asyncio.iscoroutinefunction(self.async_execute) and asyncio.get_event_loop().is_running():
             # If the operator is in an asynchronous environment and has an execute_async method, return a coroutine

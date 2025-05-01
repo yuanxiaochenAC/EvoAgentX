@@ -1,4 +1,5 @@
 import yaml
+import inspect
 import asyncio
 from abc import ABC, abstractmethod
 from pydantic import Field
@@ -107,6 +108,20 @@ class LLMOutputParser(Parser):
         elif parse_mode == "custom":
             if parse_func is None:
                 raise ValueError("`parse_func` must be provided when `parse_mode` is 'custom'.")
+            # obtain the function inputs
+            signature = inspect.signature(parse_func)
+            if "content" not in signature.parameters:
+                raise ValueError("`parse_func` must have an input argument `content`.")
+            
+            func_args = {}
+            func_args["content"] = content
+            for param_name, param in signature.parameters.items():
+                if param_name == "content":
+                    continue  # Already set
+                if param_name in kwargs:
+                    func_args[param_name] = kwargs[param_name]
+            data = parse_func(**func_args)
+            return data
         else:
             raise ValueError(f"Invalid value '{parse_mode}' detected for `parse_mode`. Available choices: {PARSER_VALID_MODE}")
         data = parse_func(content=content, **kwargs)
