@@ -2,7 +2,7 @@
 
 In EvoAgentX, agents are intelligent components designed to complete specific tasks autonomously. This tutorial will walk you through the essential concepts of creating and using agents in EvoAgentX:
 
-1. **Creating a Simple Agent with CustomizeAgent**: Learn how to create a basic agent with custom prompts and input/output formats
+1. **Creating a Simple Agent with CustomizeAgent**: Learn how to create a basic agent with custom prompts 
 2. **Working with Multiple Actions**: Create more complex agents that can perform multiple tasks
 3. **Saving and Loading Agents**: Learn how to save and load your agents
 
@@ -10,7 +10,7 @@ By the end of this tutorial, you'll be able to create both simple and complex ag
 
 ## 1. Creating a Simple Agent with CustomizeAgent
 
-The easiest way to create an agent is using `CustomizeAgent`, which allows you to quickly define an agent with a specific prompt and input/output format. 
+The easiest way to create an agent is using `CustomizeAgent`, which allows you to quickly define an agent with a specific prompt.  
 
 First, let's import the necessary components and setup the LLM:
 
@@ -31,24 +31,16 @@ openai_config = OpenAILLMConfig(
 )
 ``` 
 
-Now, let's create a simple code-writing agent. There are two ways to create a CustomizeAgent:
+Now, let's create a simple agent that prints hello world. There are two ways to create a CustomizeAgent:
 
 ### Method 1: Direct Initialization
-
+You can directly initialize the agent with the `CustomizeAgent` class: 
 ```python
-code_writer = CustomizeAgent(
-    name="CodeWriter",
-    description="Writes Python code based on requirements",
-    prompt="Write Python code that implements the following requirement: {requirement}",
-    inputs=[
-        {"name": "requirement", "type": "string", "description": "The coding requirement"} # currently only support string type
-    ],
-    outputs=[
-        {"name": "code", "type": "string", "description": "The generated Python code"} # currently only support string type
-    ],
-    system_prompt="You are an expert Python developer specialized in writing clean, efficient code. Respond only with code and brief explanations when necessary.",
-    llm_config=openai_config,
-    parse_mode="str" 
+first_agent = CustomizeAgent(
+    name="FirstAgent",
+    description="A simple agent that prints hello world",
+    prompt="Print 'hello world'", 
+    llm_config=openai_config # specify the LLM configuration 
 )
 ```
 
@@ -58,67 +50,29 @@ You can also create an agent by defining its configuration in a dictionary:
 
 ```python
 agent_data = {
-    "name": "CodeWriter",
-    "description": "Writes Python code based on requirements",
-    "inputs": [
-        {"name": "requirement", "type": "string", "description": "The coding requirement"}
-    ],
-    "outputs": [
-        {"name": "code", "type": "string", "description": "The generated Python code"}
-    ],
-    "prompt": "Write Python code that implements the following requirement: {requirement}",
-    "system_prompt": "You are an expert Python developer specialized in writing clean, efficient code. Respond only with code and brief explanations when necessary.",
-    "llm_config": openai_config,
-    "parse_mode": "str"
+    "name": "FirstAgent",
+    "description": "A simple agent that prints hello world",
+    "prompt": "Print 'hello world'",
+    "llm_config": openai_config
 }
-
-code_writer = CustomizeAgent.from_dict(agent_data) # use .from_dict() to create an agent. 
+first_agent = CustomizeAgent.from_dict(agent_data) # use .from_dict() to create an agent. 
 ```
 
 ### Using the Agent
 
-Once created, you can use the agent to generate code. You should put all the input data specified in the `prompt` in a dictionary and pass it to the `inputs`. 
+Once created, you can use the agent to print hello world. 
 
 ```python
-# Execute the agent with input. The agent will return a Message object containing the results. 
-message = code_writer(
-    inputs={"requirement": "Write a function that returns the sum of two numbers"}
-)
+# Execute the agent without input. The agent will return a Message object containing the results. 
+message = first_agent()
 
-print(f"Generated code from {code_writer.name}:")
-print(message.content.code)
+print(f"Response from {first_agent.name}:")
+print(message.content.content) # the content of a Message object is a LLMOutputParser object, where the `content` attribute is the raw LLM output. 
 ```
-The raw response from LLM will be parsed into a structured format with attributes specified in the `outputs` field. Therefore, you can access the output fields using the `.code` attribute. 
 
-You can control how the LLM response is parsed by setting the `parse_mode` parameter. `CustomizeAgent` supports different ways to parse the LLM output:
+For a complete example, please refer to the [CustomizeAgent example](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/customize_agent.py). 
 
-- `parse_mode="str"`: Uses the raw LLM output as the value for each output field
-- `parse_mode="title" (default)`: Extracts content between titles matching output field names, the default title pattern is `## {title}`, where `{title}` is the name of the output field. If you use this `parse_mode`, you should instruct the model to output the content in the following format: 
-    ```
-    ## output_name that matches the keys in the outputs field
-    [content]
-
-    ## another_output_name 
-    [content]
-    ```
-    If you want to use a different pattern, you can set the `title_format` parameter (should include `{title}` in the pattern), such as `message = code_writer(..., title_format="### {title}")`.
-
-- `parse_mode="json"`: Parses the LLM output as JSON. The LLM should be instructed to respond with a valid JSON string with keys matching the output field names. 
-
-- `parse_mode="custom"`: Uses a custom parsing function. For example, we can use the `extract_code_blocks` function to extract the code blocks from the LLM output:
-```python
-from evoagentx.core.module_utils import extract_code_blocks
-
-code_writer = CustomizeAgent(
-    # ... other parameters same as above ...
-    parse_mode="custom",
-    parse_func=lambda content: {"code": extract_code_blocks(content)[0]}
-)
-```
-The `parse_func` needs to have a single argument `content`, which receives the raw LLM output, and returns a dictionary with keys matching the output field names. 
-
-For a complete example, please refer to the [CustomizeAgent example](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/customize_agent.py).
-
+CustomizeAgent also offers other features including structured inputs/outputs and multiple parsing strategies. For detailed information, see the [CustomizeAgent documentation](../modules/customize_agent.md).
 
 ## 2. Creating an Agent with Multiple Actions
 

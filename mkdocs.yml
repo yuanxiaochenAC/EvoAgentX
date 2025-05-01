@@ -4,6 +4,7 @@ theme:
   features:
     - navigation.sections 
     - navigation.expand 
+    - content.code.copy 
   palette:
     - scheme: default 
   icon:
@@ -44,7 +45,8 @@ nav:
   - Key Modules:
     - LLM: modules/llm.md 
     - Agent: modules/agent.md
-  - API:
+    - Customize Agent: modules/customize_agent.md
+  - API Reference:
     - Core: api/core.md
     - Models: api/models.md
     - Agents: api/agents.md

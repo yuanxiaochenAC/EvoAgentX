@@ -169,36 +169,39 @@ async def customize_action_async_execute(self, llm: Optional[BaseLLM] = None, in
 class CustomizeAgent(Agent):
 
     """
-    Agent implementation that can be dynamically customized with specific actions and capabilities.
-
-    A CustomizeAgent is configured using a structured dictionary or direct parameters that define:
-    - Basic agent details (name, description)
-    - The prompt template for the agent's primary action
-    - Input and output specifications for the action
-    - LLM configuration
-    - Parsing mode and strategies
-
-    Attributes:
-
+    CustomizeAgent provides a flexible framework for creating specialized LLM-powered agents without 
+    writing custom code. It enables the creation of agents with well-defined inputs and outputs, 
+    custom prompt templates, and configurable parsing strategies. 
     
-    Expected configuration format:
-    {
-        "name": str, 
-        "description": str, 
-        "prompt": str, 
-        "llm_config": dict, # or "llm": BaseLLM, 
-        "inputs" (optional): [
-            {name: str, type: str, description: str, [required: bool]},
-        ],
-        "outputs" (optional): [
-            {name: str, type: str, description: str, [required: bool]}
-        ],
-        "system_prompt" (optional): str, default is DEFAULT_SYSTEM_PROMPT
-        "output_parser" (optional): Type[ActionOutput],
-        "parse_mode" (optional): str, default is "title"
-        "parse_func" (optional): Callable, default is None
-        "title_format" (optional): str, used to parse the LLM output when the `parse_mode` is "title". The default format is `## {title}`.
-    }
+    Attributes:
+        name (str): The name of the agent.
+        description (str): A description of the agent's purpose and capabilities.
+        prompt (str): The prompt template that will be used for the agent's primary action.
+            Should contain placeholders in the format `{input_name}` for each input parameter.
+        llm_config (LLMConfig, optional): Configuration for the language model.
+        inputs (List[dict], optional): List of input specifications, where each dict (e.g., `{"name": str, "type": str, "description": str, ["required": bool]}`) contains:
+            - name (str): Name of the input parameter
+            - type (str): Type of the input
+            - description (str): Description of what the input represents
+            - required (bool, optional): Whether this input is required (default: True)
+        outputs (List[dict], optional): List of output specifications, where each dict (e.g., `{"name": str, "type": str, "description": str, ["required": bool]}`) contains:
+            - name (str): Name of the output field
+            - type (str): Type of the output
+            - description (str): Description of what the output represents
+            - required (bool, optional): Whether this output is required (default: True)
+        system_prompt (str, optional): The system prompt for the LLM. Defaults to DEFAULT_SYSTEM_PROMPT.
+        output_parser (Type[ActionOutput], optional): A custom class for parsing the LLM's output.
+            Must be a subclass of ActionOutput.
+        parse_mode (str, optional): Mode for parsing LLM output. Options are:
+            - "title": Parse outputs using section titles (default)
+            - "str": Parse as plain text
+            - "json": Parse as JSON
+            - "xml": Parse as XML
+            - "custom": Use a custom parsing function
+        parse_func (Callable, optional): Custom function for parsing LLM output when parse_mode is "custom".
+            Must accept a "content" parameter and return a dictionary.
+        title_format (str, optional): Format string for title parsing mode with {title} placeholder.
+            Default is "## {title}".
     """
     def __init__(
         self, 
@@ -226,6 +229,10 @@ class CustomizeAgent(Agent):
         
         if isinstance(output_parser, str):
             output_parser = MODULE_REGISTRY.get_module(output_parser)
+        
+        # set default title format 
+        if parse_mode == "title" and title_format is None:
+            title_format = "## {title}"
 
         # validate the data 
         self.validate_data(
