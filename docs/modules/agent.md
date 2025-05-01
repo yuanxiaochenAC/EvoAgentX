@@ -15,6 +15,7 @@ An Agent consists of several key components:
 2. **Actions**: 
 
     Actions are the fundamental operational units of an agent. Each Action encapsulates a specific task and is the actual point where the LLM is invoked to reason, generate, or make decisions. While the Agent provides overall orchestration, it is through Actions that the LLM performs its core functions. Each Action is designed to do exactly one thing—such as retrieving knowledge, summarizing input, or calling an API—and can include the following components:
+
     - **prompt**: The prompt template used to guide the LLM's behavior for this specific task.
     - **inputs_format**: The expected structure and keys of the inputs passed into the action.
     - **outputs_format**: The format used to interpret and parse the LLM's output.
@@ -23,8 +24,9 @@ An Agent consists of several key components:
 3. **Memory Components**:
 
     Memory allows the agent to retain and recall relevant information across interactions, enhancing contextual awareness. There are two types of memory within the EvoAgentX framework: 
-   - **Short-term memory**: Maintains the intermediate conversation or context for the current task. 
-   - **Long-term memory (optional)**: Stores persistent knowledge that can span across sessions or tasks. This enables the agent to learn from past experiences, maintain user preferences, or build knowledge bases over time.
+
+    - **Short-term memory**: Maintains the intermediate conversation or context for the current task. 
+    - **Long-term memory (optional)**: Stores persistent knowledge that can span across sessions or tasks. This enables the agent to learn from past experiences, maintain user preferences, or build knowledge bases over time.
 
 
 ## Usage

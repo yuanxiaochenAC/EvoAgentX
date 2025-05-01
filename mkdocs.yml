@@ -5,6 +5,8 @@ theme:
     - navigation.sections 
     - navigation.expand 
     - content.code.copy 
+    - navigation.instant
+    - content.heading.auto-number  
   palette:
     - scheme: default 
   icon:

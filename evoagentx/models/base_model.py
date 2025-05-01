@@ -121,6 +121,8 @@ class LLMOutputParser(Parser):
                 if param_name in kwargs:
                     func_args[param_name] = kwargs[param_name]
             data = parse_func(**func_args)
+            if not isinstance(data, dict):
+                raise ValueError(f"The output of `parse_func` must be a dictionary, but found {type(data)}.")
             return data
         else:
             raise ValueError(f"Invalid value '{parse_mode}' detected for `parse_mode`. Available choices: {PARSER_VALID_MODE}")
