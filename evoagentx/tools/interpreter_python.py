@@ -310,9 +310,11 @@ class InterpreterPython(BaseInterpreter):
             list[Dict[str, Any]]: Function schema in OpenAI format
         """
         return [{
-            "name": "execute",
-            "description": "The Python Interpreter Tool provides a secure execution environment for running Python code. It performs static analysis using AST to detect unauthorized imports and security risks before execution.",
-            "parameters": {
+            "type": "function",
+            "function": {
+                "name": "execute",
+                "description": "The Python Interpreter Tool provides a secure execution environment for running Python code. It performs static analysis using AST to detect unauthorized imports and security risks before execution.",
+                "parameters": {
                 "type": "object",
                 "properties": {
                     "code": {
@@ -324,7 +326,8 @@ class InterpreterPython(BaseInterpreter):
                         "description": "The programming language of the code"
                     }
                 },
-                "required": ["code", "language"]
+                    "required": ["code", "language"]
+                }
             }
         }]
     

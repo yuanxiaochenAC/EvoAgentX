@@ -15,6 +15,7 @@ from evoagentx.tools.mcp import MCPToolkit
 from evoagentx.core.logging import logger
 from evoagentx.core.message import Message, MessageType
 from evoagentx.prompts.tool_caller import TOOL_CALLER_PROMPT
+from evoagentx.tools.search_wiki import SearchWiki
 
 load_dotenv()
 
@@ -42,11 +43,6 @@ async def main():
         # Create MCP toolkit separately and add it to the agent
         logger.info("\nCreating Tool Caller Agent with separate MCP toolkit...")
         
-        # Create MCP toolkit
-        mcp_toolkit = MCPToolkit(config_path=config_path)
-        await mcp_toolkit.connect()
-        logger.info("MCP toolkit connected successfully")
-        
         # Define the inputs and outputs for the agent
         inputs = [
             {"name": "query", "type": "str", "description": "The query from the user"}
@@ -64,15 +60,18 @@ async def main():
             prompt=TOOL_CALLER_PROMPT["prompt"],
             inputs=inputs,
             outputs=outputs,
-            llm_config=llm_config
+            llm_config=llm_config,
+            max_tool_try=1,
+            mcp_config_path=config_path
         )
+        tool_caller.add_tools(SearchWiki().get_tool_schemas(), SearchWiki().get_tools())
         
         # Add the MCP toolkit to the agent
-        tool_caller.add_mcp_toolkit(mcp_toolkit)
         logger.info("MCP toolkit added to the agent")
         
         # Create a user message with a query
-        pdf_query = f"Read and summarize the content from this PDF file: {pdf_file_path}"
+        # pdf_query = f"Read and summarize the content from this PDF file: {pdf_file_path}"
+        pdf_query = f"Search Wikipedia for the article about 'Python'"
         user_message = Message(
             content=pdf_query,
             agent="user",

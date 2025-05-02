@@ -8,7 +8,7 @@ from ..core.message import Message, MessageType
 from ..tools.mcp import MCPToolkit
 from ..core.module_utils import parse_json_from_llm_output
 from ..models.base_model import LLMOutputParser
-
+from ..tools.tool import Tool
 
 class CusToolCaller(CustomizeAgent):
     """
@@ -74,105 +74,46 @@ class CusToolCaller(CustomizeAgent):
         # Just create the toolkit, don't connect yet
         # Connection will happen in the async initialize method
     
-    async def initialize(self) -> None:
+    def initialize(self) -> None:
         """
         Asynchronously initialize the agent, including connecting to MCP toolkit.
         This should be called after creating the agent and before using it.
         """
-        if self._initialized:
-            print("Agent already initialized")
-            return
-            
-        print(f"Initializing CusToolCaller agent: {self.name}")
-        if self.mcp_toolkit:
-            try:
-                await self.mcp_toolkit.connect()
-                tools = self.mcp_toolkit.get_tools()
-                for tool in tools:
-                    self.add_tool(tool[1]["function"], tool[0])
-                self._initialized = True
-            except Exception:
-                import traceback
-                traceback.print_exc()
-                raise
         
-        print(self.tools_schema)
         if self.tools_schema:
             self.mcp_prompt = self.ori_prompt + CUSTOM_TOOL_CALLER_PROMPT + "\n### Tools Available\n" + str(self.tools_schema)
     
-    async def cleanup(self) -> None:
-        """Clean up resources, particularly disconnecting MCP toolkit"""
-        if self.mcp_toolkit and self.mcp_toolkit.is_connected():
-            try:
-                print(f"Disconnecting MCP toolkit for agent: {self.name}")
-                await self.mcp_toolkit.disconnect()
-                print(f"MCP toolkit disconnected during cleanup for agent: {self.name}")
-            except Exception as e:
-                print(f"Error disconnecting MCP toolkit for agent {self.name}: {str(e)}")
-                import traceback
-                traceback.print_exc()
-    
-    async def __aenter__(self):
-        """Async context manager enter method"""
-        await self.initialize()
-        return self
-    
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit method"""
-        await self.cleanup()
-    
-    def __del__(self):
-        """Destructor to ensure cleanup"""
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                loop.create_task(self.cleanup())
-            else:
-                loop.run_until_complete(self.cleanup())
-        except Exception:
-            # Ignore errors during cleanup in destructor
-            pass
-    
     @property
-    def tool_calling_action_name(self) -> str:
+    def tool_calling_action_name(self) -> str:  
         return self.get_action_name(action_cls=ToolCalling)
     
-    def add_tool(self, tool_schema: dict, tools_caller: Callable) -> None:
+    def add_tool(self, tool: Tool) -> None:
         """Add a tool to the tool caller agent"""
-        
+        self.add_tools([tool])
+    
+    def add_tools(self, tools: list[Tool]):
+        tools_schemas = [tool.get_tool_schemas() for tool in tools]
+        tools_schemas = [j for i in tools_schemas for j in i]
+        tools_callers = [tool.get_tools() for tool in tools]
+        tools_callers = [j for i in tools_callers for j in i]
+        tools_names = [i["function"]["name"] for i in tools_schemas]
         if not self.tools_schema:
             self.tools_schema = {}
             self.tools_caller = {}
+        for tool_schema, tool_caller, tool_name in zip(tools_schemas, tools_callers, tools_names):
+            self.tools_schema[tool_name] = tool_schema
+            self.tools_caller[tool_name] = tool_caller
         
-        self.tools_schema[tool_schema["name"]] = tool_schema
-        self.tools_caller[tool_schema["name"]] = tools_caller
-        self.tool_calling_action.add_tool(tool_schema, tools_caller)
-    
-    def add_tools(self, tool_schemas: list[dict], tools_callers: list[Callable]):
-        for tool_schema, tools_caller in zip(tool_schemas, tools_callers):
-            self.add_tool(tool_schema, tools_caller)
-
-    async def add_mcp_toolkit(self, mcp_toolkit: MCPToolkit) -> None:
-        """Add MCP toolkit to the tool caller agent"""
-        self.mcp_toolkit = mcp_toolkit
-        if not mcp_toolkit.is_connected():
-            await mcp_toolkit.connect()
-        tools = mcp_toolkit.get_tools()
-        for tool in tools:
-            self.add_tool(tool[1]["function"], tool[0])
+        self.tool_calling_action.add_tools(tools)
+        self.initialize()
         self._initialized = True
     
-    async def execute(self, **kwargs) -> Message:
+    def execute(self, **kwargs) -> Message:
         """Execute the tool caller agent"""
-        # Ensure initialization before execution
-        # if not self._initialized and self.mcp_toolkit:
-        #     await self.initialize()
-        # return await super().execute_async(**kwargs)
-    
         try:
             if not self._initialized and self.mcp_toolkit:
                 print(f"Agent {self.name} not initialized yet, initializing...")
-                await self.initialize()
+                self.initialize()
                 
             # # Always use the tool_calling_action for CusToolCaller, override the action_name
             action_name = kwargs.get("action_name", self.tool_calling_action_name)
@@ -208,7 +149,7 @@ class CusToolCaller(CustomizeAgent):
             # from pdb import set_trace; set_trace()
             
             # # Execute using the parent's execute_async method
-            llm_output = await super().execute_async(**kwargs)
+            llm_output = super().execute(**kwargs)
             print(f"Agent {self.name} execution completed successfully")
             
             
@@ -239,7 +180,6 @@ class CusToolCaller(CustomizeAgent):
                 wf_task=kwargs.get("wf_task", ""),
                 wf_task_desc=kwargs.get("wf_task_desc", "")
             )
-            
             return message
             
         except Exception as e:

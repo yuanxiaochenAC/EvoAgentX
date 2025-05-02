@@ -50,9 +50,11 @@ class SearchGoogleFree(SearchBase):
             Dict[str, Any]: Function schema in OpenAI format
         """
         return [{
-            "name": "search",
-            "description": "Search Google without requiring an API key and retrieve content from search results.",
-            "parameters": {
+            "type": "function",
+            "function": {
+                "name": "search",
+                "description": "Search Google without requiring an API key and retrieve content from search results.",
+                "parameters": {
                 "type": "object",
                 "properties": {
                     "query": {
@@ -69,6 +71,7 @@ class SearchGoogleFree(SearchBase):
                     }
                 },
                 "required": ["query"]
+                }
             }
         }]
         

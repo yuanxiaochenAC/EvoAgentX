@@ -7,99 +7,7 @@ from .action import Action, ActionInput, ActionOutput
 from ..core.message import Message
 from typing import List
 from ..prompts.tool_caller import TOOL_CALLER_PROMPT
-
-
-SUMMARIZING_PROMPT = """
-You are an expert AI assistant tasked with summarizing tool execution results and answering the user's query.
-
-### Task Completion
-- You should give a short summary of the tool call results
-- You should also provide a comprehensive summary of your suggestions based on the client's background and past experiences.
-
-### Question Answering
-- You should give a clear, concise answer based on the tool call results
-- If the problem is not solved, explain why and what additional information might be needed
-
-### Response Format
-You MUST respond with a valid JSON object in the following format. Do not include any text before or after the JSON object:
-```json
-{
-    "summary": "Your clear and concise answer based on the tool call results goes here..."
-}
-```
-"""
-
-class ToolCallSummarizingInput(ActionInput):
-    content: str = Field(description="The content produced")
-
-class ToolCallSummarizingOutput(ActionOutput):
-    summary: str = Field(description="A summary of the tool call")
-    
-class ToolCallSummarizing(Action):
-    
-    def __init__(self, **kwargs):
-        name = kwargs.pop("name", "tool_call_summarizing")
-        description = kwargs.pop("description", "Summarize the results of tool call against the query")
-        inputs_format = kwargs.pop("inputs_format", ToolCallSummarizingInput)
-        outputs_format = kwargs.pop("outputs_format", ToolCallSummarizingOutput)
-        super().__init__(name=name, description=description, inputs_format=inputs_format, outputs_format=outputs_format, **kwargs)
-    
-    async def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, history: Optional[List[Message]] = None, **kwargs) -> ToolCallSummarizingOutput:
-        if not inputs:
-            logger.error("ToolCalling action received invalid `inputs`: None or empty.")
-            raise ValueError('The `inputs` to ToolCalling action is None or empty.')
-
-        print("\n\n_______________________ Start Tool Summarizing _______________________")
-        prompt_params_values = inputs.get("content")
-        print(prompt_params_values)
-        
-        # Use the provided system message if available, otherwise use the default
-        system_message = sys_msg if sys_msg else SUMMARIZING_PROMPT
-        history = history if history else []
-        
-        # Convert Message history to OpenAI format
-        messages = []
-        
-        # Add system message
-        messages.append({"role": "system", "content": system_message})
-        
-        # Add history messages in OpenAI format
-        for msg in history:
-            content = str(msg.content)
-            # Skip empty messages
-            if not content.strip():
-                continue
-                
-            if msg.agent == "user":
-                messages.append({"role": "user", "content": content})
-            else:
-                messages.append({"role": "assistant", "content": content})
-        
-        # Add the current query as a user message
-        messages.append({"role": "user", "content": prompt_params_values})
-        
-        # Remove history from kwargs to avoid passing it as an unknown param
-        kwargs_copy = kwargs.copy()
-        if 'history' in kwargs_copy:
-            del kwargs_copy['history']
-        
-        output = llm.generate(
-            messages=messages,
-            parser=self.outputs_format,
-            system_message=system_message,
-            parse_mode="json",
-            **kwargs_copy
-        )
-        
-        print("Tool call summarizing output:")
-        print(output)
-        
-        if return_prompt:
-            return output, prompt_params_values
-        
-        return output
-
-
+from ..tools.tool import Tool
 
 class ToolCallingInput(ActionInput):
     query: str = Field(description="The query that might need to use tools to answer")
@@ -129,14 +37,20 @@ class ToolCalling(Action):
         # Allow max_tool_try to be configured through kwargs
         self.max_tool_try = kwargs.pop("max_tool_try", 2)
     
-    def add_tool(self, tools_schema: dict, tools_caller: Callable):
+    def add_tools(self, tools: List[Tool]):
+        tools_schemas = [tool.get_tool_schemas() for tool in tools]
+        tools_schemas = [j for i in tools_schemas for j in i]
+        tools_callers = [tool.get_tools() for tool in tools]
+        tools_callers = [j for i in tools_callers for j in i]
+        tools_names = [i["function"]["name"] for i in tools_schemas]
         if not self.tools_schema:
             self.tools_schema = {}
             self.tools_caller = {}
-        self.tools_schema[tools_schema["name"]] = tools_schema
-        self.tools_caller[tools_schema["name"]] = tools_caller
+        for tool_schema, tool_caller, tool_name in zip(tools_schemas, tools_callers, tools_names):
+            self.tools_schema[tool_name] = tool_schema
+            self.tools_caller[tool_name] = tool_caller
     
-    async def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, time_out = 0, history: Optional[List[Message]] = None, **kwargs) -> ToolCallingOutput:
+    def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, time_out = 0, history: Optional[List[Message]] = None, **kwargs) -> ToolCallingOutput:
         if not inputs:
             logger.error("ToolCalling action received invalid `inputs`: None or empty.")
             raise ValueError('The `inputs` to ToolCalling action is None or empty.')
@@ -206,7 +120,8 @@ class ToolCalling(Action):
                 if not function_name:
                     errors.append("No function name provided")
                     break
-                    
+                
+                print(self.tools_caller)
                 # Try to get the callable from our tools_caller dictionary
                 callable_fn = None
                 if self.tools_caller and function_name in self.tools_caller:
@@ -220,16 +135,9 @@ class ToolCalling(Action):
                 
                 try:
                     # Determine if the function is async or not
-                    import inspect
                     print("_____________________ Start Function Calling _____________________")
                     print(f"Executing function calling: {function_name} with {function_args}")
-                    if inspect.iscoroutinefunction(callable_fn):
-                        print("____ Start Async Function Calling ____")
-                        result = await callable_fn(**function_args)
-                    else:
-                        # Handle regular function
-                        print("____ Start Regular Function Calling ____")
-                        result = callable_fn(**function_args)
+                    result = callable_fn(**function_args)
                         
                 except Exception as e:
                     logger.error(f"Error executing tool {function_name}: {e}")
@@ -296,7 +204,7 @@ class ToolCalling(Action):
             # Only continue if we haven't exceeded max_tool_try
             if time_out < self.max_tool_try:
                 print(f"Continuing with tool call execution (attempt {time_out+1}/{self.max_tool_try})")
-                content = await self.execute(llm, inputs, sys_msg, return_prompt, **kwargs, time_out=time_out)
+                content = self.execute(llm, inputs, sys_msg, return_prompt, **kwargs, time_out=time_out)
             else:
                 print(f"Maximum tool call depth ({self.max_tool_try}) reached, stopping execution")
                 content = {"answer": inputs["query"] + f"\n\nTool execution reached maximum depth ({self.max_tool_try})."}

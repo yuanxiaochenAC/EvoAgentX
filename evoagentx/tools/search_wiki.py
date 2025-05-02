@@ -64,9 +64,11 @@ class SearchWiki(SearchBase):
             Dict[str, Any]: Function schema in OpenAI format
         """
         return [{
-            "name": "search",
-            "description": "Search Wikipedia for relevant articles and extract key information including titles, summaries, and content.",
-            "parameters": {
+            "type": "function",
+            "function": {
+                "name": "search",
+                "description": "Search Wikipedia for relevant articles and extract key information including titles, summaries, and content.",
+                "parameters": {
                 "type": "object",
                 "properties": {
                     "query": {
@@ -87,6 +89,7 @@ class SearchWiki(SearchBase):
                     }
                 },
                 "required": ["query"]
+                }
             }
         }]
         

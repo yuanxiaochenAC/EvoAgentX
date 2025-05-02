@@ -170,9 +170,11 @@ class DockerInterpreter(BaseInterpreter):
             list[Dict[str, Any]]: Function schema in OpenAI format
         """
         return [{
-            "name": "execute",
-            "description": "The Docker Interpreter Tool provides a secure and isolated environment for executing code inside a Docker container.",
-            "parameters": {
+            "type": "function",
+            "function": {
+                "name": "execute",
+                "description": "The Docker Interpreter Tool provides a secure and isolated environment for executing code inside a Docker container.",
+                "parameters": {
                 "type": "object",
                 "properties": {
                     "code": {
@@ -184,7 +186,8 @@ class DockerInterpreter(BaseInterpreter):
                         "description": "The programming language of the code (e.g., python, py, python3)"
                     }
                 },
-                "required": ["code", "language"]
+                    "required": ["code", "language"]
+                }
             }
         }]
         

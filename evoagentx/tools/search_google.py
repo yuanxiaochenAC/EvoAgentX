@@ -71,10 +71,12 @@ class SearchGoogle(SearchBase):
             Dict[str, Any]: Function schema in OpenAI format
         """
         return [{
-            "name": "search",
-            "description": "Search Google using the Custom Search API and retrieve detailed search results with content snippets.",
-            "parameters": {
-                "type": "object",
+            "type": "function",
+            "function": {
+                "name": "search",
+                "description": "Search Google using the Custom Search API and retrieve detailed search results with content snippets.",
+                "parameters": {
+                    "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
@@ -95,9 +97,10 @@ class SearchGoogle(SearchBase):
                     "max_content_words": {
                         "type": "integer",
                         "description": "The maximum number of words to retain from the content (default is 500)."
-                    }
-                },
-                "required": ["query"]
+                        }
+                    },
+                    "required": ["query"]
+                }
             }
         }]
     

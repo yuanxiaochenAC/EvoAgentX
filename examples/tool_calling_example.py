@@ -12,11 +12,9 @@ from dotenv import load_dotenv
 from evoagentx.models.model_configs import OpenAILLMConfig
 from evoagentx.tools.mcp import MCPToolkit, MCPClient
 from evoagentx.core.logging import logger
-# from evoagentx.core.message import Message, MessageType
-# from evoagentx.prompts.tool_caller import TOOL_CALLER_PROMPT
-# from evoagentx.agents.cus_tool_caller import CusToolCaller
-# from evoagentx.tools.search_wiki import SearchWiki
-
+from evoagentx.agents.cus_tool_caller import CusToolCaller
+from evoagentx.prompts.tool_caller import TOOL_CALLER_PROMPT
+from evoagentx.core.message import Message, MessageType
 load_dotenv()
 
 def main():
@@ -54,62 +52,26 @@ def main():
         mcp_toolkit = MCPToolkit(config_path=config_path)
         tools = mcp_toolkit.get_tools()
         # import pdb; pdb.set_trace()
-        print("Trying to call tool with direct parameters:")
-        print(tools[1].tools[0](**{"query": "camel-ai"}))
+        # print(tools[1].tools[0](**{"query": "camel-ai"}))
         
-        # # Create the CustomizeAgent (CusToolCaller) with all required parameters
-        # tool_caller = CusToolCaller(
-        #     name=TOOL_CALLER_PROMPT["name"],
-        #     description=TOOL_CALLER_PROMPT["description"],
-        #     system_prompt=TOOL_CALLER_PROMPT["system_prompt"],
-        #     prompt=TOOL_CALLER_PROMPT["prompt"],
-        #     inputs=inputs,
-        #     outputs=outputs,
-        #     llm_config=llm_config,
-        #     max_tool_try=1,
-        #     mcp_config_path=config_path
-        # )
-        # tool_caller.add_tools(SearchWiki().get_tool_schemas(), SearchWiki().get_tools())
         
-        # # Add the MCP toolkit to the agent
-        # logger.info("MCP toolkit added to the agent")
+        print("Creating Tool Caller Agent...")
+        tool_caller = CusToolCaller(name="Tool Caller", 
+                                    description="Tool Caller Agent", 
+                                    llm_config=llm_config, 
+                                    mcp_config_path=config_path,
+                                    prompt=TOOL_CALLER_PROMPT["system_prompt"],
+                                    inputs=inputs,
+                                    outputs=outputs)
+        tool_caller.add_tools(tools)
         
-        # # Create a user message with a query
-        # # pdf_query = f"Read and summarize the content from this PDF file: {pdf_file_path}"
-        # pdf_query = f"Search Wikipedia for the article about 'Python'"
-        # user_message = Message(
-        #     content=pdf_query,
-        #     agent="user",
-        #     msg_type=MessageType.REQUEST
-        # )
-        
-        # # Execute the tool calling action
-        # logger.info("Executing PDF content extraction...")
-        # response = await tool_caller.execute(
-        #     action_name=tool_caller.tool_calling_action_name,
-        #     msgs=[user_message]
-        # )
-        
-        # # Print the response
-        # logger.info("\n===== Response =====")
-        # # Log the content of the response to debug
-        # logger.info(f"Response content type: {type(response.content)}")
-        
-        # if isinstance(response.content, dict):
-        #     # Dictionary format
-        #     if "answer" in response.content:
-        #         logger.info(f"Answer: {response.content['answer']}")
-        #     else:
-        #         logger.info(f"Content (dict): {response.content}")
-        # else:
-        #     # Object format with attributes
-        #     logger.info(f"Content (object): {response.content}")
-        
-        # # Clean up resources
-        # await tool_caller.cleanup()
-        # logger.info("Resources cleaned up")
-        
-        # logger.info("\nExample completed successfully!")
+        print("Executing Tool Caller Agent...")
+        message = Message(content="Give a short summary of the github project camel-ai", agent="user", msg_type=MessageType.REQUEST)
+        message_out = tool_caller.execute(action_name=tool_caller.tool_calling_action_name,
+                                                msgs=message,
+                                                return_msg_type=MessageType.RESPONSE)
+        print(message_out)
+       
         
     except Exception as e:
         logger.error(f"Error in example: {str(e)}")
