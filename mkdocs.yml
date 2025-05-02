@@ -48,6 +48,7 @@ nav:
     - LLM: modules/llm.md 
     - Agent: modules/agent.md
     - Customize Agent: modules/customize_agent.md
+    - Workflow Graphs: modules/workflow_graph.md
   - API Reference:
     - Core: api/core.md
     - Models: api/models.md

@@ -1,9 +1,0 @@
-{
-    "llm_config": {
-        "llm_type": "OpenAILLM",
-        "openai_key": "Your OpenAI API key", 
-        "model": "gpt-4o-mini", 
-        "stream": true, 
-        "output_response": false
-    }
-}
