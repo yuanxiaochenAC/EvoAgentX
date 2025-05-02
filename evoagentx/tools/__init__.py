@@ -6,10 +6,10 @@ from .search_base import SearchBase
 from .search_google_f import SearchGoogleFree
 from .search_wiki import SearchWiki
 from .search_google import SearchGoogle
-from .mcp import MCPClient
+from .mcp import MCPClient, MCPToolkit
 
 
 __all__ = ["Tool", "BaseInterpreter", "DockerInterpreter", 
            "InterpreterPython", "SearchBase", "SearchGoogleFree", "SearchWiki", "SearchGoogle",
-           "MCPClient"]
+           "MCPClient", "MCPToolkit"]
 
