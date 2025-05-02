@@ -83,7 +83,14 @@ class Benchmark(ABC):
             dict: A dictionary containing evaluation metrics.
         """
         pass 
-
+    
+    @abstractmethod
+    def inputs(self):
+        """
+        return input items of the benchmark
+        """
+    
+    
     async def async_evaluate(self, prediction: Any, label: Any) -> dict:
         """
         Asynchronous version of evaluate method that internally calls the synchronous evaluate.

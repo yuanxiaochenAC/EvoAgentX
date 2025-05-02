@@ -3,6 +3,7 @@ import threading
 from enum import Enum
 import networkx as nx 
 from copy import deepcopy
+from abc import abstractmethod
 from networkx import MultiDiGraph
 from collections import defaultdict
 from pydantic import Field, field_validator
@@ -214,6 +215,29 @@ class WorkFlowGraph(BaseModule):
         self._validate_workflow_structure()
         self.update_graph()
     
+
+    def named_agents(self):
+        return [(agent['name'], agent) for agent in self.agents]
+    
+    def agents(self):
+        agent_lst = []
+        for node in self.nodes:
+            for agent in node.agents:
+                agent_lst.append(agent)
+        return agent_lst
+
+    def reset_agents(self):
+        agent_lst = self.agents()
+        for agent in agent_lst:
+            agent['lm'] = None
+            agent['traces'] = []
+            agent['train'] = []
+            agent['demos'] = []
+    
+    def reset_copy(self):
+        new_instacne = self.deepcopy()
+        
+        return new_instacne.reset_agents()
     def update_graph(self):
         # call this function when modifying nodes or edges!
         self._loops = self._find_all_loops()

@@ -1,8 +1,10 @@
+
 import os 
 import yaml
 import json 
 import copy
 import logging
+from abc import abstractmethod
 from typing import Callable, Any, Dict, List
 from pydantic import BaseModel, ValidationError
 from pydantic._internal._model_construction import ModelMetaclass
@@ -59,6 +61,7 @@ class BaseModule(BaseModel, metaclass=MetaModule):
     """
 
     class_name: str = None 
+    
     model_config = {"arbitrary_types_allowed": True, "extra": "allow", "protected_namespaces": ()}
 
     def __init_subclass__(cls, **kwargs):
@@ -83,7 +86,9 @@ class BaseModule(BaseModel, metaclass=MetaModule):
             ValidationError: When parameter validation fails
             Exception: When other errors occur during initialization
         """
-
+    
+        self._compiled = False
+        
         try:
             for field_name, _ in type(self).model_fields.items():
                 field_value = kwargs.get(field_name, None)
@@ -122,6 +127,7 @@ class BaseModule(BaseModel, metaclass=MetaModule):
             str: String representation of the object
         """
         return self.to_str()
+    
     
     @property
     def kwargs(self):
@@ -472,5 +478,6 @@ class BaseModule(BaseModel, metaclass=MetaModule):
                         setattr(new_instance, attr, value)
 
         return new_instance
+    
 __all__ = ["BaseModule"]
 
