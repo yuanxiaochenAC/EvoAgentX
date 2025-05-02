@@ -1,15 +1,13 @@
 import random
 import logging
-import threading
 from pydantic import Field
-from typing import Any, Callable, Dict, Literal, Optional, Union, List, Tuple
+from typing import Any, List
 
 from settings import settings
-from evoagentx.workflow.workflow_graph import WorkflowGraph
-from evoagentx.workflow.action_graph import ActionGraph
 from evoagentx.core.module import BaseModule
 from evoagentx.utils.mipro_utils.utils import get_source_code, strip_prefix
 from evoagentx.utils.mipro_utils.dataset_summary_generator import create_dataset_summary
+
 
 
 
@@ -223,3 +221,24 @@ class GroundedProposer(BaseModule):
             print(f"PROPOSED INSTRUCTION: {proposed_instruction}")
 
         return strip_prefix(proposed_instruction)
+
+def create_predictor_level_history_string(
+    program,
+    pred_i,
+    trial_logs,
+    max_instruct_history,
+    
+):
+    return ""
+
+def GenerateModuleInstruction(
+    program_code_string,
+    use_dataset_summary,
+    program_aware,
+    use_task_demos,
+    use_instruct_history,
+    
+):
+    return ""
+
+
