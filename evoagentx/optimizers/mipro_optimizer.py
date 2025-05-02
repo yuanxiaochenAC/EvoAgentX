@@ -1,6 +1,5 @@
 import logging
 import random
-import optuna
 import numpy as np
 from pydantic import Field
 from typing import Any, Callable, Dict, Literal, Optional, Union, List, Tuple
@@ -240,3 +239,55 @@ class MiproOptimizer(BaseModule):
             demo_candidates = None
 
         return demo_candidates
+    
+    def _propose_instructions(
+        self,
+        program: Any,
+        trainset: List,
+        demo_candidates: Optional[List],
+        view_data_batch_size: int,
+        program_aware_proposer: bool,
+        data_aware_proposer: bool,
+        tip_aware_proposer: bool,
+        fewshot_aware_proposer: bool,
+    ) -> Dict[int, List[str]]:
+        logger.info("\n==> STEP 2: PROPOSE INSTRUCTION CANDIDATES <==")
+        logger.info(
+            "We will use the few-shot examples from the previous step, a generated dataset summary, a summary of the program code, and a randomly selected prompting tip to propose instructions."
+        )
+
+        proposer = GroundedProposer(
+            program=program,
+            trainset=trainset,
+            prompt_model=self.prompt_model,
+            view_data_batch_size=view_data_batch_size,
+            program_aware=program_aware_proposer,
+            use_dataset_summary=data_aware_proposer,
+            use_task_demos=fewshot_aware_proposer,
+            num_demos_in_context=BOOTSTRAPPED_FEWSHOT_EXAMPLES_IN_CONTEXT,
+            use_tip=tip_aware_proposer,
+            set_tip_randomly=tip_aware_proposer,
+            use_instruct_history=False,
+            set_history_randomly=False,
+            verbose=self.verbose,
+            rng=self.rng,
+        )
+
+        logger.info("\nProposing instructions...\n")
+        instruction_candidates = proposer.propose_instructions_for_program(
+            trainset=trainset,
+            program=program,
+            demo_candidates=demo_candidates,
+            N=self.num_candidates,
+            T=self.init_temperature,
+            trial_logs={},
+        )
+
+        for i, pred in enumerate(program.predictors()):
+            logger.info(f"Proposed Instructions for Predictor {i}:\n")
+            instruction_candidates[i][0] = get_signature(pred).instructions
+            for j, instruction in enumerate(instruction_candidates[i]):
+                logger.info(f"{j}: {instruction}\n")
+            logger.info("\n")
+
+        return instruction_candidates
