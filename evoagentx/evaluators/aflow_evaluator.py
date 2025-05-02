@@ -54,7 +54,7 @@ class AFlowEvaluator:
         data = benchmark.get_test_data() if is_test else benchmark.get_dev_data()
         if not data:
             logger.warning("No data to evaluate. Returning zeros.")
-            return (0.0, 0.0, 0.0)
+            return (0.0, 0.0, 0.0, True)
         
         # get total cost before evaluation
         cost_before = cost_manager.get_total_cost()
