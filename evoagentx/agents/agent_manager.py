@@ -124,25 +124,33 @@ class AgentManager(BaseModule):
         """
         pass 
     
-    def create_customize_agent(self, agent_data: dict, llm_config: Optional[LLMConfig]=None, **kwargs) -> Agent:
+    def create_customize_agent(self, agent_data: dict, llm_config: Optional[Union[LLMConfig, dict]]=None, **kwargs) -> CustomizeAgent:
         """
         create a customized agent from the provided `agent_data`. 
 
         Args:
-            agent_data: The data used to create an Agent instance, must contain 'name' and 'description' keys
-            llm_config (Optional[LLMConfig]): The LLM configuration to be used for the agent. If not provided, the `agent_data` should contain a `llm_config` key.  
+            agent_data: The data used to create an Agent instance, must contain 'name', 'description' and 'prompt' keys.
+            llm_config (Optional[LLMConfig]): The LLM configuration to be used for the agent. 
+                It will be used as the default LLM for agents without a `llm_config` key. 
+                If not provided, the `agent_data` should contain a `llm_config` key. 
+                If provided and `agent_data` contains a `llm_config` key, the `llm_config` in `agent_data` will be used.  
             **kwargs: Additional parameters for agent creation
         
         Returns:
             Agent: the instantiated agent instance.
         """
-        if llm_config:
-            if isinstance(llm_config, dict):
-                agent_data["llm_config"] = llm_config
-            elif isinstance(llm_config, LLMConfig):
-                agent_data["llm_config"] = llm_config.to_dict()
+        agent_llm_config = agent_data.get("llm_config", llm_config)
+        if not agent_data.get("is_human", False) and not agent_llm_config:
+            raise ValueError("`agent_data` should contain a `llm_config` key or `llm_config` should be provided.")
+        
+        if agent_llm_config:
+            if isinstance(agent_llm_config, dict):
+                agent_data["llm_config"] = agent_llm_config
+            elif isinstance(agent_llm_config, LLMConfig):
+                agent_data["llm_config"] = agent_llm_config.to_dict()
             else:
-                raise ValueError(f"llm_config must be a dictionary or an instance of LLMConfig. Got {type(llm_config)}.")
+                raise ValueError(f"llm_config must be a dictionary or an instance of LLMConfig. Got {type(agent_llm_config)}.") 
+        
         return CustomizeAgent.from_dict(data=agent_data)
     
     def get_agent_name(self, agent: Union[str, dict, Agent]):
