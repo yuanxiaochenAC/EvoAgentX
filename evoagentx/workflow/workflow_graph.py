@@ -194,6 +194,7 @@ class WorkFlowGraph(BaseModule):
         nodes: List of WorkFlowNode instances representing tasks
         edges: List of WorkFlowEdge instances representing dependencies
         graph: Internal NetworkX MultiDiGraph or another WorkFlowGraph
+        graph_path: Path to the graph file
     """
 
     goal: str

@@ -11,6 +11,7 @@ from ..workflow.workflow import WorkFlowGraph as wg
 from ..core.module import BaseModule
 from ..models.base_model import BaseLLM
 from ..utils.mipro_utils.settings import settings
+from ..utils.mipro_utils.grounded_proposer import GroundedProposer
 from ..utils.mipro_utils.utils import (create_minibatch,
                                       create_n_fewshot_demo_sets,
                                       )
