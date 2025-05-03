@@ -274,6 +274,10 @@ class MCPToolkit:
             logger.info(f"Configured MCP server: {name} with command: {command_or_url}")
             
         return parameters
+    
+    def disconnect(self):
+        for server in self.servers:
+            server._disconnect()
         
     def get_tools(self):
         """Return a flattened list of all tools across all servers"""
