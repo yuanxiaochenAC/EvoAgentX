@@ -8,6 +8,8 @@ from collections import defaultdict
 from pydantic import Field, field_validator
 from typing import Union, Optional, Tuple, Callable, Dict, List
 
+from evoagentx.core.registry import MODULE_REGISTRY
+
 from ..core.logging import logger
 from ..core.module import BaseModule
 from ..core.base_config import Parameter
@@ -210,7 +212,7 @@ class WorkFlowGraph(BaseModule):
     nodes: Optional[List[WorkFlowNode]] = []
     edges: Optional[List[WorkFlowEdge]] = []
     graph: Optional[Union[MultiDiGraph, "WorkFlowGraph"]] = Field(default=None, exclude=True)
-
+    graph_path: Optional[str] = Field(default=None, description="Path to the graph file")
     def init_module(self):
         self._lock = threading.Lock()
         if not self.graph:
@@ -223,10 +225,6 @@ class WorkFlowGraph(BaseModule):
             raise TypeError(f"{type(self.graph)} is an unknown type for graph. Supported types: [MultiDiGraph, WorkFlowGraph]")
         self._validate_workflow_structure()
         self.update_graph()
-    
-
-    def named_agents(self):
-        return [(agent['name'], agent) for agent in self.agents]
     
     def agents(self):
         agent_lst = []
@@ -1074,11 +1072,12 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
                     "prompt": node.agents[0].get("prompt", None),
                     "system_prompt": node.agents[0].get("system_prompt", None),
                     "parse_mode": node.agents[0].get("parse_mode", "str"), 
-                    "parse_func": node.agents[0].get("parse_func", None).__name__ if node.agents[0].get("parse_func", None) else None,
+                    "parse_func": getattr(node.agents[0].get("parse_func", None), '__name__', node.agents[0].get("parse_func", None)),
                     "parse_title": node.agents[0].get("parse_title", None)
-                }
+                } 
                 for node in self.nodes
-            ]
+            ],
+            "graph_path": self.graph_path
         }
         return config
     
@@ -1087,15 +1086,23 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
         Save the workflow graph to a module file.
         """
         logger.info("Saving {} to {}", self.__class__.__name__, path)
+        self.graph_path = path
         config = self.get_graph_info()
         for ignore_key in ignore:
             config.pop(ignore_key, None)
         make_parent_folder(path)
+        
         with open(path, "w", encoding="utf-8") as f:
             json.dump(config, f, indent=4)
+        
         return path
     
-
+    def deepcopy(self):
+        graph = self.get_graph_info()
+        new_instance = WorkFlowGraph.from_file(self.graph_path)
+        new_instance.reset_agents()
+        return new_instance
+        
 class SEWWorkFlowGraph(SequentialWorkFlowGraph):
 
     def __init__(self, llm_config: Optional[LLMConfig] = None, llm: Optional[BaseLLM] = None, **kwargs):

@@ -132,6 +132,8 @@ class HumanEval(CodingBenchmark):
         
         return pass_at_k
     
+    def inputs(self):
+        pass
 
 class HumanEvaluPlus(HumanEval):
 

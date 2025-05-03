@@ -5,9 +5,8 @@ from pydantic import Field
 from typing import Any, Callable, Dict, Literal, Optional, Union, List, Tuple
 
 from ..evaluators.evaluator import Evaluator
-from ..workflow.workflow_graph import WorkflowGraph
+from ..workflow.workflow import WorkFlowGraph
 from ..workflow.action_graph import ActionGraph
-from ..workflow.workflow import WorkFlowGraph as wg
 from ..core.module import BaseModule
 from ..models.base_model import BaseLLM
 from ..utils.mipro_utils.settings import settings
@@ -17,6 +16,7 @@ from ..utils.mipro_utils.utils import (create_minibatch,
                                       )
 
 logger = logging.getLogger("MIPRO")
+logging.basicConfig(level=logging.INFO)
 
 # Constants
 BOOTSTRAPPED_FEWSHOT_EXAMPLES_IN_CONTEXT = 3
@@ -39,7 +39,7 @@ ENDC = "\033[0m"  # Resets the color to default
 
 class MiproOptimizer(BaseModule):
 
-    graph: Optional[Union[WorkflowGraph, ActionGraph]] = Field(default=None, description="The workflow to optimize.")
+    graph: Optional[Union[WorkFlowGraph, ActionGraph]] = Field(default=None, description="The workflow to optimize.")
     grpah_path: Optional[str] = Field(default=None, description="Path to the workflow to optimize.")
     metric: Optional[Callable] = Field(default=None, description="Evaluation function used to assess the quality of generated results")
     prompt_model: BaseLLM = Field(default=settings.lm, description="Language model used for prompt generation")
@@ -49,7 +49,7 @@ class MiproOptimizer(BaseModule):
     max_labeled_demos: int = Field(default=4, description="Maximum number of labeled examples")
     auto: Optional[Literal["light", "medium", "heavy"]] = Field(default="medium", description="Automation level, can be light/medium/heavy")
     num_candidates: int = Field(default=10, description="Number of candidates generated per round")
-    num_threads: Optional[int] = Field(default=None, description="Number of parallel threads, None means using all available threads")
+    num_threads: Optional[int] = Field(default=1, description="Number of parallel threads, None means using all available threads")
     max_errors: int = Field(default=10, description="Maximum number of allowed errors")
     seed: int = Field(default=9, description="Random seed for reproducibility")
     init_temperature: float = Field(default=0.5, description="Initial sampling temperature")
@@ -57,14 +57,15 @@ class MiproOptimizer(BaseModule):
     track_stats: bool = Field(default=True, description="Whether to track statistics")
     log_dir: Optional[str] = Field(default=None, description="Directory for saving logs, None means no saving")
     metric_threshold: Optional[float] = Field(default=None, description="Metric threshold to stop optimization when reached")
-    prompt_model_total_calls = 0
-    total_calls = 0
-    rng = None
+
 
     def init_module(self):
+        self.prompt_model_total_calls = 0
+        self.total_calls = 0
+        self.rng = None
         if not self.graph and not self.graph_path:
             raise ValueError("Either graph or graph_path must be provided")
-        self.graph = self.graph or wg.from_file(self.graph_path)
+        self.graph = self.graph or WorkFlowGraph.from_file(self.graph_path)
         
     def optimize(
         self,
@@ -284,9 +285,9 @@ class MiproOptimizer(BaseModule):
             trial_logs={},
         )
 
-        for i, pred in enumerate(program.predictors()):
+        for i, agent in enumerate(program.agents()):
             logger.info(f"Proposed Instructions for Predictor {i}:\n")
-            instruction_candidates[i][0] = get_signature(pred).instructions
+            instruction_candidates[i][0] = agent['prompt']
             for j, instruction in enumerate(instruction_candidates[i]):
                 logger.info(f"{j}: {instruction}\n")
             logger.info("\n")

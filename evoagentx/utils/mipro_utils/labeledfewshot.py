@@ -1,5 +1,7 @@
 import random
+import logging
 
+logger = logging.getLogger("MIPRO")
 
 class LabeledFewShot():
     def __init__(self, k=16):
@@ -10,6 +12,7 @@ class LabeledFewShot():
         self.trainset = trainset
 
         if len(self.trainset) == 0:
+            logger.info("No training data provided, returning original student")
             return self.student
 
         rng = random.Random(0)

@@ -1,10 +1,17 @@
-
-from .settings import settings
+import os 
+from dotenv import load_dotenv
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+from evoagentx.models import OpenAILLMConfig, OpenAILLM
+from evoagentx.utils.mipro_utils.settings import settings
 from evoagentx.utils.mipro_utils.utils import (
     strip_prefix,
     order_input_keys_in_string
 )
 from evoagentx.agents import CustomizeAgent
+
+
+
 
 dataset_descriptor = CustomizeAgent(
     name="DatasetDescriptor",
@@ -13,15 +20,18 @@ dataset_descriptor = CustomizeAgent(
     Given several examples from a dataset please write observations about trends that hold for most or all of the samples. 
     Some areas you may consider in your observations: topics, content, syntax, conciceness, etc. 
     It will be useful to make an educated guess as to the nature of the task this dataset will enable. Don't be afraid to be creative
+
+    Examples:
+    {examples}
     """,
     inputs = [
-        {"name": "examples", "type": "list", "desc": "Sample data points from the dataset"}
+        {"name": "examples", "type": "list", "description": "Sample data points from the dataset"}
     ],
     outputs = [
-        {"name": "observations", "type": "str", "desc": "Somethings that holds true for most or all of the data you observed"}
+        {"name": "observations", "type": "str", "description": "Somethings that holds true for most or all of the data you observed"}
     ],
-    llm_config=settings.lm,
-    parse_mode=str,
+    llm_config=OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY),
+    parse_mode="str",
 )
 
 
@@ -33,16 +43,22 @@ dataset_descriptor_with_prior = CustomizeAgent(
     I will also provide you with a few observations I have already made. Please add your own observations or if you feel the observations are comprehensive say 'COMPLETE'
     Some areas you may consider in your observations: topics, content, syntax, conciceness, etc.
     It will be useful to make an educated guess as to the nature of the task this dataset will enable. Don't be afraid to be creative
+    
+    Examples:
+    {examples}
+    
+    Prior Observations:
+    {prior_observations}
     """,
     inputs = [
-        {"name": "examples", "type": "list", "desc": "Sample data points from the dataset"},
-        {"name": "prior_observations", "type": "str", "desc": "Some prior observations I made about the data"}
+        {"name": "examples", "type": "list", "description": "Sample data points from the dataset"},
+        {"name": "prior_observations", "type": "str", "description": "Some prior observations I made about the data"}
     ],
     outputs = [
-        {"name": "observations", "type": "str", "desc": "Somethings that holds true for most or all of the data you observed or COMPLETE if you have nothing to add"}
+        {"name": "observations", "type": "str", "description": "Somethings that holds true for most or all of the data you observed or COMPLETE if you have nothing to add"}
     ],
-    llm_config=settings.lm,
-    parse_mode=str,
+    llm_config=OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY),
+    parse_mode="str",
 )
 
 
@@ -51,15 +67,18 @@ observation_summarizer = CustomizeAgent(
     description="An agent that summarizes dataset observations",
     prompt="""
     Given a series of observations I have made about my dataset, please summarize them into a brief 2-3 sentence summary which highlights only the most important details.
+    
+    Observations:
+    {observations}
     """,
     inputs = [
-        {"name": "observations", "type": "str", "desc": "Observations I have made about my dataset"}
+        {"name": "observations", "type": "str", "description": "Observations I have made about my dataset"}
     ],
     outputs = [
-        {"name": "summary", "type": "str", "desc": "Two to Three sentence summary of only the most significant highlights of my observations"}
+        {"name": "summary", "type": "str", "description": "Two to Three sentence summary of only the most significant highlights of my observations"}
     ],
-    llm_config=settings.lm,
-    parse_mode=str,
+    llm_config=OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY),
+    parse_mode='str',
 )
 
 

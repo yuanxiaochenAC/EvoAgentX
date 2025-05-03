@@ -5,7 +5,7 @@ import json
 import copy
 import logging
 from typing import Callable, Any, Dict, List
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, PrivateAttr
 from pydantic._internal._model_construction import ModelMetaclass
 
 from .logging import logger
@@ -86,8 +86,7 @@ class BaseModule(BaseModel, metaclass=MetaModule):
             Exception: When other errors occur during initialization
         """
     
-        self._compiled = False
-        
+        _compiled: bool = PrivateAttr(default=False)
         try:
             for field_name, _ in type(self).model_fields.items():
                 field_value = kwargs.get(field_name, None)
@@ -440,43 +439,6 @@ class BaseModule(BaseModel, metaclass=MetaModule):
         """
         logger.info("Saving {} to {}", self.__class__.__name__, path)
         return save_json(self.to_json(use_indent=True, default=lambda x: None, ignore=ignore), path=path)
-    
-    def deepcopy(self):
-        """Deep copy the module.
-
-        This is a tweak to the default python deepcopy that only deep copies `self.parameters()`, and for other
-        attributes, we just do the shallow copy.
-        """
-        try:
-            # If the instance itself is copyable, we can just deep copy it.
-            # Otherwise we will have to create a new instance and copy over the attributes one by one.
-            return copy.deepcopy(self)
-        except Exception:
-            pass
-
-        # Create an empty instance.
-        new_instance = self.__class__.__new__(self.__class__)
-        # Set attribuetes of the copied instance.
-        for attr, value in self.__dict__.items():
-            if isinstance(value, BaseModule):
-                setattr(new_instance, attr, value.deepcopy())
-            else:
-                try:
-                    # Try to deep copy the attribute
-                    setattr(new_instance, attr, copy.deepcopy(value))
-                except Exception:
-                    logging.warning(
-                        f"Failed to deep copy attribute '{attr}' of {self.__class__.__name__}, "
-                        "falling back to shallow copy or reference copy."
-                    )
-                    try:
-                        # Fallback to shallow copy if deep copy fails
-                        setattr(new_instance, attr, copy.copy(value))
-                    except Exception:
-                        # If even the shallow copy fails, we just copy over the reference.
-                        setattr(new_instance, attr, value)
-
-        return new_instance
     
 __all__ = ["BaseModule"]
 

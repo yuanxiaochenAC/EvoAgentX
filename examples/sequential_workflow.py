@@ -61,7 +61,9 @@ def build_sequential_workflow():
     )
 
     # [optional] save the workflow graph to a file 
-    # graph.save_module("examples/output/saved_sequential_workflow.json")
+    graph.save_module("examples/output/saved_sequential_workflow.json")
+    
+    return
     # [optional] load the workflow graph from a file 
     # graph = SequentialWorkFlowGraph.from_file("examples/output/saved_sequential_workflow.json")
     

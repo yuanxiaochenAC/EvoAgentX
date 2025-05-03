@@ -1,20 +1,24 @@
 import random
 import logging
 from pydantic import Field
-from typing import Any, List
-
-from settings import settings
+from typing import Any, List, Optional
+from evoagentx.models import OpenAILLMConfig, OpenAILLM
+from evoagentx.agents.customize_agent import CustomizeAgent
+from evoagentx.utils.mipro_utils.settings import settings
 from evoagentx.core.module import BaseModule
-from evoagentx.utils.mipro_utils.utils import get_source_code, strip_prefix
+from evoagentx.utils.mipro_utils.utils import get_source_code, strip_prefix, create_predictor_level_history_string, create_example_string
 from evoagentx.utils.mipro_utils.dataset_summary_generator import create_dataset_summary
 
-
+import os 
+from dotenv import load_dotenv
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
 MAX_INSTRUCT_IN_HISTORY = 5  # 10
 
 TIPS = {
-        "none": "",
+        "none": "", 
         "creative": "Don't be afraid to be creative when creating the new instruction!",
         "simple": "Keep the instruction clear and concise.",
         "description": "Make sure your instruction is very informative and descriptive.",
@@ -22,6 +26,137 @@ TIPS = {
         "persona": 'Include a persona that is relevant to the task in the instruction (ie. "You are a ...")',
     }
 
+describe_program = CustomizeAgent(
+    name="DescribeProgram", 
+    description="An agent that describes a program's functionality",
+    prompt="""
+    Below is some pseudo-code for a pipeline that solves tasks with calls to language models. Please describe what type of task this program appears to be designed to solve, and how it appears to work.
+    
+    Program Code:
+    {program_code}
+    
+    Program Example:
+    {program_example}
+    """,
+    inputs = [
+        {"name": "program_code", "type": "str", "description": "Pseudocode for a language model program designed to solve a particular task"},
+        {"name": "program_example", "type": "str", "description": "An example of the program in use"}
+    ],
+    outputs = [
+        {"name": "program_description", "type": "str", "description": "Describe what task the program is designed to solve, and how it goes about solving this task"}
+    ],
+    llm_config=OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY),
+    parse_mode='str',
+)
+
+describe_module = CustomizeAgent(
+    name="DescribeModule",
+    description="An agent that describes a module's functionality in a program",
+    prompt="""
+    Below is some pseudo-code for a pipeline that solves tasks with calls to language models. Please describe the purpose of one of the specified module in this pipeline.
+    
+    Program Code:
+    {program_code}
+    
+    Program Example:
+    {program_example}
+    
+    Program Description:
+    {program_description}
+    
+    Module:
+    {module}
+    
+    """,
+    inputs = [
+        {"name": "program_code", "type": "str", "description": "Pseudocode for a language model program designed to solve a particular task"},
+        {"name": "program_example", "type": "str", "description": "An example of the program in use"},
+        {"name": "program_description", "type": "str", "description": "Summary of the task the program is designed to solve, and how it goes about solving it"},
+        {"name": "module", "type": "str", "description": "The module in the program that we want to describe"}
+    ],
+    outputs = [
+        {"name": "module_description", "type": "str", "description": "Description of the module's role in the broader program"}
+    ],
+    llm_config=OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY),
+    parse_mode='str',
+)
+
+
+def generate_instruction_class(
+    use_dataset_summary=True,
+    program_aware=True,
+    use_task_demos=True,
+    use_instruct_history=True,
+    use_tip=True,
+):
+    inputs = []
+    if use_dataset_summary:
+        inputs.append({
+            "name": "dataset_description",
+            "type": "str", 
+            "description": "A description of the dataset that we are using."
+        })
+    if program_aware:
+        inputs.extend([
+            {
+                "name": "program_code",
+                "type": "str",
+                "description": "Language model program designed to solve a particular task."
+            },
+            {
+                "name": "program_description", 
+                "type": "str",
+                "description": "Summary of the task the program is designed to solve, and how it goes about solving it."
+            },
+            {
+                "name": "module",
+                "type": "str", 
+                "description": "The module to create an instruction for."
+            },
+            {
+                "name": "module_description",
+                "type": "str",
+                "description": "Description of the module to create an instruction for."
+            }
+        ])
+    inputs.append({
+        "name": "task_demos",
+        "type": "str",
+        "description": "Example inputs/outputs of our module."
+    })
+    if use_instruct_history:
+        inputs.append({
+            "name": "previous_instructions",
+            "type": "str",
+            "description": "Previous instructions we've attempted, along with their associated scores."
+        })
+    inputs.append({
+        "name": "basic_instruction",
+        "type": "str",
+        "description": "Basic instruction."
+    })
+    if use_tip:
+        inputs.append({
+            "name": "tip",
+            "type": "str",
+            "description": "A suggestion for how to go about generating the new instruction."
+        })
+
+    return CustomizeAgent(
+        name="GenerateSingleModuleInstruction",
+        description="An agent that generates instructions for language model modules",
+        prompt="""Use the information below to learn about a task that we are trying to solve using calls to an LM, then generate a new instruction that will be used to prompt a Language Model to better solve the task.""",
+        inputs=inputs,
+        outputs=[
+            {
+                "name": "proposed_instruction",
+                "type": "str",
+                "description": "Propose an instruction that will be used to prompt a Language Model to perform this task."
+            }
+        ],
+        llm_config=settings.lm,
+        parse_mode='str'
+    )
 
 logger = logging.getLogger("MIPRO")
 
@@ -222,23 +357,117 @@ class GroundedProposer(BaseModule):
 
         return strip_prefix(proposed_instruction)
 
-def create_predictor_level_history_string(
-    program,
-    pred_i,
-    trial_logs,
-    max_instruct_history,
-    
-):
-    return ""
 
-def GenerateModuleInstruction(
-    program_code_string,
-    use_dataset_summary,
-    program_aware,
-    use_task_demos,
-    use_instruct_history,
-    
-):
-    return ""
+class GenerateModuleInstruction(BaseModule):
+    program_code_string: Optional[str] = Field(default=None, description="The string version of the program code.")
+    use_dataset_summary: bool = Field(default=True)
+    program_aware: bool = Field(default=False)
+    use_task_demos: bool = Field(default=True)
+    use_instruct_history: bool = Field(default=True)
+    use_tip: bool = Field(default=True)
+    verbose: bool = Field(default=False)
 
+    def init_module(self):
+        self.describe_program = describe_program
+        self.describe_module = describe_module
+        self.generate_module_instruction = generate_instruction_class(
+            use_dataset_summary=self.use_dataset_summary,
+            program_aware=self.program_aware,
+            use_task_demos=self.use_task_demos,
+            use_instruct_history=self.use_instruct_history,
+            use_tip=self.use_tip,
+        )
 
+    def optimize(
+        self,
+        demo_candidates,
+        pred_i,
+        demo_set_i,
+        program,
+        previous_instructions,
+        data_summary,
+        num_demos_in_context=3,
+        tip=None,
+    ):
+        def gather_examples_from_sets(candidate_sets, max_examples):
+            """Helper function to gather up to augmented examples from given sets."""
+            count = 0
+            for candidate_set in candidate_sets:
+                for example in candidate_set:
+                    if "augmented" in example.keys():
+                        cur_module = program.agents()[pred_i]
+                        fields_to_use = cur_module["inputs"] + cur_module["outputs"]
+                        yield create_example_string(fields_to_use, example)
+                        count += 1
+                        if count >= max_examples:
+                            return
+
+            basic_instruction = program.agents()[pred_i]['prompt']
+            task_demos = ""
+            
+            if self.use_task_demos:
+                adjacent_sets = (
+                    [demo_candidates[pred_i][demo_set_i]] +
+                    demo_candidates[pred_i][demo_set_i + 1:] +
+                    demo_candidates[pred_i][:demo_set_i]
+                )
+
+                example_strings = gather_examples_from_sets(adjacent_sets, num_demos_in_context)
+                task_demos = "\n\n".join(example_strings) + "\n\n"
+
+            # Default to no demos provided if no examples were gathered, or if we're using the first demo set
+            if not task_demos.strip() or demo_set_i == 0:
+                task_demos = "No task demos provided."
+
+            # Summarize the program
+            program_description = "Not available"
+            module_code = "Not provided"
+            module_description = "Not provided"
+            if self.program_aware:
+                try:
+                    program_description = strip_prefix(
+                        self.describe_program(
+                            program_code=self.program_code_string, program_example=task_demos,
+                        ).program_description,
+                    )
+                    if self.verbose:
+                        print(f"PROGRAM DESCRIPTION: {program_description}")
+
+                    inputs = []
+                    outputs = []
+                    input_fields = cur_module.inputs_format.get_attrs()
+                    module_code = f"{program.predictors()[pred_i].__class__.__name__}({', '.join(inputs)}) -> {', '.join(outputs)}"
+
+                    module_description = self.describe_module(
+                        program_code=self.program_code_string,
+                        program_description=program_description,
+                        program_example=task_demos,
+                        module=module_code,
+                        max_depth=10,
+                    ).module_description
+                except:
+                    if self.verbose:
+                        print("Error getting program description. Running without program aware proposer.")
+                    self.program_aware = False
+
+            # Generate an instruction for our chosen module
+            if self.verbose:
+                print(f"task_demos {task_demos}")
+
+            instruct = self.generate_module_instruction(
+                dataset_description=data_summary,
+                program_code=self.program_code_string,
+                module=module_code,
+                program_description=program_description,
+                module_description=module_description,
+                task_demos=task_demos,
+                tip=tip,
+                basic_instruction=basic_instruction,
+                previous_instructions=previous_instructions,
+            )
+
+            proposed_instruction = strip_prefix(instruct.proposed_instruction)
+
+            return dspy.Prediction(proposed_instruction=proposed_instruction)
+                
+                

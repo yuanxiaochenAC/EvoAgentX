@@ -8,8 +8,8 @@ import logging
 import datetime
 import itertools
 from collections import defaultdict
-from labeledfewshot import LabeledFewShot
-from bootstrap import BootstrapFewShot
+from evoagentx.utils.mipro_utils.labeledfewshot import LabeledFewShot
+from evoagentx.utils.mipro_utils.bootstrap import BootstrapFewShot
 
 logger = logging.getLogger("MIPRO")
 
@@ -293,9 +293,11 @@ def create_n_fewshot_demo_sets(
     # Account for confusing way this is set up, where we add in 3 more candidate sets to the N specified
     num_candidate_sets -= 3
 
+    logger.info(f"Working with create_n_fewshot_demo_sets")
     # Initialize demo_candidates dictionary
     for agent in student.agents():
         demo_candidates[agent['name']] = []
+
 
     rng = rng or random.Random(seed)
 
@@ -308,8 +310,9 @@ def create_n_fewshot_demo_sets(
 
         if seed == -3 and include_non_bootstrapped:
             # zero-shot
-            program2 = student.reset_agents()
-
+            print(type(student))
+            program2 = student.reset_copy()
+            print(type(program2))
         elif (
             seed == -2
             and max_labeled_demos > 0
@@ -317,9 +320,11 @@ def create_n_fewshot_demo_sets(
         ):
             # labels only
             program = LabeledFewShot(k=max_labeled_demos)
+            logger.info("success in labeled few-shot step 1 ")
             program2 = program.optimize(
                 student, trainset=trainset_copy, sample=labeled_sample,
             )
+            logger.info("success in labeled few-shot")
 
         elif seed == -1:
             # unshuffled few-shot
@@ -352,8 +357,10 @@ def create_n_fewshot_demo_sets(
                 student, teacher=teacher, trainset=trainset_copy,
             )
 
-        for i, _ in enumerate(student.predictors()):
-            demo_candidates[i].append(program2.agents()[i].demos)
+        for i, _ in enumerate(student.agents()):
+            logger.info(f"{program2.agents()[i]}")\
+            
+            demo_candidates[i].append(program2.agents()[i]['demos'])
 
     return demo_candidates
 
@@ -384,3 +391,76 @@ def order_input_keys_in_string(unordered_repr):
     ordered_repr = re.sub(pattern, reorder_keys, unordered_repr)
 
     return ordered_repr
+
+def create_predictor_level_history_string(base_program, predictor_i, trial_logs, top_n):
+    instruction_aggregate = {}
+    instruction_history = []
+    
+    # Load trial programs
+    for trial_num in trial_logs:
+        trial = trial_logs[trial_num]
+        if "program_path" in trial:
+            trial_program = base_program.deepcopy()
+            # must have a graph_path to separate the objects
+            trial_program.from_file(trial.graph_path)
+            instruction_history.append({
+                "program": trial_program,
+                "score": trial["score"],
+            })
+
+    # Aggregate scores for each instruction
+    for history_item in instruction_history:
+        agent = history_item["program"].agents()[predictor_i]
+        # TODO: 后续添加关于system prompt的内容
+        
+        instruction = agent['prompt']
+        score = history_item["score"]
+        
+        if instruction in instruction_aggregate:
+            instruction_aggregate[instruction]['total_score'] += score
+            instruction_aggregate[instruction]['count'] += 1
+        else:
+            instruction_aggregate[instruction] = {'total_score': score, 'count': 1}
+    
+    # Calculate average score for each instruction and prepare for sorting
+    predictor_history = []
+    for instruction, data in instruction_aggregate.items():
+        average_score = data['total_score'] / data['count']
+        predictor_history.append((instruction, average_score))
+    
+    # Deduplicate and sort by average score, then select top N
+    seen_instructions = set()
+    unique_predictor_history = []
+    for instruction, score in predictor_history:
+        if instruction not in seen_instructions:
+            seen_instructions.add(instruction)
+            unique_predictor_history.append((instruction, score))
+
+    top_instructions = sorted(unique_predictor_history, key=lambda x: x[1], reverse=True)[:top_n]
+    top_instructions.reverse()
+    
+    # Create formatted history string
+    predictor_history_string = ""
+    for instruction, score in top_instructions:
+        predictor_history_string += instruction + f" | Score: {score}\n\n"
+    
+    return predictor_history_string
+
+def create_example_string(fields, example):
+
+    # Building the output string
+    output = []
+    for field_name, field_values in fields.items():
+        name = field_values.json_schema_extra["prefix"]
+
+        # Determine the value from input_data or prediction_data
+        value = example.get(field_name)
+
+        # Construct the string for the current field
+        field_str = f"{name} {value}"
+        output.append(field_str)
+
+    # Joining all the field strings
+    return '\n'.join(output)
+
+

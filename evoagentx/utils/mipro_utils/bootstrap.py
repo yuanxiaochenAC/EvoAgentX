@@ -8,7 +8,7 @@ import tqdm
 
 from .labeledfewshot import LabeledFewShot
 from evoagentx.core.module import BaseModule
-from settings import settings
+from evoagentx.utils.mipro_utils.settings import settings
 
 logger = logging.getLogger("MIPRO")
 
