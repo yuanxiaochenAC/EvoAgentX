@@ -11,7 +11,6 @@ from typing import Union, Optional, Tuple, Callable, Dict, List
 from ..core.logging import logger
 from ..core.module import BaseModule
 from ..core.base_config import Parameter
-from ..core.registry import PARSE_FUNCTION_REGISTRY
 from .action_graph import ActionGraph
 from ..models.base_model import BaseLLM
 from ..models.model_configs import LLMConfig

@@ -1,3 +1,4 @@
+import asyncio 
 import json
 from pydantic import Field
 from typing import Dict, Any, List
@@ -20,11 +21,14 @@ class ActionGraph(BaseModule):
             llm_cls = MODEL_REGISTRY.get_model(self.llm_config.llm_type)
             self._llm = llm_cls(config=self.llm_config)
     
-    def __call__(self, *args: Any, **kwargs: Any) -> dict:
-        return self.execute(*args, **kwargs)
+    # def __call__(self, *args: Any, **kwargs: Any) -> dict:
+    #     return self.execute(*args, **kwargs)
     
     def execute(self, *args, **kwargs) -> dict:
         raise NotImplementedError(f"The execute function for {type(self).__name__} is not implemented!")
+    
+    def async_execute(self, *args, **kwargs) -> dict:
+        raise NotImplementedError(f"The async_execute function for {type(self).__name__} is not implemented!")
     
     def get_graph_info(self, **kwargs) -> dict:
         """
@@ -39,10 +43,7 @@ class ActionGraph(BaseModule):
         config = {
             "class_name": self.__class__.__name__,
             "name": self.name,
-            "description": self.description,
-            "llm_config": self.llm_config.to_dict(exclude_none=True) \
-                if self.llm_config is not None else \
-                    self._llm.config.to_dict(exclude_none=True),
+            "description": self.description, 
             "operators": {
                 operator_name: {
                     "class_name": operator.__class__.__name__,
@@ -55,6 +56,16 @@ class ActionGraph(BaseModule):
             }
         }
         return config
+    
+    @classmethod
+    def load_module(cls, path: str, llm_config: LLMConfig = None, **kwargs) -> Dict:
+        """
+        Load the ActionGraph from a file.
+        """
+        assert llm_config is not None, "must provide `llm_config` when using `load_module` or `from_file` to load the ActionGraph from local storage" 
+        action_graph_data = super().load_module(path, **kwargs) 
+        action_graph_data["llm_config"] = llm_config.to_dict()
+        return action_graph_data
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any], **kwargs) -> "ActionGraph":
@@ -105,6 +116,16 @@ class QAActionGraph(ActionGraph):
             answer = response["answer"]
             solutions.append(answer)
         ensemble_result = self.sc_ensemble(solutions=solutions)
+        best_answer = ensemble_result["response"]
+        return {"answer": best_answer}
+    
+    async def async_execute(self, problem: str) -> dict:
+        solutions = [] 
+        for _ in range(3):
+            response = await self.answer_generate(input=problem)
+            answer = response["answer"]
+            solutions.append(answer)
+        ensemble_result = await self.sc_ensemble(solutions=solutions)
         best_answer = ensemble_result["response"]
         return {"answer": best_answer}
     
