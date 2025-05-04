@@ -968,8 +968,6 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
                 "outputs": [{"name": str, "type": str, "required": bool, "description": str}, ...],
                 "prompt": str, 
                 "system_prompt" (optional): str,
-                "llm_config" (optional): dict,
-                "llm" (optional): BaseLLM,
                 "output_parser" (optional): Type[ActionOutput],
                 "parse_mode" (optional): str, default is "str" 
                 "parse_func" (optional): Callable,

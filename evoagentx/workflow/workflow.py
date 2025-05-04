@@ -155,12 +155,14 @@ class WorkFlow(BaseModule):
             task: The workflow node to execute
             next_action: The next action to perform using agents
         """
+        # todo: add a maximum number of actions to execute
         while next_action:
             agent: Agent = self.agent_manager.get_agent(agent_name=next_action.agent)
             if not self.agent_manager.wait_for_agent_available(agent_name=agent.name, timeout=300):
                 raise TimeoutError(f"Timeout waiting for agent {agent.name} to become available")
             self.agent_manager.set_agent_state(agent_name=next_action.agent, new_state=AgentState.RUNNING)
             try:
+                # TODO: handle cases where inputs and outputs of different agents are not compatible
                 message = await agent.async_execute(
                     action_name=next_action.action,
                     action_input_data=self.environment.get_all_execution_data(),
