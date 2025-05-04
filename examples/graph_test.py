@@ -6,7 +6,7 @@ from evoagentx.workflow.workflow_graph import WorkFlowGraph
 
 def main():
     graph = WorkFlowGraph.from_file("examples/output/saved_sequential_workflow.json")
-   
-    print(graph.agents()[0]["inputs"] + graph.agents()[0]["outputs"])  
+    print(type(graph))
+    print(type(graph.deepcopy()))
 if __name__ == "__main__":
     main()

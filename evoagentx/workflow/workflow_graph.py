@@ -226,6 +226,7 @@ class WorkFlowGraph(BaseModule):
         self._validate_workflow_structure()
         self.update_graph()
     
+
     def agents(self):
         agent_lst = []
         for node in self.nodes:
@@ -242,9 +243,11 @@ class WorkFlowGraph(BaseModule):
             agent['demos'] = []
     
     def reset_copy(self):
-        new_instacne = self.deepcopy()
+        graph = self.to_dict()
+        new_instance = type(self).from_dict(graph)
         
-        return new_instacne.reset_agents()
+        return new_instance.reset_agents()
+    
     def update_graph(self):
         # call this function when modifying nodes or edges!
         self._loops = self._find_all_loops()
@@ -1097,12 +1100,21 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
         
         return path
     
-    def deepcopy(self):
+    def reset_copy(self):
         graph = self.get_graph_info()
-        new_instance = WorkFlowGraph.from_file(self.graph_path)
+        new_instance = type(self).from_dict(graph)
         new_instance.reset_agents()
         return new_instance
-        
+    
+    def deep_copy(self):
+        graph = self.get_graph_info()
+        new_instance = type(self).from_dict(graph)
+        return new_instance
+    
+    def reset_copy(self):
+        new_instance = self.deep_copy()
+        new_instance.reset_agents()
+        return new_instance
 class SEWWorkFlowGraph(SequentialWorkFlowGraph):
 
     def __init__(self, llm_config: Optional[LLMConfig] = None, llm: Optional[BaseLLM] = None, **kwargs):

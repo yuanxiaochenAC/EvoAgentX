@@ -3,13 +3,14 @@ import logging
 import threading
 from pydantic import Field
 from typing import  Callable, Dict,  Optional
-
+from evoagentx.workflow import SequentialWorkFlowGraph, WorkFlow
+from evoagentx.agents import AgentManager
 import tqdm
 
 from .labeledfewshot import LabeledFewShot
 from evoagentx.core.module import BaseModule
 from evoagentx.utils.mipro_utils.settings import settings
-
+from evoagentx.models import OpenAILLMConfig, OpenAILLM
 logger = logging.getLogger("MIPRO")
 
 class BootstrapFewShot(BaseModule):
@@ -52,8 +53,9 @@ class BootstrapFewShot(BaseModule):
         self.error_count = 0
         self.error_lock = threading.Lock()
         
-    def optimize(self, student, *, teacher=None, trainset):
+    def optimize(self, student, *, teacher=None, trainset, trainset_inputs):
         self.trainset = trainset
+        self.trainset_inputs = trainset_inputs
 
         self._prepare_student_and_teacher(student, teacher)
         self._prepare_agent_mappings()
@@ -69,40 +71,29 @@ class BootstrapFewShot(BaseModule):
         return self.student
     
     def _prepare_student_and_teacher(self, student, teacher):
-        self.student = student.reset_agents()
-
-        self.teacher = teacher.deepcopy() if teacher is not None else student.deepcopy()
-
+        self.student = student.reset_copy()
+        self.teacher = teacher.deep_copy() if teacher is not None else student.deep_copy()
         assert getattr(self.student, "_compiled", False) is False, "Student must be uncompiled."
 
         if self.max_labeled_demos and getattr(self.teacher, "_compiled", False) is False:
             optimizer = LabeledFewShot(k=self.max_labeled_demos)
             self.teacher = optimizer.optimize(self.teacher.reset_copy(), trainset=self.trainset)
-
+        
     def _prepare_agent_mappings(self):
         name2agent, agent2name = {}, {}
         student, teacher = self.student, self.teacher
-
         assert len(student.agents()) == len(
             teacher.agents(),
         ), "Student and teacher must have the same number of agents."
 
-        for (name1, agent1), (name2, agent2) in zip(student.named_agents(), teacher.named_agents()):
+        for agent1, agent2 in zip(student.agents(), teacher.agents()):
+            name1 = agent1['name']
+            name2 = agent2['name']
             assert name1 == name2, "Student and teacher must have the same program structure."
 
-            # TODO: must have same input and output field
-            
-            
-            assert id(agent1) != id(agent2), "Student and teacher must be different objects."
-
             name2agent[name1] = None  # dict(student=agent1, teacher=agent2)
+            
             agent2name[id(agent1)] = name1
-
-            # FIXME(shangyint): This is an ugly hack to bind traces of
-            # retry.module to retry
-            # if isinstance(agent1, Retry):
-            #     agent2name[id(agent1.module)] = name1
-
             agent2name[id(agent2)] = name2
 
         self.name2agent = name2agent
@@ -145,26 +136,37 @@ class BootstrapFewShot(BaseModule):
     def _bootstrap_one_example(self, example, round_idx=0):
         name2traces = {}
         teacher = self.teacher
+        
         agent_cache = {}
 
         try:
             with settings.context(trace=[], **self.teacher_settings):
-                lm = settings.lm
-                lm = lm.copy(temperature=0.7 + 0.001 * round_idx) if round_idx > 0 else lm
-                new_settings = dict(lm=lm) if round_idx > 0 else {}
-
+                lm = settings.lm.copy()
+                new_settings = {}
+                if round_idx > 0:
+                    lm.temperature = 0.7 + 0.001 * round_idx
+                    new_settings = dict(lm=lm)
+                
                 with settings.context(**new_settings):
-                    for name, agent in teacher.named_agents():
-                        agent_cache[name] = agent.demos
-                        agent.demos = [x for x in agent.demos if x != example]
                     
-                    # TODO: 给每个不同的数据集加inputs，或者添加iter 方法， 或者改object方式
-                    prediction = teacher(**example.inputs())
+                    
+                    for agent in teacher.agents():
+                        name = agent['name']
+                        agent_cache[name] = agent['demos']
+                        agent['demos'] = [x for x in agent['demos'] if x != example]
+                    
+                    agent_manager = AgentManager()
+                    agent_manager.add_agents_from_workflow(
+                        teacher,
+                        llm_config= lm
+                    )
+                    workflow = WorkFlow(graph=teacher, agent_manager= agent_manager, llm=OpenAILLM(lm))
+                    
+                    prediction = workflow.execute(inputs = get_inputs(example, self.trainset_inputs))
+                    
                     trace = settings.trace
-
-                    for name, agent in teacher.named_agents():
-                        agent.demos = agent_cache[name]
-
+                    for agent in teacher.agents():
+                        agent['demos'] = agent_cache[agent['name']]
                 if self.metric:
                     # TODO: 要不要实现metric，具体该怎么实现？
                     metric_val = self.metric(example, prediction, trace)
@@ -181,12 +183,12 @@ class BootstrapFewShot(BaseModule):
                 current_error_count = self.error_count
             if current_error_count >= self.max_errors:
                 raise e
-            logger.error(f"Failed to run or to evaluate example {example} with {self.metric} due to {e}.")
+            logger.error(f"Failed to run or to evaluate example with {self.metric} due to {e}.")
 
         if success:
             for step in trace:
+                logger.info(f"step: {step}")
                 agent, inputs, outputs = step
-                # TODO: 要不我们干脆在dspy上开发得了，这个Example的机制很好使啊
                 demo = {"augmented": True, **inputs, **outputs}
 
                 try:
@@ -219,3 +221,25 @@ class BootstrapFewShot(BaseModule):
                 self.name2traces[name].extend(demos)
 
         return success
+    
+    def _train(self):
+        rng = random.Random(0)
+        raw_demos = self.validation
+        
+        for agent in self.student.agents():
+            name = agent['name']
+            
+            augmented_demos = self.name2traces[name][:self.max_labeled_demos]
+            
+            sample_size = min(self.max_labeled_demos - len(augmented_demos), len(raw_demos))
+            sample_size = max(sample_size, 0)
+            
+            raw_demos = rng.sample(raw_demos, sample_size)
+            agent['demos'] = augmented_demos + raw_demos
+        return self.student
+
+def get_inputs(example: dict, inputs):
+    missing = [attr for attr in inputs if attr not in example]
+    if missing:
+        raise ValueError(f"Missing attributes: {', '.join(missing)}")
+    return {attr: example[attr] for attr in inputs}

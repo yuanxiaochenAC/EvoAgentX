@@ -36,8 +36,8 @@ def build_customize_agent():
     )
     
     # 获取 action 的输入和输出字段
-    fields_to_use = describe_module.action.inputs_format.get_attrs() + describe_module.action.outputs_format.get_attrs()
-    print(fields_to_use)
-
+    
+    message = describe_module(inputs = {"program_code": "hello", "program_example": "world", "program_description": "world", "module": "hello"})
+    print(message.content.module_description)
 if __name__ == "__main__":
     build_customize_agent()

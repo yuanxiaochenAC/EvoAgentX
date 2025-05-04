@@ -72,8 +72,10 @@ class MiproOptimizer(BaseModule):
         student: Any,
         *,
         trainset: List,
+        trainset_inputs: List[str],
         teacher: Any = None,
         valset: Optional[List] = None,
+        valset_inputs: Optional[List[str]] = None,
         num_trials: int = 30,
         max_bootstrapped_demos: Optional[int] = None,
         max_labeled_demos: Optional[int] = None,
@@ -99,6 +101,10 @@ class MiproOptimizer(BaseModule):
         if max_labeled_demos is not None:
             self.max_labeled_demos = max_labeled_demos
         
+        
+        if valset is not None and valset_inputs is None:
+            raise ValueError("valset inputs must be provided")
+        
         trainset, valset = self._set_and_validate_datasets(trainset, valset)
         
         
@@ -118,7 +124,7 @@ class MiproOptimizer(BaseModule):
         evaluate = Evaluator(self.task_model)
         
         # Step 1: Bootstrap few-shot examples
-        demo_candidates = self._bootstrap_fewshot_examples(program, trainset, seed, teacher)
+        demo_candidates = self._bootstrap_fewshot_examples(program, trainset, trainset_inputs, seed, teacher)
 
         # Step 2: Propose instruction candidates
         instruction_candidates = self._propose_instructions(
@@ -151,7 +157,8 @@ class MiproOptimizer(BaseModule):
         )
 
         return best_program
-        
+
+            
     def _set_and_validate_datasets(self, trainset: List, valset: Optional[List]):
         if not trainset:
             raise ValueError("Trainset cannot be empty.")
@@ -205,7 +212,7 @@ class MiproOptimizer(BaseModule):
             f"\nvalset size: {len(valset)}\n"
         )
 
-    def _bootstrap_fewshot_examples(self, program: Any, trainset: List, seed: int, teacher: Any) -> Optional[List]:
+    def _bootstrap_fewshot_examples(self, program: Any, trainset: List, trainset_inputs: List[str], seed: int, teacher: Any) -> Optional[List]:
         logger.info("\n==> STEP 1: BOOTSTRAP FEWSHOT EXAMPLES <==")
         if self.max_bootstrapped_demos > 0:
             logger.info(
@@ -223,6 +230,7 @@ class MiproOptimizer(BaseModule):
                 student=program,
                 num_candidate_sets=self.num_candidates,
                 trainset=trainset,
+                trainset_inputs=trainset_inputs,
                 max_labeled_demos=(LABELED_FEWSHOT_EXAMPLES_IN_CONTEXT if zeroshot else self.max_labeled_demos),
                 max_bootstrapped_demos=(
                     BOOTSTRAPPED_FEWSHOT_EXAMPLES_IN_CONTEXT if zeroshot else self.max_bootstrapped_demos

@@ -49,8 +49,7 @@ def build_sequential_workflow():
                 {"name": "code", "type": "str", "required": True, "description": "Implemented code with explanations"}
             ],
             "prompt": "You are a software developer. Your task is to implement the code based on the provided problem and implementation plan.\n\nProblem: {problem}\nImplementation Plan: {plan}\n\nPlease provide the implementation code with appropriate comments.",
-            "parse_mode": "custom", 
-            "parse_func": custom_parse_func
+            "parse_mode": "str", 
         }
     ]
     

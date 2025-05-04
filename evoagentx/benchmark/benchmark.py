@@ -84,11 +84,6 @@ class Benchmark(ABC):
         """
         pass 
     
-    @abstractmethod
-    def inputs(self):
-        """
-        return input items of the benchmark
-        """
     
     
     async def async_evaluate(self, prediction: Any, label: Any) -> dict:

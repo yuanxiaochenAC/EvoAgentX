@@ -270,6 +270,7 @@ def create_n_fewshot_demo_sets(
     student,
     num_candidate_sets,
     trainset,
+    trainset_inputs,
     max_labeled_demos,
     max_bootstrapped_demos,
     metric,
@@ -310,9 +311,8 @@ def create_n_fewshot_demo_sets(
 
         if seed == -3 and include_non_bootstrapped:
             # zero-shot
-            print(type(student))
             program2 = student.reset_copy()
-            print(type(program2))
+            logger.info("zero-shot finished")
         elif (
             seed == -2
             and max_labeled_demos > 0
@@ -320,12 +320,10 @@ def create_n_fewshot_demo_sets(
         ):
             # labels only
             program = LabeledFewShot(k=max_labeled_demos)
-            logger.info("success in labeled few-shot step 1 ")
             program2 = program.optimize(
                 student, trainset=trainset_copy, sample=labeled_sample,
             )
-            logger.info("success in labeled few-shot")
-
+            logger.info("labeled few-shot finished")
         elif seed == -1:
             # unshuffled few-shot
             program = BootstrapFewShot(
@@ -335,9 +333,10 @@ def create_n_fewshot_demo_sets(
                 max_labeled_demos=max_labeled_demos,
                 teacher_settings=teacher_settings,
                 max_rounds=max_rounds,
-            )
-            program2 = program.optimize(student, teacher=teacher, trainset=trainset_copy)
 
+            )
+            program2 = program.optimize(student, teacher=teacher, trainset=trainset_copy, trainset_inputs=trainset_inputs)
+            logger.info("bootstrap few-shot finished")
         else:
             # shuffled few-shot
             rng.shuffle(trainset_copy)
@@ -354,14 +353,11 @@ def create_n_fewshot_demo_sets(
             )
 
             program2 = program.optimize(
-                student, teacher=teacher, trainset=trainset_copy,
+                student, teacher=teacher, trainset=trainset_copy, trainset_inputs=trainset_inputs
             )
 
-        for i, _ in enumerate(student.agents()):
-            logger.info(f"{program2.agents()[i]}")\
-            
-            demo_candidates[i].append(program2.agents()[i]['demos'])
-
+        for i, agent in enumerate(student.agents()):
+            demo_candidates[agent['name']].append(program2.agents()[i]['demos'])
     return demo_candidates
 
 def get_source_code(program):

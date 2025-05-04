@@ -202,7 +202,9 @@ class BaseModule(BaseModel, metaclass=MetaModule):
                     if use_logger:
                         logger.error(error_message)
                     raise Exception(get_error_message(buffer.exceptions))
+                
             finally:
+                
                 pass
         return module
     
