@@ -443,21 +443,6 @@ class WorkFlowManager(BaseModule):
         env.update(message=message, state=TrajectoryState.COMPLETED)
         task: WorkFlowNode = graph.get_node(scheduled_task.task_name)
         return task
-
-    async def schedule_next_action(self, goal: str, task: WorkFlowNode, agent_manager: AgentManager, env: Environment = None, **kwargs) -> NextAction:
-        """
-        Return the next action to execute. If the task is completed, return None.
-        """
-        execution_results = await self.action_scheduler.async_execute(llm=self.llm, task=task, agent_manager=agent_manager, env=env, return_prompt=True, **kwargs)
-        if execution_results is None:
-            return None
-        next_action, prompt, *_ = execution_results
-        message = Message(
-            content=next_action, agent=type(self).__name__, action=self.action_scheduler.name, \
-                prompt=prompt, msg_type=MessageType.COMMAND, wf_goal=goal, wf_task=task.name, wf_task_desc=task.description 
-        )
-        env.update(message=message, state=TrajectoryState.COMPLETED)
-        return next_action
     
     async def schedule_next_action(self, goal: str, task: WorkFlowNode, agent_manager: AgentManager, env: Environment = None, **kwargs) -> NextAction:
         """
