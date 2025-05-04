@@ -12,8 +12,6 @@ from ..core.logging import logger
 from ..core.module import BaseModule
 from ..core.base_config import Parameter
 from .action_graph import ActionGraph
-from ..models.base_model import BaseLLM
-from ..models.model_configs import LLMConfig
 from ..utils.utils import generate_dynamic_class_name, make_parent_folder
 from ..prompts.workflow.sew_workflow import SEW_WORKFLOW
 
@@ -74,7 +72,7 @@ class WorkFlowNode(BaseModule):
     def to_dict(self, exclude_none: bool = True, ignore: List[str] = [], **kwargs) -> dict:
 
         data = super().to_dict(exclude_none=exclude_none, ignore=ignore, **kwargs)
-        for agent in data["agents"]:
+        for agent in data.get("agents", []):
             # for CustomizeAgent 
             if isinstance(agent, dict) and "parse_func" in agent and isinstance(agent["parse_func"], Callable):
                 agent["parse_func"] = agent["parse_func"].__name__
@@ -1074,7 +1072,7 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
 
 class SEWWorkFlowGraph(SequentialWorkFlowGraph):
 
-    def __init__(self, llm_config: Optional[LLMConfig] = None, llm: Optional[BaseLLM] = None, **kwargs):
+    def __init__(self, **kwargs):
         goal = kwargs.pop("goal", SEW_WORKFLOW["goal"])
         tasks = kwargs.pop("tasks", SEW_WORKFLOW["tasks"])
-        super().__init__(goal=goal, tasks=tasks, llm_config=llm_config, llm=llm, **kwargs)
+        super().__init__(goal=goal, tasks=tasks, **kwargs)

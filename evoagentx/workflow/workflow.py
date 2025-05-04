@@ -1,4 +1,5 @@
 import inspect
+import asyncio
 from pydantic import Field
 from typing import Optional
 from ..core.logging import logger
@@ -33,20 +34,48 @@ class WorkFlow(BaseModule):
             self.workflow_manager = WorkFlowManager(llm=self.llm)
 
     def execute(self, inputs: dict = {}, **kwargs) -> str:
+        """
+        Synchronous wrapper for async_execute. Creates a new event loop and runs the async method.
+        
+        Args:
+            inputs: Dictionary of inputs for workflow execution
+            **kwargs: Additional keyword arguments
+            
+        Returns:
+            str: The output of the workflow execution
+        """
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(self.async_execute(inputs, **kwargs))
+        finally:
+            loop.close()
 
+    async def async_execute(self, inputs: dict = {}, **kwargs) -> str:
+        """
+        Asynchronously execute the workflow.
+        
+        Args:
+            inputs: Dictionary of inputs for workflow execution
+            **kwargs: Additional keyword arguments
+            
+        Returns:
+            str: The output of the workflow execution
+        """
         goal = self.graph.goal
         inputs.update({"goal": goal})
         inp_message = Message(content=inputs, msg_type=MessageType.INPUT, wf_goal=goal)
         self.environment.update(message=inp_message, state=TrajectoryState.COMPLETED)
 
         failed = False
+        error_message = None
         while not self.graph.is_complete and not failed:
             try:
-                task: WorkFlowNode = self.get_next_task()
+                task: WorkFlowNode = await self.get_next_task()
                 if task is None:
                     break
                 logger.info(f"Executing subtask: {task.name}")
-                self.execute_task(task=task)
+                await self.execute_task(task=task)
             except Exception as e:
                 failed = True
                 error_message = Message(
@@ -61,38 +90,49 @@ class WorkFlow(BaseModule):
             return "Workflow Execution Failed"
         
         logger.info("Extracting WorkFlow Output ...")
-        output: str = self.workflow_manager.extract_output(graph=self.graph, env=self.environment)
+        output: str = await self.workflow_manager.extract_output(graph=self.graph, env=self.environment)
         return output
     
-    def get_next_task(self) -> WorkFlowNode:
+    async def get_next_task(self) -> WorkFlowNode:
         task_execution_history = " -> ".join(self.environment.task_execution_history)
         if not task_execution_history:
             task_execution_history = "None"
         logger.info(f"Task Execution Trajectory: {task_execution_history}. Scheduling next subtask ...")
-        task: WorkFlowNode = self.workflow_manager.schedule_next_task(graph=self.graph, env=self.environment)
+        task: WorkFlowNode = await self.workflow_manager.schedule_next_task(graph=self.graph, env=self.environment)
         logger.info(f"The next subtask to be executed is: {task.name}")
         return task
         
-    def execute_task(self, task: WorkFlowNode):
-
+    async def execute_task(self, task: WorkFlowNode):
+        """
+        Asynchronously execute a workflow task.
+        
+        Args:
+            task: The workflow node to execute
+        """
         last_executed_task = self.environment.get_last_executed_task()
         self.graph.step(source_node=last_executed_task, target_node=task)
-        next_action: NextAction = self.workflow_manager.schedule_next_action(
+        next_action: NextAction = await self.workflow_manager.schedule_next_action(
             goal=self.graph.goal,
             task=task, 
             agent_manager=self.agent_manager, 
             env=self.environment
         )
         if next_action.action_graph is not None:
-            self._execute_task_by_action_graph(task=task, next_action=next_action)
+            await self._async_execute_task_by_action_graph(task=task, next_action=next_action)
         else:
-            self._execute_task_by_agents(task=task, next_action=next_action)
+            await self._async_execute_task_by_agents(task=task, next_action=next_action)
         self.graph.completed(node=task)
 
-    def _execute_task_by_action_graph(self, task: WorkFlowNode, next_action: NextAction):
-
+    async def _async_execute_task_by_action_graph(self, task: WorkFlowNode, next_action: NextAction):
+        """
+        Asynchronously execute a task using an action graph.
+        
+        Args:
+            task: The workflow node to execute
+            next_action: The next action to perform with its action graph
+        """
         action_graph: ActionGraph = next_action.action_graph
-        execute_signature = inspect.signature(type(action_graph).execute)
+        execute_signature = inspect.signature(type(action_graph).async_execute)
         execute_params = []
         for param, _ in execute_signature.parameters.items():
             if param in ["self", "args", "kwargs"]:
@@ -100,24 +140,28 @@ class WorkFlow(BaseModule):
             execute_params.append(param)
         action_input_data = self.environment.get_all_execution_data()
         execute_inputs = {param: action_input_data.get(param, "") for param in execute_params}
-        action_graph_output: dict = action_graph.execute(**execute_inputs)
+        action_graph_output: dict = await action_graph.async_execute(**execute_inputs)
         message = Message(
-            content=action_graph_output, action=action_graph.name, msg_type=MessageType.RESPONSE, \
-                wf_goal=self.graph.goal, wf_task=task.name, wf_task_desc=task.description
+            content=action_graph_output, action=action_graph.name, msg_type=MessageType.RESPONSE,
+            wf_goal=self.graph.goal, wf_task=task.name, wf_task_desc=task.description
         )
         self.environment.update(message=message, state=TrajectoryState.COMPLETED)
     
-    def _execute_task_by_agents(self, task: WorkFlowNode, next_action: NextAction):
+    async def _async_execute_task_by_agents(self, task: WorkFlowNode, next_action: NextAction):
+        """
+        Asynchronously execute a task using agents.
         
+        Args:
+            task: The workflow node to execute
+            next_action: The next action to perform using agents
+        """
         while next_action:
             agent: Agent = self.agent_manager.get_agent(agent_name=next_action.agent)
-            # while self.agent_manager.get_agent_state(agent_name=agent.name) != AgentState.AVAILABLE:
-            #     sleep(5)
             if not self.agent_manager.wait_for_agent_available(agent_name=agent.name, timeout=300):
                 raise TimeoutError(f"Timeout waiting for agent {agent.name} to become available")
             self.agent_manager.set_agent_state(agent_name=next_action.agent, new_state=AgentState.RUNNING)
             try:
-                message = agent.execute(
+                message = await agent.async_execute(
                     action_name=next_action.action,
                     action_input_data=self.environment.get_all_execution_data(),
                     return_msg_type=MessageType.RESPONSE, 
@@ -130,7 +174,7 @@ class WorkFlow(BaseModule):
                 self.agent_manager.set_agent_state(agent_name=next_action.agent, new_state=AgentState.AVAILABLE)
             if self.is_task_completed(task=task):
                 break
-            next_action: NextAction = self.workflow_manager.schedule_next_action(
+            next_action: NextAction = await self.workflow_manager.schedule_next_action(
                 goal=self.graph.goal,
                 task=task,
                 agent_manager=self.agent_manager, 

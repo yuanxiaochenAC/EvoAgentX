@@ -1,6 +1,6 @@
 import asyncio
 from pydantic import Field
-from typing import Type, Optional, Union, Tuple, List
+from typing import Type, Optional, Union, Tuple, List, Any, Coroutine
 
 from ..core.module import BaseModule
 from ..core.module_utils import generate_id
@@ -60,13 +60,23 @@ class Agent(BaseModule):
         self._save_ignore_fields = ["llm", "llm_config"]
         self.init_context_extractor()
 
-    def __call__(self, *args, **kwargs) -> Message:
-        """Make the agent callable and automatically choose between sync and async execution"""
-        if asyncio.iscoroutinefunction(self.async_execute) and asyncio.get_event_loop().is_running():
-            # If the operator is in an asynchronous environment and has an execute_async method, return a coroutine
+    # def __call__(self, *args, **kwargs) -> Message:
+    #     """Make the agent callable and automatically choose between sync and async execution"""
+    #     if asyncio.iscoroutinefunction(self.async_execute) and asyncio.get_event_loop().is_running():
+    #         # If the operator is in an asynchronous environment and has an execute_async method, return a coroutine
+    #         return self.async_execute(*args, **kwargs)
+    #     # Otherwise, use the synchronous method
+    #     return self.execute(*args, **kwargs)
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Union[dict, Coroutine[Any, Any, dict]]:
+        """Make the operator callable and automatically choose between sync and async execution."""
+        try:
+            # Safe way to check if we're inside an async environment
+            asyncio.get_running_loop()
             return self.async_execute(*args, **kwargs)
-        # Otherwise, use the synchronous method
-        return self.execute(*args, **kwargs)
+        except RuntimeError:
+            # No running loop — likely in sync context or worker thread
+            return self.execute(*args, **kwargs)
     
     def _prepare_execution(
         self,
