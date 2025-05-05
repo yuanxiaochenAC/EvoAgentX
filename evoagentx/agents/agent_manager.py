@@ -1,5 +1,6 @@
 import threading
 from enum import Enum
+from copy import deepcopy
 from typing import Union, Optional, Dict, List
 
 from .agent import Agent
@@ -139,6 +140,7 @@ class AgentManager(BaseModule):
         Returns:
             Agent: the instantiated agent instance.
         """
+        agent_data = deepcopy(agent_data)
         agent_llm_config = agent_data.get("llm_config", llm_config)
         if not agent_data.get("is_human", False) and not agent_llm_config:
             raise ValueError("`agent_data` should contain a `llm_config` key or `llm_config` should be provided.")

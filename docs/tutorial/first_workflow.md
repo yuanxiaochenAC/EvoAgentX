@@ -140,4 +140,4 @@ loaded_graph = SequentialWorkFlowGraph.from_file("examples/output/saved_sequenti
 new_workflow = WorkFlow(graph=loaded_graph, agent_manager=agent_manager, llm=llm)
 ```
 
-For more complex workflows or different types of workflow graphs, please refer to the [Workflow Graphs](../modules/workflow_graph.md) documentation.  
+For more complex workflows or different types of workflow graphs, please refer to the [Workflow Graphs](../modules/workflow_graph.md) documentation and the [Action Graphs](../modules/action_graph.md) documentation. 
