@@ -391,7 +391,7 @@ class CustomizeAgent(Agent):
             if required:
                 action_input_fields[field["name"]] = (str, Field(description=field["description"]))
             else:
-                action_input_fields[field["name"]] = (Optional[str], Field(description=field["description"]))
+                action_input_fields[field["name"]] = (Optional[str], Field(default=None, description=field["description"]))
         
         action_input_type = create_model(
             self._get_unique_class_name(
@@ -409,7 +409,7 @@ class CustomizeAgent(Agent):
                 if required:
                     action_output_fields[field["name"]] = (Union[str, dict, list], Field(description=field["description"]))
                 else:
-                    action_output_fields[field["name"]] = (Optional[Union[str, dict, list]], Field(description=field["description"]))
+                    action_output_fields[field["name"]] = (Optional[Union[str, dict, list]], Field(default=None, description=field["description"]))
             
             action_output_type = create_model(
                 self._get_unique_class_name(

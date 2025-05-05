@@ -133,6 +133,9 @@ result = workflow.execute(inputs={"problem": "What is the capital of France?"})
 print(result)
 ```
 
+!!! warning 
+    When using `ActionGraph` in `WorkFlowNode`, the `inputs` parameter of the `WorkFlowNode` should match the required parameters in the `execute` method of the `ActionGraph`. The `execute` method is expected to return a **dictionary** or `LLMOutputParser` instance with keys matching the names of the `outputs` in the `WorkFlowNode`. 
+
 ### Saving and Loading an ActionGraph
 
 ```python

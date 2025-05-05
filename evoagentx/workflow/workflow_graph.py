@@ -1,12 +1,14 @@
 import json
+import inspect
 import threading
 from enum import Enum
 import networkx as nx 
 from copy import deepcopy
 from networkx import MultiDiGraph
 from collections import defaultdict
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from typing import Union, Optional, Tuple, Callable, Dict, List
+from functools import wraps
 
 from ..core.logging import logger
 from ..core.module import BaseModule
@@ -68,7 +70,81 @@ class WorkFlowNode(BaseModule):
                 assert "name" in agent and "description" in agent, \
                     "must provide the name and description of an agent when specifying an agent with a dict."
         return agents
-    
+
+    @model_validator(mode="after")
+    @classmethod
+    def check_action_graph(cls, instance: "WorkFlowNode"):
+        """
+        Validates that:
+        1. All required parameters of execute/async_execute methods are included in inputs
+        2. The execute/async_execute methods return dictionaries
+        3. All output parameters are present in the returned dictionaries
+        """
+        if instance.action_graph is None:
+            return instance
+        
+        # Get input parameter names from the node's input parameters
+        input_param_names = {param.name for param in instance.inputs if param.required}
+        output_param_names = {param.name for param in instance.outputs if param.required}
+        
+        def check_method_signature(method, method_name):
+            """Helper function to check method signature against input parameters"""
+
+            method_source = inspect.getsource(method)
+            if "NotImplementedError" in method_source:
+                return
+                
+            # Get method signature
+            method_sig = inspect.signature(method)
+            
+            # Only consider parameters other than self, *args, and **kwargs as required
+            required_params = []
+            for name, param in method_sig.parameters.items():
+                if name != 'self' and param.kind not in (param.VAR_POSITIONAL, param.VAR_KEYWORD):
+                    if param.default == param.empty:  # This is a required parameter
+                        required_params.append(name)
+            
+            # Check if all required parameters are in inputs
+            missing_inputs = set(required_params) - input_param_names
+            if missing_inputs:
+                raise ValueError(f"`{method_name}` method requires parameters that are not in `inputs`: {missing_inputs}")
+        
+        # Check execute method
+        check_method_signature(instance.action_graph.execute, "execute")
+        # Check async_execute method if it exists
+        check_method_signature(instance.action_graph.async_execute, "async_execute")
+
+        # Monkey-patch execute and async_execute to check returns at runtime
+        original_execute = instance.action_graph.execute
+        original_async_execute = instance.action_graph.async_execute
+        
+        def check_method_return(method_name, result):
+            if not isinstance(result, dict):
+                raise TypeError(f"{method_name} must return a dictionary, got {type(result)}")
+            
+            # Check if all output keys are in the result
+            missing_outputs = output_param_names - set(result.keys())
+            if missing_outputs:
+                raise ValueError(f"{method_name} return value is missing required outputs: {missing_outputs}")
+            
+            return result
+        
+        @wraps(original_execute)
+        def patched_execute(*args, **kwargs):
+            result = original_execute(*args, **kwargs)
+            return check_method_return("execute", result)
+        
+        @wraps(original_async_execute)
+        async def patched_async_execute(*args, **kwargs):
+            result = await original_async_execute(*args, **kwargs)
+            return check_method_return("async_execute", result)
+        
+        # Replace the methods with our patched versions
+        instance.action_graph.execute = patched_execute
+        instance.action_graph.async_execute = patched_async_execute
+        
+        return instance
+
     def to_dict(self, exclude_none: bool = True, ignore: List[str] = [], **kwargs) -> dict:
 
         data = super().to_dict(exclude_none=exclude_none, ignore=ignore, **kwargs)
@@ -123,6 +199,17 @@ class WorkFlowNode(BaseModule):
         )
         return desc
 
+    def get_input_names(self, required: bool = False) -> List[str]:
+        if required:
+            return [param.name for param in self.inputs if param.required]
+        else:
+            return [param.name for param in self.inputs]
+    
+    def get_output_names(self, required: bool = False) -> List[str]:
+        if required:
+            return [param.name for param in self.outputs if param.required]
+        else:
+            return [param.name for param in self.outputs]
 
 class WorkFlowEdge(BaseModule):
     """
@@ -379,6 +466,14 @@ class WorkFlowGraph(BaseModule):
                 raise ValueError(f"{attr} node {node_name} does not exists!")
         if self.edge_exists(edge):
             raise ValueError(f"Duplicate edges are not allowed! Found duplicate edges: {edge}")
+        
+        # check the inputs and outputs of the edge
+        source_node = self.get_node(edge.source)
+        target_node = self.get_node(edge.target)
+        source_output_names = set(param.name for param in source_node.outputs)
+        target_input_names = set(param.name for param in target_node.inputs)
+        if len(source_output_names & target_input_names) == 0:
+            logger.warning(f"The edge ({edge.source}, {edge.target}) has no matching inputs and outputs! You may need to check the inputs and outputs of the nodes to ensure that at least one input of the target node is the output of the source node.")
         
         self.edges.append(edge)
         self.graph.add_edge(edge.source, edge.target, ref=edge)

@@ -67,6 +67,24 @@ class ActionInput(LLMOutputParser):
             return "" 
         fields_info_str = json.dumps(fields_info, indent=4)
         return fields_info_str
+        
+    @classmethod
+    def get_required_input_names(cls) -> List[str]:
+        """Get a list of all required input parameter names.
+        
+        Returns:
+            List[str]: Names of all parameters that are required (don't have default values).
+        """
+        required_fields = []
+        attrs = cls.get_attrs()
+        for field_name, field_info in cls.model_fields.items():
+            if field_name not in attrs:
+                continue
+            field_default = field_info.default
+            # A field is required if it doesn't have a default value
+            if field_default is PydanticUndefined:
+                required_fields.append(field_name)
+        return required_fields
 
 
 class ActionOutput(LLMOutputParser):
