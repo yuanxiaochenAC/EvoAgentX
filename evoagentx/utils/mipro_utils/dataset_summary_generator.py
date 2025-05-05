@@ -85,15 +85,18 @@ observation_summarizer = CustomizeAgent(
 def create_dataset_summary(trainset, view_data_batch_size, prompt_model, log_file=None, verbose=False):
     if verbose:
         print("\nBootstrapping dataset summary (this will be used to generate instructions)...")
-    
+        
     upper_lim = min(len(trainset), view_data_batch_size)
-    prompt_model = prompt_model if prompt_model else settings.lm
-    with settings.context(lm=prompt_model):
-        observation = dataset_descriptor(
-                        inputs={"examples":order_input_keys_in_string(repr(trainset[0:upper_lim]))},
-                        llm_config=settings.lm.copy(temperature=1.0, n=1))
+    
+    lm = settings.lm.copy()
+    lm.temperature = 1.0
+    lm.n = 1
+    
+    observation = dataset_descriptor(
+        inputs={"examples":order_input_keys_in_string(repr(trainset[0:upper_lim]))},
+        llm_config=OpenAILLM(config=lm))
 
-        observations = observation.content.observations
+    observations = observation.content.observations
         
     if log_file:
         log_file.write("PRODUCING DATASET SUMMARY\n")
@@ -109,36 +112,35 @@ def create_dataset_summary(trainset, view_data_batch_size, prompt_model, log_fil
             if verbose:
                 print(f"b: {b}")
             upper_lim = min(len(trainset), b+view_data_batch_size)
-            with settings.context(lm=prompt_model):
-                output = dataset_descriptor_with_prior(
-                    inputs={ "prior_observations": observations, "examples": order_input_keys_in_string(repr(trainset[b:upper_lim]))},
-                    llm_config=settings.lm.copy(temperature=1.0, n=1))
+            
+            output = dataset_descriptor_with_prior(
+                inputs={ "prior_observations": observations, "examples": order_input_keys_in_string(repr(trainset[b:upper_lim]))},
+                llm_config=OpenAILLM(config=lm))
 
-                output_observations = output.content.observations
-                if len(output_observations) >= 8 and output_observations[:8].upper() == "COMPLETE":
-                    skips += 1
-                    if skips >= 5:
-                        break
-                    continue
-                observations += output_observations
+            output_observations = output.content.observations
+            if len(output_observations) >= 8 and output_observations[:8].upper() == "COMPLETE":
+                skips += 1
+                if skips >= 5:
+                    break
+                continue
+            observations += output_observations
 
-                if log_file:
-                    log_file.write(f"Observations: {observations}\n")
+            if log_file:
+                log_file.write(f"Observations: {observations}\n")
 
     except Exception as e:
         if verbose:
             print(f"e {e}. using observations from past round for a summary.")
     
     if prompt_model:
-        with settings.context(lm=prompt_model):
-            summary = observation_summarizer(
-                inputs={"observations": observations},
-                llm_config=settings.lm.copy(temperature=1.0, n=1)
-            )
+        summary = observation_summarizer(
+            inputs={"observations": observations},
+            llm_config=OpenAILLM(config=lm)
+        )
     else:
         summary = observation_summarizer(
             inputs={"observations": observations},
-            llm_config=settings.lm.copy(temperature=1.0, n=1)
+            llm_config=OpenAILLM(config=lm)
         )
             
     if verbose:
@@ -149,4 +151,5 @@ def create_dataset_summary(trainset, view_data_batch_size, prompt_model, log_fil
     if verbose:
         print(f"\nGenerated summary: {strip_prefix(summary.content.summary)}\n")
 
+    
     return strip_prefix(summary.content.summary)

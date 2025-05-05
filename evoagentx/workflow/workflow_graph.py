@@ -1100,11 +1100,6 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
         
         return path
     
-    def reset_copy(self):
-        graph = self.get_graph_info()
-        new_instance = type(self).from_dict(graph)
-        new_instance.reset_agents()
-        return new_instance
     
     def deep_copy(self):
         graph = self.get_graph_info()

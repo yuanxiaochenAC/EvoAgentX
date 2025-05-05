@@ -119,7 +119,7 @@ class MiproOptimizer(BaseModule):
         if minibatch and minibatch_size > len(valset):
             raise ValueError(f"Minibatch size cannot exceed the size of the valset. Valset size: {len(valset)}.")
 
-        program = student.deepcopy()
+        program = student.deep_copy()
         # TODO: 敲定evaluator的细节
         evaluate = Evaluator(self.task_model)
         

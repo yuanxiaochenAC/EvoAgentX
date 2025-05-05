@@ -15,6 +15,7 @@ def main():
     settings.lm = openai_config
     humaneval = HumanEval()
     
+    print(settings.lm.temperature)
 
     def evaluate_metric(example, prediction, trace):
         return True
@@ -31,9 +32,13 @@ def main():
     )
 
     trainset = humaneval._test_data[:100]
+    # 设置完整的输出路径
+    output_path = r"C:\Users\31646\Desktop\EvoAgentX\examples\mipro\output\demo_candidates.json"
+
+    # 确保目录存在
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     demos = optimizer._bootstrap_fewshot_examples(optimizer.graph, trainset, ["prompt"], optimizer._set_random_seeds(9), None)
-    with open("demo_candidates.json", "w", encoding="utf-8") as f:
-        # 如果 demo 对象中还有不是原生 JSON 类型的值（如 BaseModel），可添加 default=str
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(demos, f, indent=2, ensure_ascii=False, default=str)
 
 if __name__ == "__main__":
