@@ -2,7 +2,7 @@
 
 ## Benchmark Overview 
 
-This repository provides a set of benchmarks to facilitate the evaluation of different agent-based systems. Below is a summary of the benchmarks currently included, along with basic dataset statistics: 
+EvoAgentX provides a set of benchmarks to facilitate the evaluation of different agent-based systems. Below is a summary of the benchmarks currently included, along with basic dataset statistics: 
 
 
 | Task                      | Dataset Name    | # Train   | # Dev   | # Test |
@@ -17,19 +17,21 @@ This repository provides a set of benchmarks to facilitate the evaluation of dif
 | Code Execution            | LiveCodeBench   | /         | /       | 479      |
 | Test Output Prediction    | LiveCodeBench   | /         | /       | 442      |
 
+Our framework provides automatic dataset downloading capabilities, and all benchmarks have built-in evaluation methods. The framework is designed to allow users to easily load, use, and evaluate datasets for various tasks without manually handling data downloading and evaluation logic. 
+All datasets are automatically downloaded to the default path (~/.evoagentx/data/) when first used, or users can specify a custom path via parameter `path`. Each benchmark class implements a standardized interface, including methods for data loading, label retrieval, and prediction evaluation. 
 
 Below, we introduce the preprocessing steps and evaluation metrics for each benchmark. 
 
 - [Question Answering](#question-answering)
-  - [NQ](#nq)
-  - [HotPotQA](#hotpotqa)
+    - [NQ](#nq)
+    - [HotPotQA](#hotpotqa)
 - [Math](#math)
-  - [GSM8K](#gsm8k)
-  - [MATH](#math)
+    - [GSM8K](#gsm8k)
+    - [MATH](#math)
 - [Code Generation](#code-generation)
-  - [HumanEval](#humaneval)
-  - [MBPP](#mbpp)
-  - [LiveCodeBench](#livecodebench)
+    - [HumanEval](#humaneval)
+    - [MBPP](#mbpp)
+    - [LiveCodeBench](#livecodebench)
 
 ## Preprocessing and Evaluation Metrics 
 
@@ -165,7 +167,7 @@ Each example in the dataset is in the following format, where we keep the origin
 You can also access the original MBPP attributes such as "code", "test_list" in the example by using `example["code"]`. 
 
 
-#### LiveCodeBench 
+#### LiveCodeBench
 [LiveCodeBench](https://livecodebench.github.io/) is a contamination-free evaluation benchmark of LLMs for code that continuously collects new problems over time. Particularly, LiveCodeBench also focuses on broader code-related capabilities, such as code execution, and test output prediction, beyond mere code generation. Currently, LiveCodeBench hosts over three hundred high-quality coding problems published between May 2023 and February 2024. 
 
 You can load the dataset using the following code, where `scenario` can be one of [`code_generation`, `test_output_prediction`, `code_execution`] indicating different tasks. `version` denotes different versions of the code generation datasets, which is only available for `code_generation` scenario, and can be one of `["release_v1", "release_v2", "release_v3", "release_v4", "release_v5", "release_latest"]`. Please refer to the [LiveCodeBench](https://livecodebench.github.io/) repository for more details. 
@@ -173,6 +175,5 @@ You can load the dataset using the following code, where `scenario` can be one o
 ```python
 from evoagentx.benchmark import LiveCodeBench
 livecodebench_dataset = LiveCodeBench(scenario="code_generation", version="release_v1") # optional: path="/path/to/save_data"
-test_data = livecodebench_dataset.get_test_data() 
+test_data = livecodebench_dataset.get_test_data()
 ```
-

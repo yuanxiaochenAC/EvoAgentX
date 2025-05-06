@@ -4,6 +4,8 @@ from tqdm import tqdm
 # from time import time
 from typing import Callable, Optional, Any, List, Union, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import asyncio
+from tqdm.asyncio import tqdm_asyncio
 
 from ..core.logging import logger
 from ..core.message import Message
@@ -212,8 +214,9 @@ class Evaluator:
             progress_bar = tqdm(data, desc="Evaluating workflow", total=len(data))
         for example in data:
             result = self._evaluate_single_example(graph, example, benchmark, **kwargs)
-            if result is not None:
-                results.append(result)
+            # if result is not None:
+            #     results.append(result)
+            results.append(result) # can contain None values
             if verbose:
                 progress_bar.update(1)
         if verbose:
@@ -295,8 +298,20 @@ class Evaluator:
             dict: Average metrics
         """
         if not scores:
+            logger.warning("No scores found. Return an empty dictionary.")
             return {}
-        return {k: sum(d[k] for d in scores) / len(scores) for k in scores[0]}
+        num_total_items = len(scores)
+        first_valid_score = None 
+        for score in scores: 
+            if score is not None:
+                first_valid_score = score
+                break
+        if first_valid_score is None:
+            logger.warning("No valid scores found. Return an empty dictionary.")
+            return {}
+        # return {k: sum(d[k] for d in scores) / len(scores) for k in scores[0]}
+        return {k: sum(d[k] for d in scores if d is not None) / num_total_items for k in first_valid_score}
+
 
     def _evaluate_graph(self, graph: Union[WorkFlowGraph, ActionGraph], data: List[dict], benchmark: Benchmark, verbose: Optional[bool] = None, **kwargs) -> dict:
         """
@@ -313,6 +328,7 @@ class Evaluator:
             dict: The average metrics of the workflow evaluation
         """
         if not data:
+            logger.warning("No data to evaluate. Return an empty dictionary.")
             return {}
         
         verbose = verbose if verbose is not None else self.verbose
@@ -343,3 +359,150 @@ class Evaluator:
         """
         return self._evaluation_records.copy()
     
+    async def async_evaluate(
+        self, 
+        graph: Union[WorkFlowGraph, ActionGraph],
+        benchmark: Benchmark, 
+        eval_mode: str = "test", 
+        indices: Optional[List[int]] = None, 
+        sample_k: Optional[int] = None, 
+        seed: Optional[int] = None, 
+        verbose: Optional[bool] = None,
+        **kwargs
+    ) -> dict:
+        """
+        Asynchronously evaluate the performance of the workflow on the benchmark.
+
+        Args:
+            graph (WorkFlowGraph or ActionGraph): The workflow to evaluate.
+            benchmark (Benchmark): The benchmark to evaluate the workflow on.
+            eval_mode (str): which split of the benchmark to evaluate the workflow on. Choices: ["test", "dev", "train"].
+            indices (List[int], optional): The indices of the data to evaluate the workflow on.
+            sample_k (int, optional): The number of data to evaluate the workflow on. If provided, a random sample of size `sample_k` will be used.
+            verbose (bool, optional): Whether to print the evaluation progress. If not provided, the `self.verbose` will be used.
+        
+        Returns:
+            dict: The average metrics of the workflow evaluation.
+        """
+        # clear the evaluation records
+        self._evaluation_records.clear()
+        data = self._get_eval_data(benchmark=benchmark, eval_mode=eval_mode, indices=indices, sample_k=sample_k, seed=seed)
+        
+        if not data:
+            logger.warning("No data to evaluate. Return an empty dictionary.")
+            return {}
+        
+        verbose = verbose if verbose is not None else self.verbose
+        
+        # Create a semaphore to limit concurrent executions
+        sem = asyncio.Semaphore(self.num_workers)
+
+        async def process_with_semaphore(example):
+            async with sem:
+                try:
+                    return await self._async_evaluate_single_example(
+                        graph=graph, 
+                        example=example, 
+                        benchmark=benchmark, 
+                        **kwargs
+                    )
+                except Exception as e:
+                    logger.warning(f"Async evaluation failed for example with semaphore: {str(e)}")
+                    return None
+        
+        # Create tasks for concurrent execution with semaphore
+        tasks = [process_with_semaphore(example) for example in data]
+        
+        # Execute all tasks with progress bar if verbose
+        if verbose:
+            results = await tqdm_asyncio.gather(
+                *tasks,
+                desc=f"Evaluating {benchmark.name}",
+                total=len(data)
+            )
+        else:
+            results = await asyncio.gather(*tasks)
+        
+        return self._calculate_average_score(results)
+
+    async def _async_evaluate_single_example(self, graph: Union[WorkFlowGraph, ActionGraph], example: dict, benchmark: Benchmark, **kwargs) -> Optional[dict]:
+        """
+        Asynchronously evaluate a single example. 
+        """
+        try:
+            # collate the example   
+            inputs: dict = self.collate_func(example)
+            if not isinstance(inputs, dict):
+                raise ValueError(f"The collate_func should return a dictionary. Got {type(inputs)}.")
+            
+            # execute the workflow or action graph
+            if isinstance(graph, ActionGraph):
+                output: dict = await self._async_execute_action_graph(graph=graph, inputs=inputs, **kwargs)
+            elif isinstance(graph, WorkFlowGraph):
+                workflow_graph_outputs = await self._async_execute_workflow_graph(graph=graph, inputs=inputs, return_trajectory=True, **kwargs)
+                output: str = workflow_graph_outputs[0]
+                trajectory: List[Message] = workflow_graph_outputs[1]
+            else:
+                raise ValueError(f"Invalid workflow type: {type(graph)}. Must be WorkFlowGraph or ActionGraph.")
+            
+            # postprocess the output
+            output = self.output_postprocess_func(output)
+
+            # get the label and evaluate the workflow
+            label = benchmark.get_label(example)
+            
+            # Check if the benchmark has an async_evaluate method, otherwise use the synchronous one
+            if hasattr(benchmark, 'async_evaluate') and callable(getattr(benchmark, 'async_evaluate')):
+                metrics = await benchmark.async_evaluate(prediction=output, label=label)
+            else:
+                metrics = benchmark.evaluate(prediction=output, label=label)
+
+            # save workflow output and metrics to the evaluation records 
+            example_id = benchmark.get_id(example=example)
+            self._evaluation_records[example_id] = {
+                "prediction": output, 
+                "label": label,
+                "metrics": metrics
+            }
+            if isinstance(graph, WorkFlowGraph):
+                self._evaluation_records[example_id]["trajectory"] = trajectory
+        except Exception as e:
+            logger.warning(f"Error evaluating example and set the metrics to None:\nExample: {example}\nError: {str(e)}")
+            return None
+        return metrics
+    
+    async def _async_execute_action_graph(self, graph: ActionGraph, inputs: dict, **kwargs) -> dict:
+        """
+        Asynchronously execute the action graph.
+        """
+        return await graph.async_execute(**inputs, **kwargs) 
+    
+    async def _async_execute_workflow_graph(self, graph: WorkFlowGraph, inputs: dict, return_trajectory: bool = False, **kwargs) -> Union[str, Tuple[str, List[Message]]]:
+        """
+        Asynchronously execute the workflow graph.
+        """
+        if self.agent_manager is None:
+            raise ValueError("`agent_manager` is not provided. Please provide an agent manager when evaluating a WorkFlowGraph.")
+        
+        # create a WorkFlow instance
+        graph_copy = WorkFlowGraph(goal=graph.goal, graph=graph)
+        graph_copy.reset_graph() # reset the status of all nodes to pending
+        
+        # Make a local copy of agent_manager for thread-safety in async context
+        local_agent_manager = AgentManager(
+            agents=self.agent_manager.agents,
+            storage_handler=self.agent_manager.storage_handler
+        )
+        
+        workflow = WorkFlow(
+            llm=self.llm, 
+            graph=graph_copy, 
+            agent_manager=local_agent_manager, 
+            **kwargs
+        )
+        
+        output: str = await workflow.async_execute(inputs=inputs, **kwargs)
+        if return_trajectory:
+            return output, workflow.environment.get()
+        return output
+
