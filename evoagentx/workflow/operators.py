@@ -6,7 +6,7 @@ import asyncio
 import traceback
 import concurrent 
 from pydantic import Field
-from typing import Type, Optional, List, Any, Tuple
+from typing import Type, Optional, List, Any, Tuple, Union, Coroutine
 
 from ..core.logging import logger
 from ..core.module import BaseModule
@@ -45,13 +45,23 @@ class Operator(BaseModule):
     def init_module(self):
         self._save_ignore_fields = ["llm"]
 
-    def __call__(self, *args: Any, **kwargs: Any) -> dict:
-        """Make the operator callable and automatically choose between sync and async execution"""
-        if asyncio.iscoroutinefunction(self.async_execute) and asyncio.get_event_loop().is_running():
-            # If the operator is in an asynchronous environment and has an async_execute method, return a coroutine
+    # def __call__(self, *args: Any, **kwargs: Any) -> dict:
+    #     """Make the operator callable and automatically choose between sync and async execution"""
+    #     if asyncio.iscoroutinefunction(self.async_execute) and asyncio.get_event_loop().is_running():
+    #         # If the operator is in an asynchronous environment and has an async_execute method, return a coroutine
+    #         return self.async_execute(*args, **kwargs)
+    #     # Otherwise, use the synchronous method
+    #     return self.execute(*args, **kwargs)
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Union[dict, Coroutine[Any, Any, dict]]:
+        """Make the operator callable and automatically choose between sync and async execution."""
+        try:
+            # Safe way to check if we're inside an async environment
+            asyncio.get_running_loop()
             return self.async_execute(*args, **kwargs)
-        # Otherwise, use the synchronous method
-        return self.execute(*args, **kwargs)
+        except RuntimeError:
+            # No running loop — likely in sync context or worker thread
+            return self.execute(*args, **kwargs)
     
     def execute(self, *args, **kwargs) -> dict:
         raise NotImplementedError(f"The execute function for {type(self).__name__} is not implemented!")
