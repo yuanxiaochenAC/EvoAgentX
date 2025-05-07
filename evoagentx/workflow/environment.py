@@ -1,4 +1,5 @@
 from enum import Enum
+from pydantic import Field
 from typing import Union, Optional, List
 from ..core.module import BaseModule
 from ..core.message import Message, MessageType
@@ -25,9 +26,9 @@ class Environment(BaseModule):
     """
     Responsible for storing and managing intermediate states of execution.
     """
-    trajectory: List[TrajectoryStep] = []
-    task_execution_history: List[str] = []
-    execution_data: dict = {}
+    trajectory: List[TrajectoryStep] = Field(default_factory=list)
+    task_execution_history: List[str] = Field(default_factory=list)
+    execution_data: dict = Field(default_factory=dict)
 
     def update(self, message: Message, state: TrajectoryState = None, error: str = None, **kwargs):
         """

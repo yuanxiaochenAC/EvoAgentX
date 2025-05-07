@@ -27,15 +27,18 @@ from evoagentx.core.callbacks import suppress_logger_info
 ```
 
 ### Configure the LLM Model 
-You'll need a valid OpenAI API key to initialize the LLM. The configuration file (json format) should contain your API credentials and other default settings. You can refer to the [config_template.json](../../examples/config_template.json) for more details. 
+You'll need a valid OpenAI API key to initialize the LLM. It is recommended to save your API key in the `.env` file and load it using the `load_dotenv` function: 
 ```python 
-config = Config.from_file("path/to/config.json")
-llm_config = OpenAILLMConfig.from_dict(config.llm_config)
+import os 
+from dotenv import load_dotenv
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+llm_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY)
 llm = OpenAILLM(config=llm_config)
 ```
 
 ## 3. Initialize the Benchmark 
-EvoAgentX includes several predefined benchmarks for tasks like Question Answering, Math, and Coding. Please refer to the [Benchmark README](../../evoagentx/benchmark/README.md) for more details about existing benchmarks. You can also define your own benchmark class by extending the base benchmark interface, and we provide an example in the [Custom Benchmark](#custom-benchmark) section.
+EvoAgentX includes several predefined benchmarks for tasks like Question Answering, Math, and Coding. Please refer to the [Benchmark README](https://github.com/EvoAgentX/EvoAgentX/blob/main/evoagentx/benchmark/README.md) for more details about existing benchmarks. You can also define your own benchmark class by extending the base `Benchmark` interface, and we provide an example in the [Custom Benchmark](#custom-benchmark) section.
 
 In this example, we will use the `HotpotQA` benchmark. 
 ```python 
@@ -54,10 +57,10 @@ The data will be automatically downloaded to a default cache folder, but you can
 ## 4. Running the Evaluation 
 Once you have your benchmark and LLM ready, the next step is to define your agent workflow and evaluation logic. EvoAgentX supports full customization of how benchmark examples are processed and how outputs are interpreted.
 
-Here’s how to run an evaluation using the `HotpotQA` benchmark and a QA workflow.
+Here's how to run an evaluation using the `HotpotQA` benchmark and a QA workflow.
 
 ### Step 1: Define the Agent Workflow 
-You can use one of the predefined workflows or implement your own. In this example, we use the `QAActionGraph` designed for question answering, which simply use self-consistency to generate the final answer:
+You can use one of the predefined workflows or implement your own. In this example, we use the [`QAActionGraph`](https://github.com/EvoAgentX/EvoAgentX/blob/main/evoagentx/workflow/action_graph.py#L99) designed for question answering, which simply use self-consistency to generate the final answer:
 
 ```python
 workflow = QAActionGraph(
@@ -68,20 +71,19 @@ workflow = QAActionGraph(
 
 ### Step 2: Customize Data Preprocessing and Post-processing 
 
-Once you have your benchmark and LLM ready, the next step is to define your agent workflow and evaluation logic. EvoAgentX supports full customization of how benchmark examples are processed and how outputs are interpreted.
+The next key aspect of evaluation is properly transforming data between your benchmark, workflow, and evaluation metrics.
 
 ### Why Preprocessing and Postprocessing Are Needed
 
 In EvoAgentX, **preprocessing** and **postprocessing** are essential steps to ensure smooth interaction between benchmark data, workflows, and evaluation logic:
 
 - **Preprocessing (`collate_func`)**:  
-  The raw examples from a benchmark like HotpotQA typically consist of structured fields such as questions, answer, and context. However, your agent workflow usually expects a single prompt string or other structured input.  
-  The `collate_func` is used to convert each raw example into a format that can be consumed by your (custom) workflow.
 
-- **Postprocessing (`output_postprocess_func`)**:  
-  The workflow output might include reasoning steps or additional formatting beyond just the final answer.  
-  Since the `Evaluator` internally calls the benchmark’s `evaluate` method to compute metrics (e.g., exact match or F1), it's often necessary to extract the final answer in a clean format.  
-  The `output_postprocess_func` handles this and ensures the output is in the right form for evaluation.
+    The raw examples from a benchmark like HotpotQA typically consist of structured fields such as questions, answer, and context. However, your agent workflow usually expects a single prompt string or other structured input. The `collate_func` is used to convert each raw example into a format that can be consumed by your (custom) workflow.
+
+- **Postprocessing (`output_postprocess_func`)**:
+
+    The workflow output might include reasoning steps or additional formatting beyond just the final answer. Since the `Evaluator` internally calls the benchmark's `evaluate` method to compute metrics (e.g., exact match or F1), it's often necessary to extract the final answer in a clean format. The `output_postprocess_func` handles this and ensures the output is in the right form for evaluation.
 
 In short, **preprocessing prepares benchmark examples for the workflow**, while **postprocessing prepares workflow outputs for evaluation**.
 
@@ -152,7 +154,7 @@ print("Evaluation metrics: ", results)
 ```
 where `suppress_logger_info` is used to suppress the logger info.
 
-Please refer to the [benchmark_and_evaluation.py](../../examples/benchmark_and_evaluation.py) for a complete example.
+Please refer to the [benchmark and evaluation example](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/benchmark_and_evaluation.py) for a complete example.
 
 
 ## Custom Benchmark 
@@ -176,6 +178,7 @@ To define a custom benchmark, you need to extend the `Benchmark` class and imple
 
 
 - `evaluate(self, prediction: Any, label: Any) -> dict`: 
+
     Compute the evaluation metrics for a single example, based on its prediction and ground-truth label (obtained from `_get_label`).
     This method should return a dictionary of metric name(s) and value(s).
 
