@@ -1,6 +1,7 @@
 import threading
 from enum import Enum
 from copy import deepcopy
+from pydantic import Field
 from typing import Union, Optional, Dict, List
 
 from .agent import Agent
@@ -27,8 +28,8 @@ class AgentManager(BaseModule):
         agents (List[Agent]): A list to keep track of all managed Agent instances.
         agent_states (Dict[str, AgentState]): A dictionary to track the state of each Agent by name.
     """
-    agents: List[Agent] = []
-    agent_states: Dict[str, AgentState] = {} # agent_name to AgentState mapping
+    agents: List[Agent] = Field(default_factory=list)
+    agent_states: Dict[str, AgentState] = Field(default_factory=dict) # agent_name to AgentState mapping
     storage_handler: Optional[StorageHandler] = None # used to load and save agent from storage.
     # agent_generator: Optional[AgentGenerator] = None # used to generate agents for a specific subtask
     tools: Optional[List[Tool]] = None
