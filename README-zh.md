@@ -61,10 +61,6 @@ conda activate evoagentx
 pip install -r requirements.txt 
 ```
 
-### 配置
-Todos:
-1. How to set up keys
-2. others
 
 ### 示例：自动工作流生成
 ```python
