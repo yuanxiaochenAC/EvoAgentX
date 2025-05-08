@@ -7,7 +7,7 @@ from evoagentx.utils.mipro_utils.settings import settings
 from evoagentx.core.module import BaseModule
 from evoagentx.utils.mipro_utils.utils import get_source_code, strip_prefix, create_predictor_level_history_string, create_example_string
 from evoagentx.utils.mipro_utils.dataset_summary_generator import create_dataset_summary
-
+# from evoagentx.utils.utils import append_inputs_to_prompt
 import os 
 from dotenv import load_dotenv
 load_dotenv()
@@ -31,17 +31,10 @@ def generate_instruction_class(
         use_task_demos=True,
         use_instruct_history=True,
         use_tip=True,
-        input_fields=None,
     ):
         inputs = []
         prompt = f"""
         Use the information below to learn about a task we are trying to solve using calls to a Language Model (LM). Then generate a new, improved instruction that will be used to prompt an LM to better solve the task.
-
-        You must preserve all input fields as a placeholder
-        
-        Input fields: 
-        {input_fields}
-
         """
         if use_dataset_summary:
             inputs.append({
@@ -321,7 +314,6 @@ class GroundedProposer(BaseModule):
             pass
             # self.prompt_model.inspect_history(n=1)
             # print(f"PROPOSED INSTRUCTION: {proposed_instruction}")
-
         return strip_prefix(proposed_instruction)
 
 
@@ -341,7 +333,6 @@ class GenerateModuleInstruction(BaseModule):
             use_task_demos=self.use_task_demos,
             use_instruct_history=self.use_instruct_history,
             use_tip=self.use_tip,
-            input_fields=self.input_fields
         )
 
     def optimize(
@@ -400,12 +391,11 @@ class GenerateModuleInstruction(BaseModule):
             try:
                 describe_program_agent = self._describe_program(lm)
                 program_description = strip_prefix(
-                    program_description = strip_prefix(
                         describe_program_agent(
                             inputs = {"program_code": self.program_code_string, "program_example": task_demos},
                         ).content.program_description
                     )
-                )
+                
                 
                 if self.verbose:
                     print(f"PROGRAM DESCRIPTION: {program_description}")
@@ -469,6 +459,7 @@ class GenerateModuleInstruction(BaseModule):
             inputs = input_dict
         )
         
+        # proposed_instruction = strip_prefix(append_inputs_to_prompt(instruct.content.proposed_instruction, self.input_fields))
         proposed_instruction = strip_prefix(instruct.content.proposed_instruction)
 
         return proposed_instruction

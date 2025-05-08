@@ -6,7 +6,7 @@ from typing import Union, Optional, Callable, Type, List
 from .agent import Agent
 from ..core.logging import logger
 from ..core.registry import MODULE_REGISTRY, PARSE_FUNCTION_REGISTRY
-from ..core.module_utils import parse_json_from_llm_output
+from ..core.module_utils import parse_json_from_llm_output, generate_id 
 from ..core.message import Message, MessageType
 from ..models.model_configs import LLMConfig 
 from ..models.base_model import BaseLLM, LLMOutputParser, PARSER_VALID_MODE
@@ -570,11 +570,12 @@ class CustomizeAgent(Agent):
         if not MODULE_REGISTRY.has_module(candidate_name):
             return candidate_name 
         
-        i = 1 
-        while True:
-            unique_name = f"{candidate_name}V{i}"
-            if not MODULE_REGISTRY.has_module(unique_name):
-                break
-            i += 1 
+        unique_name = f"{candidate_name}_{generate_id()}"
+        # i = 1 
+        # while True:
+        #     unique_name = f"{candidate_name}V{i}"
+        #     if not MODULE_REGISTRY.has_module(unique_name):
+        #         break
+        #     i += 1 
         return unique_name 
         

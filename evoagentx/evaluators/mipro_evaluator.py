@@ -19,6 +19,8 @@ from evoagentx.utils.mipro_utils.parallelizer import ParallelExecutor
 from evoagentx.workflow import  WorkFlow
 from evoagentx.agents import AgentManager
 from evoagentx.models import  OpenAILLM
+from evoagentx.workflow.workflow_graph import WorkFlowGraph
+
 try:
     from IPython.display import HTML, display
 except ImportError:
@@ -150,17 +152,19 @@ class Evaluate:
         def process_item(example, with_inputs):
             agent_manager = AgentManager()
             agent_manager.clear_agents()
-            program.save_module("examples/mipro/output/saved_program.json")
+            # program.save_module("examples/mipro/output/saved_program.json")
             agent_manager.add_agents_from_workflow(
                 program,
                 llm_config=settings.lm,
             )
-            
-            workflow = WorkFlow(graph=program, agent_manager=agent_manager, llm = OpenAILLM(settings.lm))
+            program_copy = WorkFlowGraph(goal=program.goal, graph=program.graph)
+            program_copy.reset_graph()
+            workflow = WorkFlow(graph=program_copy, agent_manager=agent_manager, llm = OpenAILLM(settings.lm))
             
             
             prediction = workflow.execute(
                 inputs ={key: example[value] for key, value in with_inputs.items()},
+                extract_output=False,
             )
             
 

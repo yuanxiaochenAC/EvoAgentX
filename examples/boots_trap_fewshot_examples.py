@@ -8,6 +8,7 @@ import os
 import logging
 from dotenv import load_dotenv
 from evoagentx.workflow.workflow import WorkFlowGraph
+
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -27,9 +28,10 @@ def main():
     math = MATH()
     math._load_data()
     trainset = math._test_data[:100]
-    devset = math._test_data[100:200]
+    # devset = math._test_data[100:200]
+    devset = math._test_data[100:120]
     
-    graph = WorkFlowGraph.from_file("examples/output/mipro_demo.json")
+    graph = WorkFlowGraph.from_file("examples/mipro/output/saved_program.json")
     
     # zero-shot optimization
     optimizer = MiproOptimizer(
@@ -49,13 +51,14 @@ def main():
     evaluate = mipro_evaluator(
         devset=devset,
         metric=evaluate_metric,
-        num_threads=32,
+        num_threads=3,
         display_progress=True,
         display_table=False,
     )
     
-    
-    evaluate(program = graph, with_inputs={"problem":"problem"})
+    results = evaluate(program = graph, with_inputs={"problem":"problem"})
+
+    from pdb import set_trace; set_trace()
     
     output_path = r"C:\Users\31646\Desktop\EvoAgentX\examples\mipro\output\best_progrma_math.json"
 
