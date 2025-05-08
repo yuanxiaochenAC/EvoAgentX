@@ -7,7 +7,6 @@ import threading
 import time
 import traceback
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
-from functools import partial
 
 import tqdm
 
