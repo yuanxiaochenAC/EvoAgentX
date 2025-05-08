@@ -6,7 +6,7 @@
 </div>
 
 <h1 align="center">
-    EvoAgentX: Automate and Evolve Your Workflows
+    EvoAgentX:  Building a Self-Evolving Ecosystem of AI Agents
 </h1>
 
 <div align="center">
@@ -25,7 +25,7 @@
 
 <h3 align="center">
 
-English | [简体中文](./README-zh.md) 
+[English](./README.md)  | [简体中文](./README-zh.md) 
 
 </h3>
 
@@ -132,7 +132,7 @@ Explore how to effectively use EvoAgentX with the following resources:
 
 If you have any questions or feedback about this project, please feel free to contact us. We highly appreciate your suggestions!
 
-- **Email:** clayx.ai.co@gmail.com
+- **Email:** evoagentx.ai@gmail.com
 
 We will respond to all questions within 2-3 business days.
 
