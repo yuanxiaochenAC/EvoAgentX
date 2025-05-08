@@ -1,6 +1,7 @@
 # 复制黏贴的dspy/dspy/dsp/utils/utils.py
 import os
 import re
+import numpy as np
 import tqdm
 import copy
 import random
@@ -323,7 +324,6 @@ def create_n_fewshot_demo_sets(
             program2 = program.optimize(
                 student, trainset=trainset_copy, sample=labeled_sample,
             )
-            logger.info("labeled few-shot finished")
         elif seed == -1:
             # unshuffled few-shot
             program = BootstrapFewShot(
@@ -460,3 +460,51 @@ def create_example_string(fields, example):
     return '\n'.join(output)
 
 
+def eval_candidate_program(batch_size, trainset, with_inputs, candidate_program, evaluate, rng=None, return_all_scores=False):
+    """Evaluate a candidate program on the trainset, using the specified batch size."""
+
+    try:
+        # Evaluate on the full trainset
+        if batch_size >= len(trainset):
+            return evaluate(candidate_program, devset=trainset, return_all_scores=return_all_scores, with_inputs=with_inputs)
+        # Or evaluate on a minibatch
+        else:
+            return evaluate(
+                candidate_program,
+                devset=create_minibatch(trainset, batch_size, rng),
+                return_all_scores=return_all_scores,
+                with_inputs=with_inputs
+            )
+    except Exception:
+        logger.error("An exception occurred during evaluation", exc_info=True)
+        if return_all_scores:
+            return 0.0, [0.0] * len(trainset)
+        return 0.0  # TODO: Handle this better, as -ve scores are possible
+
+
+def get_program_with_highest_avg_score(param_score_dict, fully_evaled_param_combos):
+    """Used as a helper function for bayesian + minibatching optimizers. Returns the program with the highest average score from the batches evaluated so far."""
+
+    # Calculate the mean for each combination of categorical parameters, based on past trials
+    results = []
+    for key, values in param_score_dict.items():
+        scores = np.array([v[0] for v in values])
+        mean = np.average(scores)
+        program = values[0][1]
+        params = values[0][2]
+        results.append((key, mean, program, params))
+
+    # Sort results by the mean
+    sorted_results = sorted(results, key=lambda x: x[1], reverse=True)
+
+    # Find the combination with the highest mean, skip fully evaluated ones
+    for combination in sorted_results:
+        key, mean, program, params = combination
+
+        if key in fully_evaled_param_combos:
+            continue
+
+        return program, mean, key, params
+
+    # If no valid program is found, we return the last valid one that we found
+    return program, mean, key, params

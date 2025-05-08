@@ -2,7 +2,6 @@ import random
 import logging
 from pydantic import Field
 from typing import Any, List, Optional
-from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.agents.customize_agent import CustomizeAgent
 from evoagentx.utils.mipro_utils.settings import settings
 from evoagentx.core.module import BaseModule
@@ -32,10 +31,17 @@ def generate_instruction_class(
         use_task_demos=True,
         use_instruct_history=True,
         use_tip=True,
+        input_fields=None,
     ):
         inputs = []
-        prompt = """
-        Use the information below to learn about a task that we are trying to solve using calls to an LM, then generate a new instruction that will be used to prompt a Language Model to better solve the task.
+        prompt = f"""
+        Use the information below to learn about a task we are trying to solve using calls to a Language Model (LM). Then generate a new, improved instruction that will be used to prompt an LM to better solve the task.
+
+        You must preserve all input fields as a placeholder
+        
+        Input fields: 
+        {input_fields}
+
         """
         if use_dataset_summary:
             inputs.append({
@@ -278,6 +284,9 @@ class GroundedProposer(BaseModule):
         )
 
         # Create our instruction generator class (given specific criteria for this round of proposal)
+        
+        inputs = [input_field["name"] for input_field in predictor['inputs']]
+        
         instruction_generator = GenerateModuleInstruction(
             program_code_string=self.program_code_string,
             use_dataset_summary=self.use_dataset_summary,
@@ -285,7 +294,8 @@ class GroundedProposer(BaseModule):
             use_task_demos=self.use_task_demos and demo_candidates,
             use_instruct_history=self.use_instruct_history and instruction_history,
             use_tip=self.use_tip,
-            verbose=self.verbose
+            verbose=self.verbose,
+            input_fields = inputs
         )
 
         # Generate a new instruction for our predictor, using the temperature specified for this round
@@ -306,9 +316,11 @@ class GroundedProposer(BaseModule):
             
 
         # Log the trace used to generate the new instruction, along with the new instruction itself
+        #TODO: make a inspect history   
         if self.verbose:
-            self.prompt_model.inspect_history(n=1)
-            print(f"PROPOSED INSTRUCTION: {proposed_instruction}")
+            pass
+            # self.prompt_model.inspect_history(n=1)
+            # print(f"PROPOSED INSTRUCTION: {proposed_instruction}")
 
         return strip_prefix(proposed_instruction)
 
@@ -321,7 +333,7 @@ class GenerateModuleInstruction(BaseModule):
     use_instruct_history: bool = Field(default=True)
     use_tip: bool = Field(default=True)
     verbose: bool = Field(default=False)
-
+    input_fields: List[str] = Field(default=None)
     def init_module(self):
         self.generate_module_instruction = generate_instruction_class(
             use_dataset_summary=self.use_dataset_summary,
@@ -329,6 +341,7 @@ class GenerateModuleInstruction(BaseModule):
             use_task_demos=self.use_task_demos,
             use_instruct_history=self.use_instruct_history,
             use_tip=self.use_tip,
+            input_fields=self.input_fields
         )
 
     def optimize(
@@ -371,10 +384,8 @@ class GenerateModuleInstruction(BaseModule):
                 demo_candidates[agent_name][demo_set_i + 1:] +
                 demo_candidates[agent_name][:demo_set_i]
             )
-            logger.info(f"adjacent_sets: {adjacent_sets}")
             example_strings = gather_examples_from_sets(adjacent_sets, num_demos_in_context)
             task_demos = "\n\n".join(example_strings) + "\n\n"
-            logger.info(f"task_demos: {task_demos}")
         # Default to no demos provided if no examples were gathered, or if we're using the first demo set
         if not task_demos.strip() or demo_set_i == 0:
             task_demos = "No task demos provided."

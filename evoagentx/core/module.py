@@ -439,6 +439,12 @@ class BaseModule(BaseModel, metaclass=MetaModule):
         Returns:
             str: The path where the file is saved, same as the input path
         """
+        
+        trial_num = kwargs.get("trial_num", None)
+        if trial_num is not None:
+            base, ext = os.path.splitext(path)
+            path = f"{base}_trial{trial_num}{ext}"
+        
         logger.info("Saving {} to {}", self.__class__.__name__, path)
         return save_json(self.to_json(use_indent=True, default=lambda x: None, ignore=ignore), path=path)
     

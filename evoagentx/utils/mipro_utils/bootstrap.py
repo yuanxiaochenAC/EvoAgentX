@@ -3,14 +3,14 @@ import logging
 import threading
 from pydantic import Field
 from typing import  Callable, Dict,  Optional
-from evoagentx.workflow import SequentialWorkFlowGraph, WorkFlow
+from evoagentx.workflow import  WorkFlow
 from evoagentx.agents import AgentManager
 import tqdm
 
 from .labeledfewshot import LabeledFewShot
 from evoagentx.core.module import BaseModule
 from evoagentx.utils.mipro_utils.settings import settings
-from evoagentx.models import OpenAILLMConfig, OpenAILLM
+from evoagentx.models import OpenAILLM
 logger = logging.getLogger("MIPRO")
 
 class BootstrapFewShot(BaseModule):
@@ -73,6 +73,11 @@ class BootstrapFewShot(BaseModule):
     def _prepare_student_and_teacher(self, student, teacher):
         self.student = student.reset_copy()
         self.teacher = teacher.deep_copy() if teacher is not None else student.deep_copy()
+        for agent in self.teacher.agents():
+            agent.setdefault("demos", [])
+            agent.setdefault("traces", [])
+            agent.setdefault("train", [])
+        
         assert getattr(self.student, "_compiled", False) is False, "Student must be uncompiled."
 
         if self.max_labeled_demos and getattr(self.teacher, "_compiled", False) is False:
@@ -136,46 +141,39 @@ class BootstrapFewShot(BaseModule):
     def _bootstrap_one_example(self, example, round_idx=0):
         name2traces = {}
         teacher = self.teacher
-        
         agent_cache = {}
-
         try:
-            with settings.context(trace=[], **self.teacher_settings):
-                lm = settings.lm.copy()
-                new_settings = {}
-                if round_idx > 0:
-                    lm.temperature = 0.7 + 0.001 * round_idx
-                    new_settings = dict(lm=lm)
+            lm = settings.lm.copy()
+            if round_idx > 0:
+                lm.temperature = 0.7 + 0.001 * round_idx
                 
-                with settings.context(**new_settings):
-                    
-                    
-                    for agent in teacher.agents():
-                        name = agent['name']
-                        agent_cache[name] = agent['demos']
-                        agent['demos'] = [x for x in agent['demos'] if x != example]
-                    
-                    agent_manager = AgentManager()
-                    agent_manager.add_agents_from_workflow(
-                        teacher,
-                        llm_config= lm
-                    )
-                    workflow = WorkFlow(graph=teacher, agent_manager= agent_manager, llm=OpenAILLM(lm))
-                    
-                    prediction = workflow.execute(inputs = get_inputs(example, self.trainset_inputs))
-                    
-                    trace = settings.trace
-                    for agent in teacher.agents():
-                        agent['demos'] = agent_cache[agent['name']]
-                if self.metric:
-                    # TODO: 要不要实现metric，具体该怎么实现？
-                    metric_val = self.metric(example, prediction, trace)
-                    if self.metric_threshold:
-                        success = metric_val >= self.metric_threshold
-                    else:
-                        success = metric_val
+            for agent in teacher.agents():
+                name = agent['name']
+                
+                agent_cache[name] = agent['demos']
+                agent['demos'] = [x for x in agent['demos'] if x != example]
+            
+            agent_manager = AgentManager()
+            agent_manager.add_agents_from_workflow(
+                teacher,
+                llm_config= lm
+            )
+            workflow = WorkFlow(graph=teacher, agent_manager= agent_manager, llm=OpenAILLM(lm))
+            
+            prediction = workflow.execute(inputs = get_inputs(example, self.trainset_inputs))
+            
+            trace = settings.trace
+            for agent in teacher.agents():
+                agent['demos'] = agent_cache[agent['name']]
+            if self.metric:
+                # TODO: 要不要实现metric，具体该怎么实现？
+                metric_val = self.metric(example, prediction, trace)
+                if self.metric_threshold:
+                    success = metric_val >= self.metric_threshold
                 else:
-                    success = True
+                    success = metric_val
+            else:
+                success = True
         except Exception as e:
             success = False
             with self.error_lock:
@@ -187,7 +185,6 @@ class BootstrapFewShot(BaseModule):
 
         if success:
             for step in trace:
-                logger.info(f"step: {step}")
                 agent, inputs, outputs = step
                 demo = {"augmented": True, **inputs, **outputs}
 
@@ -238,8 +235,5 @@ class BootstrapFewShot(BaseModule):
             agent['demos'] = augmented_demos + raw_demos
         return self.student
 
-def get_inputs(example: dict, inputs):
-    missing = [attr for attr in inputs if attr not in example]
-    if missing:
-        raise ValueError(f"Missing attributes: {', '.join(missing)}")
-    return {attr: example[attr] for attr in inputs}
+def get_inputs(example: dict, inputs:dict):
+    return {key: example[value] for key, value in inputs.items()}

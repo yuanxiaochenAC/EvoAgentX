@@ -9,6 +9,7 @@ class LabeledFewShot():
 
     def optimize(self, student, *, trainset, sample=True):
         self.student = student.reset_copy()
+        
         self.trainset = trainset
 
         if len(self.trainset) == 0:

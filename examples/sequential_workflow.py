@@ -49,7 +49,8 @@ def build_sequential_workflow():
                 {"name": "code", "type": "str", "required": True, "description": "Implemented code with explanations"}
             ],
             "prompt": "You are a software developer. Your task is to implement the code based on the provided problem and implementation plan.\n\nProblem: {problem}\nImplementation Plan: {plan}\n\nPlease provide the implementation code with appropriate comments.",
-            "parse_mode": "str", 
+            "parse_mode": "custom", 
+            "parse_func": custom_parse_func
         }
     ]
     
@@ -60,9 +61,7 @@ def build_sequential_workflow():
     )
 
     # [optional] save the workflow graph to a file 
-    graph.save_module("examples/output/saved_sequential_workflow.json")
-    
-    return
+    # graph.save_module("examples/output/saved_sequential_workflow.json")
     # [optional] load the workflow graph from a file 
     # graph = SequentialWorkFlowGraph.from_file("examples/output/saved_sequential_workflow.json")
     
@@ -89,6 +88,5 @@ def build_sequential_workflow():
 
 if __name__ == "__main__":
     build_sequential_workflow() 
-
 
 

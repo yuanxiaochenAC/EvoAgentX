@@ -1,7 +1,5 @@
 import os 
 from dotenv import load_dotenv
-load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.utils.mipro_utils.settings import settings
 from evoagentx.utils.mipro_utils.utils import (
@@ -11,7 +9,8 @@ from evoagentx.utils.mipro_utils.utils import (
 from evoagentx.agents import CustomizeAgent
 
 
-
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 dataset_descriptor = CustomizeAgent(
     name="DatasetDescriptor",
@@ -33,7 +32,6 @@ dataset_descriptor = CustomizeAgent(
     llm_config=OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY),
     parse_mode="str",
 )
-
 
 dataset_descriptor_with_prior = CustomizeAgent(
     name="DatasetDescriptorWithPrior",
@@ -92,10 +90,12 @@ def create_dataset_summary(trainset, view_data_batch_size, prompt_model, log_fil
     lm.temperature = 1.0
     lm.n = 1
     
+    
     observation = dataset_descriptor(
         inputs={"examples":order_input_keys_in_string(repr(trainset[0:upper_lim]))},
         llm_config=OpenAILLM(config=lm))
 
+    
     observations = observation.content.observations
         
     if log_file:

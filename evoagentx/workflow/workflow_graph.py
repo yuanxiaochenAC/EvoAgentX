@@ -322,7 +322,6 @@ class WorkFlowGraph(BaseModule):
     def reset_agents(self):
         agent_lst = self.agents()
         for agent in agent_lst:
-            agent['lm'] = None
             agent['traces'] = []
             agent['train'] = []
             agent['demos'] = []
@@ -1167,7 +1166,11 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
                     "system_prompt": node.agents[0].get("system_prompt", None),
                     "parse_mode": node.agents[0].get("parse_mode", "str"), 
                     "parse_func": getattr(node.agents[0].get("parse_func", None), '__name__', node.agents[0].get("parse_func", None)),
-                    "parse_title": node.agents[0].get("parse_title", None)
+                    "parse_title": node.agents[0].get("parse_title", None),
+                    "demos": node.agents[0].get("demos", []),
+                    "traces": node.agents[0].get("traces", []),
+                    "train": node.agents[0].get("train", [])
+                    
                 } 
                 for node in self.nodes
             ],
@@ -1201,6 +1204,8 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
         new_instance = self.deep_copy()
         new_instance.reset_agents()
         return new_instance
+    
+    
 class SEWWorkFlowGraph(SequentialWorkFlowGraph):
 
     def __init__(self, **kwargs):
