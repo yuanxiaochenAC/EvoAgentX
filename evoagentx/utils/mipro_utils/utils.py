@@ -240,7 +240,7 @@ def load_batch_backgrounds(args, qids):
     for qid in qids:
         back = args.qid2backgrounds[qid]
 
-        if len(back) and type(back[0]) == int:
+        if len(back) and isinstance(back[0], int):
             x = [args.collection[pid] for pid in back]
         else:
             x = [args.collectionX.get(pid, "") for pid in back]
@@ -295,7 +295,7 @@ def create_n_fewshot_demo_sets(
     # Account for confusing way this is set up, where we add in 3 more candidate sets to the N specified
     num_candidate_sets -= 3
 
-    logger.info(f"Working with create_n_fewshot_demo_sets")
+    logger.info("Working with create_n_fewshot_demo_sets")
     # Initialize demo_candidates dictionary
     for agent in student.agents():
         demo_candidates[agent['name']] = []

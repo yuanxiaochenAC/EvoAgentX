@@ -431,9 +431,11 @@ class GenerateModuleInstruction(BaseModule):
                     }
                 ).content.module_description
                 
-            except:
+            except Exception as e:
                 if self.verbose:
                     print("Error getting program description. Running without program aware proposer.")
+                else:
+                    logger.error(f"Error getting program description: {e}")
                 self.program_aware = False
 
         # Generate an instruction for our chosen module

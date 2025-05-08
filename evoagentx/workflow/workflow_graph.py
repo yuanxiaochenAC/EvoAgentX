@@ -9,9 +9,6 @@ from collections import defaultdict
 from pydantic import Field, field_validator, model_validator
 from typing import Union, Optional, Tuple, Callable, Dict, List
 from functools import wraps
-
-from evoagentx.core.registry import MODULE_REGISTRY
-
 from ..core.logging import logger
 from ..core.module import BaseModule
 from ..core.base_config import Parameter
