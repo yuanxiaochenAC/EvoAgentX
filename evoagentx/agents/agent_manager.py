@@ -219,6 +219,10 @@ class AgentManager(BaseModule):
             llm_config (Optional[LLMConfig]): The LLM configuration to be used for the agent. Only used when the `agent` is a dictionary, used to create a CustomizeAgent. 
             **kwargs: Additional parameters for agent creation
         """
+        # Check for 'tool' key and convert it to 'tools' if needed
+        if isinstance(agent, dict) and "tool" in agent and "tools" not in agent:
+            agent["tools"] = agent.pop("tool")
+            
         agent_name = self.get_agent_name(agent=agent)
         if self.has_agent(agent_name=agent_name):
             return

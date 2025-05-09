@@ -1,43 +1,72 @@
 import wikipedia
 from .search_base import SearchBase
 from typing import Dict, Any
+from pydantic import Field
+from evoagentx.core.logging import logger
 
 
 class SearchWiki(SearchBase):
+    max_sentences: int = Field(default=10, description="Maximum number of sentences in the summary. Default 0 means return all available content.")
+    
+    def __init__(self, **data):
+        # Set default name if not provided
+        name = data.get('name', 'WikipediaSearch')
+        schemas = self.get_tool_schemas()
+        descriptions = self.get_tool_descriptions()
+        tools = self.get_tools()
+        # Pass these to the parent class initialization
+        super().__init__(
+            name=name,
+            schemas=schemas,
+            descriptions=descriptions,
+            tools=tools,
+            **data
+        )
+        self.max_sentences = data.get('max_sentences', 10)
 
-    def search(self, query: str, max_sentences: int = 15, num_search_pages: int = 5, max_content_words: int = 500) -> list:
+    def search(self, query: str, num_search_pages: int = 5, max_content_words: int = 500) -> Dict[str, Any]:
         """
         Searches Wikipedia for the given query and returns the summary and truncated full content.
 
         Args:
             query (str): The search query.
-            max_sentences (int): Maximum number of sentences in the summary.
+            num_search_pages (int): Number of search results to retrieve.
+            max_content_words (int): Maximum number of words to include in the content.
 
         Returns:
             dict: A dictionary with the title, summary, truncated content, and Wikipedia page link.
         """
         try:
-            print("searching wikipedia: ", query, max_sentences, num_search_pages, max_content_words)
+            logger.info(f"Searching wikipedia: {query}, max_sentences={self.max_sentences}, num_results={num_search_pages}")
             # Search for top matching titles
             search_results = wikipedia.search(query, results=num_search_pages)
-            print("search_results: ", search_results)
+            logger.info(f"Search results: {search_results}")
             if not search_results:
-                return {"error": "No search results found."}
+                return {"results": [], "error": "No search results found."}
 
             # Try fetching the best available page
             results = []
             for title in search_results:
                 try:
                     page = wikipedia.page(title, auto_suggest=False)
-                    summary = wikipedia.summary(title, sentences=max_sentences)
+                    
+                    # Handle the max_sentences parameter
+                    if self.max_sentences > 0:
+                        summary = wikipedia.summary(title, sentences=self.max_sentences)
+                    else:
+                        # Get the full summary without limiting sentences
+                        summary = wikipedia.summary(title)
 
                     # Truncate the full content to the first max_content_words words
-                    content = ' '.join(page.content.split()[:max_content_words])
+                    words = page.content.split()
+                    is_truncated = len(words) > max_content_words
+                    truncated_content = ' '.join(words[:max_content_words])
+                    content = truncated_content + (" ..." if is_truncated else "")
 
                     results.append({
                         "title": page.title,
                         "summary": summary,
-                        "content": content + " ...",
+                        "content": content,
                         "url": page.url,
                     })
                 except wikipedia.exceptions.DisambiguationError:
@@ -47,11 +76,12 @@ class SearchWiki(SearchBase):
                     # Skip non-existing pages and try the next
                     continue
             
-            print("get results from wikipedia: ", results)
+            logger.info(f"get results from wikipedia: {results}")
             return {"results": results}
         
         except Exception as e:
-            return {"error": str(e)}
+            logger.error(f"Error searching Wikipedia: {str(e)}")
+            return {"results": [], "error": str(e)}
     
     def get_tools(self):
         return [self.search]
@@ -61,7 +91,7 @@ class SearchWiki(SearchBase):
         Returns the OpenAI-compatible function schema for the Wikipedia search tool.
         
         Returns:
-            Dict[str, Any]: Function schema in OpenAI format
+            list[Dict[str, Any]]: Function schema in OpenAI format
         """
         return [{
             "type": "function",
@@ -82,10 +112,6 @@ class SearchWiki(SearchBase):
                     "max_content_words": {
                         "type": "integer",
                         "description": "The maximum number of words to retain from the full Wikipedia page content (default is 500)."
-                    },
-                    "max_sentences": {
-                        "type": "integer",
-                        "description": "The maximum number of sentences in the summary returned from Wikipedia (default is 15)."
                     }
                 },
                 "required": ["query"]
@@ -93,7 +119,7 @@ class SearchWiki(SearchBase):
             }
         }]
         
-    def get_tool_descriptions(self) -> str:
+    def get_tool_descriptions(self) -> list[str]:
         return [
             "Search Wikipedia for relevant articles and extract key information including titles, summaries, and content."
         ]

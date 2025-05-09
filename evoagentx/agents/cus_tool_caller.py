@@ -126,7 +126,7 @@ class CusToolCaller(CustomizeAgent):
             for i, (name, desc) in enumerate(attr_descriptions.items()):
                 output_description_list.append(f"{i+1}. {name}\nDescription: {desc}")
             output_description = "\n\n".join(output_description_list)
-            extraction_prompt = self.system_prompt + "\n\n" + OUTPUT_EXTRACTION_PROMPT.format(text=llm_output.content, output_description=output_description)
+            extraction_prompt = self.ori_prompt + "\n\n" + OUTPUT_EXTRACTION_PROMPT.format(text=llm_output.content, output_description=output_description)
             llm_extracted_output: LLMOutputParser = self.llm.generate(prompt=extraction_prompt, history=kwargs.get("history", []) + [llm_output])
             llm_extracted_data: dict = parse_json_from_llm_output(llm_extracted_output.content)
             output = self.outputs_format.from_dict(llm_extracted_data)

@@ -13,9 +13,10 @@ load_dotenv() # Loads environment variables from .env file
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY") 
 
-output_file = "workplace/output.md"
-mcp_config_path = "workplace/mcp.config"
-target_directory = "workplace/"
+output_file = "examples/output/jobs/output.md"
+mcp_config_path = "examples/output/jobs/mcp_jobs.config"
+target_directory = "examples/output/jobs/"
+module_save_path = "examples/output/jobs/jobs_demo_4o_mini.json"
 
 def main(goal=None):
 
@@ -40,12 +41,12 @@ def main(goal=None):
     # [optional] display workflow
     workflow_graph.display()
     # [optional] save workflow 
-    workflow_graph.save_module(f"{target_directory}/v4_demo_4o_mini.json")
+    workflow_graph.save_module(module_save_path)
     
     
     ## _______________ Workflow Execution _______________
     #[optional] load saved workflow 
-    workflow_graph: WorkFlowGraph = WorkFlowGraph.from_file(f"{target_directory}/v4_demo_4o_mini.json")
+    workflow_graph: WorkFlowGraph = WorkFlowGraph.from_file(module_save_path)
 
     agent_manager = AgentManager(tools=tools)
     agent_manager.add_agents_from_workflow(workflow_graph, llm_config=openai_config)

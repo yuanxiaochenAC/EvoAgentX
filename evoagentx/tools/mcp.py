@@ -218,7 +218,6 @@ class MCPClient:
     
 class MCPToolkit:
     def __init__(self, servers: Optional[list[MCPClient]] = None, config_path: Optional[str] = None, config: Optional[dict[str, Any]] = None):
-        self.servers: list[MCPClient] = servers
         
         parameters = []
         if config_path:
@@ -227,6 +226,8 @@ class MCPToolkit:
             parameters += self._from_config(config)
         
         self.servers = [MCPClient(parameters)]
+        if servers:
+            self.servers += servers
         for server in self.servers:
             try:
                 server._connect()

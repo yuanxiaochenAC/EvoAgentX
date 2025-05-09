@@ -1,75 +1,81 @@
 import requests
 from bs4 import BeautifulSoup
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Callable
 from .tool import Tool
+from pydantic import Field
 
 class SearchBase(Tool):
     """
     Base class for search tools that retrieve information from various sources.
-    Implements the standard tool interface with get_tool_schema and execute methods.
+    Implements the standard tool interface with get_tool_schemas and execute methods.
     """
     
-    num_search_pages: int = 5
-    max_content_words: int = 500
+    num_search_pages: int = Field(default=5, description="Number of search results to retrieve")
+    max_content_words: int = Field(default=None, description="Maximum number of words to include in content. Default None means no limit.")
+    
+    def __init__(self, 
+                 name: str = "Base Search Tool",
+                 schemas: List[dict] = None,
+                 descriptions: List[str] = None,
+                 tools: List[Any] = None,
+                 **data):
+        """
+        Initialize the base search tool.
+        
+        Args:
+            name (str): Name of the tool
+            schemas (List[dict], optional): Tool schemas
+            descriptions (List[str], optional): Tool descriptions
+            tools (List[Any], optional): Tool functions
+            **data: Additional data for initialization
+        """
+        # Set default values if not provided
+        schemas = self.get_tool_schemas()
+        descriptions = self.get_tool_descriptions()
+        tools = self.get_tools()
+            
+        # Pass to parent class initialization
+        super().__init__(
+            name=name,
+            schemas=schemas,
+            descriptions=descriptions,
+            tools=tools,
+            **data
+        )
+        
+        # Override default values if provided
+        if 'num_search_pages' in data:
+            self.num_search_pages = data['num_search_pages']
+        if 'max_content_words' in data:
+            self.max_content_words = data['max_content_words']
 
-    def get_tool_schema(self) -> Dict[str, Any]:
+    def get_tool_schemas(self) -> List[Dict[str, Any]]:
         """
         Returns the OpenAI-compatible function schema for the search tool.
         
         Returns:
-            Dict[str, Any]: Function schema in OpenAI format
+            List[Dict[str, Any]]: Function schema in OpenAI format
         """
-        return {
-            "type": "function",
-            "function": {
-                "name": "search",
-                "description": self.get_tool_description(),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "The search query"
-                        }
-                    },
-                    "required": ["query"]
-                }
-            }
-        }
+        pass
     
-    def get_tool_description(self) -> str:
+    def get_tool_descriptions(self) -> List[str]:
         """
         Returns a brief description of the search tool.
         
         Returns:
-            str: Tool description
+            List[str]: Tool description
         """
-        return "Search tool that retrieves information from various sources based on a query."
-    
-    def execute(self, query: str) -> List[Dict[str, Any]]:
-        """
-        Executes a search with the given query.
-        
-        Args:
-            query (str): The search query
-            
-        Returns:
-            List[Dict[str, Any]]: Search results
-        """
-        return self.search(query)
-    
-    def search(self, query: str) -> List[Dict[str, Any]]:
-        """
-        Performs the search operation. Must be implemented by subclasses.
-        
-        Args:
-            query (str): The search query
-            
-        Returns:
-            List[Dict[str, Any]]: Search results
-        """
-        raise NotImplementedError("Subclasses must implement search")
+        pass
 
+    def get_tools(self) -> List[Callable]:
+        """
+        Returns a list of callable methods provided by this tool.
+        
+        Returns:
+            List[Callable]: List of callable methods
+        """
+        pass
+    
     def _scrape_page(self, url: str) -> Tuple[str, str]:
         """
         Fetches the title and main text content from a web page.
@@ -93,6 +99,7 @@ class SearchBase(Tool):
 
         # Extract text content (only from <p> tags)
         paragraphs = soup.find_all("p")
-        text_content = " ".join([p.get_text(strip=True) for p in paragraphs])
+        paragraph_texts = [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)]
+        text_content = "\n\n".join(paragraph_texts)
 
         return title, text_content

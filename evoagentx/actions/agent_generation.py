@@ -140,7 +140,7 @@ class AgentGeneration(Action):
         inputs_format = kwargs.pop("inputs_format", None) or AgentGenerationInput
         outputs_format = kwargs.pop("outputs_format", None) or AgentGenerationOutput 
         tool_info = kwargs.pop("tool_info", None)
-        super().__init__(name=name, description=description, prompt=prompt, inputs_format=inputs_format, outputs_format=outputs_format, tool_info=tool_info, **kwargs)
+        super().__init__(name=name, description=description, prompt=prompt, inputs_format=inputs_format, outputs_format=outputs_format, **kwargs)
         self.tool_info = tool_info
     
     def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, **kwargs) -> AgentGenerationOutput:
@@ -181,6 +181,8 @@ class AgentGeneration(Action):
             parser=outputs_format,
             parse_mode="json"
         )
+        
+        print(f"Generated agents: {agents}")
         
         if return_prompt:
             return agents, prompt

@@ -142,6 +142,7 @@ You should think about what information you already have and what information yo
 You should not call the tool if you already have the information.
 
 IMPORTANT: You must ALWAYS respond with a valid JSON object. Do not include any text before or after the JSON object.
+You must NEVER write comments in the tool calls.
 """
 
 TOOL_CALLER_PROMPT_TEMPLATE = """
@@ -173,9 +174,15 @@ You are a helpful assistant with access to a set of tools. Your task is to analy
    - ONLY choose tools with different purposes
    - ONLY choose tools when it is necessary
    - If you have the information, you should not call the tool
+   - NEVER WRITE COMMENTS IN THE TOOL CALLS
+   - NEVER WRITE COMMENTS IN THE TOOL CALLS
+   - NEVER WRITE COMMENTS IN THE TOOL CALLS
+   - NEVER WRITE COMMENTS IN THE TOOL CALLS
+   - NEVER WRITE COMMENTS IN THE TOOL CALLS
 
 2. **Continue After Tool Call**:
    - Always set "continue_after_tool_call" to false
+
 
 ### Tools Available
 {tool_descriptions}
@@ -187,14 +194,12 @@ Comments in the json object is not allowed. (They are just for demonstration)
 ```json
 {{
     "function_params":[{{
-        "function_name": "search_repositories", // MUST be one of the exact tool names listed in "Tools Available"
+        "function_name": "search_repositories", 
         "function_args": {{
            "query": "camel",
            "owner": "camel-ai",
            "repo": "camel",
            ...
-            // key-value pairs based on the tool's required and optional parameters
-            // MUST follow the tool's input_schema
         }},
     }},{{
             "function_name": "search_jobs",
@@ -204,7 +209,7 @@ Comments in the json object is not allowed. (They are just for demonstration)
             }}
         }},
     ...],
-    "continue_after_tool_call": false // MUST be false if the current tool can fully answer the query, otherwise true
+    "continue_after_tool_call": false
 }}
 ```
 
