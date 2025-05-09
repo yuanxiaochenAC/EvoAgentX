@@ -187,7 +187,6 @@ class ParallelExecutor:
                                             submission_counter,
                                             idx,
                                             item,
-                                            with_inputs
                                         )
                                         futures_map[nf] = (submission_counter, idx, item)
                                         futures_set.add(nf)

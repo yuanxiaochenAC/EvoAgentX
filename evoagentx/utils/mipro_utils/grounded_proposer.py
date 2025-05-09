@@ -33,7 +33,7 @@ def generate_instruction_class(
         use_tip=True,
     ):
         inputs = []
-        prompt = f"""
+        prompt = """
         Use the information below to learn about a task we are trying to solve using calls to a Language Model (LM). Then generate a new, improved instruction that will be used to prompt an LM to better solve the task.
         """
         if use_dataset_summary:
