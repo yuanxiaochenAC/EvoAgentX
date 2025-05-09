@@ -32,7 +32,7 @@ class DockerInterpreter(BaseInterpreter):
     print_stderr:bool = Field(default=True, description="Whether to print stderr")
     container:docker.models.containers.Container = Field(default=None, description="The container to use for the interpreter")
     client:docker.client.DockerClient = Field(default=None, description="Docker client used for container operations")
-    image_tag:str = Field(default="fundingsocietiesdocker/python3.9-slim", description="The image tag to use for the container")
+    image_tag:str = Field(default=None, description="The image tag to use for the container")
     dockerfile_path:str = Field(default="", description="The path to the dockerfile to use for the container")
     host_directory:str = Field(default="", description="The path to the host directory to use for the container")
     container_directory:str = Field(default="/home/app/", description="The directory to use for the container")
@@ -62,6 +62,7 @@ class DockerInterpreter(BaseInterpreter):
         # Initialize Docker client and container
         self.client = docker.from_env()
         self._initialize_if_needed()
+        self.image_tag = data.get('image_tag', None)
         
         # Upload directory if specified
         if self.host_directory:
@@ -74,18 +75,20 @@ class DockerInterpreter(BaseInterpreter):
     def _initialize_if_needed(self):
         if self.container is not None:
             return
-        
-        try:
-            # Try to get the existing image first
-            self.client.images.get(self.image_tag)
-        except docker.errors.ImageNotFound:
+        if self.image_tag:
+            try:
+                # Try to get the existing image first
+                self.client.images.get(self.image_tag)
+            except Exception as e:
+                raise ValueError(f"Image provided in image_tag but not found: {e}")
+        else:
             # Image not found, need to build it - now we check for dockerfile_path
             if not self.dockerfile_path:
-                raise ValueError("dockerfile_path must be provided to build the image")
+                raise ValueError("dockerfile_path or image_tag must be provided to build the image")
                 
             dockerfile_path = Path(self.dockerfile_path)
             if not dockerfile_path.exists():
-                raise FileNotFoundError(f"Dockerfile not found at {dockerfile_path}")
+                raise FileNotFoundError(f"Dockerfile not found at provided path: {dockerfile_path}")
             
             dockerfile_dir = dockerfile_path.parent
             self.client.images.build(path=str(dockerfile_dir), tag=self.image_tag, rm=True, buildargs={})

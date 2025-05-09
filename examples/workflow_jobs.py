@@ -35,7 +35,7 @@ def main(goal=None):
     print(tools)
     
     ## _______________ Workflow Creation _______________
-    wf_generator = WorkFlowGenerator(llm=llm, mcp_config_path=mcp_config_path, tools=tools)
+    wf_generator = WorkFlowGenerator(llm=llm, tools=tools)
     workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal=goal, agent_suggestion=PDF_AGENT_SUGGESTION)
     # [optional] display workflow
     workflow_graph.display()

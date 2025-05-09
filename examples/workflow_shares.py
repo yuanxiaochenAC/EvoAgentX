@@ -6,6 +6,7 @@ from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.workflow import WorkFlowGraph, WorkFlow
 from evoagentx.agents import AgentManager
 from evoagentx.tools.mcp import MCPToolkit
+from evoagentx.workflow import WorkFlowGenerator
 load_dotenv() # Loads environment variables from .env file
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY") 
@@ -90,14 +91,14 @@ def main(goal=None):
    mcp_toolkit = MCPToolkit(config_path=mcp_config_path)
    tools = mcp_toolkit.get_tools()
    
-#    ## _______________ Workflow Creation _______________
-#    wf_generator = WorkFlowGenerator(llm=llm, mcp_config_path=mcp_config_path, tools=tools)
-#    # workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal=goal)
-#    workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal=goal, agent_suggestion=AGENT_SUGGESTIONS)
-#    # [optional] display workflow
-#    workflow_graph.display()
-#    # [optional] save workflow 
-#    workflow_graph.save_module(module_save_path)
+   ## _______________ Workflow Creation _______________
+   wf_generator = WorkFlowGenerator(llm=llm, tools=tools)
+   # workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal=goal)
+   workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal=goal, agent_suggestion=AGENT_SUGGESTIONS)
+   # [optional] display workflow
+   workflow_graph.display()
+   # [optional] save workflow 
+   workflow_graph.save_module(module_save_path)
    
    
    ## _______________ Workflow Execution _______________
