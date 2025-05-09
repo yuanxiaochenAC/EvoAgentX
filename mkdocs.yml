@@ -48,6 +48,10 @@ nav:
     - LLM: modules/llm.md 
     - Agent: modules/agent.md
     - Customize Agent: modules/customize_agent.md
+    - Workflow Graph: modules/workflow_graph.md
+    - Action Graph: modules/action_graph.md
+    - Benchmark: modules/benchmark.md 
+    - Evaluator: modules/evaluator.md 
   - API Reference:
     - Core: api/core.md
     - Models: api/models.md

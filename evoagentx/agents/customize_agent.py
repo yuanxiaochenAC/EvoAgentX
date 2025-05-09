@@ -393,7 +393,7 @@ class CustomizeAgent(Agent):
             if required:
                 action_input_fields[field["name"]] = (str, Field(description=field["description"]))
             else:
-                action_input_fields[field["name"]] = (Optional[str], Field(description=field["description"]))
+                action_input_fields[field["name"]] = (Optional[str], Field(default=None, description=field["description"]))
         
         action_input_type = create_model(
             self._get_unique_class_name(
@@ -411,7 +411,7 @@ class CustomizeAgent(Agent):
                 if required:
                     action_output_fields[field["name"]] = (Union[str, dict, list], Field(description=field["description"]))
                 else:
-                    action_output_fields[field["name"]] = (Optional[Union[str, dict, list]], Field(description=field["description"]))
+                    action_output_fields[field["name"]] = (Optional[Union[str, dict, list]], Field(default=None, description=field["description"]))
             
             action_output_type = create_model(
                 self._get_unique_class_name(
@@ -501,16 +501,9 @@ class CustomizeAgent(Agent):
         inputs = inputs or {} 
         return super().__call__(action_name=self.customize_action_name, action_input_data=inputs, return_msg_type=return_msg_type, **kwargs)
     
-    def save_module(self, path: str, ignore: List[str] = [], **kwargs)-> str:
-        """Save the customize agent's configuration to a JSON file.
-        
-        Args:
-            path: File path where the configuration should be saved
-            ignore: List of keys to exclude from the saved configuration
-            **kwargs: Additional parameters for the save operation
-            
-        Returns:
-            The path where the configuration was saved
+    def get_customize_agent_info(self) -> dict:
+        """
+        Get the information of the customize agent.
         """
         customize_action = self.get_action(self.customize_action_name)
         action_input_params = customize_action.inputs_format.get_attrs()
@@ -546,6 +539,20 @@ class CustomizeAgent(Agent):
             "parse_func": self.parse_func.__name__ if self.parse_func is not None else None,
             "title_format": self.title_format 
         }
+        return config
+    
+    def save_module(self, path: str, ignore: List[str] = [], **kwargs)-> str:
+        """Save the customize agent's configuration to a JSON file.
+        
+        Args:
+            path: File path where the configuration should be saved
+            ignore: List of keys to exclude from the saved configuration
+            **kwargs: Additional parameters for the save operation
+            
+        Returns:
+            The path where the configuration was saved
+        """
+        config = self.get_customize_agent_info()
 
         for ignore_key in ignore:
             config.pop(ignore_key, None)

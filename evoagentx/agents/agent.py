@@ -1,6 +1,7 @@
 import asyncio
+import inspect 
 from pydantic import Field
-from typing import Type, Optional, Union, Tuple, List
+from typing import Type, Optional, Union, Tuple, List, Any, Coroutine
 
 from ..core.module import BaseModule
 from ..core.module_utils import generate_id
@@ -60,13 +61,23 @@ class Agent(BaseModule):
         self._save_ignore_fields = ["llm", "llm_config"]
         self.init_context_extractor()
 
-    def __call__(self, *args, **kwargs) -> Message:
-        """Make the agent callable and automatically choose between sync and async execution"""
-        if asyncio.iscoroutinefunction(self.async_execute) and asyncio.get_event_loop().is_running():
-            # If the operator is in an asynchronous environment and has an execute_async method, return a coroutine
+    # def __call__(self, *args, **kwargs) -> Message:
+    #     """Make the agent callable and automatically choose between sync and async execution"""
+    #     if asyncio.iscoroutinefunction(self.async_execute) and asyncio.get_event_loop().is_running():
+    #         # If the operator is in an asynchronous environment and has an execute_async method, return a coroutine
+    #         return self.async_execute(*args, **kwargs)
+    #     # Otherwise, use the synchronous method
+    #     return self.execute(*args, **kwargs)
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Union[dict, Coroutine[Any, Any, dict]]:
+        """Make the operator callable and automatically choose between sync and async execution."""
+        try:
+            # Safe way to check if we're inside an async environment
+            asyncio.get_running_loop()
             return self.async_execute(*args, **kwargs)
-        # Otherwise, use the synchronous method
-        return self.execute(*args, **kwargs)
+        except RuntimeError:
+            # No running loop — likely in sync context or worker thread
+            return self.execute(*args, **kwargs)
     
     def _prepare_execution(
         self,
@@ -160,8 +171,9 @@ class Agent(BaseModule):
         msgs: Optional[List[Message]] = None, 
         action_input_data: Optional[dict] = None, 
         return_msg_type: Optional[MessageType] = MessageType.UNKNOWN,
+        return_action_input_data: Optional[bool] = False, 
         **kwargs
-    ) -> Message:
+    ) -> Union[Message, Tuple[Message, dict]]:
         """Execute an action asynchronously with the given context and return results.
 
         This is the async version of the execute method, allowing it to perform actions
@@ -185,22 +197,36 @@ class Agent(BaseModule):
         )
 
         # execute action asynchronously
-        execution_results = await action.async_execute(
-            llm=self.llm, 
-            inputs=action_input_data, 
-            sys_msg=self.system_prompt,
-            return_prompt=True,
-            **kwargs
+        async_execute_source = inspect.getsource(action.async_execute)
+        if "NotImplementedError" in async_execute_source:
+            # if the async_execute method is not implemented, use the execute method instead
+            execution_results = action.execute(
+                llm=self.llm, 
+                inputs=action_input_data, 
+                sys_msg=self.system_prompt,
+                return_prompt=True,
+                **kwargs
+            )
+        else:
+            execution_results = await action.async_execute(
+                llm=self.llm, 
+                inputs=action_input_data, 
+                sys_msg=self.system_prompt,
+                return_prompt=True,
+                **kwargs
         )
         action_output, prompt = execution_results
 
-        return self._create_output_message(
+        message = self._create_output_message(
             action_output=action_output,
             prompt=prompt,
             action_name=action_name,
             return_msg_type=return_msg_type,
             **kwargs
         )
+        if return_action_input_data:
+            return message, action_input_data
+        return message
     
     def execute(
         self, 
@@ -208,8 +234,9 @@ class Agent(BaseModule):
         msgs: Optional[List[Message]] = None, 
         action_input_data: Optional[dict] = None, 
         return_msg_type: Optional[MessageType] = MessageType.UNKNOWN,
+        return_action_input_data: Optional[bool] = False, 
         **kwargs
-    ) -> Message:
+    ) -> Union[Message, Tuple[Message, dict]]:
         """Execute an action with the given context and return results.
 
         This is the core method for agent functionality, allowing it to perform actions
@@ -242,13 +269,16 @@ class Agent(BaseModule):
         )
         action_output, prompt = execution_results
 
-        return self._create_output_message(
+        message = self._create_output_message(
             action_output=action_output,
             prompt=prompt,
             action_name=action_name,
             return_msg_type=return_msg_type,
             **kwargs
         )
+        if return_action_input_data:
+            return message, action_input_data
+        return message
     
     def init_llm(self):
         """

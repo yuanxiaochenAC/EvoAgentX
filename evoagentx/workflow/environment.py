@@ -1,4 +1,5 @@
 from enum import Enum
+from pydantic import Field
 from typing import Union, Optional, List
 from ..core.module import BaseModule
 from ..core.message import Message, MessageType
@@ -25,9 +26,9 @@ class Environment(BaseModule):
     """
     Responsible for storing and managing intermediate states of execution.
     """
-    trajectory: List[TrajectoryStep] = []
-    task_execution_history: List[str] = []
-    execution_data: dict = {}
+    trajectory: List[TrajectoryStep] = Field(default_factory=list)
+    task_execution_history: List[str] = Field(default_factory=list)
+    execution_data: dict = Field(default_factory=dict)
 
     def update(self, message: Message, state: TrajectoryState = None, error: str = None, **kwargs):
         """
@@ -56,8 +57,13 @@ class Environment(BaseModule):
         if isinstance(message.content, dict):
             data = message.content
             self.execution_data.update(data)
-
-    def get_task_messages(self, tasks: Union[str, List[str]], n: int = None, **kwargs) -> List[Message]:
+    
+    def update_execution_data_from_context_extraction(self, extracted_data: dict):
+        for key, value in extracted_data.items():
+            if key not in self.execution_data:
+                self.execution_data[key] = value
+    
+    def get_task_messages(self, tasks: Union[str, List[str]], n: int = None, include_inputs: bool = False, **kwargs) -> List[Message]:
         """
         Retrieve all messages related to specified tasks
 
@@ -70,6 +76,8 @@ class Environment(BaseModule):
         for step in self.trajectory:
             message = step.message
             if message.wf_task is not None and message.wf_task in tasks:
+                message_list.append(message)
+            if include_inputs and message.msg_type == MessageType.INPUT and message not in message_list:
                 message_list.append(message)
         message_list = message_list if n is None else message_list[-n:]
         return message_list

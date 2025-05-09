@@ -1,7 +1,7 @@
 from pydantic import Field
 from itertools import chain
 from collections import defaultdict
-from typing import Union, Optional, Tuple, Dict, List 
+from typing import Union, Optional, Tuple, Dict, List
 
 from ..core.module import BaseModule
 # from ..core.base_config import Parameter
@@ -64,25 +64,18 @@ class TaskScheduler(Action):
                     predecessors.append(candidate)
         return predecessors
     
-    def execute(self, llm: Optional[BaseLLM] = None, graph: WorkFlowGraph = None, env: Environment = None, sys_msg: Optional[str] = None, return_prompt: bool=False, **kwargs) -> Union[TaskSchedulerOutput, Tuple[TaskSchedulerOutput, str]]:
-
+    def _handle_edge_cases(self, candidate_tasks: List[WorkFlowNode]) -> Union[TaskSchedulerOutput, None]:
         """
-        Determine the next executable tasks.
-
+        Handle edge cases for task scheduling: Only one candidate task
+        
         Args:
-            graph (WorkFlowGraph): The workflow graph.
-            env (Environment): The execution environment. 
-        
+            candidate_tasks (List[WorkFlowNode]): List of candidate tasks to schedule      
+            
         Returns:
-            str: the name of the task to execute. 
+            Either a TaskSchedulerOutput if a direct return is possible, or None if normal processing should continue
         """
-        assert graph is not None and env is not None, "must provide 'graph' and 'env' when executing TaskScheduler"
-
-        candidate_tasks: List[WorkFlowNode] = graph.next()
-        if not candidate_tasks:
-            return None
         
-        # directly return the task if there is only one single candidate task
+        # Only one candidate task
         if len(candidate_tasks) == 1:
             task_name = candidate_tasks[0].name
             scheduled_task = TaskSchedulerOutput(
@@ -90,13 +83,31 @@ class TaskScheduler(Action):
                 task_name=task_name,
                 reason = f"Only one candidate task '{task_name}' is available."
             )
-            return (scheduled_task, None) if return_prompt else scheduled_task
+            return scheduled_task
         
+        # Multiple candidate tasks, need normal processing
+        return None
+    
+    def _prepare_execution(self, graph: WorkFlowGraph, env: Environment, candidate_tasks: List[WorkFlowNode]) -> Tuple[dict, str]:
+        """
+        Prepares common execution logic for both sync and async execute methods.
+        This is only called when edge cases have been handled and we need to generate a prompt.
+        
+        Args:
+            graph (WorkFlowGraph): The workflow graph.
+            env (Environment): The execution environment.
+            candidate_tasks (List[WorkFlowNode]): List of candidate tasks to schedule
+            
+        Returns:
+            A tuple with prompt_inputs and prompt for LLM processing.
+        """
+
+        # Process multiple candidate tasks by preparing the LLM prompt
         workflow_graph_representation = graph.get_workflow_description()
         execution_history = " -> ".join(env.task_execution_history)
         # in execution_ouputs only consider the predecessors of candidate tasks
         predecessor_tasks = self.get_predecessor_tasks(graph=graph, tasks=candidate_tasks)
-        execution_outputs = "\n\n".join([str(msg)  for msg in env.get_task_messages(tasks=predecessor_tasks)])
+        execution_outputs = "\n\n".join([str(msg) for msg in env.get_task_messages(tasks=predecessor_tasks)])
         candidate_tasks_info = "\n\n".join([task.get_task_info() for task in candidate_tasks])
         prompt_inputs = {
             "workflow_graph_representation": workflow_graph_representation, 
@@ -106,7 +117,71 @@ class TaskScheduler(Action):
             "max_num_turns": self.max_num_turns
         }
         prompt = self.prompt.format(**prompt_inputs)
+        return prompt_inputs, prompt
+    
+    def execute(self, llm: Optional[BaseLLM] = None, graph: WorkFlowGraph = None, env: Environment = None, sys_msg: Optional[str] = None, return_prompt: bool=False, **kwargs) -> Union[TaskSchedulerOutput, Tuple[TaskSchedulerOutput, str]]:
+        """
+        Determine the next executable tasks.
+
+        Args:
+            llm (Optional[BaseLLM]): Language model to use for generation.
+            graph (WorkFlowGraph): The workflow graph.
+            env (Environment): The execution environment. 
+            sys_msg (Optional[str]): Optional system message for the LLM.
+            return_prompt (bool): Whether to return the prompt along with the output.
+        
+        Returns:
+            Union[TaskSchedulerOutput, Tuple[TaskSchedulerOutput, str]]: The scheduled task and optionally the prompt.
+        """
+        assert graph is not None and env is not None, "must provide 'graph' and 'env' when executing TaskScheduler"
+
+        # obtain candidate tasks 
+        candidate_tasks: List[WorkFlowNode] = graph.next() 
+        if not candidate_tasks:
+            return None 
+
+        # First handle edge cases (only one candidate task)
+        edge_case_result = self._handle_edge_cases(candidate_tasks)
+        if edge_case_result is not None:
+            return (edge_case_result, None) if return_prompt else edge_case_result
+        
+        # Handle LLM generation case
+        _, prompt = self._prepare_execution(graph, env, candidate_tasks)
         scheduled_task = llm.generate(prompt=prompt, system_message=sys_msg, parser=self.outputs_format)
+        
+        if return_prompt:
+            return scheduled_task, prompt
+        return scheduled_task
+    
+    async def async_execute(self, llm: Optional[BaseLLM] = None, graph: WorkFlowGraph = None, env: Environment = None, sys_msg: Optional[str] = None, return_prompt: bool=False, **kwargs) -> Union[TaskSchedulerOutput, Tuple[TaskSchedulerOutput, str]]:
+        """
+        Asynchronously determine the next executable tasks.
+
+        Args:
+            llm (Optional[BaseLLM]): Language model to use for generation.
+            graph (WorkFlowGraph): The workflow graph.
+            env (Environment): The execution environment. 
+            sys_msg (Optional[str]): Optional system message for the LLM.
+            return_prompt (bool): Whether to return the prompt along with the output.
+        
+        Returns:
+            Union[TaskSchedulerOutput, Tuple[TaskSchedulerOutput, str]]: The scheduled task and optionally the prompt.
+        """
+        assert graph is not None and env is not None, "must provide 'graph' and 'env' when executing TaskScheduler"
+
+        # obtain candidate tasks 
+        candidate_tasks: List[WorkFlowNode] = graph.next()
+        if not candidate_tasks:
+            return None 
+
+        # First handle edge cases
+        edge_case_result = self._handle_edge_cases(candidate_tasks)
+        if edge_case_result is not None:
+            return (edge_case_result, None) if return_prompt else edge_case_result
+        
+        # Handle async LLM generation case
+        _, prompt = self._prepare_execution(graph, env, candidate_tasks)
+        scheduled_task = await llm.async_generate(prompt=prompt, system_message=sys_msg, parser=self.outputs_format)
         
         if return_prompt:
             return scheduled_task, prompt
@@ -162,27 +237,28 @@ class ActionScheduler(Action):
                 pairs.append((agent, action))
         return pairs
 
-    def execute(
+    def _prepare_action_execution(
         self, 
-        llm: Optional[BaseLLM] = None, 
-        task: WorkFlowNode = None, 
-        agent_manager: AgentManager = None, 
-        env: Environment = None, 
-        sys_msg: Optional[str] = None, 
-        return_prompt: bool=True, 
-        **kwargs
-    ) -> Union[NextAction, Tuple[NextAction, str]]:
+        task: WorkFlowNode, 
+        agent_manager: AgentManager, 
+        env: Environment
+    ) -> Union[Tuple[NextAction, None], Tuple[None, dict, str]]:
         """
-        Determine the next actions to take for the given task. 
-        If the last message stored in ``next_actions`` specifies the ``next_actions``, choose an action from these actions to execute. 
-
+        Prepares common execution logic for both sync and async execute methods.
+        
+        Args:
+            task (WorkFlowNode): The task for which to schedule an action.
+            agent_manager (AgentManager): The agent manager providing the agents.
+            env (Environment): The execution environment.
+            
         Returns:
-            NextAction: The next action to execute for the task.
+            Either a tuple with a scheduled action and None if a direct return is possible,
+            or a tuple with None, prompt_inputs, and prompt if LLM processing is needed.
         """
         # the task has a action_graph, directly return the action_graph for execution 
         if task.action_graph is not None:
             next_action = NextAction(action_graph=task.action_graph)
-            return (next_action, None) if return_prompt else next_action
+            return next_action, None
         
         # Otherwise, schedule an agent to execute the task.
         task_agent_names = task.get_agents()
@@ -230,7 +306,7 @@ class ActionScheduler(Action):
             )
         
         if next_action is not None:
-            return (next_action, None) if return_prompt else next_action
+            return next_action, None
 
         # prepare candidate agent & action information 
         # agent_actions_info = "\n\n".join([agent.get_agent_profile() for agent in task_agents])
@@ -256,7 +332,82 @@ class ActionScheduler(Action):
             "agent_action_list": agent_actions_info,
         }
         prompt = self.prompt.format(**prompt_inputs)
+        return None, prompt_inputs, prompt
+        
+    def execute(
+        self, 
+        llm: Optional[BaseLLM] = None, 
+        task: WorkFlowNode = None, 
+        agent_manager: AgentManager = None, 
+        env: Environment = None, 
+        sys_msg: Optional[str] = None, 
+        return_prompt: bool=True, 
+        **kwargs
+    ) -> Union[NextAction, Tuple[NextAction, str]]:
+        """
+        Determine the next actions to take for the given task. 
+        If the last message stored in ``next_actions`` specifies the ``next_actions``, choose an action from these actions to execute.
+
+        Args:
+            llm (Optional[BaseLLM]): Language model to use for generation.
+            task (WorkFlowNode): The task for which to schedule an action.
+            agent_manager (AgentManager): The agent manager providing the agents.
+            env (Environment): The execution environment.
+            sys_msg (Optional[str]): Optional system message for the LLM.
+            return_prompt (bool): Whether to return the prompt along with the output.
+            
+        Returns:
+            Union[NextAction, Tuple[NextAction, str]]: The scheduled action and optionally the prompt.
+        """
+        result = self._prepare_action_execution(task=task, agent_manager=agent_manager, env=env)
+        if result[0] is not None:
+            # Handle direct return case
+            next_action, _ = result
+            return (next_action, None) if return_prompt else next_action
+        
+        # Handle LLM generation case
+        _, _, prompt = result
         next_action = llm.generate(prompt=prompt, system_message=sys_msg, parser=self.outputs_format)
+        
+        if return_prompt:
+            return next_action, prompt
+        return next_action
+    
+    async def async_execute(
+        self, 
+        llm: Optional[BaseLLM] = None, 
+        task: WorkFlowNode = None, 
+        agent_manager: AgentManager = None, 
+        env: Environment = None, 
+        sys_msg: Optional[str] = None, 
+        return_prompt: bool=True, 
+        **kwargs
+    ) -> Union[NextAction, Tuple[NextAction, str]]:
+        """
+        Asynchronously determine the next actions to take for the given task.
+        If the last message stored in ``next_actions`` specifies the ``next_actions``, choose an action from these actions to execute.
+
+        Args:
+            llm (Optional[BaseLLM]): Language model to use for generation.
+            task (WorkFlowNode): The task for which to schedule an action.
+            agent_manager (AgentManager): The agent manager providing the agents.
+            env (Environment): The execution environment.
+            sys_msg (Optional[str]): Optional system message for the LLM.
+            return_prompt (bool): Whether to return the prompt along with the output.
+            
+        Returns:
+            Union[NextAction, Tuple[NextAction, str]]: The scheduled action and optionally the prompt.
+        """
+        result = self._prepare_action_execution(task=task, agent_manager=agent_manager, env=env)
+        if result[0] is not None:
+            # Handle direct return case
+            next_action, _ = result
+            return (next_action, None) if return_prompt else next_action
+        
+        # Handle async LLM generation case
+        _, _, prompt = result
+        next_action = await llm.async_generate(prompt=prompt, system_message=sys_msg, parser=self.outputs_format)
+        
         if return_prompt:
             return next_action, prompt
         return next_action
@@ -277,11 +428,11 @@ class WorkFlowManager(BaseModule):
     def init_module(self):
         self._save_ignore_fields = ["llm"]
 
-    def schedule_next_task(self, graph: WorkFlowGraph, env: Environment = None, **kwargs) -> WorkFlowNode:
+    async def schedule_next_task(self, graph: WorkFlowGraph, env: Environment = None, **kwargs) -> WorkFlowNode:
         """
-        Return the next task to execute. 
+        Return the next task to execute asynchronously.
         """
-        execution_results = self.task_scheduler.execute(llm=self.llm, graph=graph, env=env, return_prompt=True, **kwargs)
+        execution_results = await self.task_scheduler.async_execute(llm=self.llm, graph=graph, env=env, return_prompt=True, **kwargs)
         if execution_results is None:
             return None
         scheduled_task, prompt, *other = execution_results
@@ -292,12 +443,12 @@ class WorkFlowManager(BaseModule):
         env.update(message=message, state=TrajectoryState.COMPLETED)
         task: WorkFlowNode = graph.get_node(scheduled_task.task_name)
         return task
-
-    def schedule_next_action(self, goal: str, task: WorkFlowNode, agent_manager: AgentManager, env: Environment = None, **kwargs) -> NextAction:
+    
+    async def schedule_next_action(self, goal: str, task: WorkFlowNode, agent_manager: AgentManager, env: Environment = None, **kwargs) -> NextAction:
         """
-        return the next action to execute. If the task is completed, return None.
+        Asynchronously return the next action to execute. If the task is completed, return None.
         """
-        execution_results = self.action_scheduler.execute(llm=self.llm, task=task, agent_manager=agent_manager, env=env, return_prompt=True, **kwargs)
+        execution_results = await self.action_scheduler.async_execute(llm=self.llm, task=task, agent_manager=agent_manager, env=env, return_prompt=True, **kwargs)
         if execution_results is None:
             return None
         next_action, prompt, *_ = execution_results
@@ -307,9 +458,18 @@ class WorkFlowManager(BaseModule):
         )
         env.update(message=message, state=TrajectoryState.COMPLETED)
         return next_action
-    
-    def extract_output(self, graph: WorkFlowGraph, env: Environment, **kwargs) -> str:
 
+    async def extract_output(self, graph: WorkFlowGraph, env: Environment, **kwargs) -> str:
+        """
+        Asynchronously extract output from the workflow execution.
+        
+        Args:
+            graph (WorkFlowGraph): The workflow graph.
+            env (Environment): The execution environment.
+            
+        Returns:
+            str: The extracted output.
+        """
         # obtain the output for end tasks
         end_tasks = graph.find_end_nodes()
         end_task_predecesssors = sum([graph.get_node_predecessors(node=end_task) for end_task in end_tasks], [])
@@ -325,7 +485,7 @@ class WorkFlowManager(BaseModule):
             workflow_graph_representation=graph.get_workflow_description(), 
             workflow_execution_results="\n\n".join([str(msg) for msg in candidate_msgs_with_output]), 
         )
-        llm_output: LLMOutputParser = self.llm.generate(prompt=prompt)
+        llm_output: LLMOutputParser = await self.llm.async_generate(prompt=prompt)
         return llm_output.content
 
     def save_module(self, path: str, ignore: List[str] = [], **kwargs)-> str:

@@ -84,7 +84,7 @@ SEW_WORKFLOW = {
     "tasks": [
         {
             "name": "task_parsing",
-            "description": "Parse the user's input goal into a detailed task description.",
+            "description": "Parse the user's input coding question into a detailed task description.",
             "inputs": [
                 {"name": "question", "type": "string", "required": True, "description": "The description of the programming task."}
             ],

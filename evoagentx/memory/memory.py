@@ -22,7 +22,7 @@ class BaseMemory(BaseModule):
         capacity: Maximum number of messages that can be stored, or None for unlimited.
     """
 
-    messages: List[Message] = []
+    messages: List[Message] = Field(default_factory=list)
     memory_id: str = Field(default_factory=generate_id)
     timestamp: str = Field(default_factory=get_timestamp)
     capacity: Optional[PositiveInt] = Field(default=None, description="maximum of messages, None means there is no limit to the message number")

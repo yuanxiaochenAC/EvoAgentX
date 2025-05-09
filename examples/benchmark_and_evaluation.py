@@ -1,14 +1,18 @@
-from evoagentx.config import Config
 from evoagentx.models import OpenAILLMConfig, OpenAILLM 
 from evoagentx.benchmark import HotPotQA
 from evoagentx.workflow import QAActionGraph 
 from evoagentx.evaluators import Evaluator 
 from evoagentx.core.callbacks import suppress_logger_info
 
+import os 
+from dotenv import load_dotenv
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+
 def main(): 
 
-    config = Config.from_file("debug/config_template.json")
-    llm_config = OpenAILLMConfig.from_dict(config.llm_config)
+    llm_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY)
     llm = OpenAILLM(config=llm_config)
 
     benchmark = HotPotQA(mode="dev")
