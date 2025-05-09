@@ -37,21 +37,19 @@ class ParallelExecutor:
         self.error_lock = threading.Lock()
         self.cancel_jobs = threading.Event()
 
-    def execute(self, function, data, with_inputs):
+    def execute(self, function, data):
         tqdm.tqdm._instances.clear()
         wrapped = self._wrap_function(function)
         return self._execute_parallel(
             wrapped,
-            data,
-            with_inputs)
+            data)
 
     def _wrap_function(self, user_function):
         def safe_func(item):
-            example, with_inputs = item
             if self.cancel_jobs.is_set():
                 return None
             try:
-                return user_function(example, with_inputs)
+                return user_function(item)
             except Exception as e:
                 with self.error_lock:
                     self.error_count += 1
@@ -65,7 +63,7 @@ class ParallelExecutor:
 
         return safe_func
     
-    def _execute_parallel(self, function, data, with_inputs):
+    def _execute_parallel(self, function, data):
             results = [None] * len(data)
             job_cancelled = "cancelled"
 
@@ -75,7 +73,7 @@ class ParallelExecutor:
             resubmitted = set()
 
             # This is the worker function each thread will run.
-            def worker(parent_overrides, submission_id, index, item, with_inputs):
+            def worker(parent_overrides, submission_id, index, item):
                 if self.cancel_jobs.is_set():
                     return index, job_cancelled
                 # Record actual start time
@@ -91,8 +89,9 @@ class ParallelExecutor:
                     # Usage tracker needs to be deep copied across threads so that each thread tracks its own usage
                     thread_local_overrides.overrides["usage_tracker"] = copy.deepcopy(parent_overrides["usage_tracker"])
 
+
                 try:
-                    return index, function((item, with_inputs))
+                    return index, function(item)
                 finally:
                     thread_local_overrides.overrides = original
 
@@ -127,7 +126,7 @@ class ParallelExecutor:
                     submission_counter = 0
 
                     for idx, item in enumerate(data):
-                        f = executor.submit(worker, parent_overrides, submission_counter, idx, item, with_inputs)
+                        f = executor.submit(worker, parent_overrides, submission_counter, idx, item)
                         futures_map[f] = (submission_counter, idx, item)
                         futures_set.add(f)
                         

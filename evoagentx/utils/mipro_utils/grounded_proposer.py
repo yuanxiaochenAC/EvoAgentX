@@ -7,7 +7,7 @@ from evoagentx.utils.mipro_utils.settings import settings
 from evoagentx.core.module import BaseModule
 from evoagentx.utils.mipro_utils.utils import get_source_code, strip_prefix, create_predictor_level_history_string, create_example_string
 from evoagentx.utils.mipro_utils.dataset_summary_generator import create_dataset_summary
-# from evoagentx.utils.utils import append_inputs_to_prompt
+from evoagentx.utils.utils import append_inputs_to_prompt
 import os 
 from dotenv import load_dotenv
 load_dotenv()
@@ -459,8 +459,7 @@ class GenerateModuleInstruction(BaseModule):
             inputs = input_dict
         )
         
-        # proposed_instruction = strip_prefix(append_inputs_to_prompt(instruct.content.proposed_instruction, self.input_fields))
-        proposed_instruction = strip_prefix(instruct.content.proposed_instruction)
+        proposed_instruction = strip_prefix(append_inputs_to_prompt(instruct.content.proposed_instruction, self.input_fields))
 
         return proposed_instruction
     

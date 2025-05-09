@@ -7,6 +7,8 @@ from evoagentx.workflow import  WorkFlow
 from evoagentx.agents import AgentManager
 import tqdm
 
+from evoagentx.workflow.workflow_graph import WorkFlowGraph
+
 from .labeledfewshot import LabeledFewShot
 from evoagentx.core.module import BaseModule
 from evoagentx.utils.mipro_utils.settings import settings
@@ -154,19 +156,23 @@ class BootstrapFewShot(BaseModule):
                 agent['demos'] = [x for x in agent['demos'] if x != example]
             
             agent_manager = AgentManager()
+            agent_manager.clear_agents()
             agent_manager.add_agents_from_workflow(
                 teacher,
                 llm_config= lm
             )
+            
+            program_copy = WorkFlowGraph(goal=teacher.goal, graph=teacher.graph)
+            program_copy.reset_graph()
             workflow = WorkFlow(graph=teacher, agent_manager= agent_manager, llm=OpenAILLM(lm))
             
-            prediction = workflow.execute(inputs = get_inputs(example, self.trainset_inputs))
+            prediction = workflow.execute(inputs = {key: example[value] for key, value in self.trainset_inputs.items()},
+                                          extract_output=False)
             
             trace = settings.trace
             for agent in teacher.agents():
                 agent['demos'] = agent_cache[agent['name']]
             if self.metric:
-                # TODO: 要不要实现metric，具体该怎么实现？
                 metric_val = self.metric(example, prediction, trace)
                 if self.metric_threshold:
                     success = metric_val >= self.metric_threshold
@@ -235,5 +241,3 @@ class BootstrapFewShot(BaseModule):
             agent['demos'] = augmented_demos + raw_demos
         return self.student
 
-def get_inputs(example: dict, inputs:dict):
-    return {key: example[value] for key, value in inputs.items()}

@@ -50,7 +50,7 @@ class Evaluate:
     def __init__(
         self,
         *,
-        devset: List,
+        devset: List[dict],
         metric: Optional[Callable] = None,
         num_threads: Optional[int] = None,
         display_progress: bool = False,
@@ -148,8 +148,8 @@ class Evaluate:
            
         )
         
-        
-        def process_item(example, with_inputs):
+        logger.info(f"program: {program}")
+        def process_item(example):
             agent_manager = AgentManager()
             agent_manager.clear_agents()
             # program.save_module("examples/mipro/output/saved_program.json")
@@ -167,7 +167,7 @@ class Evaluate:
                 extract_output=False,
             )
             
-
+            
             score = metric(example, prediction)
             # Increment assert and suggest failures to program's attributes
             if hasattr(program, "_assert_failures"):
@@ -177,8 +177,7 @@ class Evaluate:
 
             return prediction, score
         
-        results = executor.execute(process_item, devset, with_inputs)
-        
+        results = executor.execute(process_item, devset)
         assert len(devset) == len(results)
 
         results = [(("", self.failure_score) if r is None else r) for r in results]

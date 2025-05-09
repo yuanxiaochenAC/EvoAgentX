@@ -98,3 +98,12 @@ def download_file(url: str, save_file: str, max_retries=3, timeout=10):
         error_message = "Exceeded maximum retries. Download failed."
         logger.error(error_message)
         raise RuntimeError(error_message)
+    
+def append_inputs_to_prompt(prompt: str, inputs: list[str]) -> str:
+    for name in inputs:
+        placeholder = "{" + name + "}"
+        line = f"{name} : {placeholder}"
+        if placeholder not in prompt:
+            prompt += f"\n{line}"
+            
+    return prompt

@@ -8,7 +8,7 @@ import os
 import logging
 from dotenv import load_dotenv
 from evoagentx.workflow.workflow import WorkFlowGraph
-
+from evoagentx.workflow import SequentialWorkFlowGraph
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -18,6 +18,32 @@ def main():
     openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY)
     executor_llm = OpenAILLM(config=openai_config)
     settings.lm = openai_config
+
+
+
+    tasks = [
+        
+        {
+            "name": f"answer",
+            "description": "provide answer to the math problem ",
+            "inputs": [
+                {"name": "problem", "type": "str", "required": True, "description": ""},
+            ],
+            "outputs": [
+                {"name": "answer", "type": "str", "required": True, "description": ""}
+            ],
+            "prompt": "Problem: {problem} You must provide the answer in box format E.g. \\boxed{{123}}",
+            "parse_mode": "str", 
+        }
+    ]
+    
+    # Create the sequential workflow
+    graph = SequentialWorkFlowGraph(
+        goal="Generate answer to math question", # describe the goal of the workflow
+        tasks=tasks, 
+    )
+
+
 
     def evaluate_metric(example, prediction, trace=None):
         example_ans = math.extract_answer(example["solution"])
@@ -29,9 +55,8 @@ def main():
     math._load_data()
     trainset = math._test_data[:100]
     # devset = math._test_data[100:200]
-    devset = math._test_data[100:120]
+    devset = math._test_data[100:200]
     
-    graph = WorkFlowGraph.from_file("examples/mipro/output/saved_program.json")
     
     # zero-shot optimization
     optimizer = MiproOptimizer(
@@ -51,22 +76,21 @@ def main():
     evaluate = mipro_evaluator(
         devset=devset,
         metric=evaluate_metric,
-        num_threads=3,
+        num_threads=32,
         display_progress=True,
         display_table=False,
     )
     
-    results = evaluate(program = graph, with_inputs={"problem":"problem"})
-
-    from pdb import set_trace; set_trace()
-    
-    output_path = r"C:\Users\31646\Desktop\EvoAgentX\examples\mipro\output\best_progrma_math.json"
+    prev_results = evaluate(program = graph, with_inputs={"problem":"problem"})
+    output_path = r"C:\Users\31646\Desktop\EvoAgentX\examples\mipro\output\best_program_math.json"
 
     best_program = optimizer.optimize(trainset=trainset, with_inputs={"problem":"problem"}, provide_traceback=True)
-    
-    evaluate(program = best_program, with_inputs={"problem":"problem"})
-    
     best_program.save_module(output_path)
+    
+    post_results = evaluate(program = WorkFlowGraph.from_file(output_path), with_inputs={"problem":"problem"})
+    # post_results = evaluate(program = best_program, with_inputs={"problem":"problem"})
+    print(f"prev_results: {prev_results}")
+    print(f"post_results: {post_results}")
     
 
 if __name__ == "__main__":
