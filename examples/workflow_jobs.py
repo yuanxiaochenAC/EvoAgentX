@@ -1,6 +1,5 @@
 import os 
 from dotenv import load_dotenv 
-import asyncio
 import sys
 
 from evoagentx.models import OpenAILLMConfig, OpenAILLM

@@ -1,7 +1,6 @@
 from .search_base import SearchBase
 from googlesearch import search as google_f_search
 from typing import Dict, Any, Optional, List, Callable
-from pydantic import Field
 from evoagentx.core.logging import logger
 
 class SearchGoogleFree(SearchBase):

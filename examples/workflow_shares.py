@@ -1,13 +1,10 @@
 import os 
 from dotenv import load_dotenv 
-import asyncio
 import sys
-import json
 
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.workflow import WorkFlowGraph, WorkFlow
 from evoagentx.agents import AgentManager
-from evoagentx.workflow import WorkFlowGenerator
 from evoagentx.tools.mcp import MCPToolkit
 load_dotenv() # Loads environment variables from .env file
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -15,7 +12,7 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
 output_html_path = "workplace/market_analysis.html"
 
-SHARES_GOAL = f"""
+SHARES_GOAL = """
 **CRITICAL CONSTRAINTS: DATA VIA TOOL CALLS ONLY. OUTPUT IS A SINGLE, SELF-CONTAINED HTML FILE WITH JAVASCRIPT FOR ALL ANALYSIS & VISUALIZATION. NO PYTHON IN HTML.**
 
 **Goal:** Generate a concise, **technically detailed HTML report** analyzing the **overall A-share market environment**. Focus on **key industry index performances** (past 3 months ending 2025-05-07).
@@ -50,7 +47,7 @@ SHARES_GOAL = f"""
 
 
 
-AGENT_SUGGESTIONS = f"""
+AGENT_SUGGESTIONS = """
 CRITICAL WORKFLOW CONSTRAINTS:
 
 1. DATA INTEGRITY:
@@ -134,7 +131,8 @@ def main(goal=None):
    except Exception as e:
        print(f"Error saving market analysis dashboard: {e}")
    
-   from pdb import set_trace; set_trace()
+   from pdb import set_trace
+   set_trace()
     
     
 if __name__ == "__main__": 
