@@ -1,0 +1,32 @@
+import importlib
+
+from ..storages.storages_config import DBConfig, VectorStoreConfig
+
+
+def load_class(class_type):
+    module_path, class_name = class_type.rsplit(".", 1)
+    module = importlib.import_module(module_path)
+    return getattr(module, class_name)
+
+
+class DBFactory:
+    provider_to_class = {
+        "sqlite": "evoagentx.storages.db_stores.sqlite.SQLite",
+        "posgre_sql": "evoagentx.storages.db_stores.posgre_sql.",
+    }
+
+    @classmethod
+    def create(cls, config: DBConfig):
+        ...
+
+
+class VectorStoreFactory:
+    provider_to_class = {
+        "qdrant": "mem0.vector_stores.qdrant.Qdrant",
+        "chroma": "mem0.vector_stores.chroma.ChromaDB",
+        "faiss": "mem0.vector_stores.faiss.FAISS",
+    }
+
+    @classmethod
+    def create(cls, config: VectorStoreConfig):
+        ...
