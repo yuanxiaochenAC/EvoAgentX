@@ -1,10 +1,12 @@
+import os 
+from dotenv import load_dotenv
 from evoagentx.optimizers import AFlowOptimizer
 from evoagentx.models import LiteLLMConfig, LiteLLM, OpenAILLMConfig, OpenAILLM 
 from evoagentx.benchmark import AFlowHumanEval
 
-OPENAI_API_KEY = "OPENAI_API_KEY" 
-ANTHROPIC_API_KEY = "ANTHROPIC_API_KEY" 
-
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
 EXPERIMENTAL_CONFIG = {
     "humaneval": {
@@ -23,7 +25,10 @@ EXPERIMENTAL_CONFIG = {
         "question_type": "math", 
         "operators": ["Custom", "ScEnsemble", "Programmer"]
     },
-    
+    "math": {
+        "question_type": "math", 
+        "operators": ["Custom", "ScEnsemble", "Programmer"]
+    }
 }
 
 def main():
@@ -38,7 +43,7 @@ def main():
 
     # create optimizer
     optimizer = AFlowOptimizer(
-        graph_path = "examples/aflow/humaneval",
+        graph_path = "examples/aflow/code_generation",
         optimized_path = "examples/aflow/humaneval/optimized",
         optimizer_llm=optimizer_llm,
         executor_llm=executor_llm,
