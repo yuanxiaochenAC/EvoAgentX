@@ -53,9 +53,10 @@ def main():
 
     math = MATH()
     math._load_data()
-    trainset = math._test_data[:100]
+    trainset = math._train_data[:200]
+    valset = math._train_data[200:400]
     # devset = math._test_data[100:200]
-    devset = math._test_data[100:200]
+    devset = math._test_data[:200]
     
     
     # zero-shot optimization
@@ -68,6 +69,7 @@ def main():
         auto = "medium",
         num_threads = 32,
         log_dir = "examples/output/logs",
+        num_candidates = 30
         
     )
     
@@ -81,16 +83,25 @@ def main():
         display_table=False,
     )
     
-    prev_results = evaluate(program = graph, with_inputs={"problem":"problem"})
+    lst = []
+    
+    for i in range(10):
+        prev_results = evaluate(program = graph, with_inputs={"problem":"problem"})
+        lst.append(prev_results)
+
     output_path = r"C:\Users\31646\Desktop\EvoAgentX\examples\mipro\output\best_program_math.json"
 
-    best_program = optimizer.optimize(trainset=trainset, with_inputs={"problem":"problem"}, provide_traceback=True)
+    best_program = optimizer.optimize(trainset=trainset, valset=valset, with_inputs={"problem":"problem"}, provide_traceback=True)
     best_program.save_module(output_path)
     
-    post_results = evaluate(program = WorkFlowGraph.from_file(output_path), with_inputs={"problem":"problem"})
-    # post_results = evaluate(program = best_program, with_inputs={"problem":"problem"})
-    print(f"prev_results: {prev_results}")
-    print(f"post_results: {post_results}")
+    llst = []
+    for i in range(10):
+        post_results = evaluate(program = WorkFlowGraph.from_file(output_path), with_inputs={"problem":"problem"})
+        # post_results = evaluate(program = best_program, with_inputs={"problem":"problem"})
+        llst.append(post_results)
+   
+    print(f"prev_results: {lst}")
+    print(f"post_results: {llst}")
     
 
 if __name__ == "__main__":

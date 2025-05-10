@@ -1,0 +1,35 @@
+{
+    "class_name": "SequentialWorkFlowGraph",
+    "goal": "Answer the math question. The answer should be in box format, e.g., \\boxed{123}",
+    "tasks": [
+        {
+            "name": "answer_generate",
+            "description": "Answer generation for Math.",
+            "inputs": [
+                {
+                    "name": "problem",
+                    "type": "str",
+                    "description": "The problem to solve.",
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "answer",
+                    "type": "str",
+                    "description": "The generated answer.",
+                    "required": true
+                }
+            ],
+            "prompt": "**\n\n\"Please solve the following mathematical problem and provide the answer in a boxed format using LaTeX syntax. Ensure that your solution is clear and well-reasoned, demonstrating the necessary steps to reach the final answer. The final output should be presented as: \\\\boxed{{your_answer_here}}.\n\n**Problem:** {problem}\" \n\n**Additional Notes:** \n- Make sure to explain any assumptions or key concepts involved in your solution.\n- Feel free to use logical reasoning and illustrative examples to support your answer.",
+            "system_prompt": null,
+            "parse_mode": "str",
+            "parse_func": null,
+            "parse_title": null,
+            "demos": [],
+            "traces": [],
+            "train": []
+        }
+    ],
+    "graph_path": "C:\\Users\\31646\\Desktop\\EvoAgentX\\examples\\mipro\\output\\best_program_math.json"
+}

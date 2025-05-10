@@ -148,18 +148,19 @@ class Evaluate:
            
         )
         
-        logger.info(f"program: {program}")
         def process_item(example):
             agent_manager = AgentManager()
             agent_manager.clear_agents()
             # program.save_module("examples/mipro/output/saved_program.json")
+            llm = settings.execute_lm if settings.execute_lm is not None else settings.lm
+            
             agent_manager.add_agents_from_workflow(
                 program,
-                llm_config=settings.lm,
+                llm_config=llm
             )
             program_copy = WorkFlowGraph(goal=program.goal, graph=program.graph)
             program_copy.reset_graph()
-            workflow = WorkFlow(graph=program_copy, agent_manager=agent_manager, llm = OpenAILLM(settings.lm))
+            workflow = WorkFlow(graph=program_copy, agent_manager=agent_manager, llm = OpenAILLM(llm))
             
             
             prediction = workflow.execute(

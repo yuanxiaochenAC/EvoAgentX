@@ -175,6 +175,7 @@ class GroundedProposer(BaseModule):
     
     def init_module(self):
         if self.program_aware:
+            logger.info("Getting source code...")
             try:
                 self.program_code_string = get_source_code(self.program)                    
                 if self.verbose:

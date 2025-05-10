@@ -5,6 +5,7 @@ import numpy as np
 import tqdm
 import copy
 import random
+import json
 import logging
 import datetime
 import itertools
@@ -364,7 +365,7 @@ def get_source_code(program):
     """
     Get the source code of a program.
     """
-    return ""
+    return json.dumps(program.get_graph_info(), indent=2, ensure_ascii=False)
 
 def strip_prefix(text):
     pattern = r'^[\*\s]*(([\w\'\-]+\s+){0,4}[\w\'\-]+):\s*'

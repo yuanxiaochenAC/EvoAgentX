@@ -397,7 +397,6 @@ class MiproOptimizer(BaseModule):
             # Log assembled program
             if self.verbose:
                 logger.info("Evaluating the following candidate program...\n")
-                candidate_program.display()
 
             # Evaluate the candidate program (on minibatch if minibatch=True)
             batch_size = minibatch_size if minibatch else len(valset)

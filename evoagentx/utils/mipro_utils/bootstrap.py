@@ -145,7 +145,8 @@ class BootstrapFewShot(BaseModule):
         teacher = self.teacher
         agent_cache = {}
         try:
-            lm = settings.lm.copy()
+
+            lm = (settings.execute_lm or settings.lm).copy()
             if round_idx > 0:
                 lm.temperature = 0.7 + 0.001 * round_idx
                 
