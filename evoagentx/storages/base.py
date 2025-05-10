@@ -1,10 +1,9 @@
-from abc import ABC, abstractmethod
 from typing import Dict, Any
 
 from ..core.module import BaseModule
 
 
-class StorageHandler(BaseModule, ABC):
+class StorageHandler(BaseModule):
 
     """
     An interface for all the storage handlers. 
@@ -13,21 +12,21 @@ class StorageHandler(BaseModule, ABC):
     It can be implemented in various ways such as file storage, database storage, cloud storage, etc.
     """
 
-    @abstractmethod
+
     def load(self, *args, **kwargs):
         """
         Load all data from the underlying storage (file, database, etc.)
         """
         pass 
 
-    @abstractmethod
+
     def save(self, *args, **kwargs):
         """
         Save all data to the underlying storage at once.
         """
         pass 
 
-    @abstractmethod
+
     def load_memory(self, memory_id: str, **kwargs) -> Dict[str, Any]:
         """
         Load a single long term memory data. 
@@ -40,7 +39,7 @@ class StorageHandler(BaseModule, ABC):
         """
         pass
 
-    @abstractmethod
+
     def save_memory(self, memory_data: Dict[str, Any], **kwargs):
         """
         Save or update a single memory. 
@@ -50,7 +49,7 @@ class StorageHandler(BaseModule, ABC):
         """
         pass 
 
-    @abstractmethod
+
     def load_agent(self, agent_name: str, **kwargs) -> Dict[str, Any]:
         # TODO
         """
@@ -64,7 +63,7 @@ class StorageHandler(BaseModule, ABC):
         """
         pass 
 
-    @abstractmethod
+
     def remove_agent(self, agent_name: str, **kwargs):
         # TODO 
         """
@@ -75,7 +74,7 @@ class StorageHandler(BaseModule, ABC):
         """
         pass
 
-    @abstractmethod
+
     def save_agent(self, agent_data: Dict[str, Any], **kwargs):
         """
         Save or update a single agent's data.
@@ -86,7 +85,7 @@ class StorageHandler(BaseModule, ABC):
         pass 
 
     
-    @abstractmethod
+
     def load_workflow(self, workflow_id: str, **kwargs) -> Dict[str, Any]:
         """
         Load a single workflow's data. 
@@ -99,7 +98,7 @@ class StorageHandler(BaseModule, ABC):
         """
         pass 
 
-    @abstractmethod
+
     def save_workflow(self, workflow_data: Dict[str, Any], **kwargs):
         """
         Save or update a workflow's data.
