@@ -76,7 +76,7 @@ def main():
     # create optimizer
     optimizer = AFlowOptimizer(
         graph_path = "examples/aflow/hotpotqa",
-        optimized_path = "debug/aflow/hotpotqa/optimized",
+        optimized_path = "examples/aflow/hotpotqa/optimized",
         optimizer_llm=optimizer_llm,
         executor_llm=executor_llm,
         validation_rounds=3,

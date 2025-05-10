@@ -72,10 +72,10 @@ def main():
     # create optimizer
     optimizer = AFlowOptimizer(
         graph_path = "examples/aflow/math",
-        optimized_path = "debug/aflow/math/optimized",
+        optimized_path = "examples/aflow/math/optimized",
         optimizer_llm=optimizer_llm,
         executor_llm=executor_llm,
-        validation_rounds=5,
+        validation_rounds=3,
         eval_rounds=3,
         max_rounds=20,
         **EXPERIMENTAL_CONFIG["math"]
