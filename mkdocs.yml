@@ -4,22 +4,35 @@ theme:
   font:
     text: Exo 2
     code: Fira Code
-  # icon:
-  #   logo: material/robot
+  icon:
+    repo: fontawesome/brands/git-alt 
   logo: assets/logo.svg
   favicon: assets/logo.svg
   features:
+    # - header.autohide
     - navigation.sections 
     - navigation.expand 
     - navigation.footer
     - navigation.path
     - content.code.select
     - content.code.copy 
+    - navigation.indexes
     - navigation.expand
+    - navigation.tabs
+    - content.tabs.link
+    - navigation.top
+    - navigation.tracking
+    - navigation.search.highlight
+    - navigation.search.share
+    - navigation.search.suggest
     - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
     - content.code.annotate
     - content.heading.auto-number 
-    - announce.dismiss 
+    - navigation.tabs.sticky
+    - toc.follow
+    # - announce.dismiss 
   palette:
     - media: "(prefers-color-scheme)"
       toggle:
@@ -43,9 +56,10 @@ theme:
   # icon:
   #   repo: fontawesome/brands/github
 
+# Repository
 repo_url: https://github.com/EvoAgentX/EvoAgentX
 repo_name: EvoAgentX
-repo_type: github
+# repo_type: github
 
 extra_css:
   - stylesheets/extra.css
@@ -54,8 +68,34 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/EvoAgentX/EvoAgentX
+    - icon: fontawesome/brands/mastodon 
+      link: https://fosstodon.org/@squidfunk
+    - icon: fontawesome/brands/github
+      link: https://github.com/squidfunk
+    - icon: fontawesome/brands/docker
+      link: https://hub.docker.com/r/squidfunk/mkdocs-material/
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/mkdocs-material/
+    - icon: fontawesome/brands/bluesky
+      link: https://bsky.app/profile/squidfunk.bsky.social
+    - icon: fontawesome/brands/mastodon
+      link: https://fosstodon.org/@squidfunk
+    - icon: fontawesome/brands/x-twitter
+      link: https://x.com/squidfunk
+  generator: false
+
+copyright: Copyright © 2025 EvoAgentX Team.
 
 markdown_extensions:
+  - toc:
+      title: On this page
+      # icon: material/link
+      permalink: true
+      toc_depth: 3
+  - attr_list
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
@@ -64,6 +104,12 @@ markdown_extensions:
   - pymdownx.snippets
   - pymdownx.superfences
   - admonition
+  - pymdownx.mark
+  - pymdownx.details
+  - pymdownx.caret
+
+
+
 
 nav:
   - Getting Started:
@@ -96,10 +142,6 @@ nav:
     - Evaluators: api/evaluators.md
     - Optimizers: api/optimizers.md
 
-# plugins:
-#   - search
-#   - mkdocstrings:
-#       default_handler: python
 
 plugins:
   - search
@@ -108,24 +150,12 @@ plugins:
         python:
           options:
             heading_level: 3
-            show_root_heading: true
-            show_source: false
+            # show_root_heading: true
+            show_source: true
             merge_init_into_class: true
             show_signature: true
             show_docstring: true
             separate_signature: true
             members_order: source
-
-extra:
-  social:
-    - icon: fontawesome/brands/mastodon 
-      link: https://fosstodon.org/@squidfunk
-  generator: false
-
-copyright: Copyright © 2025 EvoAgentX.org.
-
-markdown_extensions:
-  - attr_list
-  - pymdownx.emoji:
-      emoji_index: !!python/name:material.extensions.emoji.twemoji
-      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+            signature_crossrefs: true
+            show_signature_annotations: ture
