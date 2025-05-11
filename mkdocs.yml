@@ -1,16 +1,44 @@
 site_name: EvoAgentX
 theme:
   name: material
+  font:
+    text: Exo 2
+    code: Fira Code
+  icon:
+    logo: material/robot
+  # favicon: assets/logo.png
   features:
     - navigation.sections 
     - navigation.expand 
+    - navigation.path
+    - content.code.select
     - content.code.copy 
+    - navigation.expand
     - navigation.instant
+    - content.code.annotate
     - content.heading.auto-number  
   palette:
-    - scheme: default 
-  icon:
-    repo: fontawesome/brands/github
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/link
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: cyan
+      accent: teal
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: cyan
+      accent: teal
+      toggle:
+        icon: material/toggle-switch-off
+        name: Switch to system preference
+
+  # icon:
+  #   repo: fontawesome/brands/github
 
 repo_url: https://github.com/EvoAgentX/EvoAgentX
 repo_name: EvoAgentX
@@ -84,3 +112,10 @@ plugins:
             show_docstring: true
             separate_signature: true
             members_order: source
+
+
+markdown_extensions:
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
