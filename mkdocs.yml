@@ -4,19 +4,22 @@ theme:
   font:
     text: Exo 2
     code: Fira Code
-  icon:
-    logo: material/robot
-  # favicon: assets/logo.png
+  # icon:
+  #   logo: material/robot
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
   features:
     - navigation.sections 
     - navigation.expand 
+    - navigation.footer
     - navigation.path
     - content.code.select
     - content.code.copy 
     - navigation.expand
     - navigation.instant
     - content.code.annotate
-    - content.heading.auto-number  
+    - content.heading.auto-number 
+    - announce.dismiss 
   palette:
     - media: "(prefers-color-scheme)"
       toggle:
@@ -24,14 +27,14 @@ theme:
         name: Switch to light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: cyan
+      primary: black
       accent: teal
       toggle:
         icon: material/toggle-switch
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: cyan
+      primary: black
       accent: teal
       toggle:
         icon: material/toggle-switch-off
@@ -113,6 +116,13 @@ plugins:
             separate_signature: true
             members_order: source
 
+extra:
+  social:
+    - icon: fontawesome/brands/mastodon 
+      link: https://fosstodon.org/@squidfunk
+  generator: false
+
+copyright: Copyright © 2025 EvoAgentX.org.
 
 markdown_extensions:
   - attr_list
