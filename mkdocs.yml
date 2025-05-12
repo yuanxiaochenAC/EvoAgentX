@@ -113,6 +113,7 @@ nav:
     - Build Your First Agent: tutorial/first_agent.md
     - Build Your First Workflow: tutorial/first_workflow.md
     - Benchmark and Evaluation: tutorial/benchmark_and_evaluation.md
+    - AFlow Optimizer: tutorial/aflow_optimizer.md
     - SEW Optimizer: tutorial/sew_optimizer.md
   - Key Modules:
     - LLM: modules/llm.md 
