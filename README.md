@@ -1,7 +1,7 @@
 <!-- Add logo here -->
 <div align="center">
   <a href="https://github.com/EvoAgentX/EvoAgentX">
-    <img src="./assets/EAXLoGo_black.jpg" alt="EvoAgentX" hight="300">
+    <img src="./assets/EAXLoGo_black.jpg" alt="EvoAgentX" width="61.8%">
   </a>
 </div>
 
