@@ -5,12 +5,13 @@
   </a>
 </div>
 
-<h1 align="center">
-    EvoAgentX:  构建自进化的 AI 智能体生态系统
-</h1>
+<h2 align="center">
+    构建自进化的 AI 智能体生态系统
+</h2>
 
 <div align="center">
 
+[![文档](https://img.shields.io/badge/-Documentation-0A66C2?logo=readthedocs&logoColor=white&color=7289DA&labelColor=grey)](https://EvoAgentX.github.io/EvoAgentX/)
 [![EvoAgentX 首页](https://img.shields.io/badge/EvoAgentX-Homepage-blue?logo=homebridge)](https://EvoAgentX.github.io/EvoAgentX/)
 [![Discord](https://img.shields.io/badge/Chat-Discord-5865F2?&logo=discord&logoColor=white)](https://discord.gg/EvoAgentX)
 [![Twitter](https://img.shields.io/badge/Follow-@EvoAgentX-e3dee5?&logo=x&logoColor=white)](https://x.com/EvoAgentX)
@@ -31,38 +32,58 @@
 
 </div>
 
-<hr>
+<h4 style="text-align: center; color: #888;">
+  赋能智能体开发的全流程，支持持续进化与协作优化
+</h4>
+
+<p align="center">
+  <img src="./assets/framework_zh.png">
+</p>
+
 
 ## 🔥 最新动态
 - **[2025年5月]** 🎉 **EvoAgentX** 正式发布！
 
 ## ⚡开始使用
-- [安装指南](#installation)
-- [配置指南](#configuration)
-- [示例：自动工作流生成](#examples-automatic-workflow-generation)
-- [快速开始 & 演示视频](#quickstart--demo-video)
-- [教程和使用案例](#tutorial-and-use-cases)
+- [安装指南](#安装指南)
+- [配置指南](#配置指南)
+- [示例：自动工作流生成](#示例自动工作流生成)
+- [演示视频](#演示视频)
+- [教程与用例](#教程与用例)
 
-### 安装
+### 安装指南
 
-请参阅 [EvoAgentX 安装指南](./docs/installation.md) 以获取详细的安装步骤。
+我们推荐使用 `pip` 安装 EvoAgentX：
 
-创建环境：
-1. 克隆此代码库并进入 EvoAgentX 文件夹
+```bash
+pip install evoagentx
+```
+
+若需本地开发或更详细的安装步骤（例如使用 conda），请参阅：[EvoAgentX 安装指南]((./docs/installation.md))。
+
+<details>
+<summary>本地开发示例（可选）：</summary>
+
 ```bash
 git clone https://github.com/EvoAgentX/EvoAgentX.git
 cd EvoAgentX
-```
 
-2. 安装依赖包
-```Shell
-conda create -n evoagentx python=3.10 
+# 创建 Conda 虚拟环境
+conda create -n evoagentx python=3.10
+
+# 激活环境
 conda activate evoagentx
-pip install -r requirements.txt 
+
+# 安装依赖
+pip install -r requirements.txt
+# 或者开发者模式安装
+pip install -e .
 ```
+</details>
 
 
 ### 示例：自动工作流生成
+
 ```python
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.agents import AgentManager

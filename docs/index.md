@@ -1,8 +1,13 @@
-# EvoAgentX
+# **EvoAgentX**
 
-<p align="center">
+<p align="center" style="font-size: 1.1rem;">
   <em>An automatic agentic workflow generation and evolving framework.</em>
 </p>
+
+<p align="center">
+  <img src="./assets/framework_en.png">
+</p>
+
 
 ## 🚀 Introduction
 
