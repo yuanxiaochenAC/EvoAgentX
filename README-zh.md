@@ -16,7 +16,7 @@
 [![Discord](https://img.shields.io/badge/Chat-Discord-5865F2?&logo=discord&logoColor=white)](https://discord.gg/EvoAgentX)
 [![Twitter](https://img.shields.io/badge/Follow-@EvoAgentX-e3dee5?&logo=x&logoColor=white)](https://x.com/EvoAgentX)
 [![Wechat](https://img.shields.io/badge/WeChat-EvoAgentX-brightgreen?logo=wechat&logoColor=white)]()
-[![hf_space](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-EvoAgentX-ffc107?color=ffc107&logoColor=white)](https://huggingface.co/EvoAgentX)
+<!-- [![hf_space](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-EvoAgentX-ffc107?color=ffc107&logoColor=white)](https://huggingface.co/EvoAgentX) -->
 [![GitHub star chart](https://img.shields.io/github/stars/EvoAgentX/EvoAgentX?style=social)](https://star-history.com/#EvoAgentX/EvoAgentX)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?)](https://github.com/EvoAgentX/EvoAgentX/blob/main/LICENSE)
 
@@ -51,7 +51,7 @@
 - [演示视频](#演示视频)
 - [教程与用例](#教程与用例)
 
-### 安装指南
+## 安装指南
 
 我们推荐使用 `pip` 安装 EvoAgentX：
 
@@ -82,45 +82,117 @@ pip install -e .
 </details>
 
 
-### 示例：自动工作流生成
+## 配置指南
+要使用 EvoAgentX 中的语言大模型（如 OpenAI），需要设置 API 密钥。
+
+#### 方式一：通过环境变量设置 API 密钥
+
+- Linux/macOS: 
+```bash
+export OPENAI_API_KEY=<你的 OpenAI API 密钥>
+```
+
+- Windows 命令提示符：
+```cmd 
+set OPENAI_API_KEY=<你的 OpenAI API 密钥>
+```
+
+-  Windows PowerShell:
+```powershell
+$env:OPENAI_API_KEY="<你的 OpenAI API 密钥>"  # 注意引号不可省略
+```
+
+然后你可以在 Python 中这样获取密钥：
+```python
+import os
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+```
+
+#### 方式二：使用 .env 文件
+
+- 在项目根目录创建 .env 文件：
+```bash
+OPENAI_API_KEY=<你的 OpenAI API 密钥>
+```
+
+然后在 Python 中加载：
+```python
+from dotenv import load_dotenv 
+import os 
+
+load_dotenv()  # 加载 .env 文件中的环境变量
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+```
+> 🔐 提示：请将 .env 添加到 .gitignore，以避免泄露敏感信息。
+
+
+### 配置并使用语言模型（LLM）
+
+一旦设置好 API 密钥，可以初始化语言模型如下：
 
 ```python
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
-from evoagentx.agents import AgentManager
-from evoagentx.workflow import WorkFlowGenerator, WorkFlowGraph, WorkFlow
 
-OPENAI_API_KEY = "OPENAI_API_KEY" 
-# set output_response=True to see LLM outputs 
-openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=False)
-model = OpenAILLM(config=openai_config)
+# 加载 API 密钥
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# 定义 LLM 配置
+openai_config = OpenAILLMConfig(
+    model="gpt-4o-mini",       # 指定模型名称
+    openai_key=OPENAI_API_KEY, # 设置密钥
+    stream=True,               # 开启流式响应
+    output_response=True       # 控制台输出响应内容
+)
+
+# 初始化语言模型
+llm = OpenAILLM(config=openai_config)
+
+# 生成测试响应
+response = llm.generate(prompt="什么是 Agentic Workflow？")
+print(response)
+```
+> 📖 更多模型类型和参数说明请见：[LLM 模块指南](./docs/modules/llm.md)。
+
+
+## 示例：自动工作流生成
+
+配置好 API 密钥和语言模型后，你可以使用 EvoAgentX 自动生成和执行多智能体工作流。
+
+🧩 核心步骤：
+1. 定义自然语言目标
+2. 用 WorkFlowGenerator 自动生成工作流
+3. 使用 AgentManager 实例化智能体
+4. 调用 WorkFlow 执行整个流程
+
+💡 用例：
+
+```python
+from evoagentx.workflow import WorkFlowGenerator, WorkFlowGraph, WorkFlow
+from evoagentx.agents import AgentManager
+
+goal = "生成可在浏览器中玩的 Tetris（俄罗斯方块）HTML 游戏代码"
+workflow_graph = WorkFlowGenerator(llm=llm).generate_workflow(goal)
 
 agent_manager = AgentManager()
-wf_generator = WorkFlowGenerator(llm=model)
+agent_manager.add_agents_from_workflow(workflow_graph, llm_config=openai_config)
 
-# 生成工作流和智能体
-workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal="生成一个贪吃蛇游戏的python代码")
-
-# [可选] 显示工作流
-workflow_graph.display()
-# [可选] 保存工作流 
-workflow_graph.save_module("debug/workflow_demo.json")
-#[可选] 加载已保存的工作流 
-workflow_graph: WorkFlowGraph = WorkFlowGraph.from_file("debug/workflow_demo.json")
-
-agent_manager.add_agents_from_workflow(workflow_graph)
-# 执行工作流
-workflow = WorkFlow(graph=workflow_graph, agent_manager=agent_manager, llm=model)
+workflow = WorkFlow(graph=workflow_graph, agent_manager=agent_manager, llm=llm)
 output = workflow.execute()
 print(output)
 ```
 
-### 快速开始 & 演示视频
-Todos
+你还可以：
+- 📊 可视化工作流：`workflow_graph.display()`
+- 💾 保存 / 加载工作流：`save_module()` / `from_file()`
 
-请参阅[快速开始指南](./docs/quickstart.md) 以获得一步步的指导，帮助你快速上手 EvoAgentX。
+> 📂 查看完整示例请访问 [`workflow_demo.py`](./examples/workflow_demo.py)。
 
+## 演示视频
+🎥 演示视频即将上线，敬请期待！
 
-### 教程和使用案例
+> 在此之前，你可以先阅读 [EvoAgentX 快速入门指南](./docs/quickstart.md)，按照步骤上手使用 EvoAgentX。
+
+## 教程与用例
 
 探索如何有效地使用 EvoAgentX:
 
@@ -139,7 +211,7 @@ Todos
 
 ### 加入社区
 
-📢 参与并跟随  **EvoAgentX** 的发展历程！
+📢 参与并跟随  **EvoAgentX** 的发展历程！  
 🚩 加入我们的社区，获取最新动态，分享你的想法，并与全球的AI爱好者合作。
 
 - [Discord](https://discord.com/invite/EvoAgentX) — 实时聊天，讨论和协作。
