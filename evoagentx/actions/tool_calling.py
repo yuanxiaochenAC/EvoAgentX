@@ -4,9 +4,9 @@ import json
 from ..core.logging import logger
 from ..models.base_model import BaseLLM
 from .action import Action, ActionInput, ActionOutput
-from ..core.message import Message
+from ..core.message import Message, MessageType
 from typing import List
-from ..prompts.tool_caller import TOOL_CALLER_PROMPT
+from ..prompts.tool_caller import TOOL_CALLER_PROMPT, TOOL_CALLER_PROMPT_TEMPLATE
 from ..tools.tool import Tool
 
 class ToolCallingInput(ActionInput):
@@ -90,6 +90,8 @@ class ToolCalling(Action):
         
         # Add the current query as a user message
         messages.append({"role": "user", "content": prompt_params_values})
+        
+        messages.append({"role": "user", "content": TOOL_CALLER_PROMPT_TEMPLATE.format(tool_descriptions=self.tools_schema)})
         
         # Remove history from kwargs to avoid passing it as an unknown param
         kwargs_copy = kwargs.copy()
@@ -202,6 +204,7 @@ class ToolCalling(Action):
         print(tool_call_args.continue_after_tool_call)
         if tool_call_args.continue_after_tool_call:
             # Only continue if we haven't exceeded max_tool_try
+            print("____________________________ Entering continue ____________________________\n\n\n\n\n\n\n\n\n\n")
             if time_out < self.max_tool_try:
                 print(f"Continuing with tool call execution (attempt {time_out+1}/{self.max_tool_try})")
                 content = self.execute(llm, inputs, sys_msg, return_prompt, **kwargs, time_out=time_out)
@@ -214,8 +217,16 @@ class ToolCalling(Action):
         print("answer:")
         print(content)
         
+        content = Message(
+                content=content,
+                action=self.name,
+                msg_type=MessageType.RESPONSE
+            )
         
         if return_prompt:
+            print("_______________________ Returning Prompt _______________________")
+            print("returning prompt", prompt_params_values)
+            print("content", content)
             return content, prompt_params_values
         return content
     

@@ -267,6 +267,7 @@ class Agent(BaseModule):
             return_prompt=True,
             **kwargs
         )
+        
         action_output, prompt = execution_results
 
         message = self._create_output_message(

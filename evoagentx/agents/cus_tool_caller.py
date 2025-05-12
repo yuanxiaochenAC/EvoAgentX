@@ -1,5 +1,5 @@
-from typing import Dict, Optional, Callable
-# import asyncio
+from typing import Dict, Any, Optional, Callable
+import asyncio
 import json
 from .customize_agent import CustomizeAgent, OUTPUT_EXTRACTION_PROMPT
 from ..actions.tool_calling import ToolCalling
@@ -106,6 +106,8 @@ class CusToolCaller(CustomizeAgent):
                     wf_task_desc=kwargs.get("wf_task_desc", "")
                 )
                 kwargs["history"] = [additional_info]
+                
+                kwargs["system_prompt"] = self.tool_calling_prompt
                 
             else:
                 self.system_prompt = self.ori_prompt
