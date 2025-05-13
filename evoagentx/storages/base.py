@@ -1,8 +1,10 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from pydantic import Field
 
 from .db_stores.base import DBStoreBase
+from .graph_stores.base import GraphStoreBase
+from .vectore_stores.base import VectorStoreBase
 from ..core.module import BaseModule
 
 
@@ -14,7 +16,9 @@ class StorageHandler(BaseModule):
     StorageHandler defines an abstraction of storage used for reading and writing data (such as memory, agents, workflow, ect.). 
     It can be implemented in various ways such as file storage, database storage, cloud storage, etc.
     """
-    storageDB: DBStoreBase = Field()
+    storageDB: DBStoreBase
+    storageVector: VectorStoreBase
+    storageGraph: Optional[GraphStoreBase]
 
     def load(self, *args, **kwargs):
         """
