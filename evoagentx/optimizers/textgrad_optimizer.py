@@ -323,6 +323,7 @@ class TextGradOptimizer(BaseModule):
                 eval_mode=eval_mode, 
                 indices=indices, 
                 sample_k=sample_k,
+                update_agents=True, 
                 **kwargs
             )
             metrics_list.append(metrics)

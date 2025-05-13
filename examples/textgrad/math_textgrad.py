@@ -1,3 +1,4 @@
+import os
 from dotenv import load_dotenv
 from evoagentx.models import OpenAILLM, OpenAILLMConfig
 from evoagentx.benchmark import MATH  
@@ -8,6 +9,7 @@ from evoagentx.core.logging import logger
 
 
 load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 class MathSplits(MATH):
 
@@ -49,10 +51,10 @@ math_graph_data = {
 
 def main(): 
 
-    executor_config = OpenAILLMConfig(model="gpt-4o-mini")
+    executor_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY)
     executor_llm = OpenAILLM(config=executor_config)
 
-    optimizer_config = OpenAILLMConfig(model="gpt-4o")
+    optimizer_config = OpenAILLMConfig(model="gpt-4o", openai_key=OPENAI_API_KEY)
     optimizer_llm = OpenAILLM(config=optimizer_config)
 
     # load benchmark 

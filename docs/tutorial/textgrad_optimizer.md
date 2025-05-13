@@ -31,10 +31,10 @@ You'll need a valid API key to initialize the LLM. See [Quickstart](../quickstar
 `TextGradOptimizer` allows the use of different LLMs for workflow execution and optimization. For example, we can use GPT 4o-mini for workflow execution and GPT 4o for optimization.
 
 ```python
-executor_config = OpenAILLMConfig(model="gpt-4o-mini")
+executor_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key="your_openai_api_key")
 executor_llm = OpenAILLM(config=executor_config)
 
-optimizer_config = OpenAILLMConfig(model="gpt-4o")
+optimizer_config = OpenAILLMConfig(model="gpt-4o", openai_key="your_openai_api_key")
 optimizer_llm = OpenAILLM(config=optimizer_config)
 ```
 
@@ -93,10 +93,10 @@ def collate_func(example: dict) -> dict:
     return {"problem": example["problem"]}
 ```
 
-During optimization, the `TextGradOptimizer` will evaluate the performance on the development set by default. Please make sure the dataset has a development set properly set up. You can either:
+During optimization, the `TextGradOptimizer` will evaluate the performance on the development set by default. Please make sure the dataset has a development set properly set up (i.e., `benchmark._dev_data` is not None). You can either:
    - Use a dataset that already provides a development set
    - Split your dataset to create a development set (like in the example above)
-   - Implement a custom dataset (inherits from `evoagentx.benchmark.Benchmark`) with development set support
+   - Implement a custom dataset (inherits from `evoagentx.benchmark.Benchmark`) that properly sets up the development set. 
 
 
 ## 4. Configuring and Running the TextGrad Optimizer
@@ -203,4 +203,4 @@ Below is an example of a saved workflow graph after optimization using `TextGrad
 }
 ```
 
-For a complete working example, please refer to [examples/textgrad/math_textgrad.py](../../examples/textgrad/math_textgrad.py). You can also find TextGrad optimization scripts for other datasets in [examples/textgrad](../../examples/textgrad).
+For a complete working example, please refer to [examples/textgrad/math_textgrad.py](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/textgrad/math_textgrad.py). You can also find TextGrad optimization scripts for other datasets in [examples/textgrad](https://github.com/EvoAgentX/EvoAgentX/tree/main/examples/textgrad).
