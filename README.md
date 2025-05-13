@@ -32,8 +32,8 @@
 
 </div>
 
-<h4 style="text-align: center; color: #888;">
-  An automated framework for evaluating and evolving agentic workflows.
+<h4 align="center">
+  <i>An automated framework for evaluating and evolving agentic workflows.</i>
 </h4>
 
 <p align="center">

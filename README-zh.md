@@ -32,8 +32,8 @@
 
 </div>
 
-<h4 style="text-align: center; color: #888;">
-  助力 Agent 工作流评估与演化的自动化平台
+<h4 align="center">
+  <i>面向 Agent 工作流评估与演化的自动化框架</i>
 </h4>
 
 <p align="center">
