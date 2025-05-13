@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 
 from pydantic import BaseModel, Field
 
@@ -23,7 +23,7 @@ class MemoryStore(BaseModel):
     content: str = Field(..., description="Main content of the memory")
     date: str = Field(..., description="Date associated with the memory")
     key_words: Optional[List] = Field([], description="Optional list of keywords associated with the memory")
-    entity_content: Optional[Dict] = Field({}, description="Optional dictionary of entity-related content")
+    entity_content: Optional[Dict[str, Any]] = Field({}, description="Optional dictionary of entity-related content")
     embedding: Optional[List] = Field([], description="Optional list of embedding vectors")
 
 # Pydantic model for workflow data storage
@@ -32,7 +32,7 @@ class WorkflowStore(BaseModel):
     Stores workflow metadata with a unique name and content dictionary.
     """
     name: str = Field(..., description="Unique workflow identifier")
-    content: Dict = Field(..., description="Dictionary containing workflow details") 
+    content: Dict[str, Any] = Field(..., description="Dictionary containing workflow details") 
     date: Optional[str] = Field("", description="Date associated with the workflow") 
 
 # Pydantic model for agent data storage
@@ -41,7 +41,7 @@ class AgentStore(BaseModel):
     Stores agent metadata with a unique name and content dictionary.
     """
     name: str = Field(..., description="Unique agent identifier")
-    content: Dict = Field(..., description="Dictionary containing agent details")
+    content: Dict[str, Any] = Field(..., description="Dictionary containing agent details")
     date: Optional[str] = Field("", description="Date associated with the agent")
 
 # Pydantic model for history data storage

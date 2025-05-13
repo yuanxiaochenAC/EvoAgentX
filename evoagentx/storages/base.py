@@ -19,8 +19,8 @@ class StorageHandler(BaseModule):
     StorageHandler provides an abstraction for reading and writing data (e.g., memory, agents, workflows).
     It supports multiple storage types, including database, vector, and graph storage, initialized via factories.
     """
-    storageDB: DBStoreBase = Field(..., description="Database storage backend")
     storageConfig: StoreConfig = Field(..., description="Configuration for all storage backends")
+    storageDB: Optional[DBStoreBase] = Field(None, description="Database storage backend")
     storageVector: Optional[VectorStoreBase] = Field(None, description="Optional vector storage backend")
     storageGraph: Optional[GraphStoreBase] = Field(None, description="Optional graph storage backend")
 
@@ -113,7 +113,7 @@ class StorageHandler(BaseModule):
                 raise ValueError(f"Unknown table: {table_name}")
             # Insert each record
             for record in records:
-                self.storageDB.insert(record, store_type=store_type, table=table_name)
+                self.storageDB.insert(metadata=record, store_type=store_type, table=table_name)
 
     def parse_result(self, results: Dict[str, str], 
                      store: Union[AgentStore, WorkflowStore, MemoryStore, HistoryStore]) -> Dict[str, Any]:
@@ -128,12 +128,10 @@ class StorageHandler(BaseModule):
             Dict[str, Any]: Parsed results with JSON strings deserialized to Python objects.
         """
         for k, v in store.model_fields.items():
-            # Check if the field is not a string or optional string
             if v.annotation not in [Optional[str], str]:
                 try:
                     results[k] = json.loads(results[k])
                 except (json.JSONDecodeError, KeyError, TypeError):
-                    # Keep the original value if parsing fails or key is missing
                     results[k] = results.get(k)
         return results
 
@@ -215,7 +213,7 @@ class StorageHandler(BaseModule):
         if existing:
             self.storageDB.update(agent_name, new_metadata=agent_data, store_type="agent", table=table)
         else:
-            self.storageDB.insert(agent_data, store_type="agent", table=table)
+            self.storageDB.insert(metadata=agent_data, store_type="agent", table=table)
 
     def load_workflow(self, workflow_id: str, table: Optional[str] = None, *args, **kwargs) -> Dict[str, Any]:
         """
@@ -256,7 +254,7 @@ class StorageHandler(BaseModule):
 
             self.storageDB.update(workflow_id, new_metadata=workflow_data, store_type="workflow", table=table)
         else:
-            self.storageDB.insert(workflow_data, store_type="workflow", table=table)
+            self.storageDB.insert(metadata=workflow_data, store_type="workflow", table=table)
 
     def load_history(self, memory_id: str, table: Optional[str] = None, *args, **kwargs) -> Dict[str, Any]:
         """
@@ -295,8 +293,8 @@ class StorageHandler(BaseModule):
         existing = self.storageDB.get_by_id(memory_id, store_type="history", table=table)
         if existing:
             # parse the history, then change the old_hisotry
-            result = HistoryStore.model_validate(self.parse_result(existing))
+            result = HistoryStore.model_validate(self.parse_result(existing, HistoryStore))
             history_data["old_memory"] = result.old_memory
             self.storageDB.update(memory_id, new_metadata=history_data, store_type="history", table=table)
         else:
-            self.storageDB.insert(history_data, store_type="history", table=table)
+            self.storageDB.insert(metadata=history_data, store_type="history", table=table)

@@ -1,3 +1,4 @@
+import json
 import threading
 from functools import wraps
 from typing import Dict, Literal, Callable, Optional, List
@@ -21,12 +22,17 @@ def _create_table(table: str, column: List[str]) -> str:
     Returns:
         str: SQL statement to create the table.
     """
-    table_column = "\n".join([column[0] + " TEXT PRIMARY KEY"] + [col + " TEXT" for col in column[1:]])
-    table_column = f"""CREATE TABLE IF NOT EXISTS {table} \n(
-    {table_column}
-    )"""
+    if not column:
+        raise ValueError("Column list cannot be empty")
     
-    return table_column
+    # Quote column names to handle reserved keywords and add commas
+    column_defs = [f'"{column[0]}" TEXT PRIMARY KEY'] + [f'"{col}" TEXT' for col in column[1:]]
+    table_column = ", ".join(column_defs)
+    table_sql = f"""CREATE TABLE IF NOT EXISTS {table} (
+        {table_column}
+    )"""
+
+    return table_sql
 
 # Helper function to generate SQL for inserting metadata
 def _insert_meta(table: str, colum: List[str]) -> str:
@@ -42,7 +48,7 @@ def _insert_meta(table: str, colum: List[str]) -> str:
     """
     value_ = ", ".join(["?"] * len(colum))
     insert_string = f"""
-    INSERT INTO {table} {tuple(colum)}
+    INSERT INTO {table} ({", ".join([f'"{c}"' for c in colum])})
     VALUES ({value_})"""
 
     return insert_string 
@@ -60,7 +66,7 @@ def check_db_format(func: Callable) -> Callable:
         Callable: The wrapped function with validation and table creation logic.
     """
     @wraps(func)
-    def worker(self, *args, **kwargs):
+    def worker(self, metadata, *args, **kwargs):
         # Extract table and store type from kwargs
         table = kwargs.get("table", None)
         store_type = kwargs.get("store_type")   # memory, workflow, agent, history
@@ -69,7 +75,6 @@ def check_db_format(func: Callable) -> Callable:
         if table is None:
             table = getattr(TableType, store_type)
 
-        metadata = kwargs.get("metadata")
         # Validate metadata based on store type and convert to Pydantic model
         if store_type == TableType.store_memory:
             column = list(MemoryStore.model_fields.keys())
@@ -85,16 +90,18 @@ def check_db_format(func: Callable) -> Callable:
 
         elif store_type == TableType.store_history:
             column = list(HistoryStore.model_fields.keys())
-            metadata = HistoryStore.model_validate(metadata)
+            metadata = HistoryStore.model_validate(metadata, strict=False)
         else:
             raise ValueError("The value of store type is not valid.")
         
         # Create table if it doesn't exist
         table_column = _create_table(table, column)
+        # import pdb;pdb.set_trace()
         with self._lock:
             with self.connection:
                 self.connection.execute(table_column)
-
+                self.connection.commit()
+        
         kwargs["metadata"] = metadata
         return func(self, *args, **kwargs)
     
@@ -137,7 +144,8 @@ class SQLite(DBStoreBase):
                 insert_string = _insert_meta(table, list(MemoryStore.model_fields.keys()))
                 self.connection.execute(
                     insert_string,
-                    tuple([str(meta) for meta in metadata.model_dump().values()])
+                    tuple([json.dumps(meta) if not isinstance(meta, str) else meta \
+                           for meta in metadata.model_dump().values()])
                 )
                 self.connection.commit()
 
@@ -161,7 +169,8 @@ class SQLite(DBStoreBase):
                 insert_string = _insert_meta(table, list(AgentStore.model_fields.keys()))
                 self.connection.execute(
                     insert_string,
-                    tuple([str(meta) for meta in metadata.model_dump().values()])
+                    tuple([json.dumps(meta) if not isinstance(meta, str) else meta \
+                           for meta in metadata.model_dump().values()])
                 )
                 self.connection.commit()
 
@@ -185,7 +194,8 @@ class SQLite(DBStoreBase):
                 insert_string = _insert_meta(table, list(WorkflowStore.model_fields.keys()))
                 self.connection.execute(
                     insert_string,
-                    tuple([str(meta) for meta in metadata.model_dump().values()])
+                    tuple([json.dumps(meta) if not isinstance(meta, str) else meta \
+                           for meta in metadata.model_dump().values()])
                 )
                 self.connection.commit()
 
@@ -209,7 +219,8 @@ class SQLite(DBStoreBase):
                 insert_string = _insert_meta(table, list(HistoryStore.model_fields.keys()))
                 self.connection.execute(
                     insert_string,
-                    tuple([str(meta) for meta in metadata.model_dump().values()])
+                    tuple([json.dumps(meta) if not isinstance(meta, str) else meta \
+                           for meta in metadata.model_dump().values()])
                 )
                 self.connection.commit()
 
@@ -252,12 +263,15 @@ class SQLite(DBStoreBase):
             with self.connection:
                 if table is None:
                     table = getattr(TableType, store_type)
-                
-                cursor = self.connection.cursor()
-                delete_query = f"DELETE FROM {table} WHERE {self._get_id_column(store_type)} = ?"
-                cursor.execute(delete_query, (metadata_id,))
-                self.connection.commit()
-                return cursor.rowcount > 0
+                try:
+                    cursor = self.connection.cursor()
+                    delete_query = f"DELETE FROM {table} WHERE {self._get_id_column(store_type)} = ?"
+                    cursor.execute(delete_query, (metadata_id,))
+                    self.connection.commit()
+                    return cursor.rowcount > 0
+                except sqlite3.OperationalError:
+                    # Logger
+                    return False
 
     def update(self, metadata_id: str, new_metadata: Dict=None, store_type: Optional[Literal["memory", "agent", "workflow", "history"]]=None, 
                table: Optional[str]=None, *args, **kwargs):
@@ -295,16 +309,18 @@ class SQLite(DBStoreBase):
                 else:
                     raise ValueError("Invalid store_type provided.")
                 
-                set_clause = ", ".join([f"{col} = ?" for col in columns[1:]])  # Exclude primary key
-                update_query = f"UPDATE {table} SET {set_clause} WHERE {columns[0]} = ?"
+                # Generate SET clause for SQL update
+                set_clause = ", ".join([f'"{col}" = ?' for col in columns[1:]])  # Exclude primary key
+                update_query = f'UPDATE {table} SET {set_clause} WHERE "{columns[0]}" = ?'
                 
-                values = [metadata_id] + list([str(value) for idx, value in enumerate(new_metadata.model_dump().values()) if idx > 0])
+                values = list([json.dumps(v) if not isinstance(v, str) else v \
+                               for v in new_metadata.model_dump().values()])[1:] + [metadata_id]
                 
                 cursor = self.connection.cursor()
                 cursor.execute(update_query, values)
                 self.connection.commit()
                 return cursor.rowcount > 0
-
+    
     def get_by_id(self, metadata_id: str, store_type: Optional[Literal["memory", "agent", "workflow", "history"]], 
                   table: Optional[str]=None, *args, **kwargs):
         """
@@ -335,15 +351,17 @@ class SQLite(DBStoreBase):
                     columns = list(HistoryStore.model_fields.keys())
                 else:
                     raise ValueError("Invalid store_type provided.")
+                try:
+                    cursor = self.connection.cursor()
+                    select_query = f"SELECT * FROM {table} WHERE {columns[0]} = ?"
+                    cursor.execute(select_query, (metadata_id,))
+                    result = cursor.fetchone()
                 
-                cursor = self.connection.cursor()
-                select_query = f"SELECT * FROM {table} WHERE {columns[0]} = ?"
-                cursor.execute(select_query, (metadata_id,))
-                result = cursor.fetchone()
-                
-                if result:
-                    return dict(zip(columns, result))
-                return None
+                    if result:
+                        return dict(zip(columns, result))
+                    return None
+                except sqlite3.OperationalError:
+                    return None
 
     def col_info(self):
         """
@@ -385,12 +403,12 @@ class SQLite(DBStoreBase):
             ValueError: If store_type is invalid.
         """
         if store_type == TableType.store_memory:
-            return list(MemoryStore.model_fields().keys())[0]
+            return list(MemoryStore.model_fields.keys())[0]
         elif store_type == TableType.store_agent:
-            return list(AgentStore.model_fields().keys())[0]
+            return list(AgentStore.model_fields.keys())[0]
         elif store_type == TableType.store_workflow:
-            return list(WorkflowStore.model_fields().keys())[0]
+            return list(WorkflowStore.model_fields.keys())[0]
         elif store_type == TableType.store_history:
-            return list(HistoryStore.model_fields().keys())[0]
+            return list(HistoryStore.model_fields.keys())[0]
         else:
             raise ValueError("Invalid store_type provided.")
