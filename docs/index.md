@@ -1,7 +1,7 @@
 # **EvoAgentX**
 
-<p align="center" style="font-size: 1.1rem;">
-  <em>An automatic agentic workflow generation and evolving framework.</em>
+<p align="center" style="font-size: 1.0rem;">
+  <em>An automated framework for evaluating and evolving agentic workflows.</em>
 </p>
 
 <p align="center">
