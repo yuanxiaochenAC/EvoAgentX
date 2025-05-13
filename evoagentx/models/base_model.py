@@ -251,17 +251,22 @@ class LLMOutputParser(Parser):
         output_titles = [title_format.format(title=attr) for attr in attrs]
 
         def is_output_title(text: str):
-            return any(text.strip().startswith(title) for title in output_titles)
+            for title in output_titles:
+                if text.strip().lower().startswith(title.lower()):
+                    return True, title
+            return False, None
 
         data = {}
         current_output_name: str = None
         current_output_content: list = None
         for line in content.split("\n"):
-            if is_output_title(line):
+            is_title, title = is_output_title(line)
+            if is_title:
                 if current_output_name is not None and current_output_content is not None:
                     data[current_output_name] = "\n".join(current_output_content)
                 current_output_content = []
-                current_output_name = line.replace("#", "").strip()
+                current_output_name = title.replace("#", "").strip()
+                output_titles.remove(title)
             else: 
                 if current_output_content is not None:
                     current_output_content.append(line)
