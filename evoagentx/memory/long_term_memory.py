@@ -1,6 +1,6 @@
 
 from .memory import BaseMemory
-from ..storages.memoryhadler import MemoryStorageHandler
+from ..storages.base import StorageHandler
 
 
 class LongTermMemory(BaseMemory):
@@ -8,8 +8,8 @@ class LongTermMemory(BaseMemory):
     """
     Responsible for the management of raw data for long-term storage.
     """
-    storage: MemoryStorageHandler
-    rag_engine = ...
+    storage: StorageHandler
+    # rag_engine = ...
     pass 
 
 

@@ -80,6 +80,7 @@ class VectorStoreFactory:
             VectorStoreBase: An instance of the vector store.
         """
         # TODO: Implement vector store creation logic
+        pass
 
 
 # Factory for creating graph store instances
@@ -89,7 +90,7 @@ class GraphStoreFactory:
     Maps provider names to specific graph store classes.
     """
     provider_to_class = {
-        "": "mem0.graph_stores",  # Note: Incomplete mapping, likely a placeholder
+        "neo4j": "mem0.graph_stores",  # Note: Incomplete mapping, likely a placeholder
         "": "mem0.graph_stores",  # Note: Incomplete mapping, likely a placeholder
     }
 
@@ -105,3 +106,4 @@ class GraphStoreFactory:
             GraphStoreBase: An instance of the graph store.
         """
         # TODO: Implement graph store creation logic
+        pass

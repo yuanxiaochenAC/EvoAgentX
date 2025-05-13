@@ -227,7 +227,7 @@ class StorageHandler(BaseModule):
             Dict[str, Any]: The data that can be used to create a WorkFlow instance, or None if not found.
         """
         table = table or TableType.store_workflow.value
-        result = self.storageDB.get_by_id(workflow_id, store_type=TableType.store_workflow, table=table)
+        result = self.storageDB.get_by_id(workflow_id, store_type="workflow", table=table)
         # Parse the result to convert JSON strings to Python objects
         if result is not None:
             result = self.parse_result(result, WorkflowStore)
