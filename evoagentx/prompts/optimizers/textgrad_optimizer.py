@@ -1,7 +1,28 @@
 
 from textgrad.optimizer.optimizer_prompts import GLOSSARY_TEXT
 
-LOSS_PROMPT = "Below is a response to a task, and the correct answer. Is the response correct? The response does not need to match the correct answer 100%. It is correct as long as they reach the same answer or achieve the same goal. If it's code, also consider its efficiency. If not correct, provide a concise list of errors."
+GENERAL_LOSS_PROMPT = (
+    "Evaluate the following response to a task, comparing it to the correct answer provided."
+    "Your evaluation should cover the following points in a concise list of bullet points:\n"
+    "- Correctness: Does the response correctly address the task? If not, what is missing or incorrect?\n"
+    "- Completeness: Does the response cover all aspects of the task as outlined in the correct answer?\n"
+    "- Clarity: Is the response clear and easy to understand?\n"
+    "- Relevance: Is the response focused on the task, or does it include unnecessary information?\n"
+    "- Formatting: Is the response formatted in the same way as the correct answer?\n"
+    "- Suggestions: How can the response be improved or clarified?"
+)
+
+CODE_LOSS_PROMPT = (
+    "Evaluate the following code snippet based on the provided test result and correct code."
+    "Your evaluation should cover the following points in a concise list of bullet points:\n"
+    "- Correctness: Does the code pass the provided test? If not, why?\n"
+    "- Formatting: Is the main code enclosed within a proper markdown code block? Are any supplementary parts (e.g., usage examples or tests) placed in separate code blocks for clarity?\n"
+    "- Relevance: Does the code directly address the task at hand? Are there any extraneous elements, such as unused functions, commented-out code, or example/test cases that could be omitted?\n"
+    "- Style and Readability: Is the code clean, readable, and easy to follow?\n"
+    "- Efficiency: Is the code efficient in terms of time and space complexity? Are there any performance improvements that could be made?\n"
+    "- Error Handling: Does the code handle edge cases, invalid inputs, or potential exceptions?\n"
+    "- Takeaways from the Reference Code: What are the key insights learned from the reference code that can be applied to improve the code? Consider algorithms, data structures, coding patterns, or stylistic strengths.\n"
+)
 
 OPTIMIZER_SYSTEM_PROMPT = (
     "You are part of an optimization system that improves text (i.e., variable). "
@@ -57,7 +78,8 @@ FITNESS_COACH_EXAMPLE = (
 )
 
 OPTIMIZER_CONSTRAINTS = [
-    "If the prompt template contains <input>{input_name}</input>, the new improved prompt template should also contains the same <input>{input_name}</input>.",
-    "**Absolute Exclusion of Input Details:** The prompt template should NOT, in any form or manner, contain any information from the inputs, such as parts or the entirety of question, solution, code, etc. Instead, it should have placeholders for the inputs in the form of <input>{input_name}</input>.",
-    "System prompts should NOT include any input tags and input placeholders e.g. <input>{input_name}</input> or {input_name}."
+    "**Consistent Inputs**: If the prompt template contains <input>{input_name}</input>, the new improved prompt template should also contains the same <input>{input_name}</input>.",
+    "**Absolute Exclusion of Input Details**: The prompt template should NOT, in any form or manner, contain any information from the inputs, such as parts or the entirety of question, solution, code, etc. Instead, it should have placeholders for the inputs in the form of <input>{input_name}</input>.",
+    "**System Prompts Format**: System prompts should NOT include any input tags and input placeholders e.g. <input>{input_name}</input> or {input_name}.",
+    '**Additional Instruction for Coding Tasks**: For coding tasks, always add the following instruction to the new system prompt -- "All identifiers (e.g. variable names, function names, class names, and argument names) used in the code **must match** those in the problem statement or provided template."'
 ]

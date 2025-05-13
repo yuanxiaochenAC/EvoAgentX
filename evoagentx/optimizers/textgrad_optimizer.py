@@ -14,11 +14,11 @@ from ..core.logging import logger
 from ..core.module import BaseModule
 from ..core.callbacks import suppress_logger_info
 from ..models.base_model import BaseLLM
-from ..benchmark.benchmark import Benchmark
+from ..benchmark.benchmark import Benchmark, CodingBenchmark
 from ..evaluators import Evaluator
 from ..workflow.workflow_graph import SequentialWorkFlowGraph, WorkFlowNode
-from ..agents import AgentManager, CustomizeAgent
-from ..prompts.optimizers.textgrad_optimizer import LOSS_PROMPT, OPTIMIZER_SYSTEM_PROMPT, OPTIMIZER_CONSTRAINTS, PERSONAL_FINANCE_ADVISOR_EXAMPLE, FITNESS_COACH_EXAMPLE
+from ..agents import CustomizeAgent
+from ..prompts.optimizers.textgrad_optimizer import GENERAL_LOSS_PROMPT, CODE_LOSS_PROMPT, OPTIMIZER_SYSTEM_PROMPT, OPTIMIZER_CONSTRAINTS, PERSONAL_FINANCE_ADVISOR_EXAMPLE, FITNESS_COACH_EXAMPLE
 
 
 class CustomAgentCall:
@@ -129,32 +129,25 @@ class TextGradOptimizer(BaseModule):
     save_path: str = Field(default="./", description="The path to save the optimized workflow.")
     rollback: bool = Field(default=True, description="Whether to rollback to the best graph after each evaluation during optimization.")
 
+
     def init_module(self, **kwargs):
-        if self.eval_config is None:
-            self.eval_config = {}
         self._snapshot: List[dict] = []
-        self.agent_manager = AgentManager()
-        self.agent_manager.add_agents_from_workflow(self.graph, llm_config=self.executor_llm.config)
-        
+        self.output_lookup = self._create_output_lookup()
+
         if self.collate_func is None:
             self.collate_func = lambda x: x
         if self.output_postprocess_func is None:
             self.output_postprocess_func = lambda x:x
-        
+
         self.evaluator = Evaluator(
             llm=self.executor_llm,
             num_workers=self.max_workers,
-            agent_manager=self.agent_manager,
             collate_func=self.collate_func,
             output_postprocess_func=self.output_postprocess_func,
         )
-
-        self.output_lookup = self._create_output_lookup()
         
-        self._init_textgrad()
 
-
-    def _init_textgrad(self):
+    def _init_textgrad(self, dataset: Benchmark):
         # Disable TextGrad's short variable value to allow the optimizer to receive the full variable value
         def disable_short_variable_value(self):
             return self.value
@@ -164,13 +157,17 @@ class TextGradOptimizer(BaseModule):
         self.optimizer_engine = tg.get_engine(self.optimizer_llm.config.model)
 
         # Textgrad loss
-        evaluation_instruction = Variable(LOSS_PROMPT, requires_grad=False, role_description="evaluation instruction")
-        role_descriptions = ["response to evaluate", "correct answer"]
+        if isinstance(dataset, CodingBenchmark):
+            loss_prompt = CODE_LOSS_PROMPT
+            role_descriptions = ["code snippet to evaluate", "the task, the test result of the code snippet, and the correct code"]
+        else:
+            loss_prompt = GENERAL_LOSS_PROMPT
+            role_descriptions = ["response to evaluate", "correct answer"]
+        evaluation_instruction = Variable(loss_prompt, requires_grad=False, role_description="evaluation instruction")
         self.loss_fn = MultiFieldEvaluation(evaluation_instruction, role_descriptions, self.optimizer_engine)
 
         # Create textgrad agents
-        for node in self.graph.nodes:
-            node.textgrad_agent = self._create_textgrad_agent(node)
+        self._create_textgrad_agents()
         
         # Textgrad optimizer
         if self.optimize_mode == "all":
@@ -191,6 +188,7 @@ class TextGradOptimizer(BaseModule):
 
     def optimize(self, dataset: Benchmark):
         """Optimizes self.graph using `dataset`."""
+        self._init_textgrad(dataset)
 
         for step in tqdm(range(self.max_steps)):
             idx = [x + step*self.batch_size for x in range(self.batch_size)]
@@ -198,7 +196,7 @@ class TextGradOptimizer(BaseModule):
             inputs = [self.collate_func(x) for x in batch]
             labels = dataset.get_labels(batch)
 
-            self.step(inputs, labels)
+            self.step(inputs, labels, dataset)
 
             if self.eval_interval is not None and (step + 1) % self.eval_interval == 0:
                 logger.info(f"Evaluating the workflow at step {step+1} ...")
@@ -207,35 +205,55 @@ class TextGradOptimizer(BaseModule):
                 self.log_snapshot(self.graph, metrics)
                 logger.info(f"Step {step+1} metrics: {metrics}")
 
-                if len(self._snapshot) > 1 and self.rollback:
-                    current_average_score = np.mean(list(metrics.values()))
-                    best_graph, best_metrics = self._select_graph_with_highest_score(return_metrics=True)
-                    best_average_score = np.mean(list(best_metrics.values()))
-
-                    if current_average_score < best_average_score:
-                        self.graph = best_graph
-                        logger.info(f"Metrics are worse than the best snapshot which has {best_metrics}. Rolling back to the best snapshot.")
+                # If rollback is enabled, keep track of the best snapshot
+                if self.rollback:
+                    if len(self._snapshot) == 1:
+                        best_snapshot = self._snapshot[-1]
+                        best_average_score = np.mean(list(metrics.values()))
+                    else:
+                        current_average_score = np.mean(list(metrics.values()))
+                        
+                        if current_average_score >= best_average_score:
+                            # If the current average score is better than the best average score, update the best snapshot
+                            best_snapshot = self._snapshot[-1]
+                            best_average_score = current_average_score
+                        else:
+                            # If the current average score is worse than the best average score, roll back to the best snapshot
+                            logger.info(f"Metrics are worse than the best snapshot which has {best_snapshot['metrics']}. Rolling back to the best snapshot.")
+                            best_graph = SequentialWorkFlowGraph.from_dict(best_snapshot["graph"])
+                            self.graph = best_graph
+                            self._create_textgrad_agents()
 
             if self.save_interval is not None and (step + 1) % self.save_interval == 0:
                 logger.info(f"Saving the workflow at step {step+1} ...")
-                self.save(os.path.join(self.save_path, f"workflow_textgrad_step_{step+1}.json"))
+                self.save(os.path.join(self.save_path, f"{dataset.name}_textgrad_step_{step+1}.json"))
 
         logger.info(f"Reached the maximum number of steps {self.max_steps}. Optimization has finished.")
-        self.save(os.path.join(self.save_path, "workflow_textgrad_final.json"))
+        self.save(os.path.join(self.save_path, f"{dataset.name}_textgrad_final.json"))
 
         # Saves the best graph
         if len(self._snapshot) > 0:
             best_graph = self._select_graph_with_highest_score()
-            self.save(os.path.join(self.save_path, "workflow_textgrad_best.json"), graph=best_graph)
+            self.save(os.path.join(self.save_path, f"{dataset.name}_textgrad_best.json"), graph=best_graph)
 
         
-
-    def step(self, inputs: List[str], labels: List[str],):
+    def step(self, inputs: List[dict[str, str]], labels: List[str|dict[str, str]], dataset: Benchmark):
         """Performs one optimization step using a batch of data."""
         losses = []
         for input, label in zip(inputs, labels):
             output = self.forward(input)
-            label = Variable(label, requires_grad=False, role_description="correct answer for the query")
+            if isinstance(label, str):
+                label = Variable(label, requires_grad=False, role_description="correct answer for the query")
+            elif isinstance(label, dict):
+                if not isinstance(dataset, CodingBenchmark):
+                    raise ValueError("Label must be a string for non-coding benchmarks.")
+                end_node_name = self.graph.find_end_nodes()[0]
+                end_node = self.graph.get_node(end_node_name)
+                output_name = end_node.outputs[0].name
+                code = output.parsed_outputs[output_name]
+                label = self._format_code_label(code, label, dataset)
+                label = Variable(label, requires_grad=False, role_description="the task, the test result, and the correct code")
+
             loss = self.loss_fn([output, label])
             losses.append(loss)
             
@@ -263,21 +281,138 @@ class TextGradOptimizer(BaseModule):
         return output
 
 
-    def _initial_inputs_to_variables(self, initial_inputs: dict[str, str]) -> dict[str, Variable]:
-        """Converts inputs to the initial node to textgrad variables."""
-        variables = {}
-        initial_node = self.graph.find_initial_nodes()[0]
-        for key, value in initial_inputs.items():
-            for input in self.graph.get_node(initial_node).inputs:
-                if input.name == key:
-                    variable_description = input.description
-                    break
-            initial_input_variable = Variable(
-                value,
-                requires_grad=False,
-                role_description=variable_description,
+    def evaluate(
+        self, 
+        dataset: Benchmark, 
+        eval_mode: str = "dev", 
+        graph: Optional[SequentialWorkFlowGraph] = None,
+        indices: Optional[List[int]] = None,
+        sample_k: Optional[int] = None,
+        **kwargs
+    ) -> dict:
+        """Evaluate the workflow. If `graph` is provided, use the provided graph for evaluation. Otherwise, use the graph in the optimizer. 
+        
+        Args:
+            dataset (Benchmark): The dataset to evaluate the workflow on.
+            eval_mode (str): The evaluation mode. Choices: ["test", "dev", "train"].
+            graph (SequentialWorkFlowGraph, optional): The graph to evaluate. If not provided, use the graph in the optimizer.
+            indices (List[int], optional): The indices of the data to evaluate the workflow on.
+            sample_k (int, optional): The number of data to evaluate the workflow on. If provided, a random sample of size `sample_k` will be used.
+        
+        Returns:
+            dict: The metrics of the workflow evaluation.
+        """
+        if graph is None:
+            graph = self.graph
+
+        metrics_list = []
+        for i in range(self.eval_rounds):
+            eval_info = [
+                f"[{type(graph).__name__}]", 
+                f"Evaluation round {i+1}/{self.eval_rounds}", 
+                f"Mode: {eval_mode}"
+            ]
+            if indices is not None:
+                eval_info.append(f"Indices: {len(indices)} samples")
+            if sample_k is not None:
+                eval_info.append(f"Sample size: {sample_k}")
+            logger.info(" | ".join(eval_info))
+            metrics = self.evaluator.evaluate(
+                graph=graph, 
+                benchmark=dataset, 
+                eval_mode=eval_mode, 
+                indices=indices, 
+                sample_k=sample_k,
+                **kwargs
             )
-            variables[key] = initial_input_variable
+            metrics_list.append(metrics)
+        avg_metrics = self.evaluator._calculate_average_score(metrics_list)
+        
+        return avg_metrics
+
+
+    def save(self, path: str, graph: Optional[SequentialWorkFlowGraph] = None, ignore: List[str] = []):
+        """Save the workflow graph containing the optimized prompts to a file. 
+
+        Args:
+            path (str): The path to save the workflow graph.
+            graph (SequantialWorkFlowGraph, optional): The graph to save. If not provided, use the graph in the optimizer.
+            ignore (List[str]): The keys to ignore when saving the workflow graph.
+        """
+        if graph is None:
+            graph = self.graph
+        graph.save_module(path, ignore=ignore)
+
+
+    def log_snapshot(self, graph: SequentialWorkFlowGraph, metrics: dict):
+        """Log the snapshot of the workflow."""
+        self._snapshot.append(
+            {
+                "index": len(self._snapshot),
+                "graph": deepcopy(graph.get_graph_info()),
+                "metrics": metrics,
+            }
+        )
+
+
+    def restore_best_graph(self):
+        """Restore the best graph from the snapshot and set it to `self.graph`."""
+        if len(self._snapshot) == 0:
+            logger.info("No snapshot found. No graph to restore.")
+            return
+
+        best_graph, best_metrics = self._select_graph_with_highest_score(return_metrics=True)
+        self.graph = best_graph
+        logger.info(f"Restored the best graph from snapshot with metrics {best_metrics}")
+
+
+    def _format_code_label(self, code: str, label:dict[str, str], dataset: CodingBenchmark) -> str:
+        """Formats the label for coding tasks to include the task, the test result, and the correct code.
+
+        Args:
+            code: The code to evaluate.
+            label: A dictionary with keys "task_id", "test", "entry_point", and "canonical_solution".
+            dataset: A CodingBenchmark instance with `check_solution` method.
+        
+        Returns:
+            The formatted label which includes the task, the test result, and the correct code.
+        """
+
+        task_id = label["task_id"]
+        prompt = dataset.get_example_by_id(task_id)["prompt"]
+        test = label["test"]
+        entry_point = label["entry_point"]
+
+        state, message = dataset.check_solution(
+            task_id=task_id,
+            solution=prompt + "\n" + code,
+            test=test,
+            entry_point=entry_point
+        )
+
+        if state != dataset.SUCCESS:
+            message = message.replace("Solution", "Failed Code")
+
+        formatted_label = f"## Task:\n{prompt}\n\n## Result on test:\n{message}\n\n## Correct Solution:\n{label['canonical_solution']}"
+        return formatted_label
+
+
+    def _initial_inputs_to_variables(self, initial_inputs: dict[str, str]) -> dict[str, Variable]:
+        """Converts inputs to the initial nodes to textgrad variables."""
+        variables = {}
+        initial_nodes = self.graph.find_initial_nodes()
+        for initial_node in initial_nodes:
+            for key, value in initial_inputs.items():
+                for input in self.graph.get_node(initial_node).inputs:
+                    if input.name == key:
+                        variable_description = input.description
+                        break
+                initial_input_variable = Variable(
+                    value,
+                    requires_grad=False,
+                    role_description=variable_description,
+                )
+                variables[key] = initial_input_variable
         return variables
 
 
@@ -320,76 +455,17 @@ class TextGradOptimizer(BaseModule):
         if isinstance(node, str):
             node = self.graph.get_node(node)
 
-        agent_name = node.agents[0]['name']
-        agent = self.agent_manager.get_agent(agent_name)
+        agent_dict = node.agents[0]
+        agent = CustomizeAgent(llm=self.executor_llm, **agent_dict)
 
-        textgrad_agent = TextGradAgent(
-            agent,
-            self.optimize_mode
-        )
-        
+        textgrad_agent = TextGradAgent(agent, self.optimize_mode)
         return textgrad_agent
 
 
-    def evaluate(
-        self, 
-        dataset: Benchmark, 
-        eval_mode: str = "dev", 
-        graph: Optional[SequentialWorkFlowGraph] = None,
-        indices: Optional[List[int]] = None,
-        sample_k: Optional[int] = None,
-        **kwargs
-    ) -> dict:
-        """Evaluate the workflow. If `graph` is provided, use the provided graph for evaluation. Otherwise, use the graph in the optimizer. 
-        
-        Args:
-            dataset (Benchmark): The dataset to evaluate the workflow on.
-            eval_mode (str): The evaluation mode. Choices: ["test", "dev", "train"].
-            graph (SequentialWorkFlowGraph, optional): The graph to evaluate. If not provided, use the graph in the optimizer.
-            indices (List[int], optional): The indices of the data to evaluate the workflow on.
-            sample_k (int, optional): The number of data to evaluate the workflow on. If provided, a random sample of size `sample_k` will be used.
-        
-        Returns:
-            dict: The metrics of the workflow evaluation.
-        """
-        graph = graph if graph is not None else self.graph
-        metrics_list = []
-        for i in range(self.eval_rounds):
-            eval_info = [
-                f"[{type(graph).__name__}]", 
-                f"Evaluation round {i+1}/{self.eval_rounds}", 
-                f"Mode: {eval_mode}"
-            ]
-            if indices is not None:
-                eval_info.append(f"Indices: {len(indices)} samples")
-            if sample_k is not None:
-                eval_info.append(f"Sample size: {sample_k}")
-            logger.info(" | ".join(eval_info))
-            metrics = self.evaluator.evaluate(
-                graph=graph, 
-                benchmark=dataset, 
-                eval_mode=eval_mode, 
-                indices=indices, 
-                sample_k=sample_k,
-                **kwargs
-            )
-            metrics_list.append(metrics)
-        avg_metrics = self.evaluator._calculate_average_score(metrics_list)
-        
-        return avg_metrics
-
-
-    def save(self, path: str, graph: Optional[SequentialWorkFlowGraph] = None, ignore: List[str] = []):
-        """Save the workflow graph containing the optimized prompts to a file. 
-
-        Args:
-            path (str): The path to save the workflow graph.
-            graph (SequantialWorkFlowGraph, optional): The graph to save. If not provided, use the graph in the optimizer.
-            ignore (List[str]): The keys to ignore when saving the workflow graph.
-        """
-        if graph is None:
-            graph = self.graph
-        graph.save_module(path, ignore=ignore)
+    def _create_textgrad_agents(self):
+        """Creates textgrad agents for all nodes in the workflow graph."""
+        for node in self.graph.nodes:
+            node.textgrad_agent = self._create_textgrad_agent(node)
 
 
     def _update_workflow_graph(self):
@@ -397,23 +473,7 @@ class TextGradOptimizer(BaseModule):
         for node in self.graph.nodes:
             node.agents[0]['prompt'] = node.textgrad_agent.prompt_template.value
             node.agents[0]['system_prompt'] = node.textgrad_agent.system_prompt.value
-        
 
-    def log_snapshot(self, graph: SequentialWorkFlowGraph, metrics: dict):
-        """Log the snapshot of the workflow."""
-        if isinstance(graph, SequentialWorkFlowGraph):
-            graph_info = graph.get_graph_info()
-        else:
-            raise ValueError(f"Invalid graph type: {type(graph)}. The graph should be an instance of `SequentialWorkFlowGraph`.")
-        
-        self._snapshot.append(
-            {
-                "index": len(self._snapshot),
-                "graph": deepcopy(graph_info),
-                "metrics": metrics,
-            }
-        )
-        
 
     def _select_graph_with_highest_score(self, return_metrics: bool = False) -> SequentialWorkFlowGraph | tuple[SequentialWorkFlowGraph, Optional[dict]]:
         """Select the graph in `self._snapshot` with the highest score."""
@@ -433,17 +493,6 @@ class TextGradOptimizer(BaseModule):
         if return_metrics:
             return graph, self._snapshot[best_index]["metrics"]
         return graph
-    
-
-    def restore_best_graph(self):
-        """Restore the best graph from the snapshot and set it to `self.graph`."""
-        if len(self._snapshot) == 0:
-            logger.info("No snapshot found. No graph to restore.")
-            return
-
-        best_graph, best_metrics = self._select_graph_with_highest_score(return_metrics=True)
-        self.graph = best_graph
-        logger.info(f"Restored the best graph from snapshot with metrics {best_metrics}")
 
 
     def _get_all_system_prompts(self) -> List[Variable]:
@@ -471,7 +520,12 @@ class TextGradOptimizer(BaseModule):
 
         for input in node.inputs:
             if "<input>{" + input.name + "}</input>" not in prompt_template:
-                prompt_template += "\n\n" + input.description + ":\n<input>{" + input.name + "}</input>"
+                if "{" + input.name + "}" in prompt_template:
+                    # Only missing input tags
+                    prompt_template = prompt_template.replace("{" + input.name + "}", "<input>{" + input.name + "}</input>")
+                else:
+                    # Missing both input tags and input placeholders
+                    prompt_template += "\n\n" + input.description + ":\n<input>{" + input.name + "}</input>"
         
         return prompt_template
 
