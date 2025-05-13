@@ -11,6 +11,7 @@ from ..core.module import BaseModule
 from ..core.decorators import atomic_method
 from ..storages.base import StorageHandler
 from ..models.model_configs import LLMConfig
+from ..workflow.workflow_graph import WorkFlowGraph
 
 class AgentState(str, Enum):
     AVAILABLE = "available"
@@ -371,4 +372,36 @@ class AgentManager(BaseModule):
                 lambda: self.agent_states.get(agent_name) == AgentState.AVAILABLE,
                 timeout=timeout
             )
+
+
+    def update_agents_from_workflow(self, workflow_graph: WorkFlowGraph, llm_config: Optional[LLMConfig]=None, **kwargs):
+        """
+        Update agents from a given WorkFlowGraph.
+
+        Args:
+            workflow_graph (WorkFlowGraph): The workflow graph containing nodes with agents information.
+            llm_config (Optional[LLMConfig]): The LLM configuration to be used for the agents.
+            **kwargs: Additional parameters passed to update_agent
+        """
+        if not isinstance(workflow_graph, WorkFlowGraph):
+            raise TypeError("workflow_graph must be an instance of WorkFlowGraph")
+        for node in workflow_graph.nodes:
+            if node.agents:
+                for agent in node.agents:
+                    self.update_agent(agent=agent, llm_config=llm_config, **kwargs)
+
+
+    def update_agent(self, agent: Union[dict, Agent], llm_config: Optional[LLMConfig]=None, **kwargs):
+        """
+        Update an agent in the manager.
+
+        Args:
+            agent: The agent to be updated, specified as:
+                - Dictionary: Agent specification to update a CustomizeAgent
+                - Agent: Existing Agent instance to update
+            llm_config (Optional[LLMConfig]): The LLM configuration to be used for the agent.
+        """
+        agent_name = self.get_agent_name(agent=agent)
+        self.remove_agent(agent_name=agent_name)
+        self.add_agent(agent=agent, llm_config=llm_config, **kwargs)
         

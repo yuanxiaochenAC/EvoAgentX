@@ -28,6 +28,7 @@ class Evaluator:
         agent_manager: Optional[AgentManager] = None,
         collate_func: Optional[Callable] = None, 
         output_postprocess_func: Optional[Callable] = None, 
+        update_agent_manager: bool = True,
         verbose: Optional[bool] = None, 
         **kwargs
     ):
@@ -47,11 +48,13 @@ class Evaluator:
                 It receives the output of an WorkFlow instance (str) or an ActionGraph instance (dict) as input 
                 and the output will be passed to the `evaluate` function of the benchmark. 
                 The default is a lambda function that returns the output itself.
+            update_agent_manager (bool): Whether to update the agent manager with agents from the workflow graph.
             verbose (bool, optional): Whether to print the evaluation progress.
         """
         self.llm = llm
         self.num_workers = num_workers
         self.agent_manager = agent_manager
+        self.update_agent_manager = update_agent_manager
         self._thread_agent_managers = {}
         self.collate_func = collate_func or (lambda x: x)
         self.output_postprocess_func = output_postprocess_func or (lambda x: x)
@@ -98,6 +101,15 @@ class Evaluator:
         """
         # clear the evaluation records
         self._evaluation_records.clear()
+
+        if isinstance(graph, WorkFlowGraph):
+            if self.agent_manager is None:
+                self.agent_manager = AgentManager()
+                self.agent_manager.add_agents_from_workflow(graph, llm_config=self.llm.config)
+            else:
+                if self.update_agent_manager:
+                    self.agent_manager.update_agents_from_workflow(graph, llm_config=self.llm.config)
+            
         data = self._get_eval_data(benchmark=benchmark, eval_mode=eval_mode, indices=indices, sample_k=sample_k, seed=seed)
         results = self._evaluate_graph(graph=graph, data=data, benchmark=benchmark, verbose=verbose, **kwargs)
         return results
