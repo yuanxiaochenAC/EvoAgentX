@@ -11,7 +11,6 @@ from ..core.module import BaseModule
 from ..core.decorators import atomic_method
 from ..storages.base import StorageHandler
 from ..models.model_configs import LLMConfig
-from ..workflow.workflow_graph import WorkFlowGraph
 
 class AgentState(str, Enum):
     AVAILABLE = "available"
@@ -374,7 +373,7 @@ class AgentManager(BaseModule):
             )
 
 
-    def update_agents_from_workflow(self, workflow_graph: WorkFlowGraph, llm_config: Optional[LLMConfig]=None, **kwargs):
+    def update_agents_from_workflow(self, workflow_graph, llm_config: Optional[LLMConfig]=None, **kwargs):
         """
         Update agents from a given WorkFlowGraph.
 
@@ -383,6 +382,7 @@ class AgentManager(BaseModule):
             llm_config (Optional[LLMConfig]): The LLM configuration to be used for the agents.
             **kwargs: Additional parameters passed to update_agent
         """
+        from ..workflow.workflow_graph import WorkFlowGraph
         if not isinstance(workflow_graph, WorkFlowGraph):
             raise TypeError("workflow_graph must be an instance of WorkFlowGraph")
         for node in workflow_graph.nodes:
