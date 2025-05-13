@@ -298,7 +298,7 @@ class SQLite(DBStoreBase):
                 set_clause = ", ".join([f"{col} = ?" for col in columns[1:]])  # Exclude primary key
                 update_query = f"UPDATE {table} SET {set_clause} WHERE {columns[0]} = ?"
                 
-                values = [metadata_id] + list(new_metadata.model_dump().values())[1:]
+                values = [metadata_id] + list([str(value) for idx, value in enumerate(new_metadata.model_dump().values()) if idx > 0])
                 
                 cursor = self.connection.cursor()
                 cursor.execute(update_query, values)
@@ -350,7 +350,8 @@ class SQLite(DBStoreBase):
         Retrieve information about all tables in the database.
 
         Returns:
-            List[Dict]: A list of dictionaries containing table names and their column information.
+            List[Dict]: A list of dictionaries containing table names and their column information,
+                        where columns is a dictionary mapping column names to their data types.
         """
         with self._lock:
             with self.connection:
@@ -365,7 +366,7 @@ class SQLite(DBStoreBase):
                     columns = cursor.fetchall()
                     table_info.append({
                         "table_name": table_name,
-                        "columns": [col[1] for col in columns]  # Column names
+                        "columns": {col[1]: col[2] for col in columns}  # Map column name to data type
                     })
                 
                 return table_info
