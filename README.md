@@ -184,7 +184,9 @@ You can also:
 
 
 ## Demo Video
-🎥 Demo video coming soon – stay tuned!
+🎥 Demo video:
+
+[![EvoAgentX demo video](./assets/demo.png)](https://youtu.be/Wu0ZydYDqgg)
 
 > In the meantime, check out the [EvoAgentX Quickstart Guide](./docs/quickstart.md) for a step-by-step guide to get started with EvoAgentX.
 
