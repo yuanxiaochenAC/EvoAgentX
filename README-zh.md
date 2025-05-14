@@ -48,7 +48,7 @@
 - [安装指南](#安装指南)
 - [配置指南](#配置指南)
 - [示例：自动工作流生成](#示例自动工作流生成)
-- [演示视频](#演示视频)
+- [演示视频](#🎥-演示视频)
 - [教程与用例](#教程与用例)
 
 ## 安装指南
@@ -187,10 +187,14 @@ print(output)
 
 > 📂 查看完整示例请访问 [`workflow_demo.py`](./examples/workflow_demo.py)。
 
-## 演示视频
-🎥 演示视频:
+## 🎥 演示视频
+[![在YouTube观看](https://img.shields.io/badge/-在%20YouTube%20观看-red?logo=youtube&labelColor=grey)](https://www.youtube.com/watch?v=Wu0ZydYDqgg)
 
-[![EvoAgentX 演示视频](./assets/demo.png)](https://youtu.be/Wu0ZydYDqgg)
+<div align="center">
+  <video src="https://github.com/user-attachments/assets/5cc5d0e5-51fe-425d-943d-4c95b1f0fa8f.mp4" autoplay loop muted playsinline width="600">
+    Your browser does not support the video tag.
+  </video>
+</div>
 
 > 在此之前，你可以先阅读 [EvoAgentX 快速入门指南](./docs/quickstart.md)，按照步骤上手使用 EvoAgentX。
 

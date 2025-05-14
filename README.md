@@ -48,7 +48,7 @@
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Examples: Automatic WorkFlow Generation](#examples-automatic-workflow-generation)
-- [Demo Video](#demo-video)
+- [Demo Video](#🎥-demo-video)
 - [Tutorial and Use Cases](#tutorial-and-use-cases)
 
 ## Installation
@@ -183,10 +183,15 @@ You can also:
 > 📂 For a complete working example, check out the [`workflow_demo.py`](./examples/workflow_demo.py)
 
 
-## Demo Video
-🎥 Demo video:
+## 🎥 Demo Video
 
-[![EvoAgentX demo video](./assets/demo.png)](https://youtu.be/Wu0ZydYDqgg)
+[![Watch on YouTube](https://img.shields.io/badge/-Watch%20on%20YouTube-red?logo=youtube&labelColor=grey)](https://www.youtube.com/watch?v=Wu0ZydYDqgg)
+
+<div align="center">
+  <video src="https://github.com/user-attachments/assets/5cc5d0e5-51fe-425d-943d-4c95b1f0fa8f.mp4" autoplay loop muted playsinline width="600">
+    Your browser does not support the video tag.
+  </video>
+</div>
 
 > In the meantime, check out the [EvoAgentX Quickstart Guide](./docs/quickstart.md) for a step-by-step guide to get started with EvoAgentX.
 
