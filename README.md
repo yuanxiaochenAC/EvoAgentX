@@ -43,6 +43,10 @@ English | [简体中文](./README-zh.md)
 - [QuickStart & Demo Video](#quickstart--demo-video)
 - [Tutorial and Use Cases](#tutorial-and-use-cases)
 
+## Test video
+[![Watch the video](https://img.youtube.com/vi/T-D1KVIuvjA/maxresdefault.jpg)]([https://youtu.be/T-D1KVIuvjA](https://www.youtube.com/watch?v=Opxhh9Oh3rg))
+
+
 ### Installation
 
 Refer to the [Installation Guide for EvoAgentX](./docs/installation.md) for detailed instructions on how to install EvoAgentX.
