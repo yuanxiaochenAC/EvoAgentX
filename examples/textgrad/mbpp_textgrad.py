@@ -2,6 +2,8 @@ from dotenv import load_dotenv
 from evoagentx.models import OpenAILLM, OpenAILLMConfig
 from evoagentx.benchmark import MBPP  
 from evoagentx.workflow import SequentialWorkFlowGraph
+from evoagentx.agents.agent_manager import AgentManager
+from evoagentx.evaluators import Evaluator
 from evoagentx.optimizers import TextGradOptimizer
 from evoagentx.core.callbacks import suppress_logger_info 
 from evoagentx.core.logging import logger
@@ -56,11 +58,18 @@ def main():
     optimizer_config = OpenAILLMConfig(model="gpt-4o")
     optimizer_llm = OpenAILLM(config=optimizer_config)
 
-    # load benchmark 
     benchmark = MBPPSplits()
-
-    # load workflow 
     workflow_graph = SequentialWorkFlowGraph.from_dict(mbpp_graph_data)
+    agent_manager = AgentManager()
+    agent_manager.add_agents_from_workflow(workflow_graph, executor_llm.config)
+
+    evaluator = Evaluator(
+        llm=executor_llm, 
+        agent_manager=agent_manager, 
+        collate_func=collate_func, 
+        num_workers=20, 
+        verbose=True
+    )
 
     textgrad_optimizer = TextGradOptimizer(
         graph=workflow_graph, 
@@ -69,10 +78,9 @@ def main():
         optimizer_llm=optimizer_llm,
         batch_size=3,
         max_steps=20,
+        evaluator=evaluator,
         eval_interval=1,
         eval_rounds=1,
-        collate_func=collate_func,
-        max_workers=20,
         save_interval=None,
         save_path="./",
         rollback=True

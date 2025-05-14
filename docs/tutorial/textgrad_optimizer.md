@@ -86,18 +86,29 @@ class MathSplits(MATH):
 math_splits = MathSplits()
 ```
 
-We also need a collate function to convert the raw example to the expected input for the workflow.
-
-```python
-def collate_func(example: dict) -> dict:
-    return {"problem": example["problem"]}
-```
-
 During optimization, the `TextGradOptimizer` will evaluate the performance on the development set by default. Please make sure the dataset has a development set properly set up (i.e., `benchmark._dev_data` is not None). You can either:
    - Use a dataset that already provides a development set
    - Split your dataset to create a development set (like in the example above)
    - Implement a custom dataset (inherits from `evoagentx.benchmark.Benchmark`) that properly sets up the development set. 
 
+
+### Step 3: Set Up the Evaluator
+
+The evaluator is responsible for assessing the performance of the workflow during optimization. For more detailed information about how to set up and use the evaluator, please refer to the [Benchmark and Evaluation Tutorial](./benchmark_and_evaluation.md).
+
+
+```python
+def collate_func(example: dict) -> dict:
+    return {"problem": example["problem"]}
+
+evaluator = Evaluator(
+    llm=llm, 
+    agent_manager=agent_manager, 
+    collate_func=collate_func, 
+    num_workers=5, 
+    verbose=True
+)
+```
 
 ## 4. Configuring and Running the TextGrad Optimizer
 
@@ -112,12 +123,10 @@ The TextGradOptimizer can be configured with various parameters to control the o
 - `optimizer_llm`: The LLM used to optimize the workflow
 - `batch_size`: The batch size for optimization
 - `max_steps`: The maximum number of optimization steps
+- `evaluator`: The evaluator to perform evaluation during optimization.
 - `eval_interval`: The number of steps between evaluations
 - `eval_rounds`: The number of evaluation rounds
 - `eval_config`: The evaluation configuration during optimization (passed to `TextGradOptimizer.evaluate()`). For example, if we don't want to evaluate on the entire development set, we can set  `eval_config = {"sample_k": 100}` to only evaluate on 100 random samples from the development set.
-- `collate_func`: The collate function to convert the raw example to the expected input for the workflow
-- `output_postprocess_func`: The output postprocess function to process the output of the workflow for evaluation
-- `max_workers`: The maximum number of workers for evaluation
 - `save_interval`: The number of steps between saving the workflow graph
 - `save_path`: The path to save the workflow graph
 - `rollback`: Whether to rollback to the best workflow graph during optimization
@@ -131,11 +140,9 @@ textgrad_optimizer = TextGradOptimizer(
     optimizer_llm=optimizer_llm,
     batch_size=3,
     max_steps=20,
+    evaluator=evaluator,
     eval_interval=1,
     eval_rounds=1,
-    collate_func=collate_func,
-    output_postprocess_func=None,
-    max_workers=20,
     save_interval=None,
     save_path="./",
     rollback=True
