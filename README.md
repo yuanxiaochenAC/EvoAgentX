@@ -204,17 +204,18 @@ In this demo, we showcase the workflow generation and execution capabilities of 
 
 ### ✨ Final Results
 
-<div style="display: flex; gap: 10px;">
-  <div style="flex: 1; text-align: center;">
-    <img src="./assets/demo_result_1.png" alt="Result 1" width="100%">
-    <p><strong>Application 1:</strong><br>Job Recommendation</p>
-  </div>
-  <div style="flex: 1; text-align: center;">
-    <img src="./assets/demo_result_2.jpeg" alt="Result 2" width="100%">
-    <p><strong>Application 2:</strong><br>Stock Visual Analysis</p>
-  </div>
-</div>
-
+<table>
+  <tr>
+    <td align="center">
+      <img src="./assets/demo_result_1.png" width="400"><br>
+      <strong>Application&nbsp;1:</strong><br>Job Recommendation
+    </td>
+    <td align="center">
+      <img src="./assets/demo_result_2.jpeg" width="400"><br>
+      <strong>Application&nbsp;2:</strong><br>Stock Visual Analysis
+    </td>
+  </tr>
+</table>
 
 ## Evolution Algorithms 
 
@@ -241,16 +242,18 @@ We use our framework to optimize existing multi-agent systems on the [GAIA](http
 
 We apply EvoAgentX to optimize their prompts. The performance of the optimized agents on the GAIA benchmark validation set is shown in the figure below.
 
-<div style="display: flex; gap: 10px;">
-  <div style="flex: 1; text-align: center;">
-    <img src="./assets/open_deep_research_optimization_report.png" alt="Open Deep Research Optimization" width="100%">
-    <p><strong>Open Deep Research</strong><br></p>
-  </div>
-  <div style="flex: 1; text-align: center;">
-    <img src="./assets/owl_optimization_result.png" alt="Owl Optimization" width="100%">
-    <p><strong>OWL Agent</strong><br></p>
-  </div>
-</div>
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="./assets/open_deep_research_optimization_report.png" alt="Open Deep Research Optimization" width="100%"><br>
+      <strong>Open Deep Research</strong>
+    </td>
+    <td align="center" width="50%">
+      <img src="./assets/owl_optimization_result.png" alt="OWL Optimization" width="100%"><br>
+      <strong>OWL Agent</strong>
+    </td>
+  </tr>
+</table>
 
 > Full Optimization Reports: [Open Deep Research](https://github.com/eax6/smolagents) and [OWL](https://github.com/TedSIWEILIU/owl).  
 
@@ -308,7 +311,7 @@ Thanks go to these awesome contributors
   <img src="https://contrib.rocks/image?repo=EvoAgentX/EvoAgentX" />
 </a>
 
-We appreciate your interest in contributing to our open-source initiative. We provide a document of [contributing guidelines](https://github.com/clayxai/EvoAgentX/blob/main/CONTRIBUTING.md) which outlines the steps for contributing to EvoAgentX. Please refer to this guide to ensure smooth collaboration and successful contributions. 🤝🚀
+We appreciate your interest in contributing to our open-source initiative. We provide a document of [contributing guidelines](https://github.com/EvoAgentX/EvoAgentX/blob/main/CONTRIBUTING.md) which outlines the steps for contributing to EvoAgentX. Please refer to this guide to ensure smooth collaboration and successful contributions. 🤝🚀
 
 [![Star History Chart](https://api.star-history.com/svg?repos=EvoAgentX/EvoAgentX&type=Date)](https://www.star-history.com/#EvoAgentX/EvoAgentX&Date)
 
