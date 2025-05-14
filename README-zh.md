@@ -123,7 +123,7 @@ import os
 load_dotenv()  # 加载 .env 文件中的环境变量
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ```
-> 🔐 提示：请将 .env 添加到 .gitignore，以避免泄露敏感信息。
+<!-- > 🔐 提示：请将 .env 添加到 .gitignore，以避免泄露敏感信息。 -->
 
 
 ### 配置并使用语言模型（LLM）

@@ -123,7 +123,7 @@ load_dotenv() # Loads environment variables from .env file
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ```
 
-> 🔐 Tip: Don’t forget to add `.env` to your `.gitignore` to avoid committing secrets.
+<!-- > 🔐 Tip: Don’t forget to add `.env` to your `.gitignore` to avoid committing secrets. -->
 
 ### Configure and Use the LLM
 Once the API key is set, initialise the LLM with:

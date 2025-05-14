@@ -1,0 +1,350 @@
+# LLM
+
+## Introduction
+
+The LLM (Large Language Model) module provides a unified interface for interacting with various language model providers in the EvoAgentX framework. It abstracts away provider-specific implementation details, offering a consistent API for generating text, managing costs, and handling responses.
+
+## Supported LLM Providers
+
+EvoAgentX currently supports the following LLM providers:
+
+### OpenAILLM
+
+The primary implementation for accessing OpenAI's language models. It handles authentication, request formatting, and response parsing for models like GPT-4, GPT-3.5-Turbo, and other OpenAI models.
+
+**Basic Usage:**
+
+```python
+from evoagentx.models import OpenAILLMConfig, OpenAILLM
+
+# Configure the model
+config = OpenAILLMConfig(
+    model="gpt-4o-mini",  
+    openai_key="your-api-key",
+    temperature=0.7,
+    max_tokens=1000
+)
+
+# Initialize the model
+llm = OpenAILLM(config=config)
+
+# Generate text
+response = llm.generate(
+    prompt="Explain quantum computing in simple terms.",
+    system_message="You are a helpful assistant that explains complex topics simply."
+)
+```
+
+### LiteLLM
+
+LiteLLM is an adapter for the [LiteLLM project](https://github.com/BerriAI/litellm), which provides a unified Python SDK and proxy server for calling over 100 LLM APIs using the OpenAI API format. It supports providers such as Bedrock, Azure, OpenAI, VertexAI, Cohere, Anthropic, Sagemaker, HuggingFace, Replicate, and Groq. Thanks to this project, the `LiteLLM` model class in EvoAgentX can be used to seamlessly access a wide range of LLM providers through a single interface. 
+
+**Basic Usage:**
+
+To faciliate seamless integration with LiteLLM, you should specify the model name using the naming convention defied in the LiteLLM platform. For example, you need to specify `anthropic/claude-3-opus-20240229` for Claude 3.0 Opus. You can find a full list of supported providers and model names in their official documentation: [https://docs.litellm.ai/docs/providers](https://docs.litellm.ai/docs/providers).
+
+
+```python
+from evoagentx.models import LiteLLMConfig, LiteLLM
+
+# Configure the model
+config = LiteLLMConfig(
+    model="anthropic/claude-3-opus-20240229", 
+    anthropic_key="your-anthropic-api-key",
+    temperature=0.7,
+    max_tokens=1000
+)
+
+# Initialize the model
+llm = LiteLLM(config=config)
+
+# Generate text
+response = llm.generate(
+    prompt="Design a system for autonomous vehicles.",
+    system_message="You are an expert in autonomous systems design."
+)
+```
+
+### SiliconFlowLLM
+
+SiliconFlowLLM is an adapter for models hosted on the [SiliconFlow platform](https://www.siliconflow.com/), which offers access to both open-source and proprietary models via an OpenAI-compatible API. It enables you to integrate models like Qwen, DeepSeek, or Mixtral by specifying their names using the SiliconFlow platform's naming conventions.
+
+Thanks to SiliconFlow's unified interface, the `SiliconFlowLLM` model class in EvoAgentX allows seamless switching between a variety of powerful LLMs hosted on SiliconFlow using the same API format.
+
+**Basic Usage:**
+
+```python
+from evoagentx.models import SiliconFlowConfig, SiliconFlowLLM
+
+# Configure the model
+config = SiliconFlowConfig(
+    model="deepseek-ai/DeepSeek-V3",
+    siliconflow_key="your-siliconflow-api-key",
+    temperature=0.7,
+    max_tokens=1000
+)
+
+# Initialize the model
+llm = SiliconFlowLLM(config=config)
+
+# Generate text
+response = llm.generate(
+    prompt="Write a poem about artificial intelligence.",
+    system_message="You are a creative poet."
+)
+```
+
+## Core Functions
+
+All LLM implementations in EvoAgentX provide a consistent set of core functions for generating text and managing the generation process.
+
+### Generate Function
+
+The `generate` function is the primary method for producing text with language models:
+
+```python
+def generate(
+    self,
+    prompt: Optional[Union[str, List[str]]] = None,
+    system_message: Optional[Union[str, List[str]]] = None,
+    messages: Optional[Union[List[dict],List[List[dict]]]] = None,
+    parser: Optional[Type[LLMOutputParser]] = None,
+    parse_mode: Optional[str] = "json", 
+    parse_func: Optional[Callable] = None,
+    **kwargs
+) -> Union[LLMOutputParser, List[LLMOutputParser]]:
+    """
+    Generate text based on the prompt and optional system message.
+
+    Args:
+        prompt: Input prompt(s) to the LLM.
+        system_message: System message(s) for the LLM.
+        messages: Chat message(s) for the LLM, already in the required format (either `prompt` or `messages` must be provided).
+        parser: Parser class to use for processing the output into a structured format.
+        parse_mode: The mode to use for parsing, must be the `parse_mode` supported by the `parser`. 
+        parse_func: A function to apply to the parsed output.
+        **kwargs: Additional generation configuration parameters.
+        
+    Returns:
+        For single generation: An LLMOutputParser instance.
+        For batch generation: A list of LLMOutputParser instances.
+    """
+```
+
+#### Inputs 
+
+In EvoAgentX, there are several ways to provide inputs to LLMs using the `generate` function:
+
+**Method 1: Prompt and System Message**
+
+1. **Prompt**: The specific query or instruction for which you want a response. 
+
+2. **System Message** (optional): Instructions that guide the model's overall behavior and role. This sets the context for how the model should respond.
+
+Together, these components are converted into a standardized message format that the language model can understand:
+
+```python
+# Simple example with prompt and system message
+response = llm.generate(
+    prompt="What are three ways to improve productivity?",
+    system_message="You are a productivity expert providing concise, actionable advice."
+)
+```
+
+Behind the scenes, this gets converted into messages with appropriate roles:
+
+```python
+messages = [
+    {"role": "system", "content": "You are a productivity expert providing concise, actionable advice."},
+    {"role": "user", "content": "What are three ways to improve productivity?"}
+]
+```
+
+**Method 2: Using Messages Directly**
+
+For more complex conversations or when you need precise control over the message format, you can use the `messages` parameter directly:
+
+```python
+# Using messages directly for a multi-turn conversation
+response = llm.generate(
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Hello, who are you?"},
+        {"role": "assistant", "content": "I'm an AI assistant designed to help with various tasks."},
+        {"role": "user", "content": "Can you help me with programming?"}
+    ]
+)
+```
+
+#### Batch Generation 
+
+For batch processing, you can provide lists of prompts/system messages or list of messages. For example: 
+
+```python
+# Batch processing example
+responses = llm.generate(
+    prompt=["What is machine learning?", "Explain neural networks."],
+    system_message=["You are a data scientist.", "You are an AI researcher."]
+)
+```
+
+#### Output Parsing
+
+The `generate` function provides flexible options for parsing and structuring the raw text output from language models:
+
+- **parser**: Accepts a class (typically inheriting from `LLMOutputParser/ActionOutput`) that defines the structure for the parsed output. If not provided, the LLM output will not be parsed. In both cases, the raw LLM output can be accessed through the `.content` attribute of the returned object.   
+- **parse_mode**: Determines how the raw LLM output is parsed into the structure defined by the parser, valid options are: `'str'`, `'json'` (default), `'xml'`, `'title'`, `'custom'`.
+- **parse_func**: A custom function to handle parsing in more complex scenarios, only used when `parse_mode` is `'custom'`. 
+
+Example with structured output: 
+```python
+from evoagentx.models import LLMOutputParser 
+from pydantic import Field
+
+class CodeWriterOutput(LLMOutputParser):
+    thought: str = Field(description="Thought process for writing the code") 
+    code: str = Field(description="The generated code")
+
+prompt = """
+Write a Python function to calculate Fibonacci numbers. 
+
+Your output should always be in the following format:
+
+## thought 
+[Your thought process for writing the code]
+
+## code
+[The generated code]
+"""
+response = llm.generate(
+    prompt=prompt,
+    parser=CodeWriterOutput,
+    parse_mode="title"
+)
+
+print("Thought:\n", response.thought)
+print("Code:\n", response.code)
+```
+
+##### Parse Modes
+
+EvoAgentX supports several parsing strategies:
+
+1. **"str"**: Uses the raw output as-is for each field defined in the parser.
+2. **"json"** (default): Extracts fields from a JSON string in the output.
+3. **"xml"**: Extracts content from XML tags matching field names.
+4. **"title"**: Extracts content from markdown sections (default format: "## {title}").
+5. **"custom"**: Uses a custom parsing function specified by `parse_func`.
+
+!!! note 
+    For `'json'`, `'xml'` and `'title'`, you should instruct the LLM (through the `prompt`) to output the content in the specified format that can be parsed by the parser. Otherwise, the parsing will fail. 
+
+    1. For `'json'`, you should instruct the LLM to output a valid JSON string containing keys that match the field names in the parser class. If there are multiple JSON string in the raw LLM output, only the first one will be parsed.  
+
+    2. For `xml`, you should instruct the LLM to output content that contains XML tags matching the field names in the parser class, e.g., `<{field_name}>...</{field_name}>`. If there are multiple XML tags with the same field name, only the first one will be used. 
+
+    3. For `title`, you should instruct the LLM to output content that contains markdown sections with the title exactly matching the field names in the parser class. The default title format is "## {title}". You can change it by setting the `title_format` parameter in the `generate` function, e.g., `generate(..., title_format="### {title}")`. The `title_format` must contain `{title}` as a placeholder for the field name.  
+
+##### Custom Parsing Function
+
+For maximum flexibility, you can define a custom parsing function with `parse_func`:
+
+```python
+from evoagentx.models import LLMOutputParser
+from evoagentx.core.module_utils import extract_code_block
+
+class CodeOutput(LLMOutputParser):
+    code: str = Field(description="The generated code")
+
+# Use custom parsing
+response = llm.generate(
+    prompt="Write a Python function to calculate Fibonacci numbers.",
+    parser=CodeOutput,
+    parse_mode="custom",
+    parse_func=lambda content: {"code": extract_code_block(content)[0]}
+)
+```
+
+!!! note 
+    The `parse_func` should have an input parameter `content` that receives the raw LLM output, and return a dictionary with keys matching the field names in the parser class.  
+
+### Async Generate Function
+
+For applications requiring asynchronous operation, the `async_generate` function provides the same functionality as the `generate` function, but in a non-blocking manner:
+
+```python
+async def async_generate(
+        self,
+        prompt: Optional[Union[str, List[str]]] = None,
+        system_message: Optional[Union[str, List[str]]] = None,
+        messages: Optional[Union[List[dict],List[List[dict]]]] = None,
+        parser: Optional[Type[LLMOutputParser]] = None,
+        parse_mode: Optional[str] = "json", 
+        parse_func: Optional[Callable] = None,
+        **kwargs
+    ) -> Union[LLMOutputParser, List[LLMOutputParser]]:
+    """
+    Asynchronously generate text based on the prompt and optional system message.
+
+    Args:
+        prompt: Input prompt(s) to the LLM.
+        system_message: System message(s) for the LLM.
+        messages: Chat message(s) for the LLM, already in the required format (either `prompt` or `messages` must be provided).
+        parser: Parser class to use for processing the output into a structured format.
+        parse_mode: The mode to use for parsing, must be the `parse_mode` supported by the `parser`. 
+        parse_func: A function to apply to the parsed output.
+        **kwargs: Additional generation configuration parameters.
+        
+    Returns:
+        For single generation: An LLMOutputParser instance.
+        For batch generation: A list of LLMOutputParser instances.
+    """
+```
+
+### Streaming Responses
+
+EvoAgentX supports streaming responses from LLMs, which allows you to see the model's output as it's being generated token by token, rather than waiting for the complete response. This is especially useful for long-form content generation or providing a more interactive experience.
+
+There are two ways to enable streaming:
+
+#### Configure Streaming in the LLM Config
+
+You can enable streaming when initializing the LLM by setting appropriate parameters in the config:
+
+```python
+# Enable streaming at initialization time
+config = OpenAILLMConfig(
+    model="gpt-4o-mini",
+    openai_key="your-api-key",
+    stream=True,  # Enable streaming
+    output_response=True  # Print tokens to console in real-time
+)
+
+llm = OpenAILLM(config=config)
+
+# All calls to generate() will now stream by default
+response = llm.generate(
+    prompt="Write a story about space exploration."
+)
+```
+
+#### Enable Streaming in the Generate Method
+
+Alternatively, you can enable streaming for specific generate calls:
+
+```python
+# LLM initialized with default non-streaming behavior
+config = OpenAILLMConfig(
+    model="gpt-4o-mini",
+    openai_key="your-api-key"
+)
+
+llm = OpenAILLM(config=config)
+
+# Override for this specific call
+response = llm.generate(
+    prompt="Write a story about space exploration.",
+    stream=True,  # Enable streaming for this call only
+    output_response=True  # Print tokens to console in real-time
+)
+```
