@@ -246,6 +246,29 @@ class AgentManager(BaseModule):
             if node.agents:
                 for agent in node.agents:
                     self.add_agent(agent=agent, llm_config=llm_config, **kwargs)
+    
+    def update_agents_from_workflow(self, workflow_graph, llm_config: Optional[LLMConfig]=None, **kwargs):
+        """
+        Update agents from a given WorkFlowGraph.
+
+        Args:
+            workflow_graph (WorkFlowGraph): The workflow graph containing nodes with agents information.
+            llm_config (Optional[LLMConfig]): The LLM configuration to be used for the agents.
+            **kwargs: Additional parameters passed to update_agent
+        """
+        from ..workflow.workflow_graph import WorkFlowGraph
+        if not isinstance(workflow_graph, WorkFlowGraph):
+            raise TypeError("workflow_graph must be an instance of WorkFlowGraph")
+        for node in workflow_graph.nodes:
+            if node.agents:
+                for agent in node.agents:
+                    agent_name = self.get_agent_name(agent=agent)
+                    if self.has_agent(agent_name=agent_name):
+                        # use the llm_config of the existing agent
+                        agent_llm_config = self.get_agent(agent_name).llm_config
+                        self.update_agent(agent=agent, llm_config=agent_llm_config, **kwargs)
+                    else:
+                        self.add_agent(agent=agent, llm_config=llm_config, **kwargs)
 
     def get_agent(self, agent_name: str, **kwargs) -> Agent:
         """Retrieve an agent by its name from managed agents.
@@ -263,6 +286,20 @@ class AgentManager(BaseModule):
             if agent.name == agent_name:
                 return agent
         raise ValueError(f"Agent ``{agent_name}`` does not exists!")
+    
+    def update_agent(self, agent: Union[dict, Agent], llm_config: Optional[LLMConfig]=None, **kwargs):
+        """
+        Update an agent in the manager.
+
+        Args:
+            agent: The agent to be updated, specified as:
+                - Dictionary: Agent specification to update a CustomizeAgent
+                - Agent: Existing Agent instance to update
+            llm_config (Optional[LLMConfig]): The LLM configuration to be used for the agent.
+        """
+        agent_name = self.get_agent_name(agent=agent)
+        self.remove_agent(agent_name=agent_name)
+        self.add_agent(agent=agent, llm_config=llm_config, **kwargs)
     
     @atomic_method
     def remove_agent(self, agent_name: str, remove_from_storage: bool=False, **kwargs):
@@ -371,4 +408,4 @@ class AgentManager(BaseModule):
                 lambda: self.agent_states.get(agent_name) == AgentState.AVAILABLE,
                 timeout=timeout
             )
-        
+
