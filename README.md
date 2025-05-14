@@ -44,8 +44,7 @@ English | [简体中文](./README-zh.md)
 - [Tutorial and Use Cases](#tutorial-and-use-cases)
 
 ## Test video
-[![Watch the video](https://img.youtube.com/vi/T-D1KVIuvjA/maxresdefault.jpg)]([https://youtu.be/T-D1KVIuvjA](https://www.youtube.com/watch?v=Opxhh9Oh3rg))
-
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/T-D1KVIuvjA/maxresdefault.jpg)](https://www.youtube.com/watch?v=Opxhh9Oh3rg)
 
 ### Installation
 
