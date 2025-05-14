@@ -30,7 +30,12 @@ jobs:
             mkdocs-material-
 
       - name: Install MkDocs and plugins
-        run: pip install mkdocs-material mkdocs-static-i18n
+        run: |
+          pip install --upgrade pip
+          pip install \
+            mkdocs-material \
+            mkdocstrings[python] \
+            mkdocs-static-i18n \
 
       - name: Deploy to GitHub Pages
         run: mkdocs gh-deploy --force
