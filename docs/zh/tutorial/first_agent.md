@@ -249,7 +249,7 @@ print(review)
 
 ## 3. 保存和加载代理
 
-你可以将代理保存到文件并在以后加载它：
+你可以将代理保存到文件并在稍后加载它：
 
 ```python
 # 保存代理
@@ -257,17 +257,4 @@ developer.save_module("examples/output/developer.json")
 
 # 加载代理
 loaded_developer = Agent.load_module("examples/output/developer.json", llm_config=openai_config)
-```
-
-### 保存和加载动作
-
-你也可以单独保存和加载动作：
-
-```python
-# 保存动作
-code_generation_action = TestCodeGeneration()
-code_generation_action.save_module("examples/output/code_generation_action.json")
-
-# 加载动作
-loaded_code_generation_action = Action.load_module("examples/output/code_generation_action.json")
 ```
