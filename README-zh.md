@@ -188,7 +188,9 @@ print(output)
 > 📂 查看完整示例请访问 [`workflow_demo.py`](./examples/workflow_demo.py)。
 
 ## 演示视频
-🎥 演示视频即将上线，敬请期待！
+🎥 演示视频:
+
+https://youtu.be/Wu0ZydYDqgg
 
 > 在此之前，你可以先阅读 [EvoAgentX 快速入门指南](./docs/quickstart.md)，按照步骤上手使用 EvoAgentX。
 
