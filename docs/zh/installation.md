@@ -1,31 +1,31 @@
-# Installation Guide for EvoAgentX
+# EvoAgentX 安装指南
 
-This guide will walk you through the process of installing EvoAgentX on your system, setting up the required dependencies, and configuring the framework for your projects.
+本指南将引导您完成在系统上安装 EvoAgentX、设置所需依赖项以及为您的项目配置框架的全过程。
 
-## Prerequisites
+## 前置条件
 
-Before installing EvoAgentX, make sure you have the following prerequisites:
+在安装 EvoAgentX 之前，请确保您具备以下前置条件：
 
-- Python 3.10 or higher
-- pip (Python package installer)
-- Git (for cloning the repository)
-- Conda (recommended for environment management, but optional)
+- Python 3.10 或更高版本  
+- pip（Python 包安装器）  
+- Git（用于克隆仓库）  
+- Conda（推荐用于环境管理，但可选）  
 
-## Installation Methods
+## 安装方法
 
-There are several ways to install EvoAgentX. Choose the method that best suits your needs.
+安装 EvoAgentX 有多种方式。请选择最符合您需求的方法。
 
-### Method 1: Using pip (Recommended)
+### 方法 1：使用 pip（推荐）
 
-The simplest way to install EvoAgentX is using pip:
+安装 EvoAgentX 最简单的方法是使用 pip：
 
 ```bash
 pip install evoagentx
 ```
 
-### Method 2: From Source (For Development)
+### 方法 2：从源代码安装（开发者专用）
 
-If you want to contribute to EvoAgentX or need the latest development version, you can install it directly from the source:
+如果您希望为 EvoAgentX 做贡献，或需要获取最新的开发版本，可以直接从源代码安装：
 
 ```bash
 # Clone the repository
@@ -38,9 +38,9 @@ cd EvoAgentX
 pip install -e .
 ```
 
-### Method 3: Using Conda Environment (Recommended for Isolation)
+### 方法 3：使用 Conda 环境（推荐用于隔离）
 
-If you prefer to use Conda for managing your Python environments, follow these steps:
+如果您偏好使用 Conda 来管理 Python 环境，请按以下步骤操作：
 
 ```bash hl_lines="4-5"
 # Create a new conda environment
@@ -55,55 +55,9 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-<!-- ## Configuration Setup
+## 验证安装
 
-### API Keys Configuration
-
-EvoAgentX requires API keys for certain functionalities, especially when using language models like OpenAI's GPT models. Here's how to set them up:
-
-1. Create a `.env` file in your project root directory based on the `.env.example` template:
-
-```bash
-cp .env.example .env
-```
-
-2. Open the `.env` file and add your API keys:
-
-```
-# OpenAI API Key
-OPENAI_API_KEY=your_openai_api_key_here
-
-# Other API Keys as needed
-# ANTHROPIC_API_KEY=your_anthropic_api_key_here
-# GOOGLE_API_KEY=your_google_api_key_here
-```
-
-Alternatively, you can set these environment variables directly in your shell:
-
-```bash
-export OPENAI_API_KEY=your_openai_api_key_here
-```
-
-### Configuring Model Settings
-
-You can configure model settings programmatically:
-
-```python
-from evoagentx.models import OpenAILLMConfig, OpenAILLM
-
-# Configure your language model
-openai_config = OpenAILLMConfig(
-    model="gpt-4o",  # or any other supported model
-    openai_key="your_api_key",  # optional if set in .env
-    stream=True,
-    temperature=0.7
-)
-model = OpenAILLM(config=openai_config)
-``` -->
-
-## Verifying Installation
-
-To verify that EvoAgentX has been installed correctly, run the following Python code:
+要验证 EvoAgentX 是否已正确安装，请运行以下 Python 代码：
 
 ```python
 import evoagentx
@@ -112,80 +66,4 @@ import evoagentx
 print(evoagentx.__version__)
 ```
 
-You should see the current version of EvoAgentX printed to the console.
-
-<!-- ## Running a Simple Test
-
-Here's a simple test to ensure everything is working correctly:
-
-```python
-from evoagentx.models import OpenAILLMConfig, OpenAILLM
-from evoagentx.agents import AgentManager
-
-# Configure your language model
-openai_config = OpenAILLMConfig(
-    model="gpt-4o-mini",
-    stream=True
-)
-model = OpenAILLM(config=openai_config)
-
-# Create an agent manager
-agent_manager = AgentManager()
-
-# If you see no errors, your installation is working correctly
-print("EvoAgentX installation successful!")
-```
-
-## Troubleshooting
-
-### Common Issues
-
-#### Missing Dependencies
-
-If you encounter errors about missing dependencies, try reinstalling with all optional dependencies:
-
-```bash
-pip install evoagentx[all]
-```
-
-#### API Key Issues
-
-If you're experiencing authentication errors:
-
-1. Double-check that your API keys are correctly set in the `.env` file or as environment variables
-2. Ensure that your API keys have the necessary permissions and are valid
-3. Check if your API key has sufficient credits or quota remaining
-
-#### Version Conflicts
-
-If you encounter version conflicts with other packages, consider using a virtual environment:
-
-```bash
-# Create a new virtual environment
-python -m venv evoagentx_env
-
-# Activate the environment
-# On Windows
-evoagentx_env\Scripts\activate
-# On macOS/Linux
-source evoagentx_env/bin/activate
-
-# Install EvoAgentX
-pip install evoagentx
-```
-
-### Getting Help
-
-If you continue to experience issues:
-
-1. Check the [GitHub Issues](https://github.com/EvoAgentX/EvoAgentX/issues) page for similar problems
-2. Join our [Discord community](https://discord.gg/q5hBjHVz) for real-time help
-3. Email us at evoagentx.ai@gmail.com -->
-
-<!-- ## Next Steps
-
-Now that you have EvoAgentX installed, check out the following resources:
-
-- [Basic Usage Guide](../tutorials/basic_usage.md) - Learn how to create your first workflow
-- [API Reference](../api.md) - Explore the full API documentation
-- [Examples](../examples/index.md) - See practical examples of EvoAgentX in action -->
+您应该能在控制台看到 EvoAgentX 当前的版本号。

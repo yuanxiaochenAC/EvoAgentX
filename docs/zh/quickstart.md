@@ -1,156 +1,137 @@
-# EvoAgentX Quickstart Guide
+# EvoAgentX 快速开始指南
 
-This quickstart guide will walk you through the essential steps to set up and start using EvoAgentX. In this tutorial, you'll learn how to:
+本快速开始指南将引导你完成使用 EvoAgentX 的基础步骤。在本教程中，你将学习如何：
+1. 配置用于访问 LLM 的 API 密钥  
+2. 自动创建并执行工作流  
 
-1. Configure your API keys to access LLMs 
-2. Automatically create and execute workflows 
-
-
-## Installation
+## 安装
 ```bash
 pip install evoagentx 
 ```
-Please refere to [Installation Guide](./installation.md) for more details about the installation. 
+请参阅 [安装指南](./installation.md) 获取更多详细信息。
 
-## API Key & LLM Setup 
+## API 密钥 & LLM 设置
 
-The first step to execute a workflow in EvoAgentX is configuring your API keys to access LLMs. There are two recommended methods to configure your API keys:
+要在 EvoAgentX 中执行工作流，首先需要配置用于访问大模型（LLM）的 API 密钥。推荐以下两种方式：
 
-### Method 1: Set Environment Variables in the Terminal
+### 方法一：在终端设置环境变量
 
-This method sets the API key directly in your system environment.
+此方法直接在系统环境中设置 API 密钥。
 
-For Linux/macOS: 
+对于 Linux/macOS：
 ```bash
-export OPENAI_API_KEY=<your-openai-api-key>
+export OPENAI_API_KEY=<你的-openai-api-key>
 ```
 
-For Windows Command Prompt: 
-```cmd 
-set OPENAI_API_KEY=<your-openai-api-key>
+对于 Windows 命令提示符：
+```cmd
+set OPENAI_API_KEY=<你的-openai-api-key>
 ```
 
-For Windows PowerShell:
+对于 Windows PowerShell：
 ```powershell
-$env:OPENAI_API_KEY="<your-openai-api-key>" # " is required 
+$env:OPENAI_API_KEY="<你的-openai-api-key>"  # 引号是必需的
 ```
 
-Once set, you can access the key in your Python code with:
+设置完成后，可在 Python 中这样获取：
 ```python
 import os
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ```
 
-### Method 2: Use a `.env` File 
+### 方法二：使用 `.env` 文件
 
-You can also store your API key in a `.env` file inside the root folder of your project.
+也可以在项目根目录下创建 `.env` 文件来存储 API 密钥。
 
-Create a file named `.env` with the following content:
+文件内容示例：
 ```bash
-OPENAI_API_KEY=<your-openai-api-key>
+OPENAI_API_KEY=<你的-openai-api-key>
 ```
 
-Then, in your Python code, you can load the environment settings using `python-dotenv`:
+然后在 Python 中使用 `python-dotenv` 加载：
 ```python
 from dotenv import load_dotenv 
 import os 
 
-load_dotenv() # Loads environment variables from .env file
+load_dotenv()  # 从 .env 文件加载环境变量
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ```
-🔐 Tip: Never commit your `.env` file to public platform (e.g., GitHub). Add it to `.gitignore`.
 
-### Configure and Use the LLM in EvoAgentX
-Once your API key is configured, you can initialize and use the LLM as follows:
+🔐 提示：切勿将 `.env` 文件提交到公共平台（如 GitHub），请将其添加到 `.gitignore`。
 
+### 在 EvoAgentX 中配置并使用 LLM
+
+配置好 API 密钥后，可按如下方式初始化并使用 LLM：
 ```python
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
 
-# Load the API key from environment
+# 从环境加载 API 密钥
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Define LLM configuration
+# 定义 LLM 配置
 openai_config = OpenAILLMConfig(
-    model="gpt-4o-mini",       # Specify the model name
-    openai_key=OPENAI_API_KEY, # Pass the key directly
-    stream=True,               # Enable streaming response
-    output_response=True       # Print response to stdout
+    model="gpt-4o-mini",       # 指定模型名称
+    openai_key=OPENAI_API_KEY, # 直接传入密钥
+    stream=True,               # 启用流式响应
+    output_response=True       # 打印响应到标准输出
 )
 
-# Initialize the language model
+# 初始化语言模型
 llm = OpenAILLM(config=openai_config)
 
-# Generate a response from the LLM
+# 从 LLM 生成响应
 response = llm.generate(prompt="What is Agentic Workflow?")
 ```
 
-You can find more details about supported LLM types and their parameters in the [LLM module guide](./modules/llm.md).
+你可以在 [LLM 模块指南](./modules/llm.md) 中找到更多关于支持的 LLM 类型及其参数的详细信息。
 
+## 自动工作流生成与执行
 
-## Automatic WorkFlow Generation and Execution 
+配置完成后，即可在 EvoAgentX 中自动生成并执行智能工作流。本节展示生成工作流、实例化代理并运行的核心步骤。
 
-Once your API key and language model are configured, you can automatically generate and execute agentic workflows in EvoAgentX. This section walks you through the core steps: generating a workflow from a goal, instantiating agents, and running the workflow to get results.
-
-First, let's import the necessary modules:
+首先，导入必要的模块：
 
 ```python
 from evoagentx.workflow import WorkFlowGenerator, WorkFlowGraph, WorkFlow
 from evoagentx.agents import AgentManager
 ```
 
-### Step 1: Generate WorkFlow and Agents 
-Use the `WorkFlowGenerator` to automatically create a workflow based on a natural language goal:
+### 第一步：生成工作流与任务图
+使用 `WorkFlowGenerator` 基于自然语言目标自动创建工作流：
 ```python
 goal = "Generate html code for the Tetris game that can be played in the browser."
 wf_generator = WorkFlowGenerator(llm=llm)
 workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal=goal)
 ```
-`WorkFlowGraph` is a data structure that stores the overall workflow plan — including task nodes and their relationships — but does not yet include executable agents.
+`WorkFlowGraph` 是一个数据结构，用于存储整体工作流计划，包括任务节点及其关系，但尚未包含可执行的代理。
 
-You can optionally **visualize** or **save** the generated workflow:
+可选：可视化或保存生成的工作流：
 ```python
-# Visualize the workflow structure (optional)
+# 可视化工作流结构（可选）
 workflow_graph.display()
 
-# Save the workflow to a JSON file (optional)
+# 将工作流保存为 JSON 文件（可选）
 workflow_graph.save_module("/path/to/save/workflow_demo.json")
 ```
-We provide an example generated workflow [here](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/output/tetris_game/workflow_demo_4o_mini.json). You can **reload** the saved workflow:
+我们提供了一个生成的工作流示例 [here](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/output/tetris_game/workflow_demo_4o_mini.json)。你可以重新加载保存的工作流：
 ```python
 workflow_graph = WorkFlowGraph.from_file("/path/to/save/workflow_demo.json")
 ```
 
-### Step 2: Create and Manage Executable Agents 
+### 第二步：创建并管理执行代理
 
-Use `AgentManager` to instantiate and manage agents based on the workflow graph:
+使用 `AgentManager` 基于工作流图实例化并管理代理：
 ```python
 agent_manager = AgentManager()
 agent_manager.add_agents_from_workflow(workflow_graph, llm_config=openai_config)
 ```
 
-### Step 3: Execute the Workflow 
-Once agents are ready, you can create a `WorkFlow` instance and run it:
+### 第三步：执行工作流
+代理准备就绪后，可以创建 `WorkFlow` 实例并运行：
 ```python
 workflow = WorkFlow(graph=workflow_graph, agent_manager=agent_manager, llm=llm)
 output = workflow.execute()
 print(output)
 ```
 
-For a complete working example, check out the [full workflow demo](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/workflow_demo.py).
-
-<!-- ## Next Steps
-
-Now that you've learned the basics of EvoAgentX, you can:
-
-- Explore the [API documentation](../api.md) to learn about more advanced features
-- Try building more complex workflows with conditional branching and loops
-- Experiment with different agent configurations and tool integrations -->
-
-
-<!-- - Check out the [example projects](../examples/index.md) for inspiration
-
-For more advanced topics, see our guides on:
-- [Advanced Workflow Patterns](../advanced/workflow_patterns.md)
-- [Custom Tool Development](../advanced/custom_tools.md)
-- [Memory Systems](../advanced/memory_systems.md)
-- [Evolutionary Optimization](../advanced/evolutionary_optimization.md) -->
+更多示例请参见 [完整工作流演示](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/workflow_demo.py)。
