@@ -37,7 +37,7 @@
 </h4>
 
 <p align="center">
-  <img src="./assets/framework_zh.png">
+  <img src="./assets/framework_zh.jpg">
 </p>
 
 
