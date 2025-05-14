@@ -190,7 +190,7 @@ print(output)
 ## 演示视频
 🎥 演示视频:
 
-https://www.youtube.com/watch?v=Wu0ZydYDqgg
+[![EvoAgentX 演示视频](./assets/demo.png)](https://youtu.be/Wu0ZydYDqgg)
 
 > 在此之前，你可以先阅读 [EvoAgentX 快速入门指南](./docs/quickstart.md)，按照步骤上手使用 EvoAgentX。
 
