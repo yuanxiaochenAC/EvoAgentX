@@ -33,9 +33,10 @@ EvoAgentX 使用模块化架构，包含以下核心组件：
 
 ## 👥 社区
 
-- **Discord**：加入我们的 [Discord 频道](https://discord.gg/q5hBjHVz) 进行讨论和获取支持
+- **Discord**：加入我们的 [Discord 频道](https://discord.gg/SUEkfTYn) 进行讨论和获取支持
 - **GitHub**：在 [GitHub](https://github.com/EvoAgentX/EvoAgentX/) 上为项目做出贡献
 - **Email**：通过 [evoagentx.ai@gmail.com](mailto:evoagentx.ai@gmail.com) 联系我们
+- **微信**：通过 [微信](https://github.com/EvoAgentX/EvoAgentX/blob/main/assets/wechat_info.md) 获取更新和支持。
 
 ## 🤝 贡献
 

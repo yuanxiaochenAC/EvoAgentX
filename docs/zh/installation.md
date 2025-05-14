@@ -20,7 +20,7 @@
 安装 EvoAgentX 最简单的方法是使用 pip：
 
 ```bash
-pip install evoagentx
+pip install git+https://github.com/EvoAgentX/EvoAgentX.git
 ```
 
 ### 方法 2：从源代码安装（开发者专用）
@@ -28,13 +28,13 @@ pip install evoagentx
 如果您希望为 EvoAgentX 做贡献，或需要获取最新的开发版本，可以直接从源代码安装：
 
 ```bash
-# Clone the repository
+# 克隆仓库
 git clone https://github.com/EvoAgentX/EvoAgentX/
 
-# Navigate to the project directory
+# 进入项目目录
 cd EvoAgentX
 
-# Install the package in development mode
+# 以开发模式安装包
 pip install -e .
 ```
 
@@ -43,15 +43,15 @@ pip install -e .
 如果您偏好使用 Conda 来管理 Python 环境，请按以下步骤操作：
 
 ```bash hl_lines="4-5"
-# Create a new conda environment
+# 创建新的conda环境
 conda create -n evoagentx python=3.10
 
-# Activate the environment
+# 激活环境
 conda activate evoagentx
 
-# Install the package
+# 安装包
 pip install -r requirements.txt
-# OR install in development mode
+# 或者以开发模式安装
 pip install -e .
 ```
 
@@ -62,7 +62,7 @@ pip install -e .
 ```python
 import evoagentx
 
-# Print the version
+# 打印版本
 print(evoagentx.__version__)
 ```
 
