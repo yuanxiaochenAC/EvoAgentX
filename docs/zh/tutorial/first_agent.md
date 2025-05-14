@@ -271,15 +271,3 @@ code_generation_action.save_module("examples/output/code_generation_action.json"
 # 加载动作
 loaded_code_generation_action = Action.load_module("examples/output/code_generation_action.json")
 ```
-
-## 总结
-
-在本教程中，我们学习了：
-
-1. 如何使用 `CustomizeAgent` 创建简单代理
-2. 如何创建具有多个动作的复杂代理
-3. 如何保存和加载代理和动作
-
-这些是 EvoAgentX 中代理的基本概念。通过组合这些功能，你可以创建强大的 AI 代理来自动化各种任务。
-
-有关更多高级功能，请参阅 [CustomizeAgent 文档](../modules/customize_agent.md) 和 [Agent 文档](../modules/agent.md)。
