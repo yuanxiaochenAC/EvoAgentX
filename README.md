@@ -11,10 +11,11 @@
 
 <div align="center">
 
+[![EvoAgentX Homepage](https://img.shields.io/badge/EvoAgentX-Homepage-blue?logo=homebridge)](https://evo-agent-x-landing-page.vercel.app/)
 [![Docs](https://img.shields.io/badge/-Documentation-0A66C2?logo=readthedocs&logoColor=white&color=7289DA&labelColor=grey)](https://EvoAgentX.github.io/EvoAgentX/)
-[![Discord](https://img.shields.io/badge/Chat-Discord-5865F2?&logo=discord&logoColor=white)](https://discord.gg/EvoAgentX)
+[![Discord](https://img.shields.io/badge/Chat-Discord-5865F2?&logo=discord&logoColor=white)](https://discord.gg/SUEkfTYn)
 [![Twitter](https://img.shields.io/badge/Follow-@EvoAgentX-e3dee5?&logo=x&logoColor=white)](https://x.com/EvoAgentX)
-[![Wechat](https://img.shields.io/badge/WeChat-EvoAgentX-brightgreen?logo=wechat&logoColor=white)]()
+[![Wechat](https://img.shields.io/badge/WeChat-EvoAgentX-brightgreen?logo=wechat&logoColor=white)](https://github.com/EvoAgentX/EvoAgentX/blob/main/assets/wechat_info.md)
 [![GitHub star chart](https://img.shields.io/github/stars/EvoAgentX/EvoAgentX?style=social)](https://star-history.com/#EvoAgentX/EvoAgentX)
 [![GitHub fork](https://img.shields.io/github/forks/EvoAgentX/EvoAgentX?style=social)](https://github.com/EvoAgentX/EvoAgentX/fork)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?)](https://github.com/EvoAgentX/EvoAgentX/blob/main/LICENSE)
@@ -44,11 +45,13 @@
 ## 🔥 Latest News
 - **[May 2025]** 🎉 **EvoAgentX** has been officially released!
 
-## ⚡Get Started
+## ⚡ Get Started
 - [Installation](#installation)
-- [Configuration](#configuration)
-- [Examples: Automatic WorkFlow Generation](#examples-automatic-workflow-generation)
+- [LLM Configuration](#llm-configuration)
+- [Automatic WorkFlow Generation](#automatic-workflow-generation)
 - [Demo Video](#demo-video)
+- [Evolution Algorithms](#evolution-algorithms)
+- [Applications](#applications)
 - [Tutorial and Use Cases](#tutorial-and-use-cases)
 
 ## Installation
@@ -80,11 +83,14 @@ pip install -e .
 ```
 </details>
 
-## Configuration
+## LLM Configuration
+
+### API Key Configuration 
 
 To use LLMs with EvoAgentX (e.g., OpenAI), you must set up your API key.
 
-#### Option 1: Set API Key via Environment Variable
+<details>
+<summary>Option 1: Set API Key via Environment Variable</summary> 
 
 - Linux/macOS: 
 ```bash
@@ -106,10 +112,12 @@ Once set, you can access the key in your Python code with:
 import os
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ```
+</details>
 
-#### Option 2: Use .env File
+<details>
+<summary>Option 2: Use .env File</summary> 
 
-- Create a .env file in your project root:
+- Create a .env file in your project root and add the following:
 ```bash
 OPENAI_API_KEY=<your-openai-api-key>
 ```
@@ -122,8 +130,8 @@ import os
 load_dotenv() # Loads environment variables from .env file
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ```
-
-<!-- > 🔐 Tip: Don’t forget to add `.env` to your `.gitignore` to avoid committing secrets. -->
+</details>
+<!-- > 🔐 Tip: Don't forget to add `.env` to your `.gitignore` to avoid committing secrets. -->
 
 ### Configure and Use the LLM
 Once the API key is set, initialise the LLM with:
@@ -151,14 +159,14 @@ response = llm.generate(prompt="What is Agentic Workflow?")
 > 📖 More details on supported models and config options: [LLM module guide](./docs/modules/llm.md).
 
 
-## Examples: Automatic WorkFlow Generation 
+## Automatic WorkFlow Generation 
 Once your API key and language model are configured, you can automatically generate and execute multi-agent workflows in EvoAgentX.
 
 🧩 Core Steps:
 1. Define a natural language goal
-2. Generate the workflow with WorkFlowGenerator
-3. Instantiate agents using AgentManager
-4. Execute the workflow via WorkFlow
+2. Generate the workflow with `WorkFlowGenerator`
+3. Instantiate agents using `AgentManager`
+4. Execute the workflow via `WorkFlow`
 
 💡 Minimal Example:
 ```python
@@ -180,17 +188,76 @@ You can also:
 - 📊 Visualise the workflow: `workflow_graph.display()`
 - 💾 Save/load workflows: `save_module()` / `from_file()`
 
-> 📂 For a complete working example, check out the [`workflow_demo.py`](./examples/workflow_demo.py)
+> 📂 For a complete working example, check out the [`workflow_demo.py`](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/workflow_demo.py)
 
 
 ## Demo Video
 🎥 Demo video:
 
+In this demo, we showcase the workflow generation and execution capabilities of EvoAgentX through two examples:
+
+1. Application 1: Intelligent Job Recommendation from Resume
+
+2. Application 2: Visual Analysis of A-Share Stocks
+
 [![EvoAgentX demo video](./assets/demo.png)](https://youtu.be/Wu0ZydYDqgg)
 
-> In the meantime, check out the [EvoAgentX Quickstart Guide](./docs/quickstart.md) for a step-by-step guide to get started with EvoAgentX.
+### ✨ Final Results
+
+<div style="display: flex; gap: 10px;">
+  <div style="flex: 1; text-align: center;">
+    <img src="./assets/demo_result_1.png" alt="Result 1" width="100%">
+    <p><strong>Application 1:</strong><br>Job Recommendation</p>
+  </div>
+  <div style="flex: 1; text-align: center;">
+    <img src="./assets/demo_result_2.jpeg" alt="Result 2" width="100%">
+    <p><strong>Application 2:</strong><br>Stock Visual Analysis</p>
+  </div>
+</div>
+
+
+## Evolution Algorithms 
+
+We have integrated some existing agent/workflow evolution algorithms into EvoAgentX, including [TextGrad](https://www.nature.com/articles/s41586-025-08661-4), [MIPRO](https://arxiv.org/abs/2406.11695) and [AFlow](https://arxiv.org/abs/2410.10762).
+
+To evaluate the performance, we use them to optimize the same agent system on three different tasks: multi-hop QA (HotPotQA), code generation (MBPP) and reasoning (MATH). We randomly sample 50 examples for validation and other 100 examples for testing. 
+
+> Tip: We have integrated these benchmark and evaluation code in EvoAgentX. Please refer to the [benchmark and evaluation tutorial](https://github.com/EvoAgentX/EvoAgentX/blob/main/docs/tutorial/benchmark_and_evaluation.md) for more details.
+
+### 📊 Results 
+
+| Method   | HotPotQA<br>(F1%) | MBPP<br>(Pass@1 %) | MATH<br>(Solve Rate %) |
+|----------|--------------------|---------------------|--------------------------|
+| Original | 63.58              | 69.00               | 66.00                    |
+| TextGrad | 69.21              | 68.00               | 76.00                    |
+| AFlow    | 65.09              | 79.00               | 71.00                    |
+| MIPRO    | 69.16              | 68.00               | 72.30       
+
+Please refer to the `examples/optimization` folder for more details. 
+
+## Applications 
+
+We use our framework to optimize existing multi-agent systems on the [GAIA](https://huggingface.co/spaces/gaia-benchmark/leaderboard) benchmark. We select [Open Deep Research](https://github.com/huggingface/smolagents/tree/main/examples/open_deep_research) and [OWL](https://github.com/camel-ai/owl), two representative multi-agent framework from the GAIA leaderboard that is open-source and runnable. 
+
+We apply EvoAgentX to optimize their prompts. The performance of the optimized agents on the GAIA benchmark validation set is shown in the figure below.
+
+<div style="display: flex; gap: 10px;">
+  <div style="flex: 1; text-align: center;">
+    <img src="./assets/open_deep_research_optimization_report.png" alt="Open Deep Research Optimization" width="100%">
+    <p><strong>Open Deep Research</strong><br></p>
+  </div>
+  <div style="flex: 1; text-align: center;">
+    <img src="./assets/owl_optimization_result.png" alt="Owl Optimization" width="100%">
+    <p><strong>OWL Agent</strong><br></p>
+  </div>
+</div>
+
+> Full Optimization Reports: [Open Deep Research](https://github.com/eax6/smolagents) and [OWL](https://github.com/TedSIWEILIU/owl).  
 
 ## Tutorial and Use Cases
+
+> 💡 **New to EvoAgentX?** Start with the [Quickstart Guide](./docs/quickstart.md) for a step-by-step introduction.
+
 
 Explore how to effectively use EvoAgentX with the following resources:
 
@@ -198,13 +265,22 @@ Explore how to effectively use EvoAgentX with the following resources:
 |:---|:---|
 | **[Build Your First Agent](./docs/tutorial/first_agent.md)** | Quickly create and manage agents with multi-action capabilities. |
 | **[Build Your First Workflow](./docs/tutorial/first_workflow.md)** | Learn to build collaborative workflows with multiple agents. |
+| **[Automatic Workflow Generation](./docs/quickstart.md#automatic-workflow-generation-and-execution)** | Automatically generate workflows from natural language goals. |
 | **[Benchmark and Evaluation Tutorial](./docs/tutorial/benchmark_and_evaluation.md)** | Evaluate agent performance using benchmark datasets. |
 | **[AFlow Optimizer Tutorial](./docs/tutorial/aflow_optimizer.md)** | Automatically optimise multi-agent workflows for better task performance. |
-| **[SEW Optimizer Tutorial](./docs/tutorial/sew_optimizer.md)** | Create SEW (Self-Evolving Workflows) to enhance agent systems. |
+<!-- | **[SEW Optimizer Tutorial](./docs/tutorial/sew_optimizer.md)** | Create SEW (Self-Evolving Workflows) to enhance agent systems. | -->
 
 🛠️ Follow the tutorials to build and optimize your EvoAgentX workflows.
 
-💡 Discover real-world applications and unleash the potential of EvoAgentX in your projects!
+🚀 We're actively working on expanding our library of use cases and optimization strategies. **More coming soon — stay tuned!**
+
+## 🎯 Roadmap
+- [ ] **Modularize Evolution Algorithms**: Abstract optimization algorithms into plug-and-play modules that can be easily integrated into custom workflows. 
+- [ ] **Develop Task Templates and Agent Modules**: Build reusable templates for typical tasks and standardized agent components to streamline application development.
+- [ ] **Integrate Self-Evolving Agent Algorithms**: Incorporate more recent and advanced agent self-evolution across multiple dimensions, including prompt tuning, workflow structures, and memory modules. 
+- [ ] **Enable Visual Workflow Editing Interface**: Provide a visual interface for workflow structure display and editing to improve usability and debugging. 
+
+
 
 ## 🙋 Support
 
@@ -213,9 +289,9 @@ Explore how to effectively use EvoAgentX with the following resources:
 📢 Stay connected and be part of the **EvoAgentX** journey!  
 🚩 Join our community to get the latest updates, share your ideas, and collaborate with AI enthusiasts worldwide.
 
-- [Discord](https://discord.com/invite/EvoAgentX) — Chat, discuss, and collaborate in real-time.
+- [Discord](https://discord.gg/SUEkfTYn) — Chat, discuss, and collaborate in real-time.
 - [X (formerly Twitter)](https://x.com/EvoAgentX) — Follow us for news, updates, and insights.
-- [WeChat]() — Connect with our Chinese community.
+- [WeChat](https://github.com/EvoAgentX/EvoAgentX/blob/main/assets/wechat_info.md) — Connect with our Chinese community.
 
 ### Contact Information
 
@@ -236,6 +312,9 @@ We appreciate your interest in contributing to our open-source initiative. We pr
 
 [![Star History Chart](https://api.star-history.com/svg?repos=EvoAgentX/EvoAgentX&type=Date)](https://www.star-history.com/#EvoAgentX/EvoAgentX&Date)
 
+
+## 📚 Acknowledgements 
+This project builds upon several outstanding open-source projects: [AFlow](https://github.com/FoundationAgents/MetaGPT/tree/main/metagpt/ext/aflow), [TextGrad](https://github.com/zou-group/textgrad), [DSPy](https://github.com/stanfordnlp/dspy), [LiveCodeBench](https://github.com/LiveCodeBench/LiveCodeBench), and more. We would like to thank the developers and maintainers of the following frameworks for their valuable contributions to the open-source community.
 
 ## 📄 License
 
