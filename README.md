@@ -48,7 +48,7 @@
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Examples: Automatic WorkFlow Generation](#examples-automatic-workflow-generation)
-- [Demo Video](#🎥-demo-video)
+- [Demo Video](#demo-video)
 - [Tutorial and Use Cases](#tutorial-and-use-cases)
 
 ## Installation
@@ -183,7 +183,7 @@ You can also:
 > 📂 For a complete working example, check out the [`workflow_demo.py`](./examples/workflow_demo.py)
 
 
-## 🎥 Demo Video
+## Demo Video
 
 [![Watch on YouTube](https://img.shields.io/badge/-Watch%20on%20YouTube-red?logo=youtube&labelColor=grey)](https://www.youtube.com/watch?v=Wu0ZydYDqgg)
 
