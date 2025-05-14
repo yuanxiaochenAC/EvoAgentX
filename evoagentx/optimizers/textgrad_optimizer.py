@@ -6,7 +6,7 @@ from textgrad.autograd import StringBasedFunction
 from pydantic import Field, PositiveInt
 import os
 from tqdm import tqdm
-from typing import List, Literal, Optional, Callable
+from typing import List, Literal, Optional
 from copy import deepcopy
 import numpy as np
 
@@ -119,12 +119,10 @@ class TextGradOptimizer(BaseModule):
     optimizer_llm: BaseLLM = Field(default=None, description="The LLM to use for optimization.")
     batch_size: PositiveInt = Field(default=1, description="The batch size for optimization.")
     max_steps: PositiveInt = Field(default=10, description="The maximum number of optimization steps.")
+    evaluator: Evaluator = Field(default=None, description="The evaluator to perform evaluation during optimization.")
     eval_interval: Optional[PositiveInt] = Field(default=None, description="Evaluates performance every `eval_interval` steps.")
     eval_rounds: PositiveInt = Field(default=1, description="The number of times to evaluate the performance.")
     eval_config: dict = Field(default={}, description="The configuration for evaluation. The keys are the arguments of `TextGradOptimizer.evaluate`.")
-    collate_func: Optional[Callable] = Field(default=None, description="A function to format the raw data from the dataset into a prompt for the workflow.")
-    output_postprocess_func: Optional[Callable] = Field(default=None, description="A function to extract the answer from the output of the workflow.")
-    max_workers: PositiveInt = Field(default=1, description="The maximum number of workers to use for multi-threading.")
     save_interval: Optional[PositiveInt] = Field(default=None, description="Save the workflow every `save_interval` steps.")
     save_path: str = Field(default="./", description="The path to save the optimized workflow.")
     rollback: bool = Field(default=True, description="Whether to rollback to the best graph after each evaluation during optimization.")
@@ -133,18 +131,6 @@ class TextGradOptimizer(BaseModule):
     def init_module(self, **kwargs):
         self._snapshot: List[dict] = []
         self.output_lookup = self._create_output_lookup()
-
-        if self.collate_func is None:
-            self.collate_func = lambda x: x
-        if self.output_postprocess_func is None:
-            self.output_postprocess_func = lambda x:x
-
-        self.evaluator = Evaluator(
-            llm=self.executor_llm,
-            num_workers=self.max_workers,
-            collate_func=self.collate_func,
-            output_postprocess_func=self.output_postprocess_func,
-        )
         
 
     def _init_textgrad(self, dataset: Benchmark):
@@ -193,7 +179,7 @@ class TextGradOptimizer(BaseModule):
         for step in tqdm(range(self.max_steps)):
             idx = [x + step*self.batch_size for x in range(self.batch_size)]
             batch = dataset.get_train_data(indices=idx)
-            inputs = [self.collate_func(x) for x in batch]
+            inputs = [self.evaluator.collate_func(x) for x in batch]
             labels = dataset.get_labels(batch)
 
             self.step(inputs, labels, dataset)
