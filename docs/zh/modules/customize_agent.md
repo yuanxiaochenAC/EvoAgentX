@@ -1,22 +1,21 @@
-# CustomizeAgent
+# 自定义代理
 
-## Introduction
+## 简介
 
-The `CustomizeAgent` class provides a flexible framework for creating specialized LLM-powered agents. It enables the definition of agents with well-defined inputs, outputs, custom prompt templates, and configurable parsing strategies, making it suitable for rapid prototyping and deployment of domain-specific agents.
+`CustomizeAgent` 类提供了一个灵活的框架，用于创建专门的 LLM 驱动的代理。它允许定义具有明确定义的输入、输出、自定义提示模板和可配置解析策略的代理，使其适合快速原型设计和部署特定领域的代理。
 
-## Key Features
+## 主要特性
 
-- **No Custom Code Required**: Create specialized agents through configuration rather than writing custom agent classes
-- **Flexible Input/Output Definitions**: Define exactly what inputs your agent accepts and what outputs it produces
-- **Customizable Parsing Strategies**: Multiple parsing modes to extract structured data from LLM responses
-- **Reusable Components**: Save and load agent definitions for reuse across projects
+- **无需自定义代码**：通过配置而不是编写自定义代理类来创建专门的代理
+- **灵活的输入/输出定义**：明确定义代理接受的输入和产生的输出
+- **可自定义的解析策略**：多种解析模式，用于从 LLM 响应中提取结构化数据
+- **可重用组件**：保存和加载代理定义，以便在项目之间重用
 
-## Basic Usage
+## 基本用法
 
+### 简单代理
 
-### Simple Agent
-
-The simplest way to create a `CustomizeAgent` is with just a name, description and prompt:
+创建 `CustomizeAgent` 的最简单方法是只使用名称、描述和提示：
 
 ```python
 import os 
@@ -27,10 +26,10 @@ from evoagentx.agents import CustomizeAgent
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Configure LLM
+# 配置 LLM
 openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY)
 
-# Create a simple agent
+# 创建一个简单代理
 simple_agent = CustomizeAgent(
     name="SimpleAgent",
     description="A basic agent that responds to queries",
@@ -41,30 +40,32 @@ simple_agent = CustomizeAgent(
     ]
 )
 
-# Execute the agent
+# 执行代理
 response = simple_agent(inputs={"question": "What is a language model?"})
-print(response.content.content)  # Access the raw response content
+print(response.content.content)  # 访问原始响应内容
 ```
-In this example, 1. We specify the input information (including its name, type, and description) in the `inputs` parameter since the prompt requires an input. 2. Moreover, when executing the agent with `simple_agent(...)`, you should provide all the inputs in the `inputs` parameter. 
 
-The output after executing the agent is a `Message` object, which contains the raw LLM response in `message.content.content`. 
+在这个例子中：
+1. 由于提示需要输入，我们在 `inputs` 参数中指定了输入信息（包括其名称、类型和描述）。
+2. 此外，当使用 `simple_agent(...)` 执行代理时，您应该在 `inputs` 参数中提供所有输入。
+
+执行代理后的输出是一个 `Message` 对象，其中包含 `message.content.content` 中的原始 LLM 响应。
 
 !!! note
-    All the input names specified in the `CustomizeAgent(inputs=[...])` should appear in the `prompt`. Otherwise, an error will be raised.
+    在 `CustomizeAgent(inputs=[...])` 中指定的所有输入名称都应该出现在 `prompt` 中。否则，将引发错误。
 
+### 结构化输出
 
-### Structured Outputs 
+`CustomizeAgent` 最强大的功能之一是能够定义结构化输出。这允许您将非结构化的 LLM 响应转换为更容易以编程方式处理的明确定义的数据结构。
 
-One of the most powerful features of `CustomizeAgent` is the ability to define structured outputs. This allows you to transform unstructured LLM responses into well-defined data structures that are easier to work with programmatically.
+#### 基本结构化输出
 
-#### Basic Structured Output
-
-Here's a simple example of defining structured outputs:
+以下是定义结构化输出的简单示例：
 
 ```python
 from evoagentx.core.module_utils import extract_code_blocks
 
-# Create a CodeWriter agent with structured output
+# 创建一个具有结构化输出的代码编写代理
 code_writer = CustomizeAgent(
     name="CodeWriter",
     description="Writes Python code based on requirements",
@@ -76,36 +77,36 @@ code_writer = CustomizeAgent(
     outputs=[
         {"name": "code", "type": "string", "description": "The generated Python code"}
     ],
-    parse_mode="custom",  # Use custom parsing function
-    parse_func=lambda content: {"code": extract_code_blocks(content)[0]}  # Extract first code block
+    parse_mode="custom",  # 使用自定义解析函数
+    parse_func=lambda content: {"code": extract_code_blocks(content)[0]}  # 提取第一个代码块
 )
 
-# Execute the agent
+# 执行代理
 message = code_writer(
     inputs={"requirement": "Write a function that returns the sum of two numbers"}
 )
-print(message.content.code)  # Access the parsed code directly
+print(message.content.code)  # 直接访问解析后的代码
 ```
 
-In this example:
-1. We define an output field named `code` in the `outputs` parameter.
-2. We set `parse_mode="custom"` to use a custom parsing function.
-3. The `parse_func` extracts the first code block from the LLM response.
-4. We can directly access the parsed code with `message.content.code`.
+在这个例子中：
+1. 我们在 `outputs` 参数中定义了一个名为 `code` 的输出字段。
+2. 我们设置 `parse_mode="custom"` 来使用自定义解析函数。
+3. `parse_func` 从 LLM 响应中提取第一个代码块。
+4. 我们可以通过 `message.content.code` 直接访问解析后的代码。
 
-You can also access the raw LLM response by `message.content.content`. 
+您也可以通过 `message.content.content` 访问原始 LLM 响应。
 
 !!! note 
-    1. If the `outputs` parameter is set in `CustomizeAgent`, the agent will try to parse the LLM response based on the output field names. If you don't want to parse the LLM response, you should not set the `outputs` parameter. The raw LLM response can be accessed by `message.content.content`. 
+    1. 如果在 `CustomizeAgent` 中设置了 `outputs` 参数，代理将尝试根据输出字段名称解析 LLM 响应。如果您不想解析 LLM 响应，则不应设置 `outputs` 参数。可以通过 `message.content.content` 访问原始 LLM 响应。
 
-    2. CustomizeAgent supports different parsing modes, such as `['str', 'json', 'xml', 'title', 'custom']. Please refer to the [Parsing Modes](#parsing-modes) section for more details. 
+    2. CustomizeAgent 支持不同的解析模式，如 `['str', 'json', 'xml', 'title', 'custom']`。有关更多详细信息，请参阅[解析模式](#parsing-modes)部分。
 
-#### Multiple Structured Outputs
+#### 多个结构化输出
 
-You can define multiple output fields to create more complex structured data:
+您可以定义多个输出字段来创建更复杂的结构化数据：
 
 ```python
-# Agent that generates both code and explanation
+# 生成代码和解释的代理
 analyzer = CustomizeAgent(
     name="CodeAnalyzer",
     description="Generates and explains Python code",
@@ -132,13 +133,13 @@ analyzer = CustomizeAgent(
         {"name": "explanation", "type": "string", "description": "Explanation of the code"},
         {"name": "complexity", "type": "string", "description": "Complexity analysis"}
     ],
-    parse_mode="title"  # Use default title parsing mode
+    parse_mode="title"  # 使用默认的标题解析模式
 )
 
-# Execute the agent
+# 执行代理
 result = analyzer(inputs={"requirement": "Write a binary search algorithm"})
 
-# Access each structured output separately
+# 分别访问每个结构化输出
 print("CODE:")
 print(result.content.code)
 print("\nEXPLANATION:")
@@ -147,13 +148,13 @@ print("\nCOMPLEXITY:")
 print(result.content.complexity)
 ```
 
-## Parsing Modes
+## 解析模式
 
-CustomizeAgent supports different ways to parse the LLM output:
+CustomizeAgent 支持不同的方式来解析 LLM 输出：
 
-### 1. String Mode (`parse_mode="str"`)
+### 1. 字符串模式 (`parse_mode="str"`)
 
-Uses the raw LLM output as the value for each output field. Useful for simple agents where structured parsing isn't needed.
+使用原始 LLM 输出作为每个输出字段的值。适用于不需要结构化解析的简单代理。
 
 ```python
 agent = CustomizeAgent(
@@ -163,15 +164,15 @@ agent = CustomizeAgent(
     inputs=[{"name": "name", "type": "string", "description": "The name to greet"}],
     outputs=[{"name": "greeting", "type": "string", "description": "The generated greeting"}],
     parse_mode="str",
-    # other parameters...
+    # 其他参数...
 )
 ```
 
-After executing the agent, you can access the raw LLM response by `message.content.content` or `message.content.greeting`.  
+执行代理后，您可以通过 `message.content.content` 或 `message.content.greeting` 访问原始 LLM 响应。
 
-### 2. Title Mode (`parse_mode="title"`, default)
+### 2. 标题模式 (`parse_mode="title"`，默认)
 
-Extracts content between titles matching output field names. This is the default parsing mode.
+提取与输出字段名称匹配的标题之间的内容。这是默认的解析模式。
 
 ```python
 agent = CustomizeAgent(
@@ -182,13 +183,13 @@ agent = CustomizeAgent(
         {"name": "summary", "type": "string", "description": "Brief summary"},
         {"name": "analysis", "type": "string", "description": "Detailed analysis"}
     ],
-    # Default title pattern is "## {title}"
-    title_format="### {title}",  # Optional: customize title format
-    # other parameters...
+    # 默认标题模式是 "## {title}"
+    title_format="### {title}",  # 可选：自定义标题格式
+    # 其他参数...
 )
 ```
 
-With this configuration, the LLM should be instructed to format its response like:
+使用此配置，应该指示 LLM 将其响应格式化为：
 
 ```
 ### summary
@@ -199,11 +200,11 @@ Detailed analysis of the topic here.
 ```
 
 !!! note
-    The section titles output by the LLM should be exactly the same as the output field names. Otherwise, the parsing will fail. For instance, in above example, if the LLM outputs `### Analysis`, which is different from the output field name `analysis`, the parsing will fail. 
+    LLM 输出的章节标题应该与输出字段名称完全相同。否则，解析将失败。例如，在上面的例子中，如果 LLM 输出 `### Analysis`，这与输出字段名称 `analysis` 不同，解析将失败。
 
-### 3. JSON Mode (`parse_mode="json"`)
+### 3. JSON 模式 (`parse_mode="json"`)
 
-Parse the JSON string output by the LLM. The keys of the JSON string should be exactly the same as the output field names. 
+解析 LLM 输出的 JSON 字符串。JSON 字符串的键应该与输出字段名称完全相同。
 
 ```python
 agent = CustomizeAgent(
@@ -219,10 +220,11 @@ agent = CustomizeAgent(
         {"name": "dates", "type": "string", "description": "Dates mentioned"}
     ],
     parse_mode="json",
-    # other parameters...
+    # 其他参数...
 )
 ```
-When using this mode, the LLM should output a valid JSON string with keys matching the output field names. For instance, you should instruct the LLM to output:
+
+使用此模式时，LLM 应该输出一个有效的 JSON 字符串，其键与输出字段名称匹配。例如，您应该指示 LLM 输出：
 
 ```json
 {
@@ -231,11 +233,12 @@ When using this mode, the LLM should output a valid JSON string with keys matchi
     "dates": "extracted dates"
 }
 ```
-If there are multiple JSON string in the LLM response, only the first one will be used. 
 
-### 4. XML Mode (`parse_mode="xml"`)
+如果 LLM 响应中有多个 JSON 字符串，将只使用第一个。
 
-Parse the XML string output by the LLM. The keys of the XML string should be exactly the same as the output field names.  
+### 4. XML 模式 (`parse_mode="xml"`)
+
+解析 LLM 输出的 XML 字符串。XML 字符串的键应该与输出字段名称完全相同。
 
 ```python
 agent = CustomizeAgent(
@@ -249,28 +252,28 @@ agent = CustomizeAgent(
         {"name": "people", "type": "string", "description": "Names of people mentioned"},
     ],
     parse_mode="xml",
-    # other parameters...
+    # 其他参数...
 )
 ```
 
-When using this mode, the LLM should generte texts containing xml tags with keys matching the output field names. For instance, you should instruct the LLM to output:
+使用此模式时，LLM 应该生成包含与输出字段名称匹配的 XML 标签的文本。例如，您应该指示 LLM 输出：
 
 ```xml
 The people mentioned in the text are: <people>John Doe and Jane Smith</people>.
 ```
 
-If the LLM output contains multiple xml tags with the same name, only the first one will be used. 
+如果 LLM 输出包含多个具有相同名称的 XML 标签，将只使用第一个。
 
-### 5. Custom Parsing (`parse_mode="custom"`)
+### 5. 自定义解析 (`parse_mode="custom"`)
 
-For maximum flexibility, you can define a custom parsing function:
+为了获得最大的灵活性，您可以定义自定义解析函数：
 
 ```python
 from evoagentx.core.registry import register_parse_function
 
-@register_parse_function  # Register the function for serialization
+@register_parse_function  # 注册函数以便序列化
 def extract_python_code(content: str) -> dict:
-    """Extract Python code from LLM response"""
+    """从 LLM 响应中提取 Python 代码"""
     code_blocks = extract_code_blocks(content)
     return {"code": code_blocks[0] if code_blocks else ""}
 
@@ -286,34 +289,33 @@ agent = CustomizeAgent(
     ],
     parse_mode="custom",
     parse_func=extract_python_code,
-    # other parameters...
+    # 其他参数...
 )
 ```
 
 !!! note 
-    1. The parsing function should have an input parameter `content` that takes the raw LLM response as input, and return a dictionary with keys matching the output field names. 
+    1. 解析函数应该有一个输入参数 `content`，它接收原始 LLM 响应作为输入，并返回一个字典，其键与输出字段名称匹配。
 
-    2. It is recommended to use the `@register_parse_function` decorator to register the parsing function for serialization, so that you can save the agent and load it later. 
+    2. 建议使用 `@register_parse_function` 装饰器来注册解析函数以便序列化，这样您就可以保存代理并在以后加载它。
 
+## 保存和加载代理
 
-## Saving and Loading Agents
-
-You can save agent definitions to reuse them later:
+您可以保存代理定义以便以后重用：
 
 ```python
-# Save agent configuration. By default, the `llm_config` will not be saved. 
+# 保存代理配置。默认情况下，`llm_config` 不会被保存。
 code_writer.save_module("./agents/code_writer.json")
 
-# Load agent from file (requires providing llm_config again)
+# 从文件加载代理（需要再次提供 llm_config）
 loaded_agent = CustomizeAgent.from_file(
     "./agents/code_writer.json", 
     llm_config=openai_config
 )
 ```
 
-## Advanced Example: Multi-Step Code Generator
+## 高级示例：多步骤代码生成器
 
-Here's a more advanced example that demonstrates creating a specialized code generation agent with multiple structured outputs:
+以下是一个更高级的示例，展示了如何创建一个具有多个结构化输出的专门代码生成代理：
 
 ```python
 from pydantic import Field
@@ -327,7 +329,7 @@ class CodeGeneratorOutput(ActionOutput):
 
 @register_parse_function
 def parse_code_documentation_tests(content: str) -> dict:
-    """Parse LLM output into code, documentation, and tests sections"""
+    """将 LLM 输出解析为代码、文档和测试部分"""
     sections = content.split("## ")
     result = {"code": "", "documentation": "", "tests": ""}
     
@@ -340,19 +342,19 @@ def parse_code_documentation_tests(content: str) -> dict:
         section_content = "\n".join(lines[1:]).strip()
         
         if "code" in section_name:
-            # Extract code from code blocks
+            # 从代码块中提取代码
             code_blocks = extract_code_blocks(section_content)
             result["code"] = code_blocks[0] if code_blocks else section_content
         elif "documentation" in section_name:
             result["documentation"] = section_content
         elif "test" in section_name:
-            # Extract code from code blocks if present
+            # 如果存在，从代码块中提取代码
             code_blocks = extract_code_blocks(section_content)
             result["tests"] = code_blocks[0] if code_blocks else section_content
     
     return result
 
-# Create the advanced code generator agent
+# 创建高级代码生成器代理
 advanced_generator = CustomizeAgent(
     name="AdvancedCodeGenerator",
     description="Generates complete code packages with documentation and tests",
@@ -386,14 +388,14 @@ advanced_generator = CustomizeAgent(
     system_prompt="You are an expert Python developer specialized in writing clean, efficient code with comprehensive documentation and tests."
 )
 
-# Execute the agent
+# 执行代理
 result = advanced_generator(
     inputs={
         "requirement": "Create a function to validate if a string is a valid email address"
     }
 )
 
-# Access the structured outputs
+# 访问结构化输出
 print("CODE:")
 print(result.content.code)
 print("\nDOCUMENTATION:")
@@ -402,4 +404,4 @@ print("\nTESTS:")
 print(result.content.tests)
 ```
 
-This advanced example demonstrates how to create a specialized agent that produces multiple structured outputs from a single LLM call, providing a complete code package with implementation, documentation, and tests.
+这个高级示例展示了如何创建一个专门的代理，它可以从单个 LLM 调用中产生多个结构化输出，提供包含实现、文档和测试的完整代码包。

@@ -1,105 +1,104 @@
-# Workflow Graph
+# 工作流图
 
-## Introduction
+## 简介
 
-The `WorkFlowGraph` class is a fundamental component in the EvoAgentX framework for creating, managing, and executing complex AI agent workflows. It provides a structured way to define task dependencies, execution order, and the flow of data between tasks.
+`WorkFlowGraph` 类是 EvoAgentX 框架中的一个基础组件，用于创建、管理和执行复杂的 AI 代理工作流。它提供了一种结构化的方式来定义任务依赖关系、执行顺序和任务之间的数据流。
 
-A workflow graph represents a collection of tasks (nodes) and their dependencies (edges) that need to be executed in a specific order to achieve a goal. The `SequentialWorkFlowGraph` is a specialized implementation that focuses on linear workflows with a single path from start to end.
+工作流图表示一组任务（节点）及其依赖关系（边），这些任务需要按特定顺序执行以实现目标。`SequentialWorkFlowGraph` 是一个专门的实现，专注于从开始到结束的单一路径的线性工作流。
 
-## Architecture
+## 架构
 
-### WorkFlowGraph Architecture
+### 工作流图架构
 
-A `WorkFlowGraph` consists of several key components:
+`WorkFlowGraph` 由几个关键组件组成：
 
-1. **Nodes (WorkFlowNode)**: 
+1. **节点（WorkFlowNode）**：
    
-    Each node represents a task or operation in the workflow, with the following properties:
+    每个节点代表工作流中的一个任务或操作，具有以下属性：
 
-    - `name`: A unique identifier for the task
-    - `description`: Detailed description of what the task does
-    - `inputs`: List of input parameters required by the task, each input parameter is an instance of `Parameter` class. 
-    - `outputs`: List of output parameters produced by the task, each output parameter is an instance of `Parameter` class. 
-    - `agents` (optional): List of agents that can execute this task, each agent should be a **string** that matches the name of the agent in the `agent_manager` or a **dictionary** that specifies the agent name and its configuration, which will be used to create a `CustomizeAgent` instance in the `agent_manager`.  Please refer to the [Customize Agent](./customize_agent.md) documentation for more details about the agent configuration. 
-    - `action_graph` (optional): An instance of `ActionGraph` class, where each action is an instance of the `Operator` class. Please refer to the [Action Graph](./action_graph.md) documentation for more details about the action graph. 
-    - `status`: Current execution state of the task (PENDING, RUNNING, COMPLETED, FAILED).
+    - `name`：任务的唯一标识符
+    - `description`：任务功能的详细描述
+    - `inputs`：任务所需的输入参数列表，每个输入参数是 `Parameter` 类的实例
+    - `outputs`：任务产生的输出参数列表，每个输出参数是 `Parameter` 类的实例
+    - `agents`（可选）：可以执行此任务的代理列表，每个代理应该是一个与 `agent_manager` 中代理名称匹配的**字符串**，或者是一个指定代理名称和配置的**字典**，该配置将用于在 `agent_manager` 中创建 `CustomizeAgent` 实例。有关代理配置的更多详细信息，请参阅[自定义代理](./customize_agent.md)文档。
+    - `action_graph`（可选）：`ActionGraph` 类的实例，其中每个动作都是 `Operator` 类的实例。有关动作图的更多详细信息，请参阅[动作图](./action_graph.md)文档。
+    - `status`：任务的当前执行状态（PENDING、RUNNING、COMPLETED、FAILED）
 
     !!! note 
-        1. You should provide either `agents` or `action_graph` to execute the task. If both are provided, `action_graph` will be used. 
+        1. 您应该提供 `agents` 或 `action_graph` 来执行任务。如果两者都提供，将使用 `action_graph`。
 
-        2. If you provide a set of `agents`, these agents will work together to complete the task. When executing the task using `WorkFlow`, the system will automatically determine the execution sequence (actions) based on the agent information and execution history. Specifically, when executing the task, `WorkFlow` will analyze all the possible actions within these agents and repeatly select the best action to execute based on the task description and execution history. 
+        2. 如果您提供一组 `agents`，这些代理将协同工作以完成任务。使用 `WorkFlow` 执行任务时，系统将根据代理信息和执行历史自动确定执行顺序（动作）。具体来说，执行任务时，`WorkFlow` 将分析这些代理中的所有可能动作，并根据任务描述和执行历史重复选择最佳动作执行。
 
-        3. If you provide an `action_graph`, it will be directly used to complete the task. When executing the task with `WorkFlow`, the system will execute the actions in the order defined by the `action_graph` and return the results.  
+        3. 如果您提供 `action_graph`，它将直接用于完成任务。使用 `WorkFlow` 执行任务时，系统将按照 `action_graph` 定义的顺序执行动作并返回结果。
 
-
-2. **Edges (WorkFlowEdge)**: 
+2. **边（WorkFlowEdge）**：
    
-    Edges represent dependencies between tasks, defining execution order and data flow. Each edge has:
+    边表示任务之间的依赖关系，定义执行顺序和数据流。每条边具有：
 
-    - `source`: Name of the source node (where the edge starts)
-    - `target`: Name of the target node (where the edge ends) 
-    - `priority` (optional): numeric priority to influence execution order
+    - `source`：源节点名称（边的起点）
+    - `target`：目标节点名称（边的终点）
+    - `priority`（可选）：影响执行顺序的数值优先级
 
-3. **Graph Structure**:
+3. **图结构**：
    
-    Internally, the workflow is represented as a directed graph where:
+    在内部，工作流表示为有向图，其中：
 
-    - Nodes represent tasks
-    - Edges represent dependencies and data flow between tasks
-    - The graph structure supports both linear sequences and more complex patterns:
-        - Fork-join patterns (parallel execution paths that rejoin later)
-        - Conditional branches
-        - Potential cycles (loops) in the workflow
+    - 节点表示任务
+    - 边表示任务之间的依赖关系和数据流
+    - 图结构支持线性序列和更复杂的模式：
+        - 分叉-合并模式（稍后重新汇合的并行执行路径）
+        - 条件分支
+        - 工作流中潜在的循环
 
-4. **Node States**:
+4. **节点状态**：
    
-    Each node in the workflow can be in one of the following states:
+    工作流中的每个节点可以处于以下状态之一：
     
-    - `PENDING`: The task is waiting to be executed
-    - `RUNNING`: The task is currently being executed
-    - `COMPLETED`: The task has been successfully executed
-    - `FAILED`: The task execution has failed
+    - `PENDING`：任务等待执行
+    - `RUNNING`：任务正在执行
+    - `COMPLETED`：任务已成功执行
+    - `FAILED`：任务执行失败
 
-### SequentialWorkFlowGraph Architecture
+### 顺序工作流图架构
 
-The `SequentialWorkFlowGraph` is a specialized implementation of `WorkFlowGraph` that automatically infers node connections to create a linear workflow. It's designed for simpler use cases where tasks need to be executed in sequence, with outputs from one task feeding into the next.
+`SequentialWorkFlowGraph` 是 `WorkFlowGraph` 的专门实现，它自动推断节点连接以创建线性工作流。它专为更简单的用例设计，其中任务需要按顺序执行，一个任务的输出作为下一个任务的输入。
 
-#### Input Format
+#### 输入格式
 
-The `SequentialWorkFlowGraph` accepts a simplified input format that makes it easy to define linear workflows. Instead of explicitly defining nodes and edges, you provide a list of tasks in the order they should be executed. Each task is defined as a dictionary with the following fields:
+`SequentialWorkFlowGraph` 接受简化的输入格式，使定义线性工作流变得容易。您不需要显式定义节点和边，而是按照执行顺序提供任务列表。每个任务都定义为一个字典，包含以下字段：
 
-- `name` (required): A unique identifier for the task
-- `description` (required): Detailed description of what the task does
-- `inputs` (required): List of input parameters for the task
-- `outputs` (required): List of output parameters produced by the task
-- `prompt` (required): The prompt template to guide the agent's behavior
-- `system_prompt` (optional): System message to provide context to the agent
-- `output_parser` (optional): The output parser to parse the output of the task 
-- `parse_mode` (optional): Mode for parsing outputs, defaults to "str"
-- `parse_func` (optional): Custom function for parsing outputs
-- `parse_title` (optional): Title for the parsed output
+- `name`（必需）：任务的唯一标识符
+- `description`（必需）：任务功能的详细描述
+- `inputs`（必需）：任务的输入参数列表
+- `outputs`（必需）：任务产生的输出参数列表
+- `prompt`（必需）：指导代理行为的提示模板
+- `system_prompt`（可选）：为代理提供上下文的系统消息
+- `output_parser`（可选）：用于解析任务输出的解析器
+- `parse_mode`（可选）：解析输出的模式，默认为 "str"
+- `parse_func`（可选）：用于解析输出的自定义函数
+- `parse_title`（可选）：解析输出的标题
 
-The parameters related to prompts and parsing will be used to create a `CustomizeAgent` instance in the `agent_manager`. Please refer to the [Customize Agent](./customize_agent.md) documentation for more details about the agent configuration. 
+与提示和解析相关的参数将用于在 `agent_manager` 中创建 `CustomizeAgent` 实例。有关代理配置的更多详细信息，请参阅[自定义代理](./customize_agent.md)文档。
 
-#### Internal Conversion to WorkFlowGraph
+#### 内部转换为工作流图
 
-Internally, `SequentialWorkFlowGraph` automatically converts this simplified task list into a complete `WorkFlowGraph` by:
+在内部，`SequentialWorkFlowGraph` 通过以下方式自动将此简化的任务列表转换为完整的 `WorkFlowGraph`：
 
-1. **Creating WorkFlowNode instances**: For each task in the input list, it creates a `WorkFlowNode` with appropriate properties. During this process:
+1. **创建 WorkFlowNode 实例**：对于输入列表中的每个任务，它创建一个具有适当属性的 `WorkFlowNode`。在此过程中：
 
-    - It converts the task definition into a node with inputs, outputs, and an associated agent.
-    - It automatically generates a unique agent name based on the task name.
-    - It configures the agent with the provided prompt, system_prompt, and parsing options.
+    - 它将任务定义转换为具有输入、输出和关联代理的节点
+    - 它根据任务名称自动生成唯一的代理名称
+    - 它使用提供的提示、系统提示和解析选项配置代理
 
-2. **Inferring edge connections**: It examines the input and output parameters of each task and automatically creates `WorkFlowEdge` instances to connect tasks where outputs from one task match the inputs of another.
+2. **推断边连接**：它检查每个任务的输入和输出参数，并自动创建 `WorkFlowEdge` 实例来连接任务，其中一个任务的输出与另一个任务的输入匹配
 
-3. **Building the graph structure**: Finally, it constructs the complete directed graph representing the workflow, with all nodes and edges properly connected.
+3. **构建图结构**：最后，它构建表示工作流的完整有向图，所有节点和边都正确连接
 
-This automatic conversion process makes it significantly easier to define sequential workflows without needing to manually specify all the graph components.
+这种自动转换过程使得定义顺序工作流变得更容易，无需手动指定所有图组件。
 
-## Usage
+## 使用方法
 
-### Basic WorkFlowGraph Creation & Execution 
+### 基本工作流图创建与执行
 
 ```python
 from evoagentx.workflow.workflow_graph import WorkFlowNode, WorkFlowGraph, WorkFlowEdge
@@ -130,16 +129,16 @@ data_transformation_agent = CustomizeAgent(
     llm_config=llm_config
 )
 
-# add agents to the agent manager for workflow execution 
+# 将代理添加到代理管理器以执行工作流
 data_extraction_agent = agent_manager.add_agents(agents = [data_extraction_agent, data_transformation_agent])
 
-# Create workflow nodes
+# 创建工作流节点
 task1 = WorkFlowNode(
     name="Task1",
     description="Extract data from source",
     inputs=[{"name": "data_source", "type": "string", "description": "Source data location"}],
     outputs=[{"name": "extracted_data", "type": "string", "description": "Extracted data"}],
-    agents=["DataExtractionAgent"] # should match the name of the agent in the agent manager
+    agents=["DataExtractionAgent"] # 应该与代理管理器中的代理名称匹配
 )
 
 task2 = WorkFlowNode(
@@ -147,7 +146,7 @@ task2 = WorkFlowNode(
     description="Transform data",
     inputs=[{"name": "extracted_data", "type": "string", "description": "Data to transform"}],
     outputs=[{"name": "transformed_data", "type": "string", "description": "Transformed data"}],
-    agents=["DataTransformationAgent"] # should match the name of the agent in the agent manager
+    agents=["DataTransformationAgent"] # 应该与代理管理器中的代理名称匹配
 )
 
 task3 = WorkFlowNode(
@@ -163,35 +162,35 @@ task3 = WorkFlowNode(
             "outputs": [{"name": "insights", "type": "string", "description": "Generated insights"}],
             "prompt": "Analyze data and generate insights: {transformed_data}",
             "parse_mode": "str",
-        } # will be used to create a `CustomizeAgent` instance in the `agent_manager`
+        } # 将用于在 agent_manager 中创建 CustomizeAgent 实例
     ]
 )
 
-# Create workflow edges
+# 创建工作流边
 edge1 = WorkFlowEdge(source="Task1", target="Task2")
 edge2 = WorkFlowEdge(source="Task2", target="Task3")
 
-# Create the workflow graph
+# 创建工作流图
 workflow_graph = WorkFlowGraph(
     goal="Extract, transform, and analyze data to generate insights",
     nodes=[task1, task2, task3],
     edges=[edge1, edge2]
 )
 
-# add agents to the agent manager for workflow execution 
+# 将代理添加到代理管理器以执行工作流
 agent_manager.add_agents_from_workflow(workflow_graph, llm_config=llm_config)
 
-# create a workflow instance for execution 
+# 创建工作流实例以执行
 workflow = WorkFlow(graph=workflow_graph, agent_manager=agent_manager, llm=llm)
 workflow.execute(inputs={"data_source": "xxx"})
 ```
 
-### Creating a SequentialWorkFlowGraph
+### 创建顺序工作流图
 
 ```python
 from evoagentx.workflow.workflow_graph import SequentialWorkFlowGraph
 
-# Define tasks with their inputs, outputs, and prompts
+# 定义任务及其输入、输出和提示
 tasks = [
     {
         "name": "DataExtraction",
@@ -231,28 +230,28 @@ tasks = [
     }
 ]
 
-# Create the sequential workflow graph
+# 创建顺序工作流图
 sequential_workflow_graph = SequentialWorkFlowGraph(
     goal="Extract, transform, and analyze data to generate insights",
     tasks=tasks
 )
 ```
 
-### Saving and Loading a Workflow
+### 保存和加载工作流
 
 ```python
-# Save workflow
+# 保存工作流
 workflow_graph.save_module("examples/output/my_workflow.json")
 
-# For SequentialWorkFlowGraph, use save_module and get_graph_info
+# 对于 SequentialWorkFlowGraph，使用 save_module 和 get_graph_info
 sequential_workflow_graph.save_module("examples/output/my_sequential_workflow.json")
 ```
 
-### Visualizing the Workflow
+### 可视化工作流
 
 ```python
-# Display the workflow graph with node statuses visually
+# 以可视方式显示工作流图
 workflow_graph.display()
 ```
 
-The `WorkFlowGraph` and `SequentialWorkFlowGraph` classes provide a flexible and powerful way to design complex agent workflows, track their execution, and manage the flow of data between tasks. 
+`WorkFlowGraph` 和 `SequentialWorkFlowGraph` 类提供了一种灵活而强大的方式来设计复杂的代理工作流、跟踪其执行并管理任务之间的数据流。 

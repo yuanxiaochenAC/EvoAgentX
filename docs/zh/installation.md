@@ -1,4 +1,4 @@
-# 中文Installation Guide for EvoAgentX
+# Installation Guide for EvoAgentX
 
 This guide will walk you through the process of installing EvoAgentX on your system, setting up the required dependencies, and configuring the framework for your projects.
 

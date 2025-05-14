@@ -1,18 +1,18 @@
-# Build Your First Agent
+# 构建你的第一个代理
 
-In EvoAgentX, agents are intelligent components designed to complete specific tasks autonomously. This tutorial will walk you through the essential concepts of creating and using agents in EvoAgentX:
+在 EvoAgentX 中，代理是设计用来自主完成特定任务的智能组件。本教程将引导你了解在 EvoAgentX 中创建和使用代理的基本概念：
 
-1. **Creating a Simple Agent with CustomizeAgent**: Learn how to create a basic agent with custom prompts 
-2. **Working with Multiple Actions**: Create more complex agents that can perform multiple tasks
-3. **Saving and Loading Agents**: Learn how to save and load your agents
+1. **使用 CustomizeAgent 创建简单代理**：学习如何使用自定义提示创建基本代理
+2. **使用多个动作**：创建可以执行多个任务的更复杂的代理
+3. **保存和加载代理**：学习如何保存和加载你的代理
 
-By the end of this tutorial, you'll be able to create both simple and complex agents, understand how they process inputs and outputs, and know how to save and reuse them in your projects.
+通过本教程，你将能够创建简单和复杂的代理，了解它们如何处理输入和输出，以及如何在项目中保存和重用它们。
 
-## 1. Creating a Simple Agent with CustomizeAgent
+## 1. 使用 CustomizeAgent 创建简单代理
 
-The easiest way to create an agent is using `CustomizeAgent`, which allows you to quickly define an agent with a specific prompt.  
+创建代理最简单的方法是使用 `CustomizeAgent`，它允许你快速定义一个具有特定提示的代理。
 
-First, let's import the necessary components and setup the LLM:
+首先，让我们导入必要的组件并设置 LLM：
 
 ```python
 import os 
@@ -31,10 +31,10 @@ openai_config = OpenAILLMConfig(
 )
 ``` 
 
-Now, let's create a simple agent that prints hello world. There are two ways to create a CustomizeAgent:
+现在，让我们创建一个打印 hello world 的简单代理。有两种方法可以创建 CustomizeAgent：
 
-### Method 1: Direct Initialization
-You can directly initialize the agent with the `CustomizeAgent` class: 
+### 方法 1：直接初始化
+你可以直接使用 `CustomizeAgent` 类初始化代理：
 ```python
 first_agent = CustomizeAgent(
     name="FirstAgent",
@@ -44,9 +44,9 @@ first_agent = CustomizeAgent(
 )
 ```
 
-### Method 2: Creating from Dictionary
+### 方法 2：从字典创建
 
-You can also create an agent by defining its configuration in a dictionary:
+你也可以通过定义字典中的配置来创建代理：
 
 ```python
 agent_data = {
@@ -58,9 +58,9 @@ agent_data = {
 first_agent = CustomizeAgent.from_dict(agent_data) # use .from_dict() to create an agent. 
 ```
 
-### Using the Agent
+### 使用代理
 
-Once created, you can use the agent to print hello world. 
+创建完成后，你可以使用代理来打印 hello world。
 
 ```python
 # Execute the agent without input. The agent will return a Message object containing the results. 
@@ -70,16 +70,16 @@ print(f"Response from {first_agent.name}:")
 print(message.content.content) # the content of a Message object is a LLMOutputParser object, where the `content` attribute is the raw LLM output. 
 ```
 
-For a complete example, please refer to the [CustomizeAgent example](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/customize_agent.py). 
+有关完整示例，请参考 [CustomizeAgent 示例](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/customize_agent.py)。
 
-CustomizeAgent also offers other features including structured inputs/outputs and multiple parsing strategies. For detailed information, see the [CustomizeAgent documentation](../modules/customize_agent.md).
+CustomizeAgent 还提供其他功能，包括结构化输入/输出和多种解析策略。有关详细信息，请参阅 [CustomizeAgent 文档](../modules/customize_agent.md)。
 
-## 2. Creating an Agent with Multiple Actions
+## 2. 创建具有多个动作的代理
 
-In EvoAgentX, you can create an agent with multiple predefined actions. This allows you to build more complex agents that can perform multiple tasks. Here's an example showing how to create an agent with `TestCodeGeneration` and `TestCodeReview` actions:
+在 EvoAgentX 中，你可以创建一个具有多个预定义动作的代理。这允许你构建可以执行多个任务的更复杂的代理。以下是一个示例，展示如何创建一个具有 `TestCodeGeneration` 和 `TestCodeReview` 动作的代理：
 
-### Defining Actions
-First, we need to define the actions, which are subclasses of `Action`: 
+### 定义动作
+首先，我们需要定义动作，它们是 `Action` 的子类：
 ```python
 from evoagentx.agents import Agent
 from evoagentx.actions import Action, ActionInput, ActionOutput
@@ -176,15 +176,15 @@ class TestCodeReview(Action):
         return output
 ```
 
-From the above example, we can see that in order to define an action, we need to:
+从上面的示例中，我们可以看到，为了定义一个动作，我们需要：
 
-1. Define the action inputs and outputs using `ActionInput` and `ActionOutput` classes
-2. Create an action class that inherits from `Action`
-3. Implement the `execute` method which formulates the prompt with the action input data and uses the LLM to generate output, and specify how to parse the output using `parse_mode`.
+1. 使用 `ActionInput` 和 `ActionOutput` 类定义动作的输入和输出
+2. 创建一个继承自 `Action` 的动作类
+3. 实现 `execute` 方法，该方法使用动作输入数据格式化提示，并使用 LLM 生成输出，并通过 `parse_mode` 指定如何解析输出。
 
-### Defining an Agent 
+### 定义代理
 
-Once we have defined the actions, we can create an agent by adding the actions to it:
+一旦我们定义了动作，我们就可以通过将动作添加到代理中来创建代理：
 
 ```python
 # Initialize the LLM
@@ -199,9 +199,9 @@ developer = Agent(
 )
 ```
 
-### Executing Different Actions
+### 执行不同的动作
 
-Once you've created an agent with multiple actions, you can execute specific actions:
+一旦你创建了一个具有多个动作的代理，你可以执行特定的动作：
 
 ```python
 # List all available actions on the agent
@@ -238,23 +238,48 @@ print("\nReview:")
 print(review)
 ```
 
-This example demonstrates how to:
-1. List all available actions on an agent
-2. Generate code using the TestCodeGeneration action
-3. Review the generated code using the TestCodeReview action
-4. Access the results from each action execution
+这个示例演示了如何：
+1. 列出代理上可用的所有动作
+2. 使用 TestCodeGeneration 动作生成代码
+3. 使用 TestCodeReview 动作审查生成的代码
+4. 访问每个动作执行的结果
 
-For a complete working example, please refer to the [Agent example](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/agent_with_multiple_actions.py). 
+有关完整的工作示例，请参考 [Agent 示例](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/agent_with_multiple_actions.py)。 
 
 
-## 3. Saving and Loading Agents
+## 3. 保存和加载代理
 
-You can save an agent to a file and load it later:
+你可以将代理保存到文件并在以后加载它：
 
 ```python
-# Save the agent to a file
-developer.save_module("examples/output/developer.json") # ignore the LLM config to avoid saving the API key 
+# 保存代理
+developer.save_module("examples/output/developer.json")
 
-# Load the agent from a file
-developer = Agent.from_file("examples/output/developer.json", llm_config=openai_config)
+# 加载代理
+loaded_developer = Agent.load_module("examples/output/developer.json", llm_config=openai_config)
 ```
+
+### 保存和加载动作
+
+你也可以单独保存和加载动作：
+
+```python
+# 保存动作
+code_generation_action = TestCodeGeneration()
+code_generation_action.save_module("examples/output/code_generation_action.json")
+
+# 加载动作
+loaded_code_generation_action = Action.load_module("examples/output/code_generation_action.json")
+```
+
+## 总结
+
+在本教程中，我们学习了：
+
+1. 如何使用 `CustomizeAgent` 创建简单代理
+2. 如何创建具有多个动作的复杂代理
+3. 如何保存和加载代理和动作
+
+这些是 EvoAgentX 中代理的基本概念。通过组合这些功能，你可以创建强大的 AI 代理来自动化各种任务。
+
+有关更多高级功能，请参阅 [CustomizeAgent 文档](../modules/customize_agent.md) 和 [Agent 文档](../modules/agent.md)。

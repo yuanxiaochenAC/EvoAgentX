@@ -1,18 +1,18 @@
-# Build Your First Workflow
+# 构建你的第一个工作流
 
-In EvoAgentX, workflows allow multiple agents to collaborate sequentially on complex tasks. This tutorial will guide you through creating and using workflows:
+在 EvoAgentX 中，工作流允许多个代理按顺序协作完成复杂任务。本教程将指导你创建和使用工作流：
 
-1. **Understanding Sequential Workflows**: Learn how workflows connect multiple tasks together
-2. **Building a Sequential Workflow**: Create a workflow with planning and coding steps
-3. **Executing and Managing Workflows**: Run workflows with specific inputs
+1. **理解顺序工作流**：学习工作流如何将多个任务连接在一起
+2. **构建顺序工作流**：创建一个包含规划和编码步骤的工作流
+3. **执行和管理工作流**：使用特定输入运行工作流
 
-By the end of this tutorial, you'll be able to create sequential workflows that coordinate multiple agents to solve complex problems.
+通过本教程，你将能够创建顺序工作流，协调多个代理来解决复杂问题。
 
-## 1. Understanding Sequential Workflows
+## 1. 理解顺序工作流
 
-A workflow in EvoAgentX represents a sequence of tasks that can be executed by different agents. The simplest workflow is a sequential workflow, where tasks are executed one after another with outputs from previous tasks feeding into subsequent ones.
+EvoAgentX 中的工作流代表一系列可以由不同代理执行的任务。最简单的工作流是顺序工作流，其中任务一个接一个地执行，前一个任务的输出作为后续任务的输入。
 
-Let's start by importing the necessary components:
+让我们从导入必要的组件开始：
 
 ```python
 import os 
@@ -25,16 +25,16 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ```
 
-## 2. Building a Sequential Workflow
+## 2. 构建顺序工作流
 
-A sequential workflow consists of a series of tasks where each task has:
+顺序工作流由一系列任务组成，每个任务都有：
 
-- A name and description
-- Input and output definitions
-- A prompt template
-- Parsing mode and function (optional) 
+- 名称和描述
+- 输入和输出定义
+- 提示模板
+- 解析模式和函数（可选）
 
-Here's how to build a sequential workflow with planning and coding tasks:
+以下是如何构建一个包含规划和编码任务的顺序工作流：
 
 ```python
 # Configure the LLM 
@@ -91,13 +91,13 @@ graph = SequentialWorkFlowGraph(
 ```
 
 !!! note 
-    When you create a `SequentialWorkFlowGraph` with a list of tasks, the framework will create a `CustomizeAgent` for each task. Each task in the workflow becomes a specialized agent configured with the specific prompt, input/output formats, and parsing mode you defined. These agents are connected in sequence, with outputs from one agent becoming inputs to the next. 
+    当你使用任务列表创建 `SequentialWorkFlowGraph` 时，框架会为每个任务创建一个 `CustomizeAgent`。工作流中的每个任务都成为一个专门的代理，配置有你定义的特定提示、输入/输出格式和解析模式。这些代理按顺序连接，一个代理的输出成为下一个代理的输入。
 
-    The `parse_mode` controls how the output from an LLM is parsed into a structured format. Available options are: [`'str'` (default), `'json'`, `'title'`, `'xml'`, `'custom'`]. For detailed information about parsing modes and examples, please refer to the [CustomizeAgent documentation](../modules/customize_agent.md#parsing-modes).
+    `parse_mode` 控制如何将 LLM 的输出解析为结构化格式。可用选项有：[`'str'`（默认）、`'json'`、`'title'`、`'xml'`、`'custom'`]。有关解析模式和示例的详细信息，请参阅 [CustomizeAgent 文档](../modules/customize_agent.md#parsing-modes)。
 
-## 3. Executing and Managing Workflows
+## 3. 执行和管理工作流
 
-Once you've created a workflow graph, you can create an instance of the workflow and execute it:
+一旦你创建了工作流图，你就可以创建工作流实例并执行它：
 
 ```python
 # Create agent manager and add agents from the workflow. It will create a `CustomizeAgent` for each task in the workflow. 
@@ -121,13 +121,13 @@ print("Workflow completed!")
 print("Workflow output:\n", output)
 ```
 
-You should specify all the required inputs for the workflow in the `inputs` argument of the `execute` method. 
+你应该在 `execute` 方法的 `inputs` 参数中指定工作流所需的所有输入。
 
-For a complete working example, please refer to the [Sequential Workflow example](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/sequential_workflow.py). 
+有关完整的工作示例，请参考 [顺序工作流示例](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/sequential_workflow.py)。
 
-## 4. Saving and Loading Workflows
+## 4. 保存和加载工作流
 
-You can save a workflow graph for future use:
+你可以保存工作流图以供将来使用：
 
 ```python
 # Save the workflow graph to a file
@@ -140,4 +140,4 @@ loaded_graph = SequentialWorkFlowGraph.from_file("examples/output/saved_sequenti
 new_workflow = WorkFlow(graph=loaded_graph, agent_manager=agent_manager, llm=llm)
 ```
 
-For more complex workflows or different types of workflow graphs, please refer to the [Workflow Graphs](../modules/workflow_graph.md) documentation and the [Action Graphs](../modules/action_graph.md) documentation. 
+有关更复杂的工作流或不同类型的工作流图，请参阅 [工作流图](../modules/workflow_graph.md) 文档和 [动作图](../modules/action_graph.md) 文档。

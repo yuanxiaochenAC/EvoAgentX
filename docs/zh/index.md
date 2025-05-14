@@ -1,7 +1,7 @@
 # **EvoAgentX**
 
 <p align="center" style="font-size: 1.0rem;">
-  <em>An automated framework for evaluating and evolving agentic workflows.</em>
+  <em>一个用于评估和演进代理工作流的自动化框架。</em>
 </p>
 
 <p align="center">
@@ -9,35 +9,34 @@
 </p>
 
 
-## 🚀 Introduction
+## 🚀 简介
 
-EvoAgentX is an open-source framework designed to automate the generation, execution, evaluation and optimization of agentic workflows. By leveraging large language models (LLMs), EvoAgentX enables developers and researchers to prototype, test, and deploy multi-agent systems that grow in complexity and capability over time. 
+EvoAgentX 是一个开源框架，旨在自动化代理工作流的生成、执行、评估和优化。通过利用大语言模型（LLMs），EvoAgentX 使开发者和研究人员能够快速构建、测试和部署多代理系统，这些系统可以随着时间推移在复杂性和能力上不断增长。
 
-## ✨ Key Features
+## ✨ 主要特性
 
-- **Easy Agent and Workflow Customization**: Easily create customized agents and workflows using natural language prompts. EvoAgentX makes it easy to turn your high-level ideas to working systems. 
-- **Automatic Workflow Generation & Execution**: Automatically generate and execute agentic workflows from simple goal descriptions, reducing manual workload in multi-agent system design. 
-- **WorkFlow Optimization**: Integrates existing workflow optimization techniques that iteratively refine workflows for improved performance. 
-- **Benchmarking & Evaluation**: Includes built-in benchmarks and standardized evaluation metrics to measure workflow. effectiveness across different tasks and agent configurations 
-- **Workflow Execution Toolkit**: Offers a suite of tools essential for executing complex workflows, such as search components and the Model Context Protocol (MCP). 
+- **简单的代理和工作流定制**：使用自然语言提示轻松创建自定义代理和工作流。EvoAgentX 让你能够轻松地将高层次想法转化为可工作的系统。
+- **自动工作流生成与执行**：从简单的目标描述自动生成和执行代理工作流，减少多代理系统设计中的手动工作量。
+- **工作流优化**：集成现有工作流优化技术，通过迭代优化提升工作流性能。
+- **基准测试与评估**：包含内置基准测试和标准化评估指标，用于衡量不同任务和代理配置下的工作流效果。
+- **工作流执行工具包**：提供执行复杂工作流所需的一系列工具，如搜索组件和模型上下文协议（MCP）。
 
-## 🔍 How It Works
+## 🔍 工作原理
 
-EvoAgentX uses a modular architecture with the following core components:
+EvoAgentX 使用模块化架构，包含以下核心组件：
 
-1. **Workflow Generator**: Creates agentic workflows based on your goals
-2. **Agent Manager**: Handles agent creation, configuration, and deployment
-3. **Workflow Executor**: Runs workflows efficiently with proper agent communication
-4. **Evaluators**: Provides performance metrics and improvement suggestions
-5. **Optimizers**: Evolves workflows to enhance performance over time
+1. **工作流生成器**：根据你的目标创建代理工作流
+2. **代理管理器**：处理代理的创建、配置和部署
+3. **工作流执行器**：高效运行工作流，确保代理间正确通信
+4. **评估器**：提供性能指标和改进建议
+5. **优化器**：通过不断演进提升工作流性能
 
+## 👥 社区
 
-## 👥 Community
+- **Discord**：加入我们的 [Discord 频道](https://discord.gg/q5hBjHVz) 进行讨论和获取支持
+- **GitHub**：在 [GitHub](https://github.com/EvoAgentX/EvoAgentX/) 上为项目做出贡献
+- **Email**：通过 [evoagentx.ai@gmail.com](mailto:evoagentx.ai@gmail.com) 联系我们
 
-- **Discord**: Join our [Discord Channel](https://discord.gg/q5hBjHVz) for discussions and support
-- **GitHub**: Contribute to the project on [GitHub](https://github.com/EvoAgentX/EvoAgentX/)
-- **Email**: Contact us at [evoagentx.ai@gmail.com](mailto:evoagentx.ai@gmail.com)
+## 🤝 贡献
 
-## 🤝 Contributing
-
-We welcome contributions from the community! Please refer to our [Contributing Guidelines](https://github.com/EvoAgentX/EvoAgentX/blob/main/CONTRIBUTING.md) for more details.
+我们欢迎社区贡献！请参阅我们的[贡献指南](https://github.com/EvoAgentX/EvoAgentX/blob/main/CONTRIBUTING.md)了解更多详情。

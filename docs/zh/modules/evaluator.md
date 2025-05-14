@@ -1,51 +1,49 @@
-# Evaluator
+# 评估器
 
-## Introduction
+## 简介
 
-The `Evaluator` class is a fundamental component in the EvoAgentX framework for evaluating the performance of workflows and action graphs against benchmarks. It provides a structured way to measure how well AI agents perform on specific tasks by running evaluations on test data and computing metrics.
+`Evaluator` 类是 EvoAgentX 框架中的一个基础组件，用于评估工作流和动作图在基准测试上的性能。它提供了一种结构化的方式来衡量 AI 代理在特定任务上的表现，通过运行测试数据并计算指标。
 
+## 架构
 
-## Architecture
+### 评估器架构
 
-### Evaluator Architecture
+`Evaluator` 由几个关键组件组成：
 
-An `Evaluator` consists of several key components:
-
-1. **LLM Instance**: 
+1. **LLM 实例**：
    
-    The language model used for executing workflows during evaluation:
+    用于在评估期间执行工作流的语言模型：
 
-    - Provides the reasoning and generation capabilities needed for workflow execution
-    - Can be any implementation that follows the `BaseLLM` interface
+    - 提供工作流执行所需的推理和生成能力
+    - 可以是任何遵循 `BaseLLM` 接口的实现
 
-2. **Agent Manager**: 
+2. **代理管理器**：
    
-    Manages the agents used by workflow graphs during evaluation:
+    管理评估期间工作流图使用的代理：
 
-    - Provides access to agents needed for workflow execution
-    - Only required when evaluating `WorkFlowGraph` instances, and can be ignored when evaluating `ActionGraph` instances 
+    - 提供工作流执行所需的代理访问
+    - 仅在评估 `WorkFlowGraph` 实例时需要，评估 `ActionGraph` 实例时可以忽略
 
-3. **Data Processing Functions**:
+3. **数据处理函数**：
    
-    Functions that prepare and process data during evaluation:
+    在评估期间准备和处理数据的函数：
 
-    - `collate_func`: Prepares benchmark examples for workflow execution
-    - `output_postprocess_func`: Processes workflow outputs before evaluation
+    - `collate_func`：为工作流执行准备基准测试示例
+    - `output_postprocess_func`：在评估前处理工作流输出
 
+### 评估流程
 
-### Evaluation Process
+评估流程遵循以下步骤：
 
-The evaluation process follows these steps:
+1. **数据处理**：从基准测试数据集中获取示例，并将其处理成工作流图或动作图期望的格式
+2. **工作流执行**：通过工作流图或动作图运行每个示例
+3. **输出处理**：将输出处理成基准测试期望的格式
+4. **指标计算**：通过比较输出与真实值来计算性能指标
+5. **结果聚合**：将单个指标聚合成整体性能分数
 
-1. **Data Processing**: Obtain examples from the benchmark dataset and process them into the format expected by the workflow graph or action graph
-2. **Workflow Execution**: Run each example through the workflow graph or action graph
-3. **Output Processing**: Process the outputs into the format expected by the benchmark
-4. **Metric Calculation**: Compute performance metrics by comparing outputs to ground truth
-5. **Result Aggregation**: Aggregate individual metrics into overall performance scores
+## 使用方法
 
-## Usage
-
-### Basic Evaluator Creation & Execution
+### 基本评估器创建与执行
 
 ```python
 from evoagentx.evaluators import Evaluator
@@ -55,43 +53,43 @@ from evoagentx.workflow.workflow_graph import WorkFlowGraph
 from evoagentx.benchmark import SomeBenchmark
 from evoagentx.core.callbacks import suppress_logger_info
 
-# Initialize LLM
+# 初始化 LLM
 llm_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key="xxx")
 llm = OpenAILLM(llm_config)
 
-# Initialize agent manager
+# 初始化代理管理器
 agent_manager = AgentManager()
 
-# Load your workflow graph
+# 加载工作流图
 workflow_graph = WorkFlowGraph.from_file("path/to/workflow.json")
 
-# Add agents to the agent manager
+# 将代理添加到代理管理器
 agent_manager.add_agents_from_workflow(workflow_graph, llm_config=llm_config)
 
-# Create benchmark
+# 创建基准测试
 benchmark = SomeBenchmark()
 
-# Create evaluator
+# 创建评估器
 evaluator = Evaluator(
     llm=llm,
     agent_manager=agent_manager,
-    num_workers=4,  # Use 4 parallel workers
-    verbose=True    # Show progress bars
+    num_workers=4,  # 使用 4 个并行工作器
+    verbose=True    # 显示进度条
 )
 
-# Run evaluation with suppressed logging
+# 运行评估并抑制日志
 with suppress_logger_info():
     results = evaluator.evaluate(
         graph=workflow_graph,
         benchmark=benchmark,
-        eval_mode="test",    # Evaluate on test split (default)
-        sample_k=100         # Use 100 random examples
+        eval_mode="test",    # 在测试集上评估（默认）
+        sample_k=100         # 使用 100 个随机示例
     )
 
-print(f"Evaluation results: {results}")
+print(f"评估结果: {results}")
 ```
 
-### Customizing Data Processing
+### 自定义数据处理
 
 ```python
 from evoagentx.evaluators import Evaluator
@@ -99,31 +97,31 @@ from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.agents import AgentManager
 from evoagentx.core.callbacks import suppress_logger_info
 
-# Custom collate function to prepare inputs. The keys should match the input parameters of the workflow graph or action graph. The return value will be directly passed to the `execute` method of the workflow graph or action graph. 
+# 自定义整理函数来准备输入。键应该匹配工作流图或动作图的输入参数。返回值将直接传递给工作流图或动作图的 `execute` 方法。
 def custom_collate(example):
     return {
         "input_text": example["question"],
         "context": example.get("context", "")
     }
 
-# Custom output processing, `output` is the output of the workflow and the return value will be passed to the `evaluate` method of the benchmark.  
+# 自定义输出处理，`output` 是工作流的输出，返回值将传递给基准测试的 `evaluate` 方法。
 def custom_postprocess(output):
     if isinstance(output, dict):
         return output.get("answer", "")
     return output
 
-# Create evaluator with custom functions
+# 使用自定义函数创建评估器
 evaluator = Evaluator(
     llm=llm,
     agent_manager=agent_manager,
     collate_func=custom_collate,
     output_postprocess_func=custom_postprocess,
-    num_workers=4,  # Use 4 parallel workers
-    verbose=True    # Show progress bars
+    num_workers=4,  # 使用 4 个并行工作器
+    verbose=True    # 显示进度条
 )
 ```
 
-### Evaluating an Action Graph
+### 评估动作图
 
 ```python
 from evoagentx.workflow.action_graph import ActionGraph
@@ -131,17 +129,17 @@ from evoagentx.evaluators import Evaluator
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.core.callbacks import suppress_logger_info
 
-# Initialize LLM
+# 初始化 LLM
 llm_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key="xxx")
 llm = OpenAILLM(llm_config)
 
-# Load your action graph
+# 加载动作图
 action_graph = ActionGraph.from_file("path/to/action_graph.json", llm_config=llm_config)
 
-# Create evaluator (no agent_manager needed for action graphs)
+# 创建评估器（动作图不需要 agent_manager）
 evaluator = Evaluator(llm=llm, num_workers=4, verbose=True)
 
-# Run evaluation with suppressed logging
+# 运行评估并抑制日志
 with suppress_logger_info():
     results = evaluator.evaluate(
         graph=action_graph,
@@ -149,7 +147,7 @@ with suppress_logger_info():
     )
 ```
 
-### Asynchronous Evaluation
+### 异步评估
 
 ```python
 import asyncio
@@ -160,21 +158,21 @@ from evoagentx.workflow.workflow_graph import WorkFlowGraph
 from evoagentx.benchmark import SomeBenchmark
 from evoagentx.core.callbacks import suppress_logger_info
 
-# Initialize LLM and components
+# 初始化 LLM 和组件
 llm_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key="xxx")
 llm = OpenAILLM(llm_config)
 agent_manager = AgentManager()
 workflow_graph = WorkFlowGraph.from_file("path/to/workflow.json")
 benchmark = SomeBenchmark()
 
-# Create evaluator
+# 创建评估器
 evaluator = Evaluator(
     llm=llm,
     agent_manager=agent_manager,
     num_workers=4
 )
 
-# Run async evaluation
+# 运行异步评估
 async def run_async_eval():
     with suppress_logger_info():
         results = await evaluator.async_evaluate(
@@ -183,11 +181,11 @@ async def run_async_eval():
         )
     return results
 
-# Execute async evaluation
+# 执行异步评估
 results = asyncio.run(run_async_eval())
 ```
 
-### Accessing Evaluation Records
+### 访问评估记录
 
 ```python
 from evoagentx.evaluators import Evaluator
@@ -195,34 +193,34 @@ from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.benchmark import SomeBenchmark
 from evoagentx.core.callbacks import suppress_logger_info
 
-# Initialize components
+# 初始化组件
 llm_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key="xxx")
 llm = OpenAILLM(llm_config)
 benchmark = SomeBenchmark()
 evaluator = Evaluator(llm=llm)
 
-# Run evaluation with suppressed logging
+# 运行评估并抑制日志
 with suppress_logger_info():
     evaluator.evaluate(graph=graph, benchmark=benchmark)
 
-# Get all evaluation records
+# 获取所有评估记录
 all_records = evaluator.get_all_evaluation_records()
 
-# Get record for a specific example
+# 获取特定示例的记录
 example = benchmark.get_test_data()[0]
 record = evaluator.get_example_evaluation_record(benchmark, example)
 
-# Get record by example ID
+# 通过示例 ID 获取记录
 record_by_id = evaluator.get_evaluation_record_by_id(
     benchmark=benchmark,
     example_id="example-123",
     eval_mode="test"
 )
 
-# Access trajectory for workflow graph evaluations
+# 访问工作流图评估的轨迹
 if "trajectory" in record:
     for message in record["trajectory"]:
         print(f"{message.role}: {message.content}")
 ```
 
-The `Evaluator` class provides a powerful way to assess the performance of workflows and action graphs, enabling quantitative comparison and improvement tracking in the EvoAgentX framework.
+`Evaluator` 类提供了一种强大的方式来评估工作流和动作图的性能，使 EvoAgentX 框架中的定量比较和改进跟踪成为可能。

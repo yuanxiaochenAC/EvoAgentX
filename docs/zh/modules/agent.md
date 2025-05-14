@@ -1,47 +1,45 @@
-# 中文Agent
+# Agent
 
-## Introduction
+## 简介
 
-The `Agent` class is the fundamental building block for creating intelligent AI agents within the EvoAgentX framework. It provides a structured way to combine language models with actions, and memory management. 
+`Agent` 类是 EvoAgentX 框架中创建智能 AI 代理的基础构建块。它提供了一种结构化的方式来组合语言模型、动作和内存管理。
 
-## Architecture
+## 架构
 
-An Agent consists of several key components:
+Agent 由几个关键组件组成：
 
-1. **Large Language Model (LLM)**: 
+1. **大语言模型 (LLM)**：
 
-    The LLM is specified through the `llm` or `llm_config` parameter and serve as the building block for the agent. It is responsible for interpreting context, generating responses, and making high-level decisions. The LLM will be passed to an action for executing a specific task. 
+    LLM 通过 `llm` 或 `llm_config` 参数指定，作为代理的基础构建块。它负责解释上下文、生成响应和做出高级决策。LLM 将被传递给动作以执行特定任务。
 
-2. **Actions**: 
+2. **动作 (Actions)**：
 
-    Actions are the fundamental operational units of an agent. Each Action encapsulates a specific task and is the actual point where the LLM is invoked to reason, generate, or make decisions. While the Agent provides overall orchestration, it is through Actions that the LLM performs its core functions. Each Action is designed to do exactly one thing—such as retrieving knowledge, summarizing input, or calling an API—and can include the following components:
+    动作是代理的基本操作单元。每个动作封装了一个特定任务，是实际调用 LLM 进行推理、生成或决策的地方。虽然代理提供整体编排，但 LLM 通过动作执行其核心功能。每个动作都被设计为只做一件事——比如检索知识、总结输入或调用 API——并且可以包含以下组件：
 
-    - **prompt**: The prompt template used to guide the LLM's behavior for this specific task.
-    - **inputs_format**: The expected structure and keys of the inputs passed into the action.
-    - **outputs_format**: The format used to interpret and parse the LLM's output.
-    - **tools**: Optional tools that can be integrated and utilized within the action.
+    - **prompt**：用于指导 LLM 执行此特定任务的提示模板。
+    - **inputs_format**：传入动作的输入的预期结构和键。
+    - **outputs_format**：用于解释和解析 LLM 输出的格式。
+    - **tools**：可以在动作中集成和使用的可选工具。
 
-3. **Memory Components**:
+3. **内存组件**：
 
-    Memory allows the agent to retain and recall relevant information across interactions, enhancing contextual awareness. There are two types of memory within the EvoAgentX framework: 
+    内存允许代理在交互过程中保留和回忆相关信息，增强上下文感知能力。EvoAgentX 框架中有两种类型的内存：
 
-    - **Short-term memory**: Maintains the intermediate conversation or context for the current task. 
-    - **Long-term memory (optional)**: Stores persistent knowledge that can span across sessions or tasks. This enables the agent to learn from past experiences, maintain user preferences, or build knowledge bases over time.
+    - **短期内存**：维护当前任务的中间对话或上下文。
+    - **长期内存**（可选）：存储可以跨越会话或任务的持久知识。这使代理能够从过去的经验中学习、维护用户偏好或随时间构建知识库。
 
+## 使用方法
 
-## Usage
+### 基本 Agent 创建
 
-### Basic Agent Creation
-
-In order to create an agent, you need to define the actions that the agent will perform. Each action is defined as a class that inherits from the `Action` class. The action class should define the following components: `name`, `description`, `prompt`, `inputs_format`, and `outputs_format`, and implement the `execute` method (and `async_exectue` if you want to use the agent asynchronously). 
-
+要创建代理，您需要定义代理将执行的动作。每个动作都被定义为一个继承自 `Action` 类的类。动作类应该定义以下组件：`name`、`description`、`prompt`、`inputs_format` 和 `outputs_format`，并实现 `execute` 方法（如果您想异步使用代理，还需要实现 `async_exectue`）。
 
 ```python
 from evoagentx.agents import Agent
 from evoagentx.models import OpenAILLMConfig
 from evoagentx.actions import Action, ActionInput, ActionOutput
 
-# Define a simple action that uses the LLM to answer a question
+# 定义一个使用 LLM 回答问题的简单动作
 
 class AnswerQuestionInput(ActionInput):
     question: str
@@ -96,10 +94,10 @@ class AnswerQuestionAction(Action):
             return response, prompt
         return response 
 
-# Configure LLM
+# 配置 LLM
 llm_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key="your-api-key")
 
-# Create an agent
+# 创建代理
 agent = Agent(
     name="AssistantAgent",
     description="Answers a factual question using the LLM",
@@ -109,27 +107,27 @@ agent = Agent(
 )
 ```
 
-### Executing Actions
+### 执行动作
 
-You can directly call the `Agent` instance like a function. This will internally invoke the `execute()` method of the matching action using the specified `action_name` and `action_input_data`.
+您可以直接像函数一样调用 `Agent` 实例。这将内部使用指定的 `action_name` 和 `action_input_data` 调用匹配动作的 `execute()` 方法。
 
 ```python
-# Execute an action with input data
+# 使用输入数据执行动作
 message = agent(
     action_name="answer_question",
     action_input_data={"question": "What is the capital of France?"}
 )
 
-# Access the output
+# 访问输出
 result = message.content.answer 
 ```
 
-### Asynchronous Execution
+### 异步执行
 
-You can also call the `Agent` instance in an asynchronous context. If the action defines an `async_execute` method, it will be used automatically when you `await` the agent.
+您也可以在异步上下文中调用 `Agent` 实例。如果动作定义了 `async_execute` 方法，当您 `await` 代理时，它将自动使用。
 
 ```python
-# Execute an action asynchronously
+# 异步执行动作
 import asyncio 
 
 async def main():
@@ -143,50 +141,50 @@ result = asyncio.run(main())
 print(result)
 ```
 
-## Memory Management
+## 内存管理
 
-The Agent maintains a short-term memory for tracking conversation context:
+代理维护短期内存以跟踪对话上下文：
 
 ```python
-# Access the agent's memory
-messages = agent.short_term_memory.get(n=5)  # Get last 5 messages
+# 访问代理的内存
+messages = agent.short_term_memory.get(n=5)  # 获取最后 5 条消息
 
-# Clear memory
+# 清除内存
 agent.clear_short_term_memory()
 ```
 
-## Agent Profile
+## 代理配置文件
 
-You can get a human-readable description of an agent and its capabilities:
+您可以获取代理及其功能的人类可读描述：
 
 ```python
-# Get description of all actions
+# 获取所有动作的描述
 profile = agent.get_agent_profile()
 print(profile)
 
-# Get description of specific actions
+# 获取特定动作的描述
 profile = agent.get_agent_profile(action_names=["answer_question"])
 print(profile)
 ```
 
-## Prompt Management
+## 提示管理
 
-Access and modify the prompts used by an agent:
+访问和修改代理使用的提示：
 
 ```python
-# Get all prompts
+# 获取所有提示
 prompts = agent.get_prompts()
-# prompts is a dictionary with the structure:
+# prompts 是一个字典，结构如下：
 # {'answer_question': {'system_prompt': 'You are a helpful assistant.', 'prompt': 'Answer the following question as accurately as possible:\n\n{question}'}}
 
-# Set a specific prompt
+# 设置特定提示
 agent.set_prompt(
     action_name="answer_question",
     prompt="Please provide a clear and concise answer to the following query:\n\n{question}",
-    system_prompt="You are a helpful assistant." # optional, if not provided, the system prompt will remain unchanged 
+    system_prompt="You are a helpful assistant." # 可选，如果未提供，系统提示将保持不变
 )
 
-# Update all prompts
+# 更新所有提示
 prompts_dict = {
     "answer_question": {
         "system_prompt": "You are an expert in providing concise, accurate information.",
@@ -196,33 +194,33 @@ prompts_dict = {
 agent.set_prompts(prompts_dict)
 ```
 
-## Saving and Loading Agents
+## 保存和加载代理
 
-Agents can be persisted and reloaded:
+代理可以被持久化和重新加载：
 
 ```python
-# Save agent
+# 保存代理
 agent.save_module("./agents/my_agent.json")
 
-# Load agent (requires providing llm_config again)
+# 加载代理（需要再次提供 llm_config）
 loaded_agent = Agent.from_file(
     "./agents/my_agent.json", 
     llm_config=llm_config
 )
 ```
 
-## Context Extraction
+## 上下文提取
 
-The Agent includes a built-in context extraction mechanism that automatically derives appropriate inputs for actions from conversation history:
+代理包含内置的上下文提取机制，可以自动从对话历史中派生动动作的适当输入：
 
 ```python
-# Context is automatically extracted when executing without explicit input data
+# 在没有显式输入数据的情况下执行时，上下文会自动提取
 response = agent.execute(
     action_name="action_name",
     msgs=conversation_history
 )
 
-# Get action inputs manually
+# 手动获取动作输入
 action = agent.get_action("action_name")
 inputs = agent.get_action_inputs(action)
 ```

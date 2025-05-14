@@ -1,102 +1,102 @@
-# Action Graph
+# 动作图
 
-## Introduction
+## 简介
 
-The `ActionGraph` class is a fundamental component in the EvoAgentX framework for creating and executing sequences of operations (actions) within a single task. It provides a structured way to define, manage, and execute a series of operations that need to be performed in a specific order to complete a task.
+`ActionGraph` 类是 EvoAgentX 框架中的一个基础组件，用于在单个任务中创建和执行操作（动作）序列。它提供了一种结构化的方式来定义、管理和执行一系列需要按特定顺序执行的操作，以完成任务。
 
-An action graph represents a collection of operators (actions) that are executed in a predefined sequence to process inputs and produce outputs. Unlike the `WorkFlowGraph` which manages multiple tasks and their dependencies at a higher level, the `ActionGraph` focuses on the detailed execution steps within a single task.
+动作图表示一组按预定义顺序执行的运算符（动作），用于处理输入并产生输出。与在更高层次管理多个任务及其依赖关系的 `WorkFlowGraph` 不同，`ActionGraph` 专注于单个任务内的详细执行步骤。
 
-## Architecture
+## 架构
 
-### ActionGraph Architecture
+### 动作图架构
 
-An `ActionGraph` consists of several key components:
+`ActionGraph` 由几个关键组件组成：
 
-1. **Operators**: 
+1. **运算符**：
    
-    Each operator represents a specific operation or action that can be performed as part of a task, with the following properties:
+    每个运算符代表可以作为任务一部分执行的特定操作或动作，具有以下属性：
 
-    - `name`: A unique identifier for the operator
-    - `description`: Detailed description of what the operator does
-    - `llm`: The LLM used to execute the operator
-    - `outputs_format`: The structured format of the output of the operator
-    - `interface`: The interface for calling the operator.
-    - `prompt`: Template used to guide the LLM when executing this operator
+    - `name`：运算符的唯一标识符
+    - `description`：运算符功能的详细描述
+    - `llm`：用于执行运算符的 LLM
+    - `outputs_format`：运算符输出的结构化格式
+    - `interface`：调用运算符的接口
+    - `prompt`：执行此运算符时用于指导 LLM 的模板
 
-2. **LLM**: 
+2. **LLM**：
    
-    The ActionGraph uses a Language Learning Model (LLM) to execute the operators. It receives a `llm_config` as input and create an LLM instance, which will be passed to the operators for execution. The LLM provides the reasoning and generation capabilities needed to perform each action.
+    ActionGraph 使用语言学习模型（LLM）来执行运算符。它接收 `llm_config` 作为输入并创建 LLM 实例，该实例将被传递给运算符执行。LLM 提供了执行每个动作所需的推理和生成能力。
 
-3. **Execution Flow**:
+3. **执行流程**：
    
-    The ActionGraph defines a specific execution sequence:
+    ActionGraph 定义了特定的执行顺序：
 
-    - Actions are executed in a predetermined order (specified in the `execute` or `async_execute` method using code)
-    - Each action can use the results from previous actions
-    - The final output is produced after all actions have been executed
+    - 动作按预定顺序执行（在 `execute` 或 `async_execute` 方法中使用代码指定）
+    - 每个动作可以使用之前动作的结果
+    - 在所有动作执行完成后产生最终输出
 
-### Comparison with WorkFlowGraph
+### 与工作流图的比较
 
-While both `ActionGraph` and `WorkFlowGraph` manage execution flows, they operate at different levels of abstraction:
+虽然 `ActionGraph` 和 `WorkFlowGraph` 都管理执行流程，但它们在抽象层次上有所不同：
 
-| Feature | ActionGraph | WorkFlowGraph |
+| 特性 | 动作图 | 工作流图 |
 |---------|-------------|---------------|
-| Scope | Single task execution | Multi-task workflow orchestration |
-| Components | Operators (actions) | Nodes (tasks) and edges (dependencies) |
-| Focus | Detailed steps within a task | Relationships between different tasks |
-| Flexibility | Fixed execution sequence | Dynamic execution based on dependencies |
-| Primary use | Define reusable task execution patterns | Orchestrate complex multi-step workflows |
-| Granularity | Fine-grained operations | Coarse-grained tasks |
+| 范围 | 单个任务执行 | 多任务工作流编排 |
+| 组件 | 运算符（动作） | 节点（任务）和边（依赖关系） |
+| 重点 | 任务内的详细步骤 | 不同任务之间的关系 |
+| 灵活性 | 固定执行顺序 | 基于依赖关系的动态执行 |
+| 主要用途 | 定义可重用的任务执行模式 | 编排复杂的多步骤工作流 |
+| 粒度 | 细粒度操作 | 粗粒度任务 |
 
-## Usage
+## 使用方法
 
-### Basic ActionGraph Creation
+### 基本动作图创建
 
 ```python
 from evoagentx.workflow import ActionGraph
 from evoagentx.workflow.operators import Custom
 from evoagentx.models import OpenAILLMConfig 
 
-# Create LLM configuration
+# 创建 LLM 配置
 llm_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key="xxx")
 
-# Create a custom ActionGraph
+# 创建自定义 ActionGraph
 class MyActionGraph(ActionGraph):
     def __init__(self, llm_config, **kwargs):
 
         name = kwargs.pop("name") if "name" in kwargs else "Custom Action Graph"
         description = kwargs.pop("description") if "description" in kwargs else "A custom action graph for text processing"
-        # create an LLM instance `self._llm` based on the `llm_config` and pass it to the operators
+        # 基于 `llm_config` 创建 LLM 实例 `self._llm` 并将其传递给运算符
         super().__init__(name=name, description=description, llm_config=llm_config, **kwargs)
-        # Define operators
+        # 定义运算符
         self.extract_entities = Custom(self._llm) # , prompt="Extract key entities from the following text: {input}")
         self.analyze_sentiment = Custom(self._llm) # , prompt="Analyze the sentiment of the following text: {input}")
         self.summarize = Custom(self._llm) # , prompt="Summarize the following text in one paragraph: {input}")
 
     def execute(self, text: str) -> dict:
-        # Execute operators in sequence (specify the execution order of operators)
+        # 按顺序执行运算符（指定运算符的执行顺序）
         entities = self.extract_entities(input=text, instruction="Extract key entities from the provided text")["response"]
         sentiment = self.analyze_sentiment(input=text, instruction="Analyze the sentiment of the provided text")["response"]
         summary = self.summarize(input=text, instruction="Summarize the provided text in one paragraph")["response"]
 
-        # Return combined results
+        # 返回组合结果
         return {
             "entities": entities,
             "sentiment": sentiment,
             "summary": summary
         }
 
-# Create the action graph
+# 创建动作图
 action_graph = MyActionGraph(llm_config=llm_config)
 
-# Execute the action graph
+# 执行动作图
 result = action_graph.execute(text="This is a test text")
 print(result)
 ```
 
-### Using ActionGraph in WorkFlowGraph
+### 在工作流图中使用动作图
 
-You can either use `ActionGraph` directly or use it in `WorkFlowGraph` as a node. 
+您可以直接使用 `ActionGraph` 或在 `WorkFlowGraph` 中将其作为节点使用。
 
 ```python
 from evoagentx.workflow.workflow_graph import WorkFlowNode, WorkFlowGraph
@@ -105,46 +105,46 @@ from evoagentx.core.base_config import Parameter
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.workflow import WorkFlow
 
-# Create LLM configuration
+# 创建 LLM 配置
 llm_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key="xxx", stream=True, output_response=True)
 llm = OpenAILLM(llm_config)
 
-# Create an action graph
+# 创建动作图
 qa_graph = QAActionGraph(llm_config=llm_config)
 
-# Create a workflow node that uses the action graph
+# 创建使用动作图的工作流节点
 qa_node = WorkFlowNode(
     name="QATask",
     description="Answer questions using a QA system",
-    # input names should match the parameters in the `execute` method of the action graph
+    # 输入名称应与动作图的 `execute` 方法中的参数匹配
     inputs=[Parameter(name="problem", type="string", description="The problem to answer")],
     outputs=[Parameter(name="answer", type="string", description="The answer to the problem")],
-    action_graph=qa_graph  # Using action_graph instead of agents
+    action_graph=qa_graph  # 使用 action_graph 而不是 agents
 )
 
-# Create the workflow graph
+# 创建工作流图
 workflow_graph = WorkFlowGraph(goal="Answer a question", nodes=[qa_node])
 
-# define the workflow 
+# 定义工作流
 workflow = WorkFlow(graph=workflow_graph, llm=llm)
 
-# Execute the workflow
+# 执行工作流
 result = workflow.execute(inputs={"problem": "What is the capital of France?"})
 print(result)
 ```
 
 !!! warning 
-    When using `ActionGraph` in `WorkFlowNode`, the `inputs` parameter of the `WorkFlowNode` should match the required parameters in the `execute` method of the `ActionGraph`. The `execute` method is expected to return a **dictionary** or `LLMOutputParser` instance with keys matching the names of the `outputs` in the `WorkFlowNode`. 
+    在 `WorkFlowNode` 中使用 `ActionGraph` 时，`WorkFlowNode` 的 `inputs` 参数应与 `ActionGraph` 的 `execute` 方法中所需的参数匹配。`execute` 方法应返回一个**字典**或 `LLMOutputParser` 实例，其键与 `WorkFlowNode` 中 `outputs` 的名称匹配。
 
-### Saving and Loading an ActionGraph
+### 保存和加载动作图
 
 ```python
-# Save action graph
+# 保存动作图
 action_graph.save_module("examples/output/my_action_graph.json")
 
-# Load action graph
+# 加载动作图
 from evoagentx.workflow.action_graph import ActionGraph
 loaded_graph = ActionGraph.from_file("examples/output/my_action_graph.json", llm_config=llm_config)
 ```
 
-The `ActionGraph` class provides a powerful way to define complex sequences of operations within a single task, complementing the higher-level orchestration capabilities of the `WorkFlowGraph` in the EvoAgentX framework.
+`ActionGraph` 类提供了一种强大的方式来定义单个任务内的复杂操作序列，补充了 EvoAgentX 框架中 `WorkFlowGraph` 的高级编排功能。

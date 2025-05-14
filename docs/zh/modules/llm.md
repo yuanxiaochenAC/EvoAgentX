@@ -1,18 +1,18 @@
 # LLM
 
-## Introduction
+## 简介
 
-The LLM (Large Language Model) module provides a unified interface for interacting with various language model providers in the EvoAgentX framework. It abstracts away provider-specific implementation details, offering a consistent API for generating text, managing costs, and handling responses.
+LLM（大语言模型）模块为 EvoAgentX 框架提供了与各种语言模型提供商交互的统一接口。它抽象了特定提供商的实现细节，为生成文本、管理成本和处理响应提供了一致的 API。
 
-## Supported LLM Providers
+## 支持的 LLM 提供商
 
-EvoAgentX currently supports the following LLM providers:
+EvoAgentX 目前支持以下 LLM 提供商：
 
 ### OpenAILLM
 
-The primary implementation for accessing OpenAI's language models. It handles authentication, request formatting, and response parsing for models like GPT-4, GPT-3.5-Turbo, and other OpenAI models.
+这是访问 OpenAI 语言模型的主要实现。它处理 GPT-4、GPT-3.5-Turbo 和其他 OpenAI 模型的认证、请求格式化和响应解析。
 
-**Basic Usage:**
+**基本用法：**
 
 ```python
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
@@ -37,12 +37,11 @@ response = llm.generate(
 
 ### LiteLLM
 
-LiteLLM is an adapter for the [LiteLLM project](https://github.com/BerriAI/litellm), which provides a unified Python SDK and proxy server for calling over 100 LLM APIs using the OpenAI API format. It supports providers such as Bedrock, Azure, OpenAI, VertexAI, Cohere, Anthropic, Sagemaker, HuggingFace, Replicate, and Groq. Thanks to this project, the `LiteLLM` model class in EvoAgentX can be used to seamlessly access a wide range of LLM providers through a single interface. 
+LiteLLM 是 [LiteLLM 项目](https://github.com/BerriAI/litellm) 的适配器，该项目提供了一个统一的 Python SDK 和代理服务器，用于使用 OpenAI API 格式调用超过 100 个 LLM API。它支持 Bedrock、Azure、OpenAI、VertexAI、Cohere、Anthropic、Sagemaker、HuggingFace、Replicate 和 Groq 等提供商。多亏了这个项目，EvoAgentX 中的 `LiteLLM` 模型类可以通过单一接口无缝访问各种 LLM 提供商。
 
-**Basic Usage:**
+**基本用法：**
 
-To faciliate seamless integration with LiteLLM, you should specify the model name using the naming convention defied in the LiteLLM platform. For example, you need to specify `anthropic/claude-3-opus-20240229` for Claude 3.0 Opus. You can find a full list of supported providers and model names in their official documentation: [https://docs.litellm.ai/docs/providers](https://docs.litellm.ai/docs/providers).
-
+为了与 LiteLLM 无缝集成，您应该使用 LiteLLM 平台定义的命名约定来指定模型名称。例如，对于 Claude 3.0 Opus，您需要指定 `anthropic/claude-3-opus-20240229`。您可以在其官方文档中找到支持的提供商和模型名称的完整列表：[https://docs.litellm.ai/docs/providers](https://docs.litellm.ai/docs/providers)。
 
 ```python
 from evoagentx.models import LiteLLMConfig, LiteLLM
@@ -67,11 +66,11 @@ response = llm.generate(
 
 ### SiliconFlowLLM
 
-SiliconFlowLLM is an adapter for models hosted on the [SiliconFlow platform](https://www.siliconflow.com/), which offers access to both open-source and proprietary models via an OpenAI-compatible API. It enables you to integrate models like Qwen, DeepSeek, or Mixtral by specifying their names using the SiliconFlow platform's naming conventions.
+SiliconFlowLLM 是 [SiliconFlow 平台](https://www.siliconflow.com/) 上托管模型的适配器，该平台通过 OpenAI 兼容的 API 提供对开源和专有模型的访问。它使您能够通过使用 SiliconFlow 平台的命名约定指定模型名称来集成 Qwen、DeepSeek 或 Mixtral 等模型。
 
-Thanks to SiliconFlow's unified interface, the `SiliconFlowLLM` model class in EvoAgentX allows seamless switching between a variety of powerful LLMs hosted on SiliconFlow using the same API format.
+得益于 SiliconFlow 的统一接口，EvoAgentX 中的 `SiliconFlowLLM` 模型类允许使用相同的 API 格式在 SiliconFlow 上托管的各种强大 LLM 之间无缝切换。
 
-**Basic Usage:**
+**基本用法：**
 
 ```python
 from evoagentx.models import SiliconFlowConfig, SiliconFlowLLM
@@ -94,13 +93,13 @@ response = llm.generate(
 )
 ```
 
-## Core Functions
+## 核心功能
 
-All LLM implementations in EvoAgentX provide a consistent set of core functions for generating text and managing the generation process.
+EvoAgentX 中的所有 LLM 实现都提供了一组一致的核心功能，用于生成文本和管理生成过程。
 
-### Generate Function
+### Generate 函数
 
-The `generate` function is the primary method for producing text with language models:
+`generate` 函数是使用语言模型生成文本的主要方法：
 
 ```python
 def generate(
@@ -131,27 +130,27 @@ def generate(
     """
 ```
 
-#### Inputs 
+#### 输入方式
 
-In EvoAgentX, there are several ways to provide inputs to LLMs using the `generate` function:
+在 EvoAgentX 中，有几种使用 `generate` 函数向 LLM 提供输入的方式：
 
-**Method 1: Prompt and System Message**
+**方法 1：提示和系统消息**
 
-1. **Prompt**: The specific query or instruction for which you want a response. 
+1. **提示（Prompt）**：您想要获得响应的具体查询或指令。
 
-2. **System Message** (optional): Instructions that guide the model's overall behavior and role. This sets the context for how the model should respond.
+2. **系统消息（System Message）**（可选）：指导模型整体行为和角色的指令。这为模型应该如何响应设置了上下文。
 
-Together, these components are converted into a standardized message format that the language model can understand:
+这些组件被转换为语言模型可以理解的标准消息格式：
 
 ```python
-# Simple example with prompt and system message
+# Simple example using prompt and system message
 response = llm.generate(
     prompt="What are three ways to improve productivity?",
     system_message="You are a productivity expert providing concise, actionable advice."
 )
 ```
 
-Behind the scenes, this gets converted into messages with appropriate roles:
+在后台，这被转换为具有适当角色的消息：
 
 ```python
 messages = [
@@ -160,12 +159,12 @@ messages = [
 ]
 ```
 
-**Method 2: Using Messages Directly**
+**方法 2：直接使用消息**
 
-For more complex conversations or when you need precise control over the message format, you can use the `messages` parameter directly:
+对于更复杂的对话或当您需要精确控制消息格式时，您可以直接使用 `messages` 参数：
 
 ```python
-# Using messages directly for a multi-turn conversation
+# Direct use of messages for multi-turn conversation
 response = llm.generate(
     messages=[
         {"role": "system", "content": "You are a helpful assistant."},
@@ -176,9 +175,9 @@ response = llm.generate(
 )
 ```
 
-#### Batch Generation 
+#### 批量生成
 
-For batch processing, you can provide lists of prompts/system messages or list of messages. For example: 
+对于批量处理，您可以提供提示/系统消息列表或消息列表。例如：
 
 ```python
 # Batch processing example
@@ -188,15 +187,15 @@ responses = llm.generate(
 )
 ```
 
-#### Output Parsing
+#### 输出解析
 
-The `generate` function provides flexible options for parsing and structuring the raw text output from language models:
+`generate` 函数提供了灵活的选项来解析和结构化来自语言模型的原始文本输出：
 
-- **parser**: Accepts a class (typically inheriting from `LLMOutputParser/ActionOutput`) that defines the structure for the parsed output. If not provided, the LLM output will not be parsed. In both cases, the raw LLM output can be accessed through the `.content` attribute of the returned object.   
-- **parse_mode**: Determines how the raw LLM output is parsed into the structure defined by the parser, valid options are: `'str'`, `'json'` (default), `'xml'`, `'title'`, `'custom'`.
-- **parse_func**: A custom function to handle parsing in more complex scenarios, only used when `parse_mode` is `'custom'`. 
+- **parser**：接受一个类（通常继承自 `LLMOutputParser/ActionOutput`），该类定义了解析输出的结构。如果未提供，LLM 输出将不会被解析。在这两种情况下，都可以通过返回对象的 `.content` 属性访问原始 LLM 输出。
+- **parse_mode**：确定如何将原始 LLM 输出解析为解析器定义的结构，有效选项为：`'str'`、`'json'`（默认）、`'xml'`、`'title'`、`'custom'`。
+- **parse_func**：用于在更复杂的场景中处理解析的自定义函数，仅在 `parse_mode` 为 `'custom'` 时使用。
 
-Example with structured output: 
+结构化输出示例：
 ```python
 from evoagentx.models import LLMOutputParser 
 from pydantic import Field
@@ -226,28 +225,28 @@ print("Thought:\n", response.thought)
 print("Code:\n", response.code)
 ```
 
-##### Parse Modes
+##### 解析模式
 
-EvoAgentX supports several parsing strategies:
+EvoAgentX 支持几种解析策略：
 
-1. **"str"**: Uses the raw output as-is for each field defined in the parser.
-2. **"json"** (default): Extracts fields from a JSON string in the output.
-3. **"xml"**: Extracts content from XML tags matching field names.
-4. **"title"**: Extracts content from markdown sections (default format: "## {title}").
-5. **"custom"**: Uses a custom parsing function specified by `parse_func`.
+1. **"str"**：直接使用原始输出作为解析器中定义的每个字段。
+2. **"json"**（默认）：从输出中的 JSON 字符串提取字段。
+3. **"xml"**：从与字段名称匹配的 XML 标签中提取内容。
+4. **"title"**：从 markdown 章节中提取内容（默认格式："## {title}"）。
+5. **"custom"**：使用由 `parse_func` 指定的自定义解析函数。
 
 !!! note 
-    For `'json'`, `'xml'` and `'title'`, you should instruct the LLM (through the `prompt`) to output the content in the specified format that can be parsed by the parser. Otherwise, the parsing will fail. 
+    对于 `'json'`、`'xml'` 和 `'title'`，您应该通过 `prompt` 指示 LLM 以可以被解析器解析的指定格式输出内容。否则，解析将失败。
 
-    1. For `'json'`, you should instruct the LLM to output a valid JSON string containing keys that match the field names in the parser class. If there are multiple JSON string in the raw LLM output, only the first one will be parsed.  
+    1. 对于 `'json'`，您应该指示 LLM 输出一个包含与解析器类中的字段名称匹配的键的有效 JSON 字符串。如果原始 LLM 输出中有多个 JSON 字符串，只会解析第一个。
 
-    2. For `xml`, you should instruct the LLM to output content that contains XML tags matching the field names in the parser class, e.g., `<{field_name}>...</{field_name}>`. If there are multiple XML tags with the same field name, only the first one will be used. 
+    2. 对于 `xml`，您应该指示 LLM 输出包含与解析器类中的字段名称匹配的 XML 标签的内容，例如 `<{field_name}>...</{field_name}>`。如果有多个具有相同字段名称的 XML 标签，只会使用第一个。
 
-    3. For `title`, you should instruct the LLM to output content that contains markdown sections with the title exactly matching the field names in the parser class. The default title format is "## {title}". You can change it by setting the `title_format` parameter in the `generate` function, e.g., `generate(..., title_format="### {title}")`. The `title_format` must contain `{title}` as a placeholder for the field name.  
+    3. 对于 `title`，您应该指示 LLM 输出包含标题与解析器类中的字段名称完全匹配的 markdown 章节的内容。默认标题格式是 "## {title}"。您可以通过在 `generate` 函数中设置 `title_format` 参数来更改它，例如 `generate(..., title_format="### {title}")`。`title_format` 必须包含 `{title}` 作为字段名称的占位符。
 
-##### Custom Parsing Function
+##### 自定义解析函数
 
-For maximum flexibility, you can define a custom parsing function with `parse_func`:
+为了获得最大的灵活性，您可以使用 `parse_func` 定义自定义解析函数：
 
 ```python
 from evoagentx.models import LLMOutputParser
@@ -266,11 +265,11 @@ response = llm.generate(
 ```
 
 !!! note 
-    The `parse_func` should have an input parameter `content` that receives the raw LLM output, and return a dictionary with keys matching the field names in the parser class.  
+    解析函数应该有一个接收原始 LLM 输出的输入参数 `content`，并返回一个字典，其键与解析器类中的字段名称匹配。
 
-### Async Generate Function
+### 异步生成函数
 
-For applications requiring asynchronous operation, the `async_generate` function provides the same functionality as the `generate` function, but in a non-blocking manner:
+对于需要异步操作的应用程序，`async_generate` 函数提供了与 `generate` 函数相同的功能，但以非阻塞方式运行：
 
 ```python
 async def async_generate(
@@ -284,56 +283,56 @@ async def async_generate(
         **kwargs
     ) -> Union[LLMOutputParser, List[LLMOutputParser]]:
     """
-    Asynchronously generate text based on the prompt and optional system message.
+    基于提示和可选的系统消息异步生成文本。
 
-    Args:
-        prompt: Input prompt(s) to the LLM.
-        system_message: System message(s) for the LLM.
-        messages: Chat message(s) for the LLM, already in the required format (either `prompt` or `messages` must be provided).
-        parser: Parser class to use for processing the output into a structured format.
-        parse_mode: The mode to use for parsing, must be the `parse_mode` supported by the `parser`. 
-        parse_func: A function to apply to the parsed output.
-        **kwargs: Additional generation configuration parameters.
+    参数：
+        prompt: 输入到 LLM 的提示。
+        system_message: LLM 的系统消息。
+        messages: LLM 的聊天消息，已经是所需格式（必须提供 `prompt` 或 `messages` 之一）。
+        parser: 用于将输出处理为结构化格式的解析器类。
+        parse_mode: 用于解析的模式，必须是 `parser` 支持的 `parse_mode`。
+        parse_func: 应用于解析输出的函数。
+        **kwargs: 额外的生成配置参数。
         
-    Returns:
-        For single generation: An LLMOutputParser instance.
-        For batch generation: A list of LLMOutputParser instances.
+    返回：
+        单次生成：一个 LLMOutputParser 实例。
+        批量生成：LLMOutputParser 实例列表。
     """
 ```
 
-### Streaming Responses
+### 流式响应
 
-EvoAgentX supports streaming responses from LLMs, which allows you to see the model's output as it's being generated token by token, rather than waiting for the complete response. This is especially useful for long-form content generation or providing a more interactive experience.
+EvoAgentX 支持来自 LLM 的流式响应，这使您可以在生成过程中逐令牌查看模型的输出，而不是等待完整响应。这对于生成长篇内容或提供更交互式的体验特别有用。
 
-There are two ways to enable streaming:
+有两种启用流式传输的方式：
 
-#### Configure Streaming in the LLM Config
+#### 在 LLM 配置中配置流式传输
 
-You can enable streaming when initializing the LLM by setting appropriate parameters in the config:
+您可以在初始化 LLM 时通过设置配置中的适当参数来启用流式传输：
 
 ```python
-# Enable streaming at initialization time
+# 在初始化时启用流式传输
 config = OpenAILLMConfig(
     model="gpt-4o-mini",
     openai_key="your-api-key",
-    stream=True,  # Enable streaming
-    output_response=True  # Print tokens to console in real-time
+    stream=True,  # 启用流式传输
+    output_response=True  # 实时将令牌打印到控制台
 )
 
 llm = OpenAILLM(config=config)
 
-# All calls to generate() will now stream by default
+# 现在所有对 generate() 的调用都将默认使用流式传输
 response = llm.generate(
     prompt="Write a story about space exploration."
 )
 ```
 
-#### Enable Streaming in the Generate Method
+#### 在生成方法中启用流式传输
 
-Alternatively, you can enable streaming for specific generate calls:
+或者，您可以为特定的生成调用启用流式传输：
 
 ```python
-# LLM initialized with default non-streaming behavior
+# 使用默认非流式行为初始化的 LLM
 config = OpenAILLMConfig(
     model="gpt-4o-mini",
     openai_key="your-api-key"
@@ -341,10 +340,10 @@ config = OpenAILLMConfig(
 
 llm = OpenAILLM(config=config)
 
-# Override for this specific call
+# 仅为此特定调用覆盖设置
 response = llm.generate(
     prompt="Write a story about space exploration.",
-    stream=True,  # Enable streaming for this call only
-    output_response=True  # Print tokens to console in real-time
+    stream=True,  # 仅为此调用启用流式传输
+    output_response=True  # 实时将令牌打印到控制台
 )
 ```

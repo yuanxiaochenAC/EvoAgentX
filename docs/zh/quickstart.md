@@ -1,4 +1,4 @@
-# 中文EvoAgentX Quickstart Guide
+# EvoAgentX Quickstart Guide
 
 This quickstart guide will walk you through the essential steps to set up and start using EvoAgentX. In this tutorial, you'll learn how to:
 
