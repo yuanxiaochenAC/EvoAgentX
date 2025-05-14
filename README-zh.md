@@ -123,7 +123,7 @@ import os
 load_dotenv()  # 加载 .env 文件中的环境变量
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ```
-> 🔐 提示：请将 .env 添加到 .gitignore，以避免泄露敏感信息。
+<!-- > 🔐 提示：请将 .env 添加到 .gitignore，以避免泄露敏感信息。 -->
 
 
 ### 配置并使用语言模型（LLM）
@@ -198,10 +198,11 @@ print(output)
 
 | Cookbook | Description |
 |:---|:---|
-| **[构建你的第一个智能体](./docs/tutorial/first_agent.md)** | 逐步创建第一个智能体的完全指南. |
-| **[手动构建工作流](./docs/tutorial/first_workflow.md)** | 学习如何设计和实现写作智能体工作流. |
-| **[基准和评估教程](./docs/tutorial/benchmark_and_evaluation.md)** | 智能体性能评估和准则测试指南. |
-| **[SEW优化器教程](./docs/tutorial/sew_optimizer.md)** | 学习优化技术，提升智能体工作效率. |
+| **[构建你的智能体](./docs/tutorial/first_agent.md)** | 快速上手创建并管理支持多任务的智能体 |
+| **[手动构建工作流](./docs/tutorial/first_workflow.md)** | 学习构建由多个智能体协作完成的工作流 |
+| **[基准和评估教程](./docs/tutorial/benchmark_and_evaluation.md)** | 智能体性能评估和准则测试指南 |
+| **[AFlow优化器教程](./docs/tutorial/aflow_optimizer.md)** | 自动优化多智能体工作流以提升任务表现 |
+| **[SEW优化器教程](./docs/tutorial/sew_optimizer.md)** | 构建可自演化的工作流以持续提升系统能力 |
 
 🛠️ 按照教程构建和优化你的 EvoAgentX 工作流。
 

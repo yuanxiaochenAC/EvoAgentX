@@ -123,7 +123,7 @@ load_dotenv() # Loads environment variables from .env file
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ```
 
-> 🔐 Tip: Don’t forget to add `.env` to your `.gitignore` to avoid committing secrets.
+<!-- > 🔐 Tip: Don’t forget to add `.env` to your `.gitignore` to avoid committing secrets. -->
 
 ### Configure and Use the LLM
 Once the API key is set, initialise the LLM with:
@@ -194,10 +194,11 @@ Explore how to effectively use EvoAgentX with the following resources:
 
 | Cookbook | Description |
 |:---|:---|
-| **[Build Your First Agent](./docs/tutorial/first_agent.md)** | A comprehensive guide to creating your first agent step-by-step. |
-| **[Building Workflows Manually](./docs/tutorial/first_workflow.md)** | Learn how to design and implement collaborative agent workflows. |
-| **[Benchmark and Evaluation Tutorial](./docs/tutorial/benchmark_and_evaluation.md)** | Guidelines for evaluating and benchmarking agent performance. |
-| **[SEW Optimizer Tutorial](./docs/tutorial/sew_optimizer.md)** | Learn optimization techniques for enhancing agent workflows. |
+| **[Build Your First Agent](./docs/tutorial/first_agent.md)** | Quickly create and manage agents with multi-action capabilities. |
+| **[Build Your First Workflow](./docs/tutorial/first_workflow.md)** | Learn to build collaborative workflows with multiple agents. |
+| **[Benchmark and Evaluation Tutorial](./docs/tutorial/benchmark_and_evaluation.md)** | Evaluate agent performance using benchmark datasets. |
+| **[AFlow Optimizer Tutorial](./docs/tutorial/aflow_optimizer.md)** | Automatically optimise multi-agent workflows for better task performance. |
+| **[SEW Optimizer Tutorial](./docs/tutorial/sew_optimizer.md)** | Create SEW (Self-Evolving Workflows) to enhance agent systems. |
 
 🛠️ Follow the tutorials to build and optimize your EvoAgentX workflows.
 
