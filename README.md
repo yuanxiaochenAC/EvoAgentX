@@ -59,7 +59,7 @@
 We recommend installing EvoAgentX using `pip`:
 
 ```bash
-pip install evoagentx
+pip install git+https://github.com/EvoAgentX/EvoAgentX.git
 ```
 
 For local development or detailed setup (e.g., using conda), refer to the [Installation Guide for EvoAgentX](./docs/installation.md).
@@ -317,7 +317,7 @@ We appreciate your interest in contributing to our open-source initiative. We pr
 
 
 ## 📚 Acknowledgements 
-This project builds upon several outstanding open-source projects: [AFlow](https://github.com/FoundationAgents/MetaGPT/tree/main/metagpt/ext/aflow), [TextGrad](https://github.com/zou-group/textgrad), [DSPy](https://github.com/stanfordnlp/dspy), [LiveCodeBench](https://github.com/LiveCodeBench/LiveCodeBench), and more. We would like to thank the developers and maintainers of the following frameworks for their valuable contributions to the open-source community.
+This project builds upon several outstanding open-source projects: [AFlow](https://github.com/FoundationAgents/MetaGPT/tree/main/metagpt/ext/aflow), [TextGrad](https://github.com/zou-group/textgrad), [DSPy](https://github.com/stanfordnlp/dspy), [LiveCodeBench](https://github.com/LiveCodeBench/LiveCodeBench), and more. We would like to thank the developers and maintainers of these frameworks for their valuable contributions to the open-source community.
 
 ## 📄 License
 

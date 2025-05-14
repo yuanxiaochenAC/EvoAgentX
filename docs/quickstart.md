@@ -8,7 +8,7 @@ This quickstart guide will walk you through the essential steps to set up and st
 
 ## Installation
 ```bash
-pip install evoagentx 
+pip install git+https://github.com/EvoAgentX/EvoAgentX.git
 ```
 Please refere to [Installation Guide](./installation.md) for more details about the installation. 
 

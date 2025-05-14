@@ -20,7 +20,7 @@ There are several ways to install EvoAgentX. Choose the method that best suits y
 The simplest way to install EvoAgentX is using pip:
 
 ```bash
-pip install evoagentx
+pip install git+https://github.com/EvoAgentX/EvoAgentX.git
 ```
 
 ### Method 2: From Source (For Development)
