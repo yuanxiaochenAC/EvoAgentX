@@ -276,7 +276,8 @@ print(output)
 | **[构建您的第一个工作流](./docs/tutorial/first_workflow.md)** | 学习如何使用多个智能体构建协作工作流。 |
 | **[自动工作流生成](./docs/quickstart.md#automatic-workflow-generation-and-execution)** | 从自然语言目标自动生成工作流。 |
 | **[基准测试与评估教程](./docs/tutorial/benchmark_and_evaluation.md)** | 使用基准数据集评估智能体性能。 |
-| **[AFlow优化器教程](./docs/tutorial/aflow_optimizer.md)** | 自动优化多智能体工作流以提高任务性能。 |
+| **[TextGrad优化器教程](./docs/tutorial/textgrad_optimizer.md)** | 使用TextGrad自动优化多智能体工作流中的提示词。 |
+| **[AFlow优化器教程](./docs/tutorial/aflow_optimizer.md)** | 使用AFlow自动优化多智能体工作流的提示词和结构。 |
 <!-- | **[SEW优化器教程](./docs/tutorial/sew_optimizer.md)** | 创建SEW（自进化工作流）来增强智能体系统。 | -->
 
 🛠️ 通过这些教程构建和优化您的EvoAgentX工作流。

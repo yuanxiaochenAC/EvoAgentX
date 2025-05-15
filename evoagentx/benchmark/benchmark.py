@@ -251,7 +251,7 @@ class CodingBenchmark(Benchmark):
         label = [label] if isinstance(label, dict) else label
         return prediction, label
 
-    def check_solution(self, task_id: str, solution: str, test: str, entry_point: Optional[str] = None, use_entrypoint_as_input: bool = True) -> bool:
+    def check_solution(self, task_id: str, solution: str, test: str, entry_point: Optional[str] = None, use_entrypoint_as_input: bool = True) -> Tuple[int, str]:
         """
         Execute the solution code and check if it passes the unit test.
 
@@ -261,7 +261,7 @@ class CodingBenchmark(Benchmark):
             test (str): The unit test code in HumanEval format. 
             entry_point (str): The entry point of the solution code.
         Returns:
-            bool: True if the solution passes the unit test, False otherwise.
+            Tuple[int, str]: A tuple containing an integer indicating whether the solution passes the unit test (0: success, 1: failed, 2: timeout) and a string containing the success/error message.
         """
         solution = sanitize(solution, entrypoint=entry_point)
 
