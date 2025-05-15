@@ -276,7 +276,8 @@ Explore how to effectively use EvoAgentX with the following resources:
 | **[Build Your First Workflow](./docs/tutorial/first_workflow.md)** | Learn to build collaborative workflows with multiple agents. |
 | **[Automatic Workflow Generation](./docs/quickstart.md#automatic-workflow-generation-and-execution)** | Automatically generate workflows from natural language goals. |
 | **[Benchmark and Evaluation Tutorial](./docs/tutorial/benchmark_and_evaluation.md)** | Evaluate agent performance using benchmark datasets. |
-| **[AFlow Optimizer Tutorial](./docs/tutorial/aflow_optimizer.md)** | Automatically optimise multi-agent workflows for better task performance. |
+| **[TextGrad Optimizer Tutorial](./docs/tutorial/textgrad_optimizer.md)** | Automatically optimise the prompts within multi-agent workflow with TextGrad. |
+| **[AFlow Optimizer Tutorial](./docs/tutorial/aflow_optimizer.md)** | Automatically optimise both the prompts and structure of multi-agent workflow with AFlow. |
 <!-- | **[SEW Optimizer Tutorial](./docs/tutorial/sew_optimizer.md)** | Create SEW (Self-Evolving Workflows) to enhance agent systems. | -->
 
 🛠️ Follow the tutorials to build and optimize your EvoAgentX workflows.
