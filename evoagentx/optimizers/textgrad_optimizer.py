@@ -191,7 +191,9 @@ class TextGradOptimizer(BaseModule):
         
         Args:
             dataset (Benchmark): The dataset to use for optimization.
-            use_answers (bool): Whether to use the answers in the dataset for optimization.
+            use_answers (bool): Whether to use the answers (labels) in the training set for optimization.
+                If False, `dataset`'s training set does not need to have answers.
+                If `eval_every_n_steps` is set to None, we can optimize the workflow without any labeled data.
             seed (Optional[int]): The random seed to use for shuffling the data.
         """
         self._init_textgrad(dataset, use_answers)
@@ -205,7 +207,10 @@ class TextGradOptimizer(BaseModule):
                 for i in range(0, len(train_data), self.batch_size):
                     batch = train_data[i:i + self.batch_size]
                     inputs = [self.evaluator.collate_func(x) for x in batch]
-                    labels = dataset.get_labels(batch)
+                    if use_answers:
+                        labels = dataset.get_labels(batch)
+                    else:
+                        labels = None
                     yield inputs, labels
                 epoch += 1
 
@@ -254,13 +259,17 @@ class TextGradOptimizer(BaseModule):
             self.save(os.path.join(self.save_path, f"{dataset.name}_textgrad_best.json"), graph=best_graph)
 
         
-    def step(self, inputs: List[dict[str, str]], labels: List[str|dict[str, str]], dataset: Benchmark, use_answers: bool = True):
+    def step(self, inputs: List[dict[str, str]], labels: Optional[List[str|dict[str, str]]], dataset: Benchmark, use_answers: bool = True):
         """Performs one optimization step using a batch of data."""
-        losses = []
-        for input, label in zip(inputs, labels):
-            output = self.forward(input)
 
-            if use_answers:
+        if labels is None and use_answers:
+            raise ValueError("Labels must be provided if `use_answers` is True.")
+
+        losses = []
+
+        if use_answers:
+            for input, label in zip(inputs, labels):
+                output = self.forward(input)
                 if isinstance(label, str):
                     label = Variable(label, requires_grad=False, role_description="correct answer for the query")
                 elif isinstance(label, dict):
@@ -272,12 +281,14 @@ class TextGradOptimizer(BaseModule):
                     code = output.parsed_outputs[output_name]
                     label = self._format_code_label(code, label, dataset)
                     label = Variable(label, requires_grad=False, role_description="the task, the test result, and the correct code")
-
                 loss = self.loss_fn([output, label])
-            else:
+                losses.append(loss)
+        else:
+            for input in inputs:
+                output = self.forward(input)
                 loss = self.loss_fn(output)
-            losses.append(loss)
-            
+                losses.append(loss)
+
         total_loss = tg.sum(losses)
         total_loss.backward(self.optimizer_engine)
         self.textgrad_optimizer.step()
