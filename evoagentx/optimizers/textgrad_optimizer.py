@@ -1,6 +1,6 @@
 import textgrad as tg
 from textgrad import Variable
-from textgrad.loss import MultiFieldEvaluation
+from textgrad.loss import TextLoss, MultiFieldEvaluation
 from textgrad.optimizer import TextualGradientDescent
 from textgrad.autograd import StringBasedFunction
 from pydantic import Field, PositiveInt
@@ -18,7 +18,15 @@ from ..benchmark.benchmark import Benchmark, CodingBenchmark
 from ..evaluators import Evaluator
 from ..workflow.workflow_graph import SequentialWorkFlowGraph, WorkFlowNode
 from ..agents import CustomizeAgent
-from ..prompts.optimizers.textgrad_optimizer import GENERAL_LOSS_PROMPT, CODE_LOSS_PROMPT, OPTIMIZER_SYSTEM_PROMPT, OPTIMIZER_CONSTRAINTS, PERSONAL_FINANCE_ADVISOR_EXAMPLE, FITNESS_COACH_EXAMPLE
+from ..prompts.optimizers.textgrad_optimizer import (
+    GENERAL_LOSS_PROMPT, 
+    CODE_LOSS_PROMPT, 
+    NO_ANSWER_LOSS_PROMPT, 
+    OPTIMIZER_SYSTEM_PROMPT, 
+    OPTIMIZER_CONSTRAINTS, 
+    PERSONAL_FINANCE_ADVISOR_EXAMPLE, 
+    FITNESS_COACH_EXAMPLE
+)
 
 
 class CustomAgentCall:
@@ -120,7 +128,7 @@ class TextGradOptimizer(BaseModule):
     batch_size: PositiveInt = Field(default=1, description="The batch size for optimization.")
     max_steps: PositiveInt = Field(default=10, description="The maximum number of optimization steps.")
     evaluator: Evaluator = Field(default=None, description="The evaluator to perform evaluation during optimization.")
-    eval_interval: Optional[PositiveInt] = Field(default=None, description="Evaluates performance every `eval_interval` steps.")
+    eval_every_n_steps: Optional[PositiveInt] = Field(default=None, description="Evaluate the workflow every `eval_every_n_steps` steps.")
     eval_rounds: PositiveInt = Field(default=1, description="The number of times to evaluate the performance.")
     eval_config: dict = Field(default={}, description="The configuration for evaluation. The keys are the arguments of `TextGradOptimizer.evaluate`.")
     save_interval: Optional[PositiveInt] = Field(default=None, description="Save the workflow every `save_interval` steps.")
@@ -133,7 +141,7 @@ class TextGradOptimizer(BaseModule):
         self.output_lookup = self._create_output_lookup()
         
 
-    def _init_textgrad(self, dataset: Benchmark):
+    def _init_textgrad(self, dataset: Benchmark, use_answers: bool = True):
         # Disable TextGrad's short variable value to allow the optimizer to receive the full variable value
         def disable_short_variable_value(self):
             return self.value
@@ -143,14 +151,20 @@ class TextGradOptimizer(BaseModule):
         self.optimizer_engine = tg.get_engine(self.optimizer_llm.config.model)
 
         # Textgrad loss
-        if isinstance(dataset, CodingBenchmark):
-            loss_prompt = CODE_LOSS_PROMPT
-            role_descriptions = ["code snippet to evaluate", "the task, the test result of the code snippet, and the correct code"]
+        if use_answers:
+            if isinstance(dataset, CodingBenchmark):
+                loss_prompt = CODE_LOSS_PROMPT
+                role_descriptions = ["code snippet to evaluate", "the task, the test result of the code snippet, and the correct code"]
+            else:
+                loss_prompt = GENERAL_LOSS_PROMPT
+                role_descriptions = ["response to evaluate", "correct answer"]
+
+            evaluation_instruction = Variable(loss_prompt, requires_grad=False, role_description="evaluation instruction")
+            self.loss_fn = MultiFieldEvaluation(evaluation_instruction, role_descriptions, self.optimizer_engine)
         else:
-            loss_prompt = GENERAL_LOSS_PROMPT
-            role_descriptions = ["response to evaluate", "correct answer"]
-        evaluation_instruction = Variable(loss_prompt, requires_grad=False, role_description="evaluation instruction")
-        self.loss_fn = MultiFieldEvaluation(evaluation_instruction, role_descriptions, self.optimizer_engine)
+            loss_prompt = NO_ANSWER_LOSS_PROMPT
+            evaluation_instruction = Variable(loss_prompt, requires_grad=False, role_description="evaluation instruction")
+            self.loss_fn = TextLoss(evaluation_instruction, self.optimizer_engine)
 
         # Create textgrad agents
         self._create_textgrad_agents()
@@ -172,17 +186,34 @@ class TextGradOptimizer(BaseModule):
         )
 
 
-    def optimize(self, dataset: Benchmark):
-        """Optimizes self.graph using `dataset`."""
-        self._init_textgrad(dataset)
+    def optimize(self, dataset: Benchmark, use_answers: bool = True, seed: Optional[int] = None):
+        """Optimizes self.graph using `dataset`.
+        
+        Args:
+            dataset (Benchmark): The dataset to use for optimization.
+            use_answers (bool): Whether to use the answers in the dataset for optimization.
+            seed (Optional[int]): The random seed to use for shuffling the data.
+        """
+        self._init_textgrad(dataset, use_answers)
+ 
+        def iterator():
+            epoch = 0
+            while True:
+                # Shuffle train data every epoch
+                effective_seed = seed + epoch if seed is not None else None
+                train_data = dataset.get_train_data(sample_k=len(dataset._train_data), seed=effective_seed)
+                for i in range(0, len(train_data), self.batch_size):
+                    batch = train_data[i:i + self.batch_size]
+                    inputs = [self.evaluator.collate_func(x) for x in batch]
+                    labels = dataset.get_labels(batch)
+                    yield inputs, labels
+                epoch += 1
+
+        data_iterator = iterator()
 
         for step in tqdm(range(self.max_steps)):
-            idx = [x + step*self.batch_size for x in range(self.batch_size)]
-            batch = dataset.get_train_data(indices=idx)
-            inputs = [self.evaluator.collate_func(x) for x in batch]
-            labels = dataset.get_labels(batch)
-
-            self.step(inputs, labels, dataset)
+            inputs, labels = next(data_iterator)
+            self.step(inputs, labels, dataset, use_answers)
 
             if self.eval_interval is not None and (step + 1) % self.eval_interval == 0:
                 logger.info(f"Evaluating the workflow at step {step+1} ...")
@@ -223,24 +254,28 @@ class TextGradOptimizer(BaseModule):
             self.save(os.path.join(self.save_path, f"{dataset.name}_textgrad_best.json"), graph=best_graph)
 
         
-    def step(self, inputs: List[dict[str, str]], labels: List[str|dict[str, str]], dataset: Benchmark):
+    def step(self, inputs: List[dict[str, str]], labels: List[str|dict[str, str]], dataset: Benchmark, use_answers: bool = True):
         """Performs one optimization step using a batch of data."""
         losses = []
         for input, label in zip(inputs, labels):
             output = self.forward(input)
-            if isinstance(label, str):
-                label = Variable(label, requires_grad=False, role_description="correct answer for the query")
-            elif isinstance(label, dict):
-                if not isinstance(dataset, CodingBenchmark):
-                    raise ValueError("Label must be a string for non-coding benchmarks.")
-                end_node_name = self.graph.find_end_nodes()[0]
-                end_node = self.graph.get_node(end_node_name)
-                output_name = end_node.outputs[0].name
-                code = output.parsed_outputs[output_name]
-                label = self._format_code_label(code, label, dataset)
-                label = Variable(label, requires_grad=False, role_description="the task, the test result, and the correct code")
 
-            loss = self.loss_fn([output, label])
+            if use_answers:
+                if isinstance(label, str):
+                    label = Variable(label, requires_grad=False, role_description="correct answer for the query")
+                elif isinstance(label, dict):
+                    if not isinstance(dataset, CodingBenchmark):
+                        raise ValueError("Label must be a string for non-coding benchmarks.")
+                    end_node_name = self.graph.find_end_nodes()[0]
+                    end_node = self.graph.get_node(end_node_name)
+                    output_name = end_node.outputs[0].name
+                    code = output.parsed_outputs[output_name]
+                    label = self._format_code_label(code, label, dataset)
+                    label = Variable(label, requires_grad=False, role_description="the task, the test result, and the correct code")
+
+                loss = self.loss_fn([output, label])
+            else:
+                loss = self.loss_fn(output)
             losses.append(loss)
             
         total_loss = tg.sum(losses)
