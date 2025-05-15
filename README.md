@@ -15,7 +15,7 @@
 [![Docs](https://img.shields.io/badge/-Documentation-0A66C2?logo=readthedocs&logoColor=white&color=7289DA&labelColor=grey)](https://EvoAgentX.github.io/EvoAgentX/)
 [![Discord](https://img.shields.io/badge/Chat-Discord-5865F2?&logo=discord&logoColor=white)](https://discord.gg/SUEkfTYn)
 [![Twitter](https://img.shields.io/badge/Follow-@EvoAgentX-e3dee5?&logo=x&logoColor=white)](https://x.com/EvoAgentX)
-[![Wechat](https://img.shields.io/badge/WeChat-EvoAgentX-brightgreen?logo=wechat&logoColor=white)](https://github.com/EvoAgentX/EvoAgentX/blob/main/assets/wechat_info.md)
+[![Wechat](https://img.shields.io/badge/WeChat-EvoAgentX-brightgreen?logo=wechat&logoColor=white)](./assets/wechat_info.md)
 [![GitHub star chart](https://img.shields.io/github/stars/EvoAgentX/EvoAgentX?style=social)](https://star-history.com/#EvoAgentX/EvoAgentX)
 [![GitHub fork](https://img.shields.io/github/forks/EvoAgentX/EvoAgentX?style=social)](https://github.com/EvoAgentX/EvoAgentX/fork)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?)](https://github.com/EvoAgentX/EvoAgentX/blob/main/LICENSE)
@@ -38,7 +38,7 @@
 </h4>
 
 <p align="center">
-  <img src="./assets/framework_en.png">
+  <img src="./assets/framework_en.jpg">
 </p>
 
 
@@ -192,15 +192,21 @@ You can also:
 
 
 ## Demo Video
-🎥 Demo video:
+
+
+[![Watch on YouTube](https://img.shields.io/badge/-Watch%20on%20YouTube-red?logo=youtube&labelColor=grey)](https://www.youtube.com/watch?v=Wu0ZydYDqgg)
+
+<div align="center">
+  <video src="https://github.com/user-attachments/assets/5cc5d0e5-51fe-425d-943d-4c95b1f0fa8f.mp4" autoplay loop muted playsinline width="600">
+    Your browser does not support the video tag.
+  </video>
+</div>
 
 In this demo, we showcase the workflow generation and execution capabilities of EvoAgentX through two examples:
 
-1. Application 1: Intelligent Job Recommendation from Resume
+- Application 1: Intelligent Job Recommendation from Resume
+- Application 2: Visual Analysis of A-Share Stocks
 
-2. Application 2: Visual Analysis of A-Share Stocks
-
-[![EvoAgentX demo video](./assets/demo.png)](https://youtu.be/Wu0ZydYDqgg)
 
 ### ✨ Final Results
 

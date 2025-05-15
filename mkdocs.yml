@@ -75,12 +75,14 @@ extra:
       link: /zh/
       lang: zh
   social:
+    - icon: fontawesome/solid/house
+      link: https://evo-agent-x-landing-page.vercel.app/
     - icon: fontawesome/brands/github
       link: https://github.com/EvoAgentX/EvoAgentX
     - icon: fontawesome/brands/x-twitter
       link: https://x.com/EvoAgentX
     - icon: fontawesome/brands/discord
-      link: https://discord.gg/EvoAgentX
+      link: https://discord.gg/SUEkfTYn
     - icon: fontawesome/solid/envelope
       link: mailto:evoagentx.ai@gmail.com
   generator: false

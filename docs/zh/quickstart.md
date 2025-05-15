@@ -10,7 +10,7 @@ pip install evoagentx
 ```
 请参阅 [安装指南](./installation.md) 获取更多详细信息。
 
-## API 密钥 & LLM 设置
+## API 密钥 和 LLM 设置
 
 要在 EvoAgentX 中执行工作流，首先需要配置用于访问大模型（LLM）的 API 密钥。推荐以下两种方式：
 

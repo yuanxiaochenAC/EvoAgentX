@@ -1,122 +1,127 @@
-# SEW 优化器教程
+# SEW优化器教程
 
-本教程将指导你如何使用 EvoAgentX 的 SEW 优化器来优化你的工作流。SEW 优化器是一个专门用于优化工作流执行效率的工具。
+本教程将指导您设置和运行EvoAgentX中的SEW（Self-Evolving Workflow，自进化工作流）优化器。我们将使用HumanEval基准作为示例，演示如何优化多智能体工作流。
 
 ## 1. 概述
 
-SEW 优化器是 EvoAgentX 框架中的一个重要组件，它提供了以下功能：
+SEW优化器是EvoAgentX中的强大工具，它使您能够：
 
-- 自动优化工作流的执行效率
-- 支持多种优化策略
-- 提供详细的优化报告
-- 支持自定义优化目标
+- 自动优化多智能体工作流（提示词和工作流结构）
+- 在基准数据集上评估优化结果
+- 支持不同的工作流表示方案（Python、Yaml、BPMN等）
 
-## 2. 设置 SEW 优化器
+## 2. 设置环境
 
-首先，你需要导入相关模块并设置 SEW 优化器。
+首先，让我们导入设置SEW优化器所需的必要模块：
 
 ```python
-from evoagentx.optimizers import SEWOptimizer
 from evoagentx.config import Config
-from evoagentx.models import OpenAIConfig, OpenAI
+from evoagentx.models import OpenAILLMConfig, OpenAILLM
+from evoagentx.workflow import SEWWorkFlowGraph 
+from evoagentx.agents import AgentManager
+from evoagentx.benchmark import HumanEval 
+from evoagentx.evaluators import Evaluator 
+from evoagentx.optimizers import SEWOptimizer 
+from evoagentx.core.callbacks import suppress_logger_info
 ```
 
-### 配置 LLM 模型
-你需要一个有效的 OpenAI API 密钥来初始化 LLM。建议将 API 密钥保存在 `.env` 文件中，并使用 `load_dotenv` 函数加载它：
+### 配置LLM模型
+
+与EvoAgentX中的其他组件类似，您需要一个有效的OpenAI API密钥来初始化LLM。
+
 ```python
-import os
-from dotenv import load_dotenv
-load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-llm_config = OpenAIConfig(model="gpt-4", openai_key=OPENAI_API_KEY)
-llm = OpenAI(config=llm_config)
+llm_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY)
+llm = OpenAILLM(config=llm_config)
 ```
 
-## 3. 初始化 SEW 优化器
+## 3. 设置组件
 
-SEW 优化器可以通过以下方式初始化：
+### 步骤1：初始化SEW工作流
+
+SEW工作流是将被优化的核心组件。它代表一个顺序工作流，旨在解决代码生成任务。
+
+```python
+sew_graph = SEWWorkFlowGraph(llm_config=llm_config)
+agent_manager = AgentManager()
+agent_manager.add_agents_from_workflow(sew_graph)
+```
+
+### 步骤2：准备基准测试
+
+对于本教程，我们将使用HumanEval基准的修改版本，该版本将测试数据分为开发集和测试集：
+
+```python
+class HumanEvalSplits(HumanEval):
+    def _load_data(self):
+        # 加载原始测试数据
+        super()._load_data()
+        # 将数据分为开发集和测试集
+        import numpy as np 
+        np.random.seed(42)
+        num_dev_samples = int(len(self._test_data) * 0.2)
+        random_indices = np.random.permutation(len(self._test_data))
+        self._dev_data = [self._test_data[i] for i in random_indices[:num_dev_samples]]
+        self._test_data = [self._test_data[i] for i in random_indices[num_dev_samples:]]
+
+# 初始化基准
+humaneval = HumanEvalSplits()
+```
+
+SEWOptimizer默认会在开发集上评估性能。请确保基准测试正确设置了开发集。您可以：
+   - 使用已经提供开发集的基准（如HotPotQA）
+   - 将数据集分为开发集和测试集（如上面HumanEvalSplits示例所示）
+   - 实现带有开发集支持的自定义基准
+
+### 步骤3：设置评估器
+
+评估器负责在优化过程中评估工作流的性能。有关如何设置和使用评估器的更详细信息，请参阅[基准和评估教程](./benchmark_and_evaluation.md)。
+
+```python
+def collate_func(example: dict) -> dict:
+    # 将原始示例转换为SEW工作流的预期输入
+    return {"question": example["prompt"]}
+
+evaluator = Evaluator(
+    llm=llm, 
+    agent_manager=agent_manager, 
+    collate_func=collate_func, 
+    num_workers=5, 
+    verbose=True
+)
+```
+
+## 4. 配置和运行SEW优化器
+
+SEW优化器可以通过各种参数配置，以控制优化过程：
 
 ```python
 optimizer = SEWOptimizer(
-    llm=llm,
-    max_iterations=10,  # 最大优化迭代次数
-    optimization_strategy="efficiency",  # 优化策略：efficiency, cost, or balanced
-    verbose=True  # 是否显示详细日志
+    graph=sew_graph,           # 要优化的工作流图
+    evaluator=evaluator,       # 用于性能评估的评估器
+    llm=llm,                   # 语言模型
+    max_steps=10,              # 最大优化步骤数
+    eval_rounds=1,             # 每步评估轮数
+    repr_scheme="python",      # 工作流的表示方案
+    optimize_mode="prompt",    # 要优化的方面（提示/结构/全部）
+    order="zero-order"         # 优化算法顺序（零阶/一阶）
 )
 ```
 
-## 4. 运行优化
+### 运行优化
 
-一旦你准备好了 SEW 优化器，下一步就是定义你的工作流并运行优化过程。
-
-### 步骤 1：定义工作流
-你可以使用预定义的工作流之一或实现自己的工作流。在这个示例中，我们使用一个简单的工作流：
+要启动优化过程：
 
 ```python
-from evoagentx.workflow import WorkFlowGraph
+# 优化SEW工作流
+optimizer.optimize(dataset=humaneval)
 
-workflow = WorkFlowGraph(
-    name="example_workflow",
-    description="An example workflow for optimization"
-)
+# 评估优化后的工作流
+with suppress_logger_info():
+    metrics = optimizer.evaluate(dataset=humaneval, eval_mode="test")
+print("Evaluation metrics: ", metrics)
+
+# 保存优化后的SEW工作流
+optimizer.save("debug/optimized_sew_workflow.json")
 ```
 
-### 步骤 2：运行优化
-现在，你可以通过向优化器提供工作流来运行优化过程：
-
-```python
-optimized_workflow = optimizer.optimize(workflow)
-```
-
-优化器将返回一个优化后的工作流，其中包含了优化后的节点和边。
-
-## 5. 查看优化报告
-
-SEW 优化器会生成一个详细的优化报告，你可以通过以下方式查看：
-
-```python
-report = optimizer.get_optimization_report()
-print(report)
-```
-
-报告包含以下信息：
-- 优化前后的执行效率指标
-- 优化过程中使用的策略
-- 每个节点的优化结果
-- 优化建议
-
-## 6. 自定义优化目标
-
-你可以通过设置 `optimization_strategy` 参数来自定义优化目标：
-
-- `"efficiency"`：优化工作流的执行效率
-- `"cost"`：优化工作流的成本
-- `"balanced"`：平衡效率和成本
-
-```python
-optimizer = SEWOptimizer(
-    llm=llm,
-    optimization_strategy="balanced",
-    max_iterations=10
-)
-```
-
-## 7. 保存和加载优化后的工作流
-
-你可以将优化后的工作流保存到文件中，并在以后加载它：
-
-```python
-# 保存优化后的工作流
-optimized_workflow.save("optimized_workflow.json")
-
-# 加载优化后的工作流
-loaded_workflow = WorkFlowGraph.load("optimized_workflow.json")
-```
-
-## 8. 注意事项
-
-- SEW 优化器需要足够的计算资源来运行优化过程
-- 优化过程可能需要一些时间，具体取决于工作流的复杂性和优化策略
-- 建议在运行优化之前备份原始工作流
-
-有关完整示例，请参考 [SEW 优化器示例](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/sew_optimizer.py)。
+有关完整的工作示例，请参阅[sew_optimizer.py](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/sew_optimizer.py)。

@@ -32,91 +32,148 @@ llm_config = OpenAIConfig(model="gpt-4", openai_key=OPENAI_API_KEY)
 llm = OpenAI(config=llm_config)
 ```
 
-## 3. 初始化 AFlow 优化器
+## 3. 设置组件
 
-AFlow 优化器可以通过以下方式初始化：
+### 第一步：定义任务配置
+
+AFlow 优化器需要一个配置来指定任务类型和可用的操作符。以下是不同任务类型的示例配置：
+
+```python
+EXPERIMENTAL_CONFIG = {
+    "humaneval": {
+        "question_type": "code", 
+        "operators": ["Custom", "CustomCodeGenerate", "Test", "ScEnsemble"] 
+    }, 
+    "mbpp": {
+        "question_type": "code", 
+        "operators": ["Custom", "CustomCodeGenerate", "Test", "ScEnsemble"] 
+    },
+    "hotpotqa": {
+        "question_type": "qa", 
+        "operators": ["Custom", "AnswerGenerate", "QAScEnsemble"]
+    },
+    "gsm8k": {
+        "question_type": "math", 
+        "operators": ["Custom", "ScEnsemble", "Programmer"]
+    },
+    "math": {
+        "question_type": "math", 
+        "operators": ["Custom", "ScEnsemble", "Programmer"]
+    }
+}
+```
+
+### 第二步：定义初始工作流
+
+AFlow 优化器需要两个文件：
+- `graph.py`：该文件用 Python 代码定义初始工作流图。
+- `prompt.py`：该文件定义工作流中使用的提示。
+
+以下是 HumanEval 基准的 `graph.py` 文件示例：
+
+```python
+import evoagentx.workflow.operators as operator
+import examples.aflow.code_generation.prompt as prompt_custom # noqa: F401
+from evoagentx.models.model_configs import LLMConfig
+from evoagentx.benchmark.benchmark import Benchmark
+from evoagentx.models.model_utils import create_llm_instance
+
+class Workflow:
+    
+    def __init__(
+        self,
+        name: str,
+        llm_config: LLMConfig,
+        benchmark: Benchmark
+    ):
+        self.name = name
+        self.llm = create_llm_instance(llm_config)
+        self.benchmark = benchmark 
+        self.custom = operator.Custom(self.llm)
+        self.custom_code_generate = operator.CustomCodeGenerate(self.llm)
+
+    async def __call__(self, problem: str, entry_point: str):
+        """
+        工作流的实现
+        Custom 操作符可以生成任何你想要的内容。
+        但当你想获取标准代码时，应该使用 custom_code_generate 操作符。
+        """
+        # await self.custom(input=, instruction="")
+        solution = await self.custom_code_generate(problem=problem, entry_point=entry_point, instruction=prompt_custom.GENERATE_PYTHON_CODE_PROMPT) # 但当你想获取标准代码时，应该使用 customcodegenerator
+        return solution['response']
+```
+
+!!! 注意
+    在定义工作流时，请注意以下关键点：
+
+    1. **提示导入路径**：确保正确指定 `prompt.py` 的导入路径（例如 `examples.aflow.code_generation.prompt`）。此路径应该与你的项目结构匹配，以便正确加载提示。
+
+    2. **操作符初始化**：在 `__init__` 函数中，你必须初始化工作流中将使用的所有操作符。每个操作符都应该使用适当的 LLM 实例进行实例化。
+
+    3. **工作流执行**：`__call__` 函数是工作流执行的主要入口点。它应该定义工作流的完整执行逻辑，并返回将用于评估的最终输出。
+
+
+以下是 HumanEval 基准的 `prompt.py` 文件示例：
+
+```python
+GENERATE_PYTHON_CODE_PROMPT = """
+Generate a functional and correct Python code for the given problem.
+
+Problem: """
+```
+
+!!! 注意 
+    如果工作流不需要任何提示，则 `prompt.py` 文件可以为空。
+
+### 第三步：准备基准
+
+在本教程中，我们将使用 AFlowHumanEval 基准。它遵循与 [原始 AFlow 实现](https://github.com/FoundationAgents/MetaGPT/tree/main/examples/aflow) 中相同的数据划分和格式。
+
+```python
+# Initialize the benchmark
+humaneval = AFlowHumanEval()
+```
+
+## 4. 配置和运行 AFlow 优化器
+
+AFlow 优化器可以通过各种参数进行配置，以控制优化过程：
 
 ```python
 optimizer = AFlowOptimizer(
-    llm=llm,
-    max_iterations=10,  # 最大优化迭代次数
-    optimization_strategy="performance",  # 优化策略：performance, cost, or balanced
-    verbose=True  # 是否显示详细日志
+    graph_path="examples/aflow/code_generation",  # 初始工作流图的路径
+    optimized_path="examples/aflow/humaneval/optimized",  # 保存优化工作流的路径
+    optimizer_llm=optimizer_llm,  # 用于优化的 LLM
+    executor_llm=executor_llm,    # 用于执行的 LLM
+    validation_rounds=3,          # 优化期间在开发集上运行验证的次数
+    eval_rounds=3,               # 测试期间在测试集上运行评估的次数
+    max_rounds=20,               # 最大优化轮数
+    **EXPERIMENTAL_CONFIG["humaneval"]  # 特定任务的配置，用于指定任务类型和可用操作符
 )
 ```
 
-## 4. 运行优化
+### 运行优化
 
-一旦你准备好了 AFlow 优化器，下一步就是定义你的工作流并运行优化过程。
-
-### 步骤 1：定义工作流
-你可以使用预定义的工作流之一或实现自己的工作流。在这个示例中，我们使用一个简单的工作流：
+要开始优化过程：
 
 ```python
-from evoagentx.workflow import WorkFlowGraph
-
-workflow = WorkFlowGraph(
-    name="example_workflow",
-    description="An example workflow for optimization"
-)
+# 优化工作流
+optimizer.optimize(humaneval)
 ```
 
-### 步骤 2：运行优化
-现在，你可以通过向优化器提供工作流来运行优化过程：
+!!! 注意 
+    在优化过程中，工作流将在每一步骤上对开发集进行 `validation_rounds` 次验证。确保基准 `humaneval` 包含开发集（即 `self._dev_data` 不为空）。
+
+### 测试优化后的工作流
+
+要测试优化后的工作流：
 
 ```python
-optimized_workflow = optimizer.optimize(workflow)
+# 测试优化后的工作流
+optimizer.test(humaneval)
 ```
+默认情况下，优化器将选择验证性能最高的工作流进行测试。你还可以使用 `test_rounds: List[int]` 参数指定测试轮次。例如，要评估第二轮和第三轮，可以使用 `optimizer.test(humaneval, test_rounds=[2, 3])`。
 
-优化器将返回一个优化后的工作流，其中包含了优化后的节点和边。
+!!! 注意 
+    在测试期间，工作流将在测试集上进行 `eval_rounds` 次评估。确保基准 `humaneval` 包含测试集（即 `self._test_data` 不为空）。
 
-## 5. 查看优化报告
-
-AFlow 优化器会生成一个详细的优化报告，你可以通过以下方式查看：
-
-```python
-report = optimizer.get_optimization_report()
-print(report)
-```
-
-报告包含以下信息：
-- 优化前后的性能指标
-- 优化过程中使用的策略
-- 每个节点的优化结果
-- 优化建议
-
-## 6. 自定义优化目标
-
-你可以通过设置 `optimization_strategy` 参数来自定义优化目标：
-
-- `"performance"`：优化工作流的性能
-- `"cost"`：优化工作流的成本
-- `"balanced"`：平衡性能和成本
-
-```python
-optimizer = AFlowOptimizer(
-    llm=llm,
-    optimization_strategy="balanced",
-    max_iterations=10
-)
-```
-
-## 7. 保存和加载优化后的工作流
-
-你可以将优化后的工作流保存到文件中，并在以后加载它：
-
-```python
-# 保存优化后的工作流
-optimized_workflow.save("optimized_workflow.json")
-
-# 加载优化后的工作流
-loaded_workflow = WorkFlowGraph.load("optimized_workflow.json")
-```
-
-## 8. 注意事项
-
-- AFlow 优化器需要足够的计算资源来运行优化过程
-- 优化过程可能需要一些时间，具体取决于工作流的复杂性和优化策略
-- 建议在运行优化之前备份原始工作流
-
-有关完整示例，请参考 [AFlow 优化器示例](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/aflow_optimizer.py)。
+有关完整的工作示例，请参阅 [aflow_humaneval.py](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/optimization/aflow_humaneval.py)。
