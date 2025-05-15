@@ -4,8 +4,8 @@ from evoagentx.models import OpenAILLM, OpenAILLMConfig
 from evoagentx.benchmark import MBPP  
 from evoagentx.workflow import SequentialWorkFlowGraph, WorkFlowGraph
 from evoagentx.core.callbacks import suppress_logger_info 
-from evoagentx.optimizers.mipro_optimizer import MiproOptimizer
-from evoagentx.evaluators.mipro_evaluator import Evaluate as mipro_evaluator
+from evoagentx.optimizers import MiproOptimizer
+from evoagentx.evaluators import MiproEvaluator
 from evoagentx.utils.mipro_utils.settings import settings
 
 load_dotenv()
@@ -65,7 +65,7 @@ def main():
         return result['pass@1']
     
     # Create MIPRO evaluator
-    evaluate = mipro_evaluator(
+    evaluate = MiproEvaluator(
         devset=testset,
         metric=evaluate_metric,
         num_threads=32,

@@ -1,9 +1,9 @@
-from evoagentx.optimizers.mipro_optimizer import MiproOptimizer
+from evoagentx.optimizers import MiproOptimizer
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.benchmark.math import MATH
 from evoagentx.utils.mipro_utils.settings import settings
 # OPENAI_API_KEY = "OPENAI_API_KEY" 
-from evoagentx.evaluators.mipro_evaluator import Evaluate as mipro_evaluator
+from evoagentx.evaluators import MiproEvaluator
 import os 
 import logging
 from dotenv import load_dotenv
@@ -75,7 +75,7 @@ def main():
     
 
     # zero-shot evaluation
-    evaluate = mipro_evaluator(
+    evaluate = MiproEvaluator(
         devset=devset,
         metric=evaluate_metric,
         num_threads=32,

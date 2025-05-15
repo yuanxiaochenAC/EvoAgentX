@@ -4,9 +4,9 @@ from evoagentx.models import OpenAILLM, OpenAILLMConfig
 from evoagentx.benchmark import MATH
 from evoagentx.workflow import SequentialWorkFlowGraph, WorkFlowGraph
 from evoagentx.core.callbacks import suppress_logger_info
-from evoagentx.optimizers.mipro_optimizer import MiproOptimizer
+from evoagentx.optimizers import MiproOptimizer
 from evoagentx.utils.mipro_utils.settings import settings
-from evoagentx.evaluators.mipro_evaluator import Evaluate as mipro_evaluator
+from evoagentx.evaluators import MiproEvaluator
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -67,7 +67,7 @@ def main():
         return benchmark.math_equal(prediction_ans, example_ans)
     
     
-    evaluate = mipro_evaluator(
+    evaluate = MiproEvaluator(
         devset = testset,
         metric = evaluate_metric,
         num_threads = 32,

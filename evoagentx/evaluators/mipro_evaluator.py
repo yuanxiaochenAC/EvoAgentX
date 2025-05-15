@@ -45,7 +45,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-class Evaluate:
+class MiproEvaluator:
     
     def __init__(
         self,
