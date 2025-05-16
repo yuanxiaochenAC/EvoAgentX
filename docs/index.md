@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="./assets/framework_en.png">
+  <img src="./assets/framework_en.jpg">
 </p>
 
 
@@ -34,9 +34,10 @@ EvoAgentX uses a modular architecture with the following core components:
 
 ## 👥 Community
 
-- **Discord**: Join our [Discord Channel](https://discord.gg/q5hBjHVz) for discussions and support
+- **Discord**: Join our [Discord Channel](https://discord.gg/SUEkfTYn) for discussions and support
 - **GitHub**: Contribute to the project on [GitHub](https://github.com/EvoAgentX/EvoAgentX/)
 - **Email**: Contact us at [evoagentx.ai@gmail.com](mailto:evoagentx.ai@gmail.com)
+- **WeChat**: Connect with us on [WeChat](https://github.com/EvoAgentX/EvoAgentX/blob/main/assets/wechat_info.md) for updates and support.
 
 ## 🤝 Contributing
 

@@ -15,6 +15,7 @@ from ..core.base_config import Parameter
 from .action_graph import ActionGraph
 from ..utils.utils import generate_dynamic_class_name, make_parent_folder
 from ..prompts.workflow.sew_workflow import SEW_WORKFLOW
+from ..prompts.utils import DEFAULT_SYSTEM_PROMPT
 
 
 class WorkFlowNodeState(str, Enum):
@@ -1085,7 +1086,7 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
                 "inputs": [{"name": str, "type": str, "required": bool, "description": str}, ...],
                 "outputs": [{"name": str, "type": str, "required": bool, "description": str}, ...],
                 "prompt": str, 
-                "system_prompt" (optional): str,
+                "system_prompt" (optional): str, default is DEFAULT_SYSTEM_PROMPT,
                 "output_parser" (optional): Type[ActionOutput],
                 "parse_mode" (optional): str, default is "str" 
                 "parse_func" (optional): Callable,
@@ -1118,7 +1119,7 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
         outputs = task.get("outputs", [])
         agent_name = generate_dynamic_class_name(node_name+" Agent")
         agent_description = node_description # .replace("task", "agent")
-        agent_system_prompt = task.get("system_prompt", None)
+        agent_system_prompt = task.get("system_prompt", DEFAULT_SYSTEM_PROMPT)
         agent_output_parser = task.get("output_parser", None)
         agent_parse_mode = task.get("parse_mode", "str")
         agent_parse_func = task.get("parse_func", None)
