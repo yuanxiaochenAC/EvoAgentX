@@ -16,13 +16,14 @@ class HotPotQASplits(HotPotQA):
     def _load_data(self):
         # load the original test data 
         super()._load_data()
-        # split the data into dev and test
+        # split the data into train, dev and test
         import numpy as np 
         np.random.seed(42)
         permutation = np.random.permutation(len(self._dev_data))
         full_test_data = self._dev_data 
-        # randomly select 50 samples for dev and 100 samples for test
-        self._dev_data = [full_test_data[idx] for idx in permutation[:50]]
+        # randomly select 10 samples for train, 40 for dev, and 100 for test
+        self._train_data = [full_test_data[idx] for idx in permutation[:10]]
+        self._dev_data = [full_test_data[idx] for idx in permutation[10:50]]
         self._test_data = [full_test_data[idx] for idx in permutation[50:150]]
 
 
@@ -96,7 +97,7 @@ def main():
     logger.info(f"Evaluation metrics (before optimization): {results}")
 
     logger.info("Optimizing workflow...")
-    textgrad_optimizer.optimize(benchmark)
+    textgrad_optimizer.optimize(benchmark, seed=8)
     textgrad_optimizer.restore_best_graph()
 
     logger.info("Evaluating workflow on test set...")

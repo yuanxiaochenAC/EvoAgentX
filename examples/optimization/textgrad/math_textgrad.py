@@ -1,4 +1,3 @@
-import os
 from dotenv import load_dotenv
 from evoagentx.models import OpenAILLM, OpenAILLMConfig
 from evoagentx.benchmark import MATH  
@@ -11,20 +10,20 @@ from evoagentx.core.logging import logger
 
 
 load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 class MathSplits(MATH):
 
     def _load_data(self):
         # load the original test data 
         super()._load_data()
-        # split the data into dev and test
+        # split the data into train, dev and test
         import numpy as np 
         np.random.seed(42)
         permutation = np.random.permutation(len(self._test_data))
         full_test_data = self._test_data
-        # randomly select 50 samples for dev and 100 samples for test
-        self._dev_data = [full_test_data[idx] for idx in permutation[:50]]
+        # randomly select 10 samples for train, 40 for dev, and 100 for test
+        self._train_data = [full_test_data[idx] for idx in permutation[:10]]
+        self._dev_data = [full_test_data[idx] for idx in permutation[10:50]]
         self._test_data = [full_test_data[idx] for idx in permutation[50:150]]
 
 
@@ -53,10 +52,10 @@ math_graph_data = {
 
 def main(): 
 
-    executor_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY)
+    executor_config = OpenAILLMConfig(model="gpt-4o-mini")
     executor_llm = OpenAILLM(config=executor_config)
 
-    optimizer_config = OpenAILLMConfig(model="gpt-4o", openai_key=OPENAI_API_KEY)
+    optimizer_config = OpenAILLMConfig(model="gpt-4o")
     optimizer_llm = OpenAILLM(config=optimizer_config)
 
     benchmark = MathSplits()
@@ -93,7 +92,7 @@ def main():
     logger.info(f"Evaluation metrics (before optimization): {results}")
 
     logger.info("Optimizing workflow...")
-    textgrad_optimizer.optimize(benchmark)
+    textgrad_optimizer.optimize(benchmark, seed=8)
     textgrad_optimizer.restore_best_graph()
 
     logger.info("Evaluating workflow on test set...")
