@@ -1,10 +1,10 @@
 {
     "class_name": "SequentialWorkFlowGraph",
-    "goal": "Answer the math question. The answer should be in box format, e.g., \\boxed{{123}}",
+    "goal": "Generate a functional and correct Python code for the given problem.",
     "tasks": [
         {
-            "name": "answer_generate",
-            "description": "Answer generation for Math.",
+            "name": "code_generate",
+            "description": "Code generation for MBPP.",
             "inputs": [
                 {
                     "name": "problem",
@@ -15,33 +15,83 @@
             ],
             "outputs": [
                 {
-                    "name": "answer",
+                    "name": "code",
                     "type": "str",
-                    "description": "The generated answer.",
+                    "description": "The generated code.",
                     "required": true
                 }
             ],
-            "prompt": "To enhance the clarity and effectiveness of the instruction for generating answers to mathematical problems, it is essential to provide a more detailed context in the prompt. This can guide the language model better in understanding the structure of the input and the expected output. Here's an improved instruction:\n\n---\n\n**Improved Instruction:**\n\nPlease solve the following mathematical problem step-by-step, ensuring that you have included all necessary calculations and reasoning in your explanation. Once you have reached the final answer, express it in a boxed format, e.g., \\(\\boxed{{123}}\\).\n\n**Problem:** {problem}\n\n---\n\nThis revised instruction prompts the language model not only to provide the answer but also to explain the reasoning behind it, which can enhance understanding, especially in educational contexts.",
+            "prompt": "To enhance the effectiveness and clarity of the instruction for the language model, the prompt can be improved by providing more contextual details and specifying the expected quality of the generated code. Here\u2019s a refined instruction:\n\n---\n\n**Improved Instruction:**\n\n\"Please write a complete and correct Python function that solves the following problem. Ensure that the code is clear, well-structured, and thoroughly comments where necessary to enhance understanding. Additionally, consider edge cases and provide proper error handling. \n\nProblem: {problem}\"\n\n---\n\nThis revision emphasizes clarity, structure, comments, and considerations for edge cases, which can lead to better code generation outcomes.",
             "system_prompt": null,
             "parse_mode": "str",
             "parse_func": null,
             "parse_title": null,
             "demos": [
                 {
-                    "problem": "Simplify and rationalize the denominator: $$\\frac{8}{3\\sqrt{3}+ 7\\sqrt{27}}.$$",
-                    "solution": "We begin by recognizing that since $27 = 3^3$, $7\\sqrt{27}$ simplifies to $7\\cdot3\\sqrt{3}=21\\sqrt{3}$. Our expression then becomes  \\begin{align*}\n\\frac{8}{3\\sqrt{3}+21\\sqrt{3}} & = \\frac{8}{24\\sqrt{3}} \\\\\n& = \\frac{1}{3\\sqrt{3}} \\\\\n& = \\boxed{\\frac{\\sqrt{3}}{9}}.\n\\end{align*}"
+                    "source_file": "Benchmark Questions Verification V2.ipynb",
+                    "task_id": 283,
+                    "prompt": "Write a python function takes in an integer and check whether the frequency of each digit in the integer is less than or equal to the digit itself.\n\ndef validate(n):\n",
+                    "code": "def validate(n): \n    for i in range(10): \n        temp = n;  \n        count = 0; \n        while (temp): \n            if (temp % 10 == i): \n                count+=1;  \n            if (count > i): \n                return False\n            temp //= 10; \n    return True",
+                    "test_imports": [],
+                    "test_list": [
+                        "assert validate(1234) == True",
+                        "assert validate(51241) == False",
+                        "assert validate(321) == True"
+                    ],
+                    "entry_point": "validate",
+                    "canonical_solution": "def validate(n): \n    for i in range(10): \n        temp = n;  \n        count = 0; \n        while (temp): \n            if (temp % 10 == i): \n                count+=1;  \n            if (count > i): \n                return False\n            temp //= 10; \n    return True",
+                    "test": "def check(candidate):\n    assert validate(1234) == True\n    assert validate(51241) == False\n    assert validate(321) == True\n",
+                    "original_prompt": "Write a python function takes in an integer and check whether the frequency of each digit in the integer is less than or equal to the digit itself."
                 },
                 {
-                    "problem": "In how many ways can the letters of the word BANANA be rearranged such that the new word does not begin with a B?",
-                    "solution": "The first thing to do is place the B since it has a restriction on it. We can put it anywhere but the first place, so we have 5 options. Once we have done that, we just need to place the two N's and then the rest of the spots will just be A's. We have 5 spots left, so there are 5 options for where to put the first N and 4 options for where to put the second N. However, the two N's are identical, which means that we've counted each new word twice. So our answer is $\\frac{5\\times5\\times4}{2}=\\boxed{50}$."
+                    "source_file": "Ellen's Copy of Benchmark Questions Verification V2.ipynb",
+                    "task_id": 308,
+                    "prompt": "Write a function to find the specified number of largest products from two given lists, selecting one factor from each list.\n\ndef large_product(nums1, nums2, N):\n",
+                    "code": "def large_product(nums1, nums2, N):\n    result = sorted([x*y for x in nums1 for y in nums2], reverse=True)[:N]\n    return result",
+                    "test_imports": [],
+                    "test_list": [
+                        "assert large_product([1, 2, 3, 4, 5, 6],[3, 6, 8, 9, 10, 6],3)==[60, 54, 50]",
+                        "assert large_product([1, 2, 3, 4, 5, 6],[3, 6, 8, 9, 10, 6],4)==[60, 54, 50, 48]",
+                        "assert large_product([1, 2, 3, 4, 5, 6],[3, 6, 8, 9, 10, 6],5)==[60, 54, 50, 48, 45]"
+                    ],
+                    "entry_point": "large_product",
+                    "canonical_solution": "def large_product(nums1, nums2, N):\n    result = sorted([x*y for x in nums1 for y in nums2], reverse=True)[:N]\n    return result",
+                    "test": "def check(candidate):\n    assert large_product([1, 2, 3, 4, 5, 6],[3, 6, 8, 9, 10, 6],3)==[60, 54, 50]\n    assert large_product([1, 2, 3, 4, 5, 6],[3, 6, 8, 9, 10, 6],4)==[60, 54, 50, 48]\n    assert large_product([1, 2, 3, 4, 5, 6],[3, 6, 8, 9, 10, 6],5)==[60, 54, 50, 48, 45]\n",
+                    "original_prompt": "Write a function to find the specified number of largest products from two given lists, selecting one factor from each list."
                 },
                 {
-                    "problem": "Beth rolls a fair six-sided die. If she rolls a prime number, she wins 1 dollar, but if she rolls a composite number, she loses 1 dollar. If she rolls 1 nothing happens. What is the expected value of the amount of money Beth will win if she rolls the die once? Express your answer as a common fraction.",
-                    "solution": "There are 3 possible prime numbers which can be rolled (2, 3, and 5), and two possible composite numbers which can be rolled (4 and 6). Each number has a $\\dfrac{1}{6}$ chance of being rolled. So, the expected value of Beth's winnings is $$\\frac{3}{6}(1)+\\frac{2}{6}(-1)+\\frac{1}{6}(0)=\\boxed{\\frac{1}{6}}$$"
+                    "source_file": "Benchmark Questions Verification V2.ipynb",
+                    "task_id": 802,
+                    "prompt": "Write a python function to count the number of rotations required to generate a sorted array. https://www.geeksforgeeks.org/count-of-rotations-required-to-generate-a-sorted-array/\n\ndef count_rotation(arr):\n",
+                    "code": "def count_rotation(arr):   \n    for i in range (1,len(arr)): \n        if (arr[i] < arr[i - 1]): \n            return i  \n    return 0",
+                    "test_imports": [],
+                    "test_list": [
+                        "assert count_rotation([3,2,1]) == 1",
+                        "assert count_rotation([4,5,1,2,3]) == 2",
+                        "assert count_rotation([7,8,9,1,2,3]) == 3",
+                        "assert count_rotation([1,2,3]) == 0",
+                        "assert count_rotation([1,3,2]) == 2"
+                    ],
+                    "entry_point": "count_rotation",
+                    "canonical_solution": "def count_rotation(arr):   \n    for i in range (1,len(arr)): \n        if (arr[i] < arr[i - 1]): \n            return i  \n    return 0",
+                    "test": "def check(candidate):\n    assert count_rotation([3,2,1]) == 1\n    assert count_rotation([4,5,1,2,3]) == 2\n    assert count_rotation([7,8,9,1,2,3]) == 3\n    assert count_rotation([1,2,3]) == 0\n    assert count_rotation([1,3,2]) == 2\n",
+                    "original_prompt": "Write a python function to count the number of rotations required to generate a sorted array. https://www.geeksforgeeks.org/count-of-rotations-required-to-generate-a-sorted-array/"
                 },
                 {
-                    "problem": "Determine the complex number $z$ satisfying the equation $3z+4i\\bar{z}=1-8i$.  Note that $\\bar{z}$ denotes the conjugate of $z$.",
-                    "solution": "Let $z=a+bi$, where $a$ and $b$ are real numbers representing the real and imaginary parts of $z$, respectively.  Then $\\bar{z}=a-bi$, so that $4i\\bar{z}=4b+4ia$.  We now find that \\[ 3z+4i\\bar{z} = (3a+4b) + (4a+3b)i. \\]So if $3z+4i\\bar{z}=1-8i$ then we must have $3a+4b=1$ and $4a+3b=-8$.  This system of equations is routine to solve, leading to the values $a=-5$ and $b=4$.  Therefore the complex number we are seeking is $z=\\boxed{-5+4i}$."
+                    "source_file": "Ellen's Copy of Benchmark Questions Verification V2.ipynb",
+                    "task_id": 310,
+                    "prompt": "Write a function to convert a given string to a tuple of characters.\n\ndef string_to_tuple(str1):\n",
+                    "code": "def string_to_tuple(str1):\n    result = tuple(x for x in str1 if not x.isspace()) \n    return result",
+                    "test_imports": [],
+                    "test_list": [
+                        "assert string_to_tuple(\"python 3.0\")==('p', 'y', 't', 'h', 'o', 'n', '3', '.', '0')",
+                        "assert string_to_tuple(\"item1\")==('i', 't', 'e', 'm', '1')",
+                        "assert string_to_tuple(\"15.10\")==('1', '5', '.', '1', '0')"
+                    ],
+                    "entry_point": "string_to_tuple",
+                    "canonical_solution": "def string_to_tuple(str1):\n    result = tuple(x for x in str1 if not x.isspace()) \n    return result",
+                    "test": "def check(candidate):\n    assert string_to_tuple(\"python 3.0\")==('p', 'y', 't', 'h', 'o', 'n', '3', '.', '0')\n    assert string_to_tuple(\"item1\")==('i', 't', 'e', 'm', '1')\n    assert string_to_tuple(\"15.10\")==('1', '5', '.', '1', '0')\n",
+                    "original_prompt": "Write a function to convert a given string to a tuple of characters."
                 }
             ],
             "traces": [],

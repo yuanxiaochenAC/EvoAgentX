@@ -22,9 +22,9 @@ class MBPPSplits(MBPP):
         np.random.seed(42)
         permutation = np.random.permutation(len(self._test_data))
         full_test_data = self._test_data
-        # randomly select 50 samples for dev and 100 samples for test
+        # randomly select 50 samples for dev and 50 samples for test
         self._train_data = [full_test_data[idx] for idx in permutation[:50]]
-        self._test_data = [full_test_data[idx] for idx in permutation[50:150]]
+        self._test_data = [full_test_data[idx] for idx in permutation[50:100]]
 
 def collate_func(example: dict) -> dict:
     return {"problem": example["prompt"]}
@@ -52,14 +52,7 @@ def main():
     evoagentx.configure(lm=openai_config)
     
     benchmark = MBPPSplits()
-    benchmark._load_data()
-    trainset = benchmark._train_data
-    
     workflow_graph = SequentialWorkFlowGraph.from_dict(mbpp_graph_data)
-    
-    def evaluate_metric(example, prediction, trace=None):
-        result = benchmark.evaluate(prediction, example)
-        return result['pass@1']
     
     agent_manager = AgentManager()
     agent_manager.add_agents_from_workflow(workflow_graph, llm_config=openai_config)
@@ -68,27 +61,28 @@ def main():
         llm = OpenAILLM(config=openai_config),
         agent_manager = agent_manager,
         collate_func = collate_func,
-        num_workers = 32,
+        num_workers = 16,
         verbose = True
     )
     
     optimizer = MiproOptimizer(
-        metric = evaluate_metric,
+        graph = workflow_graph,
         executor_llm = openai_config,
         max_bootstrapped_demos = 4,
         max_labeled_demos = 4,
         num_candidates = 5,
         auto = "light",
-        num_threads = 32,
+        num_threads = 16,
         save_path = "examples/mipro/output/logs",
-        evaluator = evaluate
+        evaluator = evaluate,
+        metric_instance = "pass@1",
+        metric_threshold = 0.5
     )
     
-    with suppress_logger_info():
-        best_program = optimizer.optimize(
-            trainset = trainset,
-            collate_func = collate_func,
-        )
+    best_program = optimizer.optimize(
+        benchmark = benchmark,
+        collate_func = collate_func,
+    )
     
     output_path = r"C:\Users\31646\Desktop\EvoAgentX\examples\mipro\output\best_program_mbpp.json"
     best_program.save_module(output_path)

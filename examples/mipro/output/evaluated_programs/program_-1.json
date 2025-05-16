@@ -1,10 +1,10 @@
 {
     "class_name": "SequentialWorkFlowGraph",
-    "goal": "Answer the question based on the context. The answer should be a direct response to the question, without including explanations or reasoning.",
+    "goal": "Generate a functional and correct Python code for the given problem.",
     "tasks": [
         {
-            "name": "answer_generate",
-            "description": "Answer the question based on the context.",
+            "name": "code_generate",
+            "description": "Code generation for MBPP.",
             "inputs": [
                 {
                     "name": "problem",
@@ -15,15 +15,15 @@
             ],
             "outputs": [
                 {
-                    "name": "answer",
+                    "name": "code",
                     "type": "str",
-                    "description": "The answer to the problem.",
+                    "description": "The generated code.",
                     "required": true
                 }
             ],
-            "prompt": "Think step by step to answer the question. You should explain your thinking process in the 'thought' field, and provide the final answer in the 'answer' field.\nFormat your output in xml format, such as <thought>xxx</thought> and <answer>xxx</answer>.\n\nProblem: {problem}",
+            "prompt": "Generate a functional and correct Python code for the given problem.\n\nProblem: {problem}",
             "system_prompt": null,
-            "parse_mode": "xml",
+            "parse_mode": "str",
             "parse_func": null,
             "parse_title": null,
             "demos": [],

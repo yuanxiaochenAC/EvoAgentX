@@ -196,7 +196,6 @@ class MiproOptimizer(BaseModule):
             program,
             instruction_candidates,
             demo_candidates,
-            self.mipro_evaluate,
             valset,
             num_trials,
             minibatch,
