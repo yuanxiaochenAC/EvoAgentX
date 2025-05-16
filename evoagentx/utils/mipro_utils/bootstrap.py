@@ -2,7 +2,7 @@ import random
 import logging
 import threading
 from pydantic import Field
-from typing import  Callable, Dict,  Optional
+from typing import  Callable, Optional
 from evoagentx.workflow import  WorkFlow
 from evoagentx.agents import AgentManager
 import tqdm

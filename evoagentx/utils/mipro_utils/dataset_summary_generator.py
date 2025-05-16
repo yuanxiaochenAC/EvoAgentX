@@ -1,6 +1,5 @@
 import os 
 from dotenv import load_dotenv
-from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.utils.mipro_utils.settings import settings
 from evoagentx.utils.mipro_utils.utils import (
     strip_prefix,

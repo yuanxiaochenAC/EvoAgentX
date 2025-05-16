@@ -7,12 +7,11 @@ import numpy as np
 from pydantic import Field
 from typing import Any, Callable, Dict, Literal, Optional, Union, List, Tuple
 from ..benchmark.benchmark import Benchmark
-from ..models import OpenAILLMConfig, OpenAILLM
+from ..models import OpenAILLMConfig
 from ..evaluators import MiproEvaluator as mipro_evaluator
 from ..workflow.workflow import WorkFlowGraph
 from ..workflow.action_graph import ActionGraph
 from ..core.module import BaseModule
-from ..models.base_model import BaseLLM
 from ..utils.mipro_utils.settings import settings
 from ..utils.mipro_utils.grounded_proposer import GroundedProposer
 from ..utils.mipro_utils.utils import (create_minibatch,
