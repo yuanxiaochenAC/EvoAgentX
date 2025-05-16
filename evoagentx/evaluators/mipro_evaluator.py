@@ -90,6 +90,7 @@ class MiproEvaluator:
     def __call__(
         self,
         program,
+        collate_func: Callable,
         metric: Optional[Callable] = None,
         devset: Optional[List] = None,
         num_threads: Optional[int] = None,
@@ -97,7 +98,7 @@ class MiproEvaluator:
         display_table: Optional[Union[bool, int]] = None,
         return_all_scores: Optional[bool] = None,
         return_outputs: Optional[bool] = None,
-        with_inputs: Optional[Any] = None,
+        
     ):
         """
         Args:
@@ -152,7 +153,7 @@ class MiproEvaluator:
             agent_manager = AgentManager()
             agent_manager.clear_agents()
             # program.save_module("examples/mipro/output/saved_program.json")
-            llm = settings.execute_lm if settings.execute_lm is not None else settings.lm
+            llm = settings.executor_llm if settings.executor_llm is not None else settings.lm
             
             agent_manager.add_agents_from_workflow(
                 program,
@@ -164,8 +165,7 @@ class MiproEvaluator:
             
             
             prediction = workflow.execute(
-                inputs ={key: example[value] for key, value in with_inputs.items()},
-                extract_output=False,
+                inputs =collate_func(example),
             )
             
             

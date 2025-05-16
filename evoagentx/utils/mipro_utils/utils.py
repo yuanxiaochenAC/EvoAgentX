@@ -272,11 +272,10 @@ def create_n_fewshot_demo_sets(
     student,
     num_candidate_sets,
     trainset,
-    trainset_inputs,
+    collate_func,
     max_labeled_demos,
     max_bootstrapped_demos,
     metric,
-    teacher_settings,
     max_errors=10,
     max_rounds=1,
     labeled_sample=True,
@@ -332,11 +331,10 @@ def create_n_fewshot_demo_sets(
                 max_errors=max_errors,
                 max_bootstrapped_demos=max_bootstrapped_demos,
                 max_labeled_demos=max_labeled_demos,
-                teacher_settings=teacher_settings,
                 max_rounds=max_rounds,
 
             )
-            program2 = program.optimize(student, teacher=teacher, trainset=trainset_copy, trainset_inputs=trainset_inputs)
+            program2 = program.optimize(student, teacher=teacher, trainset=trainset_copy, collate_func=collate_func)
             logger.info("bootstrap few-shot finished")
         else:
             # shuffled few-shot
@@ -349,12 +347,11 @@ def create_n_fewshot_demo_sets(
                 metric_threshold=metric_threshold,
                 max_bootstrapped_demos=size,
                 max_labeled_demos=max_labeled_demos,
-                teacher_settings=teacher_settings,
                 max_rounds=max_rounds,
             )
 
             program2 = program.optimize(
-                student, teacher=teacher, trainset=trainset_copy, trainset_inputs=trainset_inputs
+                student, teacher=teacher, trainset=trainset_copy, collate_func=collate_func
             )
 
         for i, agent in enumerate(student.agents()):
@@ -461,20 +458,20 @@ def create_example_string(fields, example):
     return '\n'.join(output)
 
 
-def eval_candidate_program(batch_size, trainset, with_inputs, candidate_program, evaluate, rng=None, return_all_scores=False):
+def eval_candidate_program(batch_size, trainset, collate_func, candidate_program, evaluate, rng=None, return_all_scores=False):
     """Evaluate a candidate program on the trainset, using the specified batch size."""
 
     try:
         # Evaluate on the full trainset
         if batch_size >= len(trainset):
-            return evaluate(candidate_program, devset=trainset, return_all_scores=return_all_scores, with_inputs=with_inputs)
+            return evaluate(candidate_program, devset=trainset, return_all_scores=return_all_scores, collate_func=collate_func)
         # Or evaluate on a minibatch
         else:
             return evaluate(
                 candidate_program,
                 devset=create_minibatch(trainset, batch_size, rng),
                 return_all_scores=return_all_scores,
-                with_inputs=with_inputs
+                collate_func=collate_func
             )
     except Exception:
         logger.error("An exception occurred during evaluation", exc_info=True)
@@ -509,3 +506,36 @@ def get_program_with_highest_avg_score(param_score_dict, fully_evaled_param_comb
 
     # If no valid program is found, we return the last valid one that we found
     return program, mean, key, params
+
+def save_candidate_program(program, save_path, trial_num, note=None):
+    """Save the candidate program to the log directory.
+    
+    Args:
+        program: The program to save
+        save_path: Directory to save the program in, can be a full path including .json
+        trial_num: Trial number for the program
+        note: Optional note to add to the filename
+        
+    Returns:
+        str: Path where the program was saved, or None if save_path is None
+    """
+    if save_path is None:
+        return None
+
+    # 只保留目录部分
+    save_dir = os.path.dirname(save_path)
+
+    # 确保目录存在
+    eval_programs_dir = os.path.join(save_dir, "evaluated_programs")
+    os.makedirs(eval_programs_dir, exist_ok=True)
+
+    # 定义保存路径
+    if note:
+        save_path = os.path.join(eval_programs_dir, f"program_{trial_num}_{note}.json")
+    else:
+        save_path = os.path.join(eval_programs_dir, f"program_{trial_num}.json")
+
+    # 保存程序
+    program.save_module(save_path)
+
+    return save_path

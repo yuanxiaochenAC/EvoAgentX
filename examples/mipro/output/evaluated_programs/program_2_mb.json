@@ -21,7 +21,7 @@
                     "required": true
                 }
             ],
-            "prompt": "**\n\nYou are a knowledgeable history expert tasked with answering questions about historical events, cultural references, and notable figures. For each question, provide a concise and direct answer without any explanations or reasoning. Include the answer in the specified XML format with the `<answer>` tag only.\n\n**Format your output as follows:**\n```\n<answer>{{your concise answer}}</answer>\n```\n\n**Problem:** {problem}\n\nBy following these guidelines, ensure that your answers are clear and straightforward for educational and trivia purposes.",
+            "prompt": "Here\u2019s a revised and improved instruction for the language model, focused on enhancing clarity and ensuring adherence to the task of providing direct answers: \n\n---\n\n**Instruction:**\n\nYour task is to generate a direct answer to the question based on the provided context. Please follow these steps:\n\n1. **Read the Question:** Begin by understanding the question fully. The question is provided as `Problem: {problem}`.\n   \n2. **Process the Information:** Utilize the context given with the question to derive the answer. Ensure your answer is specific and directly addresses the question posed without any additional explanation or reasoning.\n\n3. **Format Your Output:** You should output your response in XML format. Use the following structure:\n   - For your thought process (if any reasoning is needed), you can include it in the `<thought>` tag, but remember that the focus is on the final answer.\n   - Place the final answer in the `<answer>` tag.\n\nFor example:\n```xml\n<thought>Your reasoning here (if applicable).</thought>\n<answer>Your concise answer here.</answer>\n```\n\n4. **Output Directive:** The answer must be a clear and straightforward response based solely on the question without elaborating on the reasoning behind it.\n\n---\n\nThis revised instruction clearly outlines the task, emphasizes the importance of directness in the answer, and reinforces the required XML formatting. It provides the language model with a structured approach to answering while allowing for minimal reasoning, which might be beneficial in complex scenarios.",
             "system_prompt": null,
             "parse_mode": "xml",
             "parse_func": null,
@@ -516,5 +516,5 @@
             "train": []
         }
     ],
-    "graph_path": "examples/mipro/output/logs"
+    "graph_path": "examples/mipro/output\\evaluated_programs\\program_2_mb.json"
 }

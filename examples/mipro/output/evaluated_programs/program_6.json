@@ -1,0 +1,52 @@
+{
+    "class_name": "SequentialWorkFlowGraph",
+    "goal": "Answer the math question. The answer should be in box format, e.g., \\boxed{{123}}",
+    "tasks": [
+        {
+            "name": "answer_generate",
+            "description": "Answer generation for Math.",
+            "inputs": [
+                {
+                    "name": "problem",
+                    "type": "str",
+                    "description": "The problem to solve.",
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "answer",
+                    "type": "str",
+                    "description": "The generated answer.",
+                    "required": true
+                }
+            ],
+            "prompt": "### Improved Instruction\n\nYour task is to analyze and solve the given mathematical problem, considering real-world contexts and applying systematic problem-solving techniques. Please ensure that the answer is presented in a clear and standardized boxed format for easy readability. \n\n**Format Requirement**: Provide your answer in the format: \\(\\boxed{{answer}}\\)\n\n**Problem to Solve**: {problem}\n\nTo aid in your understanding, think through the steps necessary to reach the solution, ensuring that any important concepts or calculations mentioned are clearly articulated in your final answer.",
+            "system_prompt": null,
+            "parse_mode": "str",
+            "parse_func": null,
+            "parse_title": null,
+            "demos": [
+                {
+                    "problem": "Let \\[f(n) =\n\\begin{cases}\n4n+3 &\\text{if }n<a, \\\\\n7n-12 &\\text{if }n\\ge{a}.\n\\end{cases}\n\\]Find $a$ if the graph of $y=f(n)$ is continuous.",
+                    "solution": "In order for the graph to be continuous, the two pieces of the function must meet at $n=a$. In order for this to happen, we know that $4a+3=7a-12$. Solving for $a$, we find that $a=\\frac{15}{3}=\\boxed{5}$."
+                },
+                {
+                    "problem": "In how many ways can the letters of the word BANANA be rearranged such that the new word does not begin with a B?",
+                    "solution": "The first thing to do is place the B since it has a restriction on it. We can put it anywhere but the first place, so we have 5 options. Once we have done that, we just need to place the two N's and then the rest of the spots will just be A's. We have 5 spots left, so there are 5 options for where to put the first N and 4 options for where to put the second N. However, the two N's are identical, which means that we've counted each new word twice. So our answer is $\\frac{5\\times5\\times4}{2}=\\boxed{50}$."
+                },
+                {
+                    "problem": "Below is a portion of the graph of a function, $y=h(x)$:\n\n[asy]\nimport graph; size(8cm); real lsf=0.5; pen dps=linewidth(0.7)+fontsize(10); defaultpen(dps); pen ds=black; real xmin=-0.75,xmax=8.25,ymin=-1.25,ymax=10.25;\n\npen cqcqcq=rgb(0.75,0.75,0.75);\n\n/*grid*/ pen gs=linewidth(0.7)+cqcqcq+linetype(\"2 2\"); real gx=1,gy=1;\nfor(real i=ceil(xmin/gx)*gx;i<=floor(xmax/gx)*gx;i+=gx) draw((i,ymin)--(i,ymax),gs); for(real i=ceil(ymin/gy)*gy;i<=floor(ymax/gy)*gy;i+=gy) draw((xmin,i)--(xmax,i),gs);\n\nLabel laxis; laxis.p=fontsize(10);\n\nxaxis(\"\",xmin,xmax,Ticks(laxis,Step=1.0,Size=2,NoZero),Arrows(6),above=true); yaxis(\"\",ymin,ymax,Ticks(laxis,Step=1.0,Size=2,NoZero),Arrows(6),above=true);\nreal f1(real x){return (x-0.5)*(x-2.5)*(x-6.5)*(x-7.5)/16+x;}\ndraw(graph(f1,-0.25,8.25),linewidth(1));\nclip((xmin,ymin)--(xmin,ymax)--(xmax,ymax)--(xmax,ymin)--cycle);\nlabel(\"$y=h(x)$\",(8.5,8),E);\n[/asy]\n\nWhat is the sum of all integers $x$ in the interval shown ($0\\le x\\le 8$) such that $h(x)>x$ ?",
+                    "solution": "We could check $h(x)$ separately for each integer $x$ from $0$ to $8$: for example, $h(0)\\approx 3.8$, so $h(0)>0$, but $h(1)\\approx -0.7$, so $h(1)\\not>1$, and so on.\n\nHowever, it is easier to see at a glance which $x$ satisfy $h(x)>x$ by superimposing a graph of $y=x$ on the graph of $y=h(x)$:\n\n[asy]\ndraw((-0.75,-0.75)--(8.25,8.25),red+1);\nimport graph; size(8cm); real lsf=0.5; pen dps=linewidth(0.7)+fontsize(10); defaultpen(dps); pen ds=black; real xmin=-0.75,xmax=8.25,ymin=-1.25,ymax=10.25;\n\npen cqcqcq=rgb(0.75,0.75,0.75);\n\n/*grid*/ pen gs=linewidth(0.7)+cqcqcq+linetype(\"2 2\"); real gx=1,gy=1;\nfor(real i=ceil(xmin/gx)*gx;i<=floor(xmax/gx)*gx;i+=gx) draw((i,ymin)--(i,ymax),gs); for(real i=ceil(ymin/gy)*gy;i<=floor(ymax/gy)*gy;i+=gy) draw((xmin,i)--(xmax,i),gs);\n\nLabel laxis; laxis.p=fontsize(10);\n\nxaxis(\"\",xmin,xmax,Ticks(laxis,Step=1.0,Size=2,NoZero),Arrows(6),above=true); yaxis(\"\",ymin,ymax,Ticks(laxis,Step=1.0,Size=2,NoZero),Arrows(6),above=true);\nreal f1(real x){return (x-0.5)*(x-2.5)*(x-6.5)*(x-7.5)/16+x;}\ndraw(graph(f1,-0.25,8.25),linewidth(1));\nclip((xmin,ymin)--(xmin,ymax)--(xmax,ymax)--(xmax,ymin)--cycle);\nlabel(\"$y=h(x)$\",(8.5,8),E);\ndot((0,0),blue); dot((3,3),blue); dot((4,4),blue); dot((5,5),blue); dot((6,6),blue); dot((8,8),blue);\n[/asy]\n\nThe six blue dots above mark the integer points $(x,x)$ which lie below the graph of $y=h(x)$, indicating that $h(x)>x$. Their $x$-coordinates are $0,3,4,5,6,8,$ which add up to $\\boxed{26}$."
+                },
+                {
+                    "problem": "What is the sum of the 10 smallest positive multiples of three?",
+                    "solution": "The first ten positive multiples of 3 are 3, $3 \\cdot 2$, $\\dots$, $3 \\cdot 10$, so we want to find the sum $3 + 3 \\cdot 2 + \\dots + 3 \\cdot 10 = 3 \\cdot (1 + 2 + \\dots + 10)$.\n\nFor all $n$, $1 + 2 + \\dots + n = n(n + 1)/2$, so $3 \\cdot (1 + 2 + \\dots + 10) = 3 \\cdot 10 \\cdot 11/2 = \\boxed{165}$."
+                }
+            ],
+            "traces": [],
+            "train": []
+        }
+    ],
+    "graph_path": "examples/mipro/output\\evaluated_programs\\program_6.json"
+}

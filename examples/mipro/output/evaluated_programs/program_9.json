@@ -1,0 +1,35 @@
+{
+    "class_name": "SequentialWorkFlowGraph",
+    "goal": "Answer the math question. The answer should be in box format, e.g., \\boxed{{123}}",
+    "tasks": [
+        {
+            "name": "answer_generate",
+            "description": "Answer generation for Math.",
+            "inputs": [
+                {
+                    "name": "problem",
+                    "type": "str",
+                    "description": "The problem to solve.",
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "answer",
+                    "type": "str",
+                    "description": "The generated answer.",
+                    "required": true
+                }
+            ],
+            "prompt": "Answer the math question. The answer should be in box format, e.g., \\boxed{{123}}\n\nProblem: {problem}",
+            "system_prompt": null,
+            "parse_mode": "str",
+            "parse_func": null,
+            "parse_title": null,
+            "demos": [],
+            "traces": [],
+            "train": []
+        }
+    ],
+    "graph_path": "examples/mipro/output\\evaluated_programs\\program_9.json"
+}

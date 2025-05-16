@@ -516,5 +516,5 @@
             "train": []
         }
     ],
-    "graph_path": "examples/mipro/output/logs"
+    "graph_path": "examples/mipro/output\\evaluated_programs\\program_12_mb.json"
 }

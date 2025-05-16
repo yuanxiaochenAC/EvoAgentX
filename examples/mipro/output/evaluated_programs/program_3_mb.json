@@ -21,7 +21,7 @@
                     "required": true
                 }
             ],
-            "prompt": "**\n\nYou are a knowledgeable history expert tasked with answering questions about historical events, cultural references, and notable figures. For each question, provide a concise and direct answer without any explanations or reasoning. Include the answer in the specified XML format with the `<answer>` tag only.\n\n**Format your output as follows:**\n```\n<answer>{{your concise answer}}</answer>\n```\n\n**Problem:** {problem}\n\nBy following these guidelines, ensure that your answers are clear and straightforward for educational and trivia purposes.",
+            "prompt": "**\n\nProvide a direct answer to the following question based solely on the given context. No elaboration or reasoning should be included in the answer. \n\nPlease follow this format:\n- Place your thought process in the `<thought>` field, but keep it concise and relevant to your final answer.\n- Write the final answer in the `<answer>` field.\n\nFormat your output in XML, similar to this example:\n```xml\n<thought>Your concise thought process here.</thought>\n<answer>Your final answer here.</answer>\n```\n\nQuestion: {problem}",
             "system_prompt": null,
             "parse_mode": "xml",
             "parse_func": null,
@@ -516,5 +516,5 @@
             "train": []
         }
     ],
-    "graph_path": "examples/mipro/output/logs"
+    "graph_path": "examples/mipro/output\\evaluated_programs\\program_3_mb.json"
 }

@@ -1,6 +1,6 @@
 {
     "class_name": "SequentialWorkFlowGraph",
-    "goal": "Answer the math question. The answer should be in box format, e.g., \\boxed{123}",
+    "goal": "Answer the math question. The answer should be in box format, e.g., \\boxed{{123}}",
     "tasks": [
         {
             "name": "answer_generate",
@@ -21,7 +21,7 @@
                     "required": true
                 }
             ],
-            "prompt": "**\n\n\"Please solve the following mathematical problem and provide the answer in a boxed format using LaTeX syntax. Ensure that your solution is clear and well-reasoned, demonstrating the necessary steps to reach the final answer. The final output should be presented as: \\\\boxed{{your_answer_here}}.\n\n**Problem:** {problem}\" \n\n**Additional Notes:** \n- Make sure to explain any assumptions or key concepts involved in your solution.\n- Feel free to use logical reasoning and illustrative examples to support your answer.",
+            "prompt": "To enhance the instruction for the language model (LM) and improve the accuracy and clarity of the generated answers to the math problems, we can add details that guide the LM about the context and the expected reasoning process. Here's the revised prompt:\n\n---\n\n**Improved Instruction:**\n\nYou are an intelligent math tutor tasked with solving mathematical problems. Please read the problem carefully, analyze the necessary mathematical concepts, and compute the answer step by step. Ensure that your solution is clearly articulated, demonstrating the reasoning process behind your computations.\n\nWhen you arrive at your final answer, format it in the specified box format, for example, \\(\\boxed{{123}}\\).\n\n**Problem:** {problem}\n\n---\n\nThis improved instruction emphasizes the reasoning process and clarity, inviting the LM to present the answer along with an explanation, which could enhance learning outcomes for users engaging with the system.",
             "system_prompt": null,
             "parse_mode": "str",
             "parse_func": null,

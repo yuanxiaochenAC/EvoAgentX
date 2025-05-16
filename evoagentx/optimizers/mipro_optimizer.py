@@ -6,8 +6,9 @@ from optuna.distributions import CategoricalDistribution
 import numpy as np
 from pydantic import Field
 from typing import Any, Callable, Dict, Literal, Optional, Union, List, Tuple
-
-from ..evaluators.mipro_evaluator import Evaluate as mipro_evaluator
+from ..benchmark.benchmark import Benchmark
+from ..models import OpenAILLMConfig, OpenAILLM
+from ..evaluators import MiproEvaluator as mipro_evaluator
 from ..workflow.workflow import WorkFlowGraph
 from ..workflow.action_graph import ActionGraph
 from ..core.module import BaseModule
@@ -16,7 +17,9 @@ from ..utils.mipro_utils.settings import settings
 from ..utils.mipro_utils.grounded_proposer import GroundedProposer
 from ..utils.mipro_utils.utils import (create_minibatch,
                                       create_n_fewshot_demo_sets,
-                                      eval_candidate_program, get_program_with_highest_avg_score,
+                                      eval_candidate_program, 
+                                      get_program_with_highest_avg_score,
+                                      save_candidate_program,
                                       )
 
 logger = logging.getLogger("MIPRO")
@@ -42,43 +45,58 @@ ENDC = "\033[0m"  # Resets the color to default
 
 
 class MiproOptimizer(BaseModule):
-
+    # load graph
     graph: Optional[Union[WorkFlowGraph, ActionGraph]] = Field(default=None, description="The workflow to optimize.")
     grpah_path: Optional[str] = Field(default=None, description="Path to the workflow to optimize.")
+    
     metric: Optional[Callable] = Field(default=None, description="Evaluation function used to assess the quality of generated results")
-    prompt_model: BaseLLM = Field(default=settings.lm, description="Language model used for prompt generation")
-    task_model: BaseLLM = Field(default=settings.lm, description="Language model used for task execution")
-    teacher_settings: Dict = Field(default_factory=dict, description="Configuration parameters for the teacher model")
+    metric_threshold: Optional[float] = Field(default=None, description="Metric threshold to stop optimization when reached")
+    metric_instance: Optional[str] = Field(default=None, description="Metric instance to use")
+    
+    executor_llm: OpenAILLMConfig = Field(default=settings.lm, description="Language model used for task execution")
+    optimizer_llm: OpenAILLMConfig = Field(default=settings.lm, description="Language model used for prompt generation")
+    
     max_bootstrapped_demos: int = Field(default=4, description="Maximum number of bootstrapped examples")
     max_labeled_demos: int = Field(default=4, description="Maximum number of labeled examples")
+    
     auto: Optional[Literal["light", "medium", "heavy"]] = Field(default="medium", description="Automation level, can be light/medium/heavy")
+    
     num_candidates: int = Field(default=10, description="Number of candidates generated per round")
+    
     num_threads: Optional[int] = Field(default=1, description="Number of parallel threads, None means using all available threads")
     max_errors: int = Field(default=10, description="Maximum number of allowed errors")
     seed: int = Field(default=9, description="Random seed for reproducibility")
     init_temperature: float = Field(default=0.5, description="Initial sampling temperature")
     verbose: bool = Field(default=False, description="Whether to output detailed logs")
     track_stats: bool = Field(default=True, description="Whether to track statistics")
-    log_dir: Optional[str] = Field(default=None, description="Directory for saving logs, None means no saving")
-    metric_threshold: Optional[float] = Field(default=None, description="Metric threshold to stop optimization when reached")
+    
+    save_interval: Optional[int] = Field(default=None, description="Save the workflow every save_interval steps.")
+    save_path: Optional[str] = Field(default=None, description="Directory for saving logs, None means no saving")
 
-
+    evaluator: Optional[Any] = Field(default=None, description="Evaluator for the optimizer")
+    eval_rounds: Optional[int] = Field(default=1, description="Run evaluation for eval_rounds times and compute the average_score")
+    eval_every_n_steps: Optional[int] = Field(default=1, description="Evaluate the workflow every eval_every_n_steps steps.")
+    max_steps: int = Field(default=30, description="Maximum number of steps to run the optimizer")
+    
     def init_module(self):
-        self.prompt_model_total_calls = 0
         self.total_calls = 0
+        self.executor_llm_total_calls = 0
         self.rng = None
         if not self.graph and not self.graph_path:
             raise ValueError("Either graph or graph_path must be provided")
         self.graph = self.graph or WorkFlowGraph.from_file(self.graph_path)
+        if self.executor_llm:
+            settings.executor_llm = self.executor_llm
+        if self.optimizer_llm:
+            settings.optimizer_llm = self.optimizer_llm
         
     def optimize(
         self,
         *,
-        trainset: List,
-        with_inputs: List[str],
-        teacher: Any = None,
+        benchmark: Optional[Benchmark] = None,
+        trainset: Optional[List] = None,
+        collate_func: Optional[Callable] = None,
         valset: Optional[List] = None,
-        num_trials: int = 30,
         max_bootstrapped_demos: Optional[int] = None,
         max_labeled_demos: Optional[int] = None,
         seed: Optional[int] = None,
@@ -90,12 +108,11 @@ class MiproOptimizer(BaseModule):
         view_data_batch_size: int = 10,
         tip_aware_proposer: bool = True,
         fewshot_aware_proposer: bool = True,
-        requires_permission_to_run: bool = True,
         provide_traceback: Optional[bool] = None,
+        **kwargs, # 接收任何额外的关键字参数,确保向后兼容性
     ) -> Any:
-        self.with_inputs = with_inputs
         
-        
+        self.collate_func = collate_func
         seed = seed or self.seed
         self._set_random_seeds(seed)
         
@@ -105,13 +122,31 @@ class MiproOptimizer(BaseModule):
         if max_labeled_demos is not None:
             self.max_labeled_demos = max_labeled_demos
         
-        
+        if benchmark:
+            trainset = benchmark._train_data
+            valset = benchmark._dev_data
+            self.benchmark = benchmark
+            def evaluation_metric(example, prediction, trace=None, **kwargs):
+                result = benchmark.evaluate(prediction, benchmark._get_label(example))
+                if self.metric_instance:
+                    score = result[self.metric_instance]
+                else:
+                    score = list(result.values())[0]
+                
+                if self.metric_threshold:
+                    success = score >= self.metric_threshold
+                else:
+                    success = score
+                return success
+
+            self.metric = evaluation_metric
         trainset, valset = self._set_and_validate_datasets(trainset, valset)
+        
         
         
         zeroshot_opt = (self.max_bootstrapped_demos == 0) and (self.max_labeled_demos == 0)
         num_trials, valset, minibatch = self._set_hyperparams_from_run_mode(
-            self.graph, num_trials, minibatch, zeroshot_opt, valset
+            self.graph, self.max_steps, minibatch, zeroshot_opt, valset
         )
         
         if self.auto:
@@ -121,8 +156,8 @@ class MiproOptimizer(BaseModule):
             raise ValueError(f"Minibatch size cannot exceed the size of the valset. Valset size: {len(valset)}.")
 
         program = self.graph.deep_copy()
-        # TODO: 敲定evaluator的细节
-        evaluate = mipro_evaluator(
+        
+        self.mipro_evaluate = mipro_evaluator(
             devset=valset,
             metric=self.metric,
             num_threads=self.num_threads,
@@ -134,7 +169,7 @@ class MiproOptimizer(BaseModule):
         
 
         # Step 1: Bootstrap few-shot examples
-        demo_candidates = self._bootstrap_fewshot_examples(program, trainset, seed, teacher)
+        demo_candidates = self._bootstrap_fewshot_examples(program, trainset, seed, self.optimizer_llm)
 
         
         # Step 2: Propose instruction candidates
@@ -161,7 +196,7 @@ class MiproOptimizer(BaseModule):
             program,
             instruction_candidates,
             demo_candidates,
-            evaluate,
+            self.mipro_evaluate,
             valset,
             num_trials,
             minibatch,
@@ -171,6 +206,21 @@ class MiproOptimizer(BaseModule):
         )
 
         return best_program
+
+    def evaluate(self, *,graph, benchmark=None, eval_mode='test', **kwargs):
+        result_lst = []
+        for i in range(self.eval_rounds):
+            if self.benchmark:
+                result = self.evaluator.evaluate(graph, self.benchmark, eval_mode)
+            if self.metric_instance:
+                score = result[self.metric_instance]
+            else:
+                score = list(result.values())[0]
+            
+            result_lst.append(score)
+        
+        return np.mean(result_lst)
+
 
             
     def _set_and_validate_datasets(self, trainset: List, valset: Optional[List]):
@@ -232,7 +282,7 @@ class MiproOptimizer(BaseModule):
             f"\nvalset size: {len(valset)}\n"
         )
 
-    def _bootstrap_fewshot_examples(self, program: Any, trainset: List, seed: int, teacher: Any) -> Optional[List]:
+    def _bootstrap_fewshot_examples(self, program: Any, trainset: List, seed: int, optimizer_llm: Any) -> Optional[List]:
         logger.info("\n==> STEP 1: BOOTSTRAP FEWSHOT EXAMPLES <==")
         if self.max_bootstrapped_demos > 0:
             logger.info(
@@ -250,15 +300,13 @@ class MiproOptimizer(BaseModule):
                 student=program,
                 num_candidate_sets=self.num_candidates,
                 trainset=trainset,
-                trainset_inputs=self.with_inputs,
+                collate_func=self.collate_func,
                 max_labeled_demos=(LABELED_FEWSHOT_EXAMPLES_IN_CONTEXT if zeroshot else self.max_labeled_demos),
                 max_bootstrapped_demos=(
                     BOOTSTRAPPED_FEWSHOT_EXAMPLES_IN_CONTEXT if zeroshot else self.max_bootstrapped_demos
                 ),
                 metric=self.metric,
                 max_errors=self.max_errors,
-                teacher=teacher,
-                teacher_settings=self.teacher_settings,
                 seed=seed,
                 metric_threshold=self.metric_threshold,
                 rng=self.rng,
@@ -289,7 +337,7 @@ class MiproOptimizer(BaseModule):
         proposer = GroundedProposer(
             program=program,
             trainset=trainset,
-            prompt_model=self.prompt_model,
+            optimizer_llm=self.optimizer_llm,
             view_data_batch_size=view_data_batch_size,
             program_aware=program_aware_proposer,
             use_dataset_summary=data_aware_proposer,
@@ -327,7 +375,6 @@ class MiproOptimizer(BaseModule):
         program: Any,
         instruction_candidates: Dict[int, List[str]],
         demo_candidates: Optional[List],
-        evaluate: mipro_evaluator,
         valset: List,
         num_trials: int,
         minibatch: bool,
@@ -349,14 +396,14 @@ class MiproOptimizer(BaseModule):
         logger.info(f"== Trial {1} / {adjusted_num_trials} - Full Evaluation of Default Program ==")
         
         default_score, _ = eval_candidate_program(
-            len(valset), valset, self.with_inputs, program, evaluate, self.rng, return_all_scores=True
+            len(valset), valset, self.collate_func, program, self.mipro_evaluate, self.rng, return_all_scores=True
         )
         
         logger.info(f"Default Program Score: {default_score}")
         
         trial_logs = {}
         trial_logs[1] = {}
-        trial_logs[1]["full_eval_program_path"] = program.save_module(self.log_dir, trial_num=-1)
+        trial_logs[1]["full_eval_program_path"] = save_candidate_program(program, self.save_path, trial_num=-1)
         trial_logs[1]["full_eval_score"] = default_score
         trial_logs[1]["total_eval_calls_so_far"] = len(valset)
         trial_logs[1]["full_eval_program"] = program.deep_copy()
@@ -400,7 +447,7 @@ class MiproOptimizer(BaseModule):
 
             # Evaluate the candidate program (on minibatch if minibatch=True)
             batch_size = minibatch_size if minibatch else len(valset)
-            score = eval_candidate_program(batch_size, valset, self.with_inputs, candidate_program, evaluate, self.rng)
+            score = eval_candidate_program(batch_size, valset, self.collate_func, candidate_program, self.mipro_evaluate, self.rng)
             total_eval_calls += batch_size
 
             # Update best score and program
@@ -454,7 +501,7 @@ class MiproOptimizer(BaseModule):
                     adjusted_num_trials,
                     param_score_dict,
                     fully_evaled_param_combos,
-                    evaluate,
+                    self.mipro_evaluate,
                     valset,
                     trial_logs,
                     total_eval_calls,
@@ -488,8 +535,8 @@ class MiproOptimizer(BaseModule):
         if best_program is not None and self.track_stats:
             best_program.trial_logs = trial_logs
             best_program.score = best_score
-            best_program.prompt_model_total_calls = self.prompt_model_total_calls
             best_program.total_calls = self.total_calls
+            best_program.executor_llm_total_calls = self.executor_llm_total_calls
             sorted_candidate_programs = sorted(score_data, key=lambda x: x["score"], reverse=True)
             # Attach all minibatch programs
             best_program.mb_candidate_programs = [
@@ -518,7 +565,10 @@ class MiproOptimizer(BaseModule):
         candidate_program,
         total_eval_calls,
     ):
-        trial_logs[trial_num]["mb_program_path"] = candidate_program.save_module(self.log_dir, trial_num=trial_num)
+        if self.save_interval is None or trial_num % self.save_interval == 0:
+            trial_logs[trial_num]["mb_program_path"] = save_candidate_program(candidate_program, self.save_path, trial_num=trial_num, note="mb")
+        else:
+            trial_logs[trial_num]["mb_program_path"] = ""
         trial_logs[trial_num]["mb_score"] = score
         trial_logs[trial_num]["total_eval_calls_so_far"] = total_eval_calls
         trial_logs[trial_num]["mb_program"] = candidate_program.deep_copy()
@@ -549,7 +599,10 @@ class MiproOptimizer(BaseModule):
         candidate_program,
         total_eval_calls,
     ):
-        trial_logs[trial_num]["full_eval_program_path"] = candidate_program.save_module(self.log_dir, trial_num=trial_num)
+        if self.save_interval is None or trial_num % self.save_interval == 0:
+            trial_logs[trial_num]["full_eval_program_path"] = save_candidate_program(candidate_program, self.save_path, trial_num=trial_num)
+        else:
+            trial_logs[trial_num]["full_eval_program_path"] = ""
         trial_logs[trial_num]["full_eval_score"] = score
         trial_logs[trial_num]["total_eval_calls_so_far"] = total_eval_calls
         trial_logs[trial_num]["full_eval_program"] = candidate_program.deep_copy()
@@ -614,7 +667,6 @@ class MiproOptimizer(BaseModule):
         adjusted_num_trials: int,
         param_score_dict: Dict,
         fully_evaled_param_combos: Dict,
-        evaluate: mipro_evaluator,
         valset: List,
         trial_logs: Dict,
         total_eval_calls: int,
@@ -632,7 +684,7 @@ class MiproOptimizer(BaseModule):
             param_score_dict, fully_evaled_param_combos
         )
         logger.info(f"Doing full eval on next top averaging program (Avg Score: {mean_score}) from minibatch trials...")
-        full_eval_score = eval_candidate_program(len(valset), valset, self.with_inputs, highest_mean_program, evaluate, self.rng)
+        full_eval_score = eval_candidate_program(len(valset), valset, self.collate_func, highest_mean_program, self.mipro_evaluate, self.rng)
         score_data.append({"score": full_eval_score, "program": highest_mean_program, "full_eval": True})
 
         # Log full eval as a trial so that optuna can learn from the new results
@@ -651,7 +703,7 @@ class MiproOptimizer(BaseModule):
         total_eval_calls += len(valset)
         trial_logs[trial_num + 1] = {}
         trial_logs[trial_num + 1]["total_eval_calls_so_far"] = total_eval_calls
-        trial_logs[trial_num + 1]["full_eval_program_path"] = highest_mean_program.save_module(self.log_dir, trial_num=trial_num + 1)
+        trial_logs[trial_num + 1]["full_eval_program_path"] = highest_mean_program.save_module(self.save_path)
         trial_logs[trial_num + 1]["full_eval_program"] = highest_mean_program
         trial_logs[trial_num + 1]["full_eval_score"] = full_eval_score
 

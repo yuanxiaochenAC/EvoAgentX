@@ -1,13 +1,13 @@
 import os
 from dotenv import load_dotenv
+from evoagentx.agents.agent_manager import AgentManager
 from evoagentx.models import OpenAILLM, OpenAILLMConfig
 from evoagentx.benchmark import MATH
 from evoagentx.workflow import SequentialWorkFlowGraph, WorkFlowGraph
 from evoagentx.core.callbacks import suppress_logger_info
 from evoagentx.optimizers import MiproOptimizer
-from evoagentx.utils.mipro_utils.settings import settings
-from evoagentx.evaluators import MiproEvaluator
-
+from evoagentx.evaluators import Evaluator
+import evoagentx
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -30,7 +30,7 @@ def collate_func(example: dict) -> dict:
 
 
 math_graph_data = {
-    "goal": r"Answer the math question. The answer should be in box format, e.g., \boxed{123}",
+    "goal": r"Answer the math question. The answer should be in box format, e.g., \boxed{{123}}",
     "tasks": [
         {
             "name": "answer_generate",
@@ -49,13 +49,10 @@ math_graph_data = {
 
 def main():
     openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY)
-    llm = OpenAILLM(config=openai_config)
-    settings.lm = openai_config
+    evoagentx.configure(lm=openai_config)
     
     benchmark = MathSplits()
-    benchmark._load_data()
     trainset = [{"problem": collate_func(example)["problem"], "solution": example["solution"]} for example in benchmark._train_data]
-    testset = [{"problem": collate_func(example)["problem"], "solution": example["solution"]} for example in benchmark._test_data]
     
     workflow_graph = SequentialWorkFlowGraph.from_dict(math_graph_data)
     
@@ -67,39 +64,40 @@ def main():
         return benchmark.math_equal(prediction_ans, example_ans)
     
     
-    evaluate = MiproEvaluator(
-        devset = testset,
-        metric = evaluate_metric,
-        num_threads = 32,
-        display_progress = True,
-        display_table = False,
+    agent_manager = AgentManager()
+    agent_manager.add_agents_from_workflow(workflow_graph, llm_config=openai_config)
+    
+    evaluate = Evaluator(
+        llm = OpenAILLM(config=openai_config),
+        agent_manager = agent_manager,
+        collate_func = collate_func,
+        num_workers = 32,
+        verbose = True
     )
     
     optimizer = MiproOptimizer(
         graph = workflow_graph,
         metric = evaluate_metric,
-        prompt_model = llm,
+        executor_llm = openai_config,
         max_bootstrapped_demos = 4,
         max_labeled_demos = 4,
-        num_candidates = 15,
-        auto = "medium",
+        num_candidates = 5,
+        auto = "light",
         num_threads = 32,
-        log_dir = "examples/mipro/output/logs",
+        save_path = "examples/mipro/output/logs",
+        evaluator = evaluate
     )
     
     with suppress_logger_info():
         best_program = optimizer.optimize(
             trainset = trainset,
-            with_inputs = {"problem": "problem"},
+            collate_func = collate_func,
         )
     
     output_path = r"C:\Users\31646\Desktop\EvoAgentX\examples\mipro\output\best_program_math.json"
     best_program.save_module(output_path)
-    
-    with suppress_logger_info():
-        post_results = evaluate(program = WorkFlowGraph.from_file(output_path), 
-                                with_inputs = {"problem": "problem"})
-    
+    result = optimizer.evaluate(graph = best_program, benchmark = benchmark, eval_mode = "test")
+    print(result)
 
 if __name__ == "__main__":
     main()

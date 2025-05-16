@@ -1,0 +1,52 @@
+{
+    "class_name": "SequentialWorkFlowGraph",
+    "goal": "Answer the math question. The answer should be in box format, e.g., \\boxed{{123}}",
+    "tasks": [
+        {
+            "name": "answer_generate",
+            "description": "Answer generation for Math.",
+            "inputs": [
+                {
+                    "name": "problem",
+                    "type": "str",
+                    "description": "The problem to solve.",
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "answer",
+                    "type": "str",
+                    "description": "The generated answer.",
+                    "required": true
+                }
+            ],
+            "prompt": "To enhance the instruction for the language model (LM) and improve the accuracy and clarity of the generated answers to the math problems, we can add details that guide the LM about the context and the expected reasoning process. Here's the revised prompt:\n\n---\n\n**Improved Instruction:**\n\nYou are an intelligent math tutor tasked with solving mathematical problems. Please read the problem carefully, analyze the necessary mathematical concepts, and compute the answer step by step. Ensure that your solution is clearly articulated, demonstrating the reasoning process behind your computations.\n\nWhen you arrive at your final answer, format it in the specified box format, for example, \\(\\boxed{{123}}\\).\n\n**Problem:** {problem}\n\n---\n\nThis improved instruction emphasizes the reasoning process and clarity, inviting the LM to present the answer along with an explanation, which could enhance learning outcomes for users engaging with the system.",
+            "system_prompt": null,
+            "parse_mode": "str",
+            "parse_func": null,
+            "parse_title": null,
+            "demos": [
+                {
+                    "problem": "Let $a,$ $b,$ $c$ be positive real numbers such that $a + b + c = 1.$  Find the minimum value of $a^2 + 2b^2 + c^2.$",
+                    "solution": "By Cauchy-Schwarz,\n\\[(a^2 + 2b^2 + c^2) \\left( 1 + \\frac{1}{2} + 1 \\right) \\ge (a + b + c)^2 = 1,\\]so $a^2 + 2b^2 + c^2 \\ge \\frac{2}{5}.$\n\nEquality occurs when $\\frac{a^2}{1} = \\frac{2b^2}{1/2} = \\frac{c^2}{1}$ and $a + b + c = 1.$  We can solve to get $a = \\frac{2}{5},$ $b = \\frac{1}{5},$ and $c = \\frac{2}{5},$ so the minimum value is $\\boxed{\\frac{2}{5}}.$"
+                },
+                {
+                    "problem": "If $\\log_{3}6 \\approx 1.63$, what is the value of $\\log_{9} 4$, accurate to two decimal places?",
+                    "solution": "Writing $6=2\\cdot 3$ and applying the logarithmic identity $\\log_a(xy) = \\log_a(x)+\\log_a(y)$ for all positive real numbers $x$, $y$, and $a$ (with $a\\neq 1$), we obtain \\begin{align*}\n\\log_3 6=\\log_3 (2\\cdot3)&=\\log_3 2 + \\log_{3} 3 \\\\\n\\qquad&=\\log_3 2 + 1.\n\\end{align*}Now use the change of base rule for logarithms on the right hand side: \\begin{align*}\n\\log_3 6&=\\frac{\\log_4 2}{\\log_4 3} + 1 \\\\\n\\qquad&=\\frac{1}{2\\log_4 3} + 1 \\\\\n\\qquad&=\\frac{1}{\\log_4 9} + 1.\n\\end{align*}Use the change of base rule on the right hand side once more, we get $$\\log_3 6 = \\log_9 4 + 1,$$which implies that $$\\log_4 9 = 1.63 - 1 = \\boxed{0.63}.$$"
+                },
+                {
+                    "problem": "Let \\[f(n) =\n\\begin{cases}\n4n+3 &\\text{if }n<a, \\\\\n7n-12 &\\text{if }n\\ge{a}.\n\\end{cases}\n\\]Find $a$ if the graph of $y=f(n)$ is continuous.",
+                    "solution": "In order for the graph to be continuous, the two pieces of the function must meet at $n=a$. In order for this to happen, we know that $4a+3=7a-12$. Solving for $a$, we find that $a=\\frac{15}{3}=\\boxed{5}$."
+                },
+                {
+                    "problem": "Determine the complex number $z$ satisfying the equation $3z+4i\\bar{z}=1-8i$.  Note that $\\bar{z}$ denotes the conjugate of $z$.",
+                    "solution": "Let $z=a+bi$, where $a$ and $b$ are real numbers representing the real and imaginary parts of $z$, respectively.  Then $\\bar{z}=a-bi$, so that $4i\\bar{z}=4b+4ia$.  We now find that \\[ 3z+4i\\bar{z} = (3a+4b) + (4a+3b)i. \\]So if $3z+4i\\bar{z}=1-8i$ then we must have $3a+4b=1$ and $4a+3b=-8$.  This system of equations is routine to solve, leading to the values $a=-5$ and $b=4$.  Therefore the complex number we are seeking is $z=\\boxed{-5+4i}$."
+                }
+            ],
+            "traces": [],
+            "train": []
+        }
+    ],
+    "graph_path": "examples/mipro/output\\evaluated_programs\\program_11.json"
+}

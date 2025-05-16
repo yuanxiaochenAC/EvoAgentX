@@ -118,9 +118,9 @@ def generate_instruction_class(
 logger = logging.getLogger("MIPRO")
 
 class GroundedProposer(BaseModule):
-    prompt_model: Any = Field(
+    optimizer_llm: Any = Field(
         default=settings.lm,
-        description="The prompt model to use for generating instructions"
+        description="The optimizer llm to use for generating instructions"
     )
     program: Any = Field(
         description="The program to generate instructions for"
@@ -189,7 +189,7 @@ class GroundedProposer(BaseModule):
         if self.use_dataset_summary:
             try:
                 self.data_summary = create_dataset_summary(
-                    trainset=self.trainset, view_data_batch_size=self.view_data_batch_size, prompt_model=self.prompt_model,
+                    trainset=self.trainset, view_data_batch_size=self.view_data_batch_size, optimizer_llm=self.optimizer_llm,
                 )
                 if self.verbose:
                     print(f"DATA SUMMARY: {self.data_summary}")

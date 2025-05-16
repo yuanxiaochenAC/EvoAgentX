@@ -1,13 +1,14 @@
 import os 
 from dotenv import load_dotenv
+from evoagentx.agents.agent_manager import AgentManager
 from evoagentx.models import OpenAILLM, OpenAILLMConfig
 from evoagentx.benchmark import HotPotQA 
-from evoagentx.workflow import SequentialWorkFlowGraph
+from evoagentx.workflow import SequentialWorkFlowGraph, WorkFlowGraph
 from evoagentx.core.callbacks import suppress_logger_info 
 from evoagentx.optimizers import MiproOptimizer
-from evoagentx.evaluators import MiproEvaluator
-from evoagentx.utils.mipro_utils.settings import settings
-from evoagentx.workflow.workflow import WorkFlowGraph
+from evoagentx.evaluators import Evaluator
+import evoagentx
+
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -23,7 +24,7 @@ class HotPotQASplits(HotPotQA):
         full_test_data = self._dev_data 
         # randomly select 50 samples for dev and 100 samples for test
         self._train_data = [full_test_data[idx] for idx in permutation[:50]]
-        self._test_data = [full_test_data[idx] for idx in permutation[50:150]]
+        self._test_data = [full_test_data[idx] for idx in permutation[50:100]]
 
 def collate_func(example: dict) -> dict:
     context_list = []
@@ -34,8 +35,6 @@ def collate_func(example: dict) -> dict:
     problem = "Context: {}\n\nQuestion: {}\n\nAnswer:".format(context, example["question"])
     return {"problem": problem}
 
-
-    
     
     
 hotpotqa_graph_data = {
@@ -57,64 +56,47 @@ hotpotqa_graph_data = {
 }
 
 def main():
-    # Initialize LLM
-    llm_config = OpenAILLMConfig(model="gpt-4", openai_key=OPENAI_API_KEY)
-    llm = OpenAILLM(config=llm_config)
-    settings.lm = llm_config
-
-    # Load benchmark
-    benchmark = HotPotQASplits()
-    benchmark._load_data()
-    trainset = [{"problem": collate_func(example)["problem"], "answer": example["answer"]} for example in benchmark._train_data]
-    testset = [{"problem": collate_func(example)["problem"], "answer": example["answer"]} for example in benchmark._test_data]
+    openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY)
+    evoagentx.configure(lm=openai_config)
     
-    # Load workflow
+    benchmark = HotPotQASplits()
+    
     workflow_graph = SequentialWorkFlowGraph.from_dict(hotpotqa_graph_data)
     
+    agent_manager = AgentManager()
+    agent_manager.add_agents_from_workflow(workflow_graph, llm_config=openai_config)
     
-    def evaluate_metric(example, prediction, trace=None):
-        label = example["answer"]
-        
-        result = benchmark.evaluate(prediction, label)
-        
-        return result["f1"] >= 0.66
-    
-    # Create MIPRO evaluator
-    evaluate = MiproEvaluator(
-        devset=testset,
-        metric=evaluate_metric,
-        num_threads=32,
-        display_progress=True,
-        display_table=False,
+    evaluate = Evaluator(
+        llm = OpenAILLM(config=openai_config),
+        agent_manager = agent_manager,
+        collate_func = collate_func,
+        num_workers = 16,
+        verbose = True
     )
-
-    # Create MIPRO optimizer
+    
     optimizer = MiproOptimizer(
-        graph=workflow_graph,
-        metric=evaluate_metric,
-        prompt_model=llm,
-        max_bootstrapped_demos=4,
-        max_labeled_demos=4,
-        num_candidates=15,
-        auto="medium",
-        num_threads=32,
-        log_dir="examples/mipro/output/logs",
+        graph = workflow_graph,
+        executor_llm = openai_config,
+        max_bootstrapped_demos = 4,
+        max_labeled_demos = 4,
+        num_candidates = 5,
+        auto = "light",
+        num_threads = 16,
+        save_path = "examples/mipro/output/logs",
+        evaluator = evaluate,
+        metric_instance = "f1",
+        metric_threshold = 0.66
     )
-
-    # Run optimization
-    with suppress_logger_info():
-        best_program = optimizer.optimize(
-            trainset=trainset,
-            with_inputs={"problem":"problem"},
+    
+    best_program = optimizer.optimize(
+            benchmark = benchmark,
+            collate_func = collate_func,
         )
-        
+    
     output_path = r"C:\Users\31646\Desktop\EvoAgentX\examples\mipro\output\best_program_hotpotqa.json"
     best_program.save_module(output_path)
-    # 保存评估结果
-    with suppress_logger_info():
-        post_results = evaluate(program = WorkFlowGraph.from_file(output_path), 
-                                with_inputs={"problem":"problem"})
-    
+    result = optimizer.evaluate(graph = best_program, benchmark = benchmark, eval_mode = "test")
+    print(result)
 
 if __name__ == "__main__":
     main() 

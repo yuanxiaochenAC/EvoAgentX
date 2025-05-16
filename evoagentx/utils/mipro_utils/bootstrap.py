@@ -29,10 +29,6 @@ class BootstrapFewShot(BaseModule):
         default=None,
         description="If metric yields a numerical value, check against this threshold when deciding whether to accept a bootstrap example"
     )
-    teacher_settings: Dict = Field(
-        default_factory=dict,
-        description="Settings for the teacher model"
-    )
     max_bootstrapped_demos: int = Field(
         default=4,
         description="Maximum number of bootstrapped demonstrations to include"
@@ -55,9 +51,9 @@ class BootstrapFewShot(BaseModule):
         self.error_count = 0
         self.error_lock = threading.Lock()
         
-    def optimize(self, student, *, teacher=None, trainset, trainset_inputs):
+    def optimize(self, student, *, teacher=None, trainset, collate_func):
         self.trainset = trainset
-        self.trainset_inputs = trainset_inputs
+        self.collate_func = collate_func
 
         self._prepare_student_and_teacher(student, teacher)
         self._prepare_agent_mappings()
@@ -146,7 +142,7 @@ class BootstrapFewShot(BaseModule):
         agent_cache = {}
         try:
 
-            lm = (settings.execute_lm or settings.lm).copy()
+            lm = (settings.executor_llm or settings.lm).copy()
             if round_idx > 0:
                 lm.temperature = 0.7 + 0.001 * round_idx
                 
@@ -167,8 +163,7 @@ class BootstrapFewShot(BaseModule):
             program_copy.reset_graph()
             workflow = WorkFlow(graph=teacher, agent_manager= agent_manager, llm=OpenAILLM(lm))
             
-            prediction = workflow.execute(inputs = {key: example[value] for key, value in self.trainset_inputs.items()},
-                                          extract_output=False)
+            prediction = workflow.execute(inputs = self.collate_func(example))
             
             trace = settings.trace
             for agent in teacher.agents():

@@ -32,7 +32,6 @@ class dotdict(dict):
     
 DEFAULT_CONFIG = dotdict(
     lm=None,
-    execute_lm = None,
     adapter=None,
     rm=None,
     trace=[],

@@ -21,7 +21,7 @@
                     "required": true
                 }
             ],
-            "prompt": "**\n\nYou are a knowledgeable history expert tasked with answering questions about historical events, cultural references, and notable figures. For each question, provide a concise and direct answer without any explanations or reasoning. Include the answer in the specified XML format with the `<answer>` tag only.\n\n**Format your output as follows:**\n```\n<answer>{{your concise answer}}</answer>\n```\n\n**Problem:** {problem}\n\nBy following these guidelines, ensure that your answers are clear and straightforward for educational and trivia purposes.",
+            "prompt": "Think step by step to answer the question. You should explain your thinking process in the 'thought' field, and provide the final answer in the 'answer' field.\nFormat your output in xml format, such as <thought>xxx</thought> and <answer>xxx</answer>.\n\nProblem: {problem}",
             "system_prompt": null,
             "parse_mode": "xml",
             "parse_func": null,
@@ -31,5 +31,5 @@
             "train": []
         }
     ],
-    "graph_path": "C:\\Users\\31646\\Desktop\\EvoAgentX\\examples\\mipro\\output\\best_program_hotpotqa.json"
+    "graph_path": "examples/mipro/output\\evaluated_programs\\program_10_mb.json"
 }
