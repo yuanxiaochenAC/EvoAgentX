@@ -16,15 +16,15 @@ class MBPPSplits(MBPP):
     def _load_data(self):
         # load the original test data 
         super()._load_data()
-        # split the data into dev and test
+        # split the data into train, dev and test
         import numpy as np 
         np.random.seed(42)
         permutation = np.random.permutation(len(self._test_data))
         full_test_data = self._test_data
-        # randomly select 50 samples for dev and 100 samples for test
-        self._dev_data = [full_test_data[idx] for idx in permutation[:50]]
+        # randomly select 10 samples for train, 40 for dev, and 100 for test
+        self._train_data = [full_test_data[idx] for idx in permutation[:10]]
+        self._dev_data = [full_test_data[idx] for idx in permutation[10:50]]
         self._test_data = [full_test_data[idx] for idx in permutation[50:150]]
-        self._train_data = [full_test_data[idx] for idx in permutation[150:]]
 
 
 def collate_func(example: dict) -> dict:
@@ -92,13 +92,13 @@ def main():
     logger.info("Evaluation metrics (before optimization): ", results)
 
     logger.info("Optimizing workflow...")
-    textgrad_optimizer.optimize(benchmark)
+    textgrad_optimizer.optimize(benchmark, seed=8)
     textgrad_optimizer.restore_best_graph()
 
     logger.info("Evaluating workflow on test set...")
     with suppress_logger_info():
         results = textgrad_optimizer.evaluate(dataset=benchmark, eval_mode="test")
-    logger.info("Evaluation metrics (after optimization): ", results)
+    logger.info(f"Evaluation metrics (after optimization): {results}")
 
 
 if __name__ == "__main__":

@@ -24,6 +24,21 @@ CODE_LOSS_PROMPT = (
     "- Takeaways from the Reference Code: What are the key insights learned from the reference code that can be applied to improve the code? Consider algorithms, data structures, coding patterns, or stylistic strengths.\n"
 )
 
+NO_ANSWER_LOSS_PROMPT = (
+    "Evaluate the quality of the following response to a task. Please assess the response based on the following criteria:\n"
+    "- Correctness: Is the response factually, logically, or mathematically accurate? For code, does it run and produce the correct output?\n"
+    "- Relevance: Does the response directly address the task without introducing unrelated or off-topic content?\n"
+    "- Completeness: Does the response fully answer all aspects of the task? Are any parts missing or insufficiently addressed?\n"
+    "- Clarity and Communication: Is the explanation or expression clear, well-structured, and easy to follow? Are key ideas communicated effectively?\n"
+    "- Reasoning and Justification: Does the response provide a sound explanation, derivation, or rationale for the solution or answer?\n"
+    "- Efficiency and Elegance: Is the solution concise, efficient, and well-structured? Does it avoid unnecessary complexity?\n"
+    "- Insight and Creativity: Does the response offer novel insights, creative approaches, or thoughtful perspectives?\n"
+    "- Robustness: Does the solution consider edge cases, exceptions, or ambiguities in the problem? Is it reliable under different conditions?\n"
+    "- Formatting and Presentation: Is the response well-organized and properly formatted (e.g., code indentation, paragraphing, math notation)?\n"
+    "- Adherence to Instructions: Does the response follow any specific formatting, style, or content requirements given in the task?\n"
+    "Your evaluation should cover these points in a concise list of bullet points.\n"
+)
+
 OPTIMIZER_SYSTEM_PROMPT = (
     "You are part of an optimization system that improves text (i.e., variable). "
     "You will be asked to creatively and critically improve instruction prompt templates or system prompts. "
