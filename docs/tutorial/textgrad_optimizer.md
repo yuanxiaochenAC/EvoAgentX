@@ -79,8 +79,9 @@ class MathSplits(MATH):
         np.random.seed(42)
         permutation = np.random.permutation(len(self._test_data))
         full_test_data = self._test_data
-        # randomly select 50 samples for dev and 100 samples for test
-        self._dev_data = [full_test_data[idx] for idx in permutation[:50]]
+        # randomly select 10 samples for train, 40 for dev and 100 for test
+        self._train_data = [full_test_data[idx] for idx in permutation[:10]]
+        self._dev_data = [full_test_data[idx] for idx in permutation[10:50]]
         self._test_data = [full_test_data[idx] for idx in permutation[50:150]]
 
 math_splits = MathSplits()
@@ -153,23 +154,24 @@ textgrad_optimizer = TextGradOptimizer(
 
 To start the optimization process:
 ```python
-textgrad_optimizer.optimize(dataset=math_splits)
+textgrad_optimizer.optimize(dataset=math_splits, seed=8)
 ```
-
-After optimization, we can evaluate the workflow again to see the improvement.
-
-```python
-with suppress_logger_info():
-    result = textgrad_optimizer.evaluate(dataset=math_splits, eval_mode="test")
-print(f"Evaluation result (after optimization):\n{result}")
-```
+The `seed` is used for shuffling the training data. The training data is automatically re-shuffled every epoch. If `seed` is
+provided, the effective seed for shuffling the training data is `seed + epoch`.
 
 The final graph at the end of the optimization is not necessarily the best graph. If you wish to restore the graph that performed best on the development set, simply call
 ```python
 textgrad_optimizer.restore_best_graph()
 ```
 
-`TextGradOptimizer` always saves the final workflow graph and the best workflow graph. It also saves graphs during optimization if `save_interval` is not `None`. You can also save the workflow graph manually by calling `textgrad_optimizer.save()`.
+We can evaluate the workflow again to see the improvement after optimization.
+```python
+with suppress_logger_info():
+    result = textgrad_optimizer.evaluate(dataset=math_splits, eval_mode="test")
+print(f"Evaluation result (after optimization):\n{result}")
+```
+
+`TextGradOptimizer` always saves the final workflow graph and the best workflow graph to `save_path`. It also saves graphs during optimization if `save_interval` is not `None`. You can also save the workflow graph manually by calling `textgrad_optimizer.save()`.
 
 
 Note that `TextGradOptimizer` does not change the workflow structure but saving the workflow graph also saves the prompts and system prompts which will be different after optimization.
@@ -200,8 +202,8 @@ Below is an example of a saved workflow graph after optimization using `TextGrad
                     "required": true
                 }
             ],
-            "prompt": "Begin by assessing the complexity of the math problem to determine the appropriate level of detail required. For complex problems, provide a brief introduction to set the context and explain the relevance of key mathematical concepts. For simpler problems, focus on delivering a direct and concise solution.\n\nIdentify and apply relevant mathematical properties or theorems that can simplify the problem-solving process, such as the arithmetic sequence property. Prioritize methods that offer a concise and efficient solution, minimizing unnecessary steps while maintaining clarity.\n\nSolve the problem using the most direct and appropriate mathematical methodologies, ensuring each calculation step is accurate. Clearly explain the reasoning behind each step, enhancing understanding by providing brief explanations of why specific mathematical properties or methods are applicable.\n\nMaintain a smooth and coherent logical flow throughout the solution, using transitional phrases to connect different parts of the problem-solving process. Where applicable, compare alternative methods to solve the problem, discussing the benefits of each approach to provide a comprehensive understanding.\n\nEncourage the use of visual aids, such as diagrams or charts, to illustrate complex concepts and enhance comprehension when necessary. Explicitly state and verify any assumptions made during the problem-solving process, clarifying why certain methodologies are chosen.\n\nConclude with a verification step to confirm the solution's correctness, and present the final answer in a consistent format, such as \\boxed{{answer}}. Ensure that the final expression is in its simplest form and that all calculations are accurate and justified.\n\nProblem: <input>{problem}</input>",
-            "system_prompt": "You are a highly intelligent assistant with expertise in mathematics. Your goal is to provide precise, clear, and logically structured solutions to mathematical problems. Begin each solution with a concise summary of the problem to set the context for the reader. Assess the complexity of the problem and adjust the level of detail accordingly, focusing on conciseness for simpler problems. Emphasize mathematical rigor by using appropriate tools such as inequalities and fractions, and ensure accuracy by double-checking each step of the simplification process. Provide detailed explanations for each step when necessary, clearly articulating the reasoning and purpose behind each mathematical operation. Use consistent mathematical notation and terminology throughout the solution, specifying when to use LaTeX-style notation for complex equations. Where applicable, incorporate visual aids such as diagrams to illustrate complex concepts. Conclude with a summary of key concepts and rules used, and include a verification step to confirm the accuracy of the final answer. Use a conversational tone and incorporate real-world analogies to make the explanation more relatable and engaging for the reader. Encourage critical thinking by comparing different problem-solving methods and highlighting the most efficient approach.",
+            "prompt": "To solve the math problem, follow these steps:\n\n1. **Contextual Overview**: Begin with a brief overview of the problem-solving strategy, using logical reasoning and mathematical principles to derive the solution. Include any relevant geometric or algebraic insights.\n\n2. **Key Steps Identification**: Break down the problem-solving process into distinct parts:\n   - Identify the relevant mathematical operations and properties, such as symmetry, roots of unity, or trigonometric identities.\n   - Perform the necessary calculations, ensuring each step logically follows from the previous one.\n   - Present the final answer.\n\n3. **Conciseness and Clarity**: Provide a clear and concise explanation of your solution, avoiding unnecessary repetition. Use consistent formatting and notation throughout.\n\n4. **Mathematical Justification**: Explain the reasoning behind each step to ensure the solution is well-justified. Include explanations of reference angles, geometric interpretations, and any special conditions or edge cases.\n\n5. **Verification Step**: Include a quick verification step to confirm the accuracy of your calculations. Consider recalculating key values if initial assumptions were incorrect.\n\n6. **Visual Aids**: Where applicable, include diagrams or sketches to visually represent the problem and solution, enhancing understanding.\n\n7. **Final Answer Presentation**: Present the final answer clearly and ensure it is boxed, reflecting the correct solution. Verify that it aligns with the problem's requirements and any known correct solutions.\n\nProblem: <input>{problem}</input>",
+            "system_prompt": "You are a math-focused assistant dedicated to providing clear, concise, and educational solutions to mathematical problems. Your goal is to deliver structured and pedagogically sound explanations, ensuring mathematical accuracy and logical reasoning. Begin with a brief overview of the problem-solving approach, followed by detailed calculations, and conclude with a verification step. Use precise mathematical notation and consider potential edge cases. Present the final answer clearly, using the specified format, and incorporate visual aids or analogies where appropriate to enhance understanding and engagement. \n\nExplicitly include geometric explanations when applicable, describing the geometric context and relationships. Emphasize the importance of visual aids, such as diagrams or sketches, to enhance understanding. Ensure consistency in formatting and mathematical notation. Provide a brief explanation of the reference angle concept and its significance. Include contextual explanations of trigonometric identities and their applications. Critically evaluate initial assumptions and verify geometric properties before proceeding. Highlight the use of symmetry and conjugate pairs in complex numbers. Encourage re-evaluation and verification of steps, ensuring logical flow and clarity. Focus on deriving the correct answer and consider problem-specific strategies or known techniques.",
             "parse_mode": "str",
             "parse_func": null,
             "parse_title": null
