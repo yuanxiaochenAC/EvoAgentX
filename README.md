@@ -236,7 +236,7 @@ To evaluate the performance, we use them to optimize the same agent system on th
 | Method   | HotPotQA<br>(F1%) | MBPP<br>(Pass@1 %) | MATH<br>(Solve Rate %) |
 |----------|--------------------|---------------------|--------------------------|
 | Original | 63.58              | 69.00               | 66.00                    |
-| TextGrad | 69.21              | 68.00               | 76.00                    |
+| TextGrad | 71.02              | 71.00               | 76.00                    |
 | AFlow    | 65.09              | 79.00               | 71.00                    |
 | MIPRO    | 69.16              | 68.00               | 72.30       
 
