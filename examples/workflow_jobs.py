@@ -21,6 +21,7 @@ module_save_path = "examples/output/jobs/jobs_demo_4o_mini.json"
 def main(goal=None):
 
     # LLM configuration
+    print(OPENAI_API_KEY)
     openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=True, max_tokens=16000)
     # Initialize the language model
     llm = OpenAILLM(config=openai_config)
@@ -34,13 +35,13 @@ def main(goal=None):
     mcp_toolkit = MCPToolkit(config_path=mcp_config_path)
     tools = mcp_toolkit.get_tools()
     
-    # ## _______________ Workflow Creation _______________
-    # wf_generator = WorkFlowGenerator(llm=llm, tools=tools)
-    # workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal=goal, agent_suggestion=PDF_AGENT_SUGGESTION)
-    # # [optional] display workflow
-    # workflow_graph.display()
-    # # [optional] save workflow 
-    # workflow_graph.save_module(module_save_path)
+    ## _______________ Workflow Creation _______________
+    wf_generator = WorkFlowGenerator(llm=llm, tools=tools)
+    workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal=goal, agent_suggestion=PDF_AGENT_SUGGESTION)
+    # [optional] display workflow
+    workflow_graph.display()
+    # [optional] save workflow 
+    workflow_graph.save_module(module_save_path)
     
     
     ## _______________ Workflow Execution _______________
