@@ -8,6 +8,7 @@ ruff
 
 sympy
 stopit
+scipy
 setuptools
 tree_sitter
 tree_sitter_python
@@ -32,6 +33,7 @@ matplotlib>=3.10.0
 transformers>=4.47.1
 datasets>=3.4.0
 faiss-cpu==1.8.0.post1
+textgrad>=0.1.8
 
 # fast api dependencies
 fastapi>=0.115.11

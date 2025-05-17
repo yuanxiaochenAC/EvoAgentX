@@ -16,6 +16,7 @@ from ..core.base_config import Parameter
 from .action_graph import ActionGraph
 from ..utils.utils import generate_dynamic_class_name, make_parent_folder
 from ..prompts.workflow.sew_workflow import SEW_WORKFLOW
+from ..prompts.utils import DEFAULT_SYSTEM_PROMPT
 
 
 class WorkFlowNodeState(str, Enum):
@@ -780,16 +781,19 @@ class WorkFlowGraph(BaseModule):
     
     def get_candidate_children_nodes(self, completed_nodes: List[Union[str, WorkFlowNode]]) -> List[str]:
         """
-        return the next set of possible tasks to execute. If there are no loops in the graph, consider only the uncompleted children. 
+        Return the next set of possible tasks to execute. If there are no loops in the graph, consider only the uncompleted children. 
         If there exists loops, also consider the previous completed tasks.
 
         Args:
-            nodes (List[Union[str, WorkFlowNode]]): a list of completed nodes. 
+            completed_nodes (List[Union[str, WorkFlowNode]]): A list of completed nodes.
+            
+        Returns:
+            List[str]: List of node names that are candidates for execution.
         """
         node_names = [node if isinstance(node, str) else node.name for node in completed_nodes]
         has_loop = (len(self._loops) > 0)
         if has_loop:
-            # 存在环的时候需要额外判断
+            # if there exists loops, we need to check the completed nodes and their children nodes
             uncompleted_children_nodes = []
             for node_name in node_names:
                 children_nodes = self.get_all_children_nodes(nodes=[node_name])
@@ -819,8 +823,7 @@ class WorkFlowGraph(BaseModule):
         Check if all predecessors for a node are complete.
 
         Args:
-            graph (WorkFlowGraph): The workflow graph.
-            task_name (str): the name of a task.
+            node_name (str): The name of the task/node to check.
         
         Returns:
             bool: True if all predecessors are complete, False otherwise.
@@ -1062,7 +1065,7 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
                 "inputs": [{"name": str, "type": str, "required": bool, "description": str}, ...],
                 "outputs": [{"name": str, "type": str, "required": bool, "description": str}, ...],
                 "prompt": str, 
-                "system_prompt" (optional): str,
+                "system_prompt" (optional): str, default is DEFAULT_SYSTEM_PROMPT,
                 "output_parser" (optional): Type[ActionOutput],
                 "parse_mode" (optional): str, default is "str" 
                 "parse_func" (optional): Callable,
@@ -1095,7 +1098,7 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
         outputs = task.get("outputs", [])
         agent_name = generate_dynamic_class_name(node_name+" Agent")
         agent_description = node_description # .replace("task", "agent")
-        agent_system_prompt = task.get("system_prompt", None)
+        agent_system_prompt = task.get("system_prompt", DEFAULT_SYSTEM_PROMPT)
         agent_output_parser = task.get("output_parser", None)
         agent_parse_mode = task.get("parse_mode", "str")
         agent_parse_func = task.get("parse_func", None)

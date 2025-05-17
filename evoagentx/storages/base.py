@@ -71,7 +71,8 @@ class StorageHandler(BaseModule, ABC):
         Remove an agent from storage if the agent exists. 
 
         Args:
-            agent_name (str) the name of the agent to be deleted.
+            agent_name: The name of the agent to be deleted.
+            **kwargs (Any): Additional keyword arguments for the operation.
         """
         pass
 
