@@ -1,6 +1,6 @@
 import wikipedia
 from .search_base import SearchBase
-from typing import Dict, Any
+from typing import Dict, Any, Optional, List, Callable
 from pydantic import Field
 from evoagentx.core.logging import logger
 
@@ -8,23 +8,36 @@ from evoagentx.core.logging import logger
 class SearchWiki(SearchBase):
     max_sentences: int = Field(default=10, description="Maximum number of sentences in the summary. Default 0 means return all available content.")
     
-    def __init__(self, **data):
+    def __init__(
+        self, 
+        name: str = 'Wikipedia Search',
+        schemas: Optional[List[dict]] = None,
+        descriptions: Optional[List[str]] = None,
+        tools: Optional[List[Callable]] = None,
+        num_search_pages: int = 5, 
+        max_content_words: int = None,
+        max_sentences: int = 10,
+        **kwargs
+    ):
         # Set default name if not provided
-        name = data.get('name', 'WikipediaSearch')
-        schemas = self.get_tool_schemas()
-        descriptions = self.get_tool_descriptions()
-        tools = self.get_tools()
+        # name = data.get('name', 'WikipediaSearch')
+        schemas = schemas or self.get_tool_schemas()
+        descriptions = descriptions or self.get_tool_descriptions()
+        tools = tools or self.get_tools()
         # Pass these to the parent class initialization
         super().__init__(
             name=name,
             schemas=schemas,
             descriptions=descriptions,
             tools=tools,
-            **data
+            num_search_pages=num_search_pages,
+            max_content_words=max_content_words,
+            **kwargs
         )
-        self.max_sentences = data.get('max_sentences', 10)
+        self.max_sentences = max_sentences
+        # self.max_sentences = data.get('max_sentences', 10)
 
-    def search(self, query: str, num_search_pages: int = 5, max_content_words: int = 500) -> Dict[str, Any]:
+    def search(self, query: str, num_search_pages: int = None, max_content_words: int = None, max_sentences: int = None) -> Dict[str, Any]:
         """
         Searches Wikipedia for the given query and returns the summary and truncated full content.
 

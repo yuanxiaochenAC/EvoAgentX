@@ -12,10 +12,7 @@ class DockerInterpreter(BaseInterpreter):
     """
     A Docker-based interpreter for executing Python, Bash, and R scripts in an isolated environment.
     """
-
     
-
-
     CODE_EXECUTE_CMD_MAPPING: ClassVar[Dict[str, str]] = {
         "python": "python {file_name}",
     }

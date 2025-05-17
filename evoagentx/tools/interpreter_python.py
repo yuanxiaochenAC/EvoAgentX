@@ -18,22 +18,37 @@ class PythonInterpreter(BaseInterpreter):
     allowed_imports:Set[str] = Field(default_factory=set, description="Set of allowed imports")
     namespace:Dict[str, Any] = Field(default_factory=dict, description="Namespace for the interpreter")
 
-    def __init__(self, **data):
+    def __init__(
+        self, 
+        project_path: str, 
+        name: str = 'PythonInterpreter',
+        schemas: Optional[List[dict]] = None,
+        descriptions: Optional[List[str]] = None,
+        tools: Optional[List[Callable]] = None,
+        directory_names: Optional[List[str]] = None,
+        allowed_imports: Optional[Set[str]] = None, 
+        namespace: Optional[Dict[str, Any]] = None,
+        **kwargs
+    ):
         # Set default name if not provided
-        name = data.get('name', 'PythonInterpreter')
+        # name = kwargs.get('name', 'PythonInterpreter')
         # Get schemas, descriptions and tools before passing to parent
-        schemas = self.get_tool_schemas()
-        descriptions = self.get_tool_descriptions()
-        tools = self.get_tools()
+        schemas = schemas or self.get_tool_schemas()
+        descriptions = descriptions or self.get_tool_descriptions()
+        tools = tools or self.get_tools()
         # Pass these to the parent class initialization
         super().__init__(
             name=name,
             schemas=schemas,
             descriptions=descriptions,
             tools=tools,
-            **data
+            project_path=project_path,
+            **kwargs
         )
-        
+        self.directory_names = directory_names or self.directory_names
+        self.allowed_imports = allowed_imports or self.allowed_imports
+        self.namespace = namespace or self.namespace
+
     def _get_file_and_folder_names(self, target_path: str) -> List[str]:
         """Retrieves the names of files and folders (without extensions) in a given directory.
         Args:
@@ -387,6 +402,7 @@ class PythonInterpreter(BaseInterpreter):
                 }
             }
         }]
+    
     def get_tools(self) -> list[Callable]:
         return [self.execute, self.execute_script]
 

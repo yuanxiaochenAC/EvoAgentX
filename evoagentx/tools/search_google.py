@@ -1,6 +1,6 @@
 import requests
 import os
-from typing import Dict, Any
+from typing import Dict, Any, Optional, List, Callable
 from .search_base import SearchBase
 from pydantic import Field
 from evoagentx.core.logging import logger
@@ -8,25 +8,30 @@ import dotenv
 dotenv.load_dotenv()
 
 class SearchGoogle(SearchBase):
-    num_search_pages: int = Field(default=5, description="Number of search results to retrieve")
-    max_content_words: int = Field(default=500, description="Maximum number of words to include in content")
-    
-    def __init__(self, **data):
-        name = data.get('name', 'GoogleSearch')
-        schemas = self.get_tool_schemas()
-        tools = self.get_tools()
-        descriptions = self.get_tool_descriptions()
+
+    def __init__(
+        self, 
+        name: str = 'Google Search',
+        schemas: Optional[List[dict]] = None,
+        descriptions: Optional[List[str]] = None,
+        tools: Optional[List[Callable]] = None,
+        num_search_pages: int = 5, 
+        max_content_words: int = None,
+        **kwargs
+    ):
+        schemas = schemas or self.get_tool_schemas()
+        descriptions = descriptions or self.get_tool_descriptions()
+        tools = tools or self.get_tools()
         # Pass these to the parent class initialization
         super().__init__(
             name=name,
             schemas=schemas,
             descriptions=descriptions,
             tools=tools,
-            **data
+            num_search_pages=num_search_pages,
+            max_content_words=max_content_words,
+            **kwargs
         )
-        # Override default values if provided
-        self.num_search_pages = data.get('num_search_pages', 5)
-        self.max_content_words = data.get('max_content_words', 500)
     
     def search(self, query: str) -> Dict[str, Any]:
         """
@@ -44,8 +49,8 @@ class SearchGoogle(SearchBase):
         api_key = os.getenv('GOOGLE_API_KEY', '')
         search_engine_id = os.getenv('GOOGLE_SEARCH_ENGINE_ID', '')
         
-        print(f"api_key: {api_key}")
-        print(f"search_engine_id: {search_engine_id}")
+        # print(f"api_key: {api_key}")
+        # print(f"search_engine_id: {search_engine_id}")
             
         if not api_key or not search_engine_id:
             error_msg = (

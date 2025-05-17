@@ -8,12 +8,16 @@ class SearchGoogleFree(SearchBase):
     Free Google Search tool that doesn't require API keys.
     """
     
-    def __init__(self, 
-                 name: str = "Free Google Search",
-                 schemas: Optional[List[dict]] = None,
-                 descriptions: Optional[List[str]] = None,
-                 tools: Optional[List[Callable]] = None,
-                 **data):
+    def __init__(
+        self, 
+        name: str = "Free Google Search",
+        schemas: Optional[List[dict]] = None,
+        descriptions: Optional[List[str]] = None,
+        tools: Optional[List[Callable]] = None,
+        num_search_pages: int = 5, 
+        max_content_words: int = None,
+        **kwargs 
+    ):
         """
         Initialize the Free Google Search tool.
         
@@ -22,12 +26,14 @@ class SearchGoogleFree(SearchBase):
             schemas (Optional[List[dict]]): Tool schemas
             descriptions (Optional[List[str]]): Tool descriptions
             tools (Optional[List[Callable]]): Tool functions
-            **data: Additional data for initialization
+            num_search_pages (int): Number of search results to retrieve
+            max_content_words (int): Maximum number of words to include in content
+            **kwargs: Additional keyword arguments for parent class initialization
         """
-        name = data.get('name', "FreeGoogleSearch")
-        schemas = self.get_tool_schemas()
-        descriptions = self.get_tool_descriptions()
-        tools = self.get_tools()
+        # name = kwargs.get('name', "FreeGoogleSearch")
+        schemas = schemas or self.get_tool_schemas()
+        descriptions = descriptions or self.get_tool_descriptions()
+        tools = tools or self.get_tools()
         
         # Pass to parent class initialization
         super().__init__(
@@ -35,7 +41,9 @@ class SearchGoogleFree(SearchBase):
             schemas=schemas,
             descriptions=descriptions,
             tools=tools,
-            **data
+            num_search_pages=num_search_pages,
+            max_content_words=max_content_words,
+            **kwargs
         )
 
     def search(self, query: str, num_search_pages: int = None, max_content_words: int = None) -> Dict[str, Any]:
