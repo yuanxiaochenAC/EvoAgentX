@@ -1,13 +1,18 @@
-from pydantic import Field
-from typing import Optional, Any, Callable
+from pydantic import Field, create_model
+from typing import Optional, Any, Callable, Type, List, Union
 import json
+
 from ..core.logging import logger
 from ..models.base_model import BaseLLM
 from .action import Action, ActionInput, ActionOutput
 from ..core.message import Message, MessageType
-from typing import List
 from ..prompts.tool_caller import TOOL_CALLER_PROMPT, TOOL_CALLER_PROMPT_TEMPLATE
 from ..tools.tool import Tool
+from ..utils.utils import generate_dynamic_class_name
+from ..core.registry import MODULE_REGISTRY
+from ..models.base_model import LLMOutputParser
+from ..core.module_utils import parse_json_from_llm_output
+from ..prompts.tool_caller import OUTPUT_EXTRACTION_PROMPT
 
 class ToolCallingInput(ActionInput):
     query: str = Field(description="The query that might need to use tools to answer")
@@ -17,7 +22,7 @@ class ToolGeneratingOutput(ActionOutput):
     continue_after_tool_call: bool = Field(description="Whether to continue the conversation after the tool call")
     
 class ToolCallingOutput(ActionOutput):
-    content: str = Field(description="The answer to the query")
+    answer: str = Field(description="The answer to the query")
 
 
 class ToolCalling(Action):
@@ -26,16 +31,86 @@ class ToolCalling(Action):
     tools_caller: Optional[dict[str, Callable]] = None
     conversation: Optional[Message] = None
     tool_generating_output_format: Optional[Any] = None
-
+    inputs: dict = {}
+    outputs: dict = {}
+    output_parser: Optional[Type[ActionOutput]] = None
+    task_description: str = ""
+    execution_history: list[Any] = []
+    llm: BaseLLM = None
+    
+    
     def __init__(self, **kwargs):
         name = kwargs.pop("name", "tool_calling")
         description = kwargs.pop("description", "Call a tool function and return the results")
-        inputs_format = kwargs.pop("inputs_format", ToolCallingInput)
-        outputs_format = kwargs.pop("outputs_format", ToolCallingOutput)
-        super().__init__(name=name, description=description, inputs_format=inputs_format, outputs_format=outputs_format, **kwargs)
+        inputs_format = kwargs.pop("inputs")
+        outputs_format = kwargs.pop("outputs")
+        output_parser = kwargs.pop("output_parser", None)
+        super().__init__(name=name, description=description, inputs_format=ToolCallingInput, outputs_format=ToolCallingOutput, **kwargs)
+        self._generate_inputs_outputs_info(inputs_format, outputs_format, output_parser, name)
         self.tool_generating_output_format = kwargs.pop("intermediate_output_format", ToolGeneratingOutput)
         # Allow max_tool_try to be configured through kwargs
         self.max_tool_try = kwargs.pop("max_tool_try", 2)
+        self.task_description = kwargs.pop("task_description", "")
+    
+    def _generate_inputs_outputs_info(self, inputs: List[dict], outputs: List[dict], output_parser: ActionOutput = None, name: str = None):
+        # create the action input type
+        action_input_fields = {}
+        for field in inputs:
+            required = field.get("required", True)
+            if required:
+                action_input_fields[field["name"]] = (str, Field(description=field["description"]))
+            else:
+                action_input_fields[field["name"]] = (Optional[str], Field(default=None, description=field["description"]))
+        
+        action_input_type = create_model(
+            self._get_unique_class_name(
+                generate_dynamic_class_name(name+" action_input")
+            ),
+            **action_input_fields, 
+            __base__=ActionInput
+        )
+        
+        # create the action output type
+        if output_parser is None:
+            action_output_fields = {}
+            for field in outputs:
+                required = field.get("required", True)
+                if required:
+                    action_output_fields[field["name"]] = (Union[str, dict, list], Field(description=field["description"]))
+                else:
+                    action_output_fields[field["name"]] = (Optional[Union[str, dict, list]], Field(default=None, description=field["description"]))
+            
+            action_output_type = create_model(
+                self._get_unique_class_name(
+                    generate_dynamic_class_name(name+" action_output")
+                ),
+                **action_output_fields, 
+                __base__=ActionOutput,
+                # get_content_data=customize_get_content_data,
+                # to_str=customize_to_str
+            )
+        else:
+            # self._check_output_parser(outputs, output_parser)
+            self.action_output_type = output_parser
+        
+        self.inputs_format = action_input_type
+        self.outputs_format = action_output_type
+    
+    def _get_unique_class_name(self, candidate_name: str) -> str:
+        """
+        Get a unique class name by checking if it already exists in the registry.
+        If it does, append "Vx" to make it unique.
+        """
+        if not MODULE_REGISTRY.has_module(candidate_name):
+            return candidate_name 
+        
+        i = 1 
+        while True:
+            unique_name = f"{candidate_name}V{i}"
+            if not MODULE_REGISTRY.has_module(unique_name):
+                break
+            i += 1 
+        return unique_name 
     
     def add_tools(self, tools: List[Tool]):
         tools_schemas = [tool.get_tool_schemas() for tool in tools]
@@ -50,67 +125,55 @@ class ToolCalling(Action):
             self.tools_schema[tool_name] = tool_schema
             self.tools_caller[tool_name] = tool_caller
     
-    def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, time_out = 0, history: Optional[List[Message]] = None, **kwargs) -> ToolCallingOutput:
+    def _extract_output(self, llm_output: Any, llm: BaseLLM = None, **kwargs):
+        attr_descriptions: dict = self.outputs_format.get_attr_descriptions()
+        output_description_list = [] 
+        for i, (name, desc) in enumerate(attr_descriptions.items()):
+            output_description_list.append(f"{i+1}. {name}\nDescription: {desc}")
+        output_description = "\n\n".join(output_description_list)
+        extraction_prompt = self.task_description + "\n\n" + OUTPUT_EXTRACTION_PROMPT.format(text=llm_output, output_description=output_description)
+        llm_extracted_output: LLMOutputParser = llm.generate(prompt=extraction_prompt, history=kwargs.get("history", []) + [llm_output])
+        llm_extracted_data: dict = parse_json_from_llm_output(llm_extracted_output.content)
+        output = self.outputs_format.from_dict(llm_extracted_data)
+        
+        print("Extracted output:")
+        print(output)
+        
+        return output
+    
+    def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, return_prompt: bool = False, time_out = 0, **kwargs) -> ToolCallingOutput:
         if not inputs:
             logger.error("ToolCalling action received invalid `inputs`: None or empty.")
             raise ValueError('The `inputs` to ToolCalling action is None or empty.')
 
-        time_out += 1
-        if time_out > self.max_tool_try:
-            if return_prompt:
-                prompt_params_values = inputs.get("query")
-                return {"content": inputs["query"] + f"\n\nTool execution passing max depth: {self.max_tool_try}"}, prompt_params_values
-            return {"content": inputs["query"] + f"\n\nTool execution passing max depth: {self.max_tool_try}"}
+        if time_out == 0:
+            self.execution_history = []
         
         print("_______________________ Start Tool Calling _______________________")
         ## 1. Generate tool call args
-        prompt_params_values = inputs.get("query")
+        input_attributes: dict = self.inputs_format.get_attr_descriptions()
+        prompt_params_values = {k: inputs[k] for k in input_attributes.keys()}
+        print("prompt_params_values:")
+        print(prompt_params_values)
         
-        # Make sure we use the provided system message
-        system_message = sys_msg if sys_msg else TOOL_CALLER_PROMPT["system_prompt"]
-        history = history if history else []
+        if time_out > self.max_tool_try:
+            if return_prompt:
+                return self._extract_output("{content}".format(content = self.execution_history), llm = llm), self.task_description
+            return self._extract_output("{content}".format(content = self.execution_history), llm = llm) 
         
-        # Convert Message history to OpenAI format
-        messages = []
-        
-        # Add system message
-        messages.append({"role": "system", "content": system_message})
-        
-        # Add history messages in OpenAI format
-        for msg in history:
-            content = str(msg.content)
-            # Skip empty messages
-            if not content.strip():
-                continue
-                
-            if msg.agent == "user":
-                messages.append({"role": "user", "content": content})
-            else:
-                messages.append({"role": "assistant", "content": content})
-        
-        # Add the current query as a user message
-        messages.append({"role": "user", "content": prompt_params_values})
-        
-        messages.append({"role": "user", "content": TOOL_CALLER_PROMPT_TEMPLATE.format(tool_descriptions=self.tools_schema)})
-        
-        # Remove history from kwargs to avoid passing it as an unknown param
-        kwargs_copy = kwargs.copy()
-        if 'history' in kwargs_copy:
-            del kwargs_copy['history']
         
         tool_call_args = llm.generate(
-            messages=messages,
+            prompt = TOOL_CALLER_PROMPT_TEMPLATE.format(tool_descriptions=self.tools_schema, goal = self.task_description, inputs = prompt_params_values, history = self.execution_history), 
+            system_message = TOOL_CALLER_PROMPT["system_prompt"], 
             parser=self.tool_generating_output_format,
-            history = history,
             parse_mode="json"
         )
         
         print("Tool call args:")
         print(tool_call_args)
         
-        ## 2. Call the tools
+        ## ___________ Call the tools ___________
         function_params = tool_call_args.function_params
-        
         errors = []
         results  =[]
         for function_param in function_params:
@@ -155,79 +218,21 @@ class ToolCalling(Action):
         ## 3. Add the tool call results to the query and continue the conversation
         results = {"result": results, "error": errors}
         
-        inputs = inputs.copy()
         
-        ##### ___________ Custom Object Serializer ___________
-        # Define a custom object   that can handle various types
-        def object_serializer(obj):
-            # Handle Pydantic models
-            if hasattr(obj, "model_dump"):
-                return obj.model_dump()
-            # Handle objects with __dict__ attribute
-            elif hasattr(obj, "__dict__"):
-                return obj.__dict__
-            # Handle objects with custom __str__ method
-            elif hasattr(obj, "__str__"):
-                return str(obj)
-            # Default fallback
-            else:
-                return repr(obj)
+        print("results:")
+        print(results)
         
+        self.execution_history.append((tool_call_args, results))
         
-        ##### ___________ Converting results to string ___________
-        try:
-            print("Serializing results...")
-            results_str = json.dumps(results, default=object_serializer)
-        except TypeError as e:
-            # If JSON serialization fails, use a more direct approach
-            print(f"JSON serialization failed: {e}")
-            
-            # Build a more controlled string representation
-            result_parts = []
-            result_parts.append("Results:")
-            
-            # Process the actual results
-            for i, res in enumerate(results.get("result", [])):
-                result_parts.append(f"  Result {i+1}: {object_serializer(res)}")
-                
-            # Process any errors
-            for i, err in enumerate(results.get("error", [])):
-                result_parts.append(f"  Error {i+1}: {err}")
-                
-            # Join all parts with newlines
-            results_str = "\n".join(result_parts)
-            
-        ##### ___________ Adding tool call results to the query ___________
-        inputs["query"] += "\n\n ### Tool Call Results \n\n" + results_str
-        
-        print("\nContinue after tool call? :")
-        print(tool_call_args.continue_after_tool_call)
+        ### Continue Execution or Returning Extracted Answer
         if tool_call_args.continue_after_tool_call:
-            # Only continue if we haven't exceeded max_tool_try
-            print("____________________________ Entering continue ____________________________\n\n\n\n\n\n\n\n\n\n")
-            if time_out < self.max_tool_try:
-                print(f"Continuing with tool call execution (attempt {time_out+1}/{self.max_tool_try})")
-                content = self.execute(llm, inputs, sys_msg, return_prompt, **kwargs, time_out=time_out)
+            if return_prompt:
+                return self.execute(llm, inputs, return_prompt, time_out + 1, **kwargs), self.task_description
             else:
-                print(f"Maximum tool call depth ({self.max_tool_try}) reached, stopping execution")
-                content = {"answer": inputs["query"] + f"\n\nTool execution reached maximum depth ({self.max_tool_try})."}
-        else:
-            content = {"answer": inputs["query"]}
-            
-        print("answer:")
-        print(content)
-        
-        content = Message(
-                content=content,
-                action=self.name,
-                msg_type=MessageType.RESPONSE
-            )
+                return self.execute(llm, inputs, return_prompt, time_out + 1, **kwargs)
         
         if return_prompt:
-            print("_______________________ Returning Prompt _______________________")
-            print("returning prompt", prompt_params_values)
-            print("content", content)
-            return content, prompt_params_values
-        return content
-    
+            return self._extract_output("{content}".format(content = self.execution_history), llm = llm), self.task_description
+        return self._extract_output("{content}".format(content = self.execution_history), llm = llm) 
+        
 

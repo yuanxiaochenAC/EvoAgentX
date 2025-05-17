@@ -1,3 +1,33 @@
+OUTPUT_EXTRACTION_PROMPT = """
+You are given the following text:
+{text}
+
+We need you to process this text and generate high-quality outputs for each of the following fields:
+{output_description}
+
+**Instructions:**
+1. Read through the provided text carefully.
+2. For each of the listed output fields, analyze the relevant information from the text and generate a well-formulated response.
+3. You may summarize, process, restructure, or enhance the information as needed to provide the best possible answer.
+4. Your analysis should be faithful to the content but can go beyond simple extraction - provide meaningful insights where appropriate.
+5. Return your processed outputs in a single JSON object, where the JSON keys **exactly match** the output names given above.
+6. If there is insufficient information for an output, provide your best reasonable inference or set its value to an empty string ("") or `null`.
+7. Do not include any additional keys in the JSON.
+8. Your final output should be valid JSON and should not include any explanatory text.
+
+**Example JSON format:**
+{{
+  "<OUTPUT_NAME_1>": "Processed content here",
+  "<OUTPUT_NAME_2>": "Processed content here",
+  "<OUTPUT_NAME_3>": "Processed content here"
+}}
+
+Now, based on the text and the instructions above, provide your final JSON output.
+"""
+
+
+
+
 CUSTOM_TOOL_CALLER_PROMPT = """
 
 At the same time, you are a tool caller agent and is able to call the tools.
@@ -177,6 +207,7 @@ You are a helpful assistant with access to a set of tools. Your task is to analy
    - ONLY choose tools when it is necessary
    - If you have the information, you should not call the tool
    - NEVER WRITE COMMENTS IN THE TOOL CALLS
+   - You should avoid calling the same tool successfully called in the history
 
 2. **Continue After Tool Call**:
    - ALWAYS set "continue_after_tool_call" to false
@@ -239,6 +270,16 @@ Comments in the json object is not allowed. (They are just for demonstration)
    - ALWAYS set "continue_after_tool_call" to false unless you explicitly need to make more tool calls
    - Only set "continue_after_tool_call" to true when absolutely necessary and you have a specific next tool in mind
 
+
+_____________ Let's start the task _____________
+## Goal
+{goal}
+
+## Inputs
+{inputs}
+
+## History
+{history}
 
 """
 

@@ -29,7 +29,9 @@ class CusToolCaller(CustomizeAgent):
         max_tool_try = kwargs.pop("max_tool_try", 2)
         # Create actions with the max_tool_try value
         # Don't add to kwargs - let CustomizeAgent handle action creation
-        tool_actions = [ToolCalling(max_tool_try=max_tool_try)]
+        inputs = kwargs.get("inputs", None)
+        outputs = kwargs.get("outputs", None)
+        tool_actions = [ToolCalling(max_tool_try=max_tool_try, inputs = inputs, outputs = outputs, ori_prompt = kwargs.get("prompt", ""))]
         tools = kwargs.get("tools", None)
         
         # Initialize as CustomizeAgent - all other parameters should be passed by the caller
@@ -78,6 +80,9 @@ class CusToolCaller(CustomizeAgent):
     
     def execute(self, **kwargs) -> Message:
         """Execute the tool caller agent"""
+        
+        print("_____________________ Start Executing _____________________")
+        
         try:
             # # Always use the tool_calling_action for CusToolCaller, override the action_name
             action_name = kwargs.get("action_name", self.tool_calling_action_name)
@@ -114,7 +119,7 @@ class CusToolCaller(CustomizeAgent):
             
             # from pdb import set_trace; set_trace()
             
-            # # Execute using the parent's execute_async method
+            # # Execute using the parent's  method
             llm_output = super().execute(**kwargs)
             print(f"Agent {self.name} execution completed successfully")
             
@@ -128,7 +133,7 @@ class CusToolCaller(CustomizeAgent):
             for i, (name, desc) in enumerate(attr_descriptions.items()):
                 output_description_list.append(f"{i+1}. {name}\nDescription: {desc}")
             output_description = "\n\n".join(output_description_list)
-            extraction_prompt = self.ori_prompt + "\n\n" + OUTPUT_EXTRACTION_PROMPT.format(text=llm_output.content, output_description=output_description)
+            extraction_prompt = self.ori_prompt + "\n\n" + OUTPUT_EXTRACTION_PROMPT.format(text=llm_output.answer, output_description=output_description)
             llm_extracted_output: LLMOutputParser = self.llm.generate(prompt=extraction_prompt, history=kwargs.get("history", []) + [llm_output])
             llm_extracted_data: dict = parse_json_from_llm_output(llm_extracted_output.content)
             output = self.outputs_format.from_dict(llm_extracted_data)

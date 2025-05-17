@@ -159,6 +159,7 @@ class AgentManager(BaseModule):
                 raise ValueError(f"llm_config must be a dictionary or an instance of LLMConfig. Got {type(llm_config)}.")
         if agent_data.get("tools", None):
             agent_data["tools"] = [self.tools_mapping[tool_name] for tool_name in agent_data["tools"]]
+            print("Generate Tool Caller")
             return CusToolCaller.from_dict(data=agent_data)
         return CustomizeAgent.from_dict(data=agent_data)
     

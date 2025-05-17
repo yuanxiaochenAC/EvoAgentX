@@ -15,6 +15,7 @@ from ..memory.memory_manager import MemoryManager
 from ..storages.base import StorageHandler
 from ..actions.action import Action
 from ..actions.action import ContextExtraction
+from ..core.logging import logger
 
 
 class Agent(BaseModule):
@@ -216,7 +217,7 @@ class Agent(BaseModule):
                 **kwargs
         )
         action_output, prompt = execution_results
-
+        
         message = self._create_output_message(
             action_output=action_output,
             prompt=prompt,
