@@ -11,7 +11,7 @@
 
 <div align="center">
 
-[![EvoAgentX Homepage](https://img.shields.io/badge/EvoAgentX-Homepage-blue?logo=homebridge)](https://evo-agent-x-landing-page.vercel.app/)
+[![EvoAgentX Homepage](https://img.shields.io/badge/EvoAgentX-Homepage-blue?logo=homebridge)](https://evoagentx.org/)
 [![Docs](https://img.shields.io/badge/-Documentation-0A66C2?logo=readthedocs&logoColor=white&color=7289DA&labelColor=grey)](https://EvoAgentX.github.io/EvoAgentX/)
 [![Discord](https://img.shields.io/badge/Chat-Discord-5865F2?&logo=discord&logoColor=white)](https://discord.gg/SUEkfTYn)
 [![Twitter](https://img.shields.io/badge/Follow-@EvoAgentX-e3dee5?&logo=x&logoColor=white)](https://x.com/EvoAgentX)
@@ -46,13 +46,26 @@
 - **[May 2025]** 🎉 **EvoAgentX** has been officially released!
 
 ## ⚡ Get Started
+- [🔥 Latest News](#-latest-news)
+- [⚡ Get Started](#-get-started)
 - [Installation](#installation)
 - [LLM Configuration](#llm-configuration)
+  - [API Key Configuration](#api-key-configuration)
+  - [Configure and Use the LLM](#configure-and-use-the-llm)
 - [Automatic WorkFlow Generation](#automatic-workflow-generation)
 - [Demo Video](#demo-video)
+  - [✨ Final Results](#-final-results)
 - [Evolution Algorithms](#evolution-algorithms)
+  - [📊 Results](#-results)
 - [Applications](#applications)
 - [Tutorial and Use Cases](#tutorial-and-use-cases)
+- [🎯 Roadmap](#-roadmap)
+- [🙋 Support](#-support)
+  - [Join the Community](#join-the-community)
+  - [Contact Information](#contact-information)
+- [🙌 Contributing to EvoAgentX](#-contributing-to-evoagentx)
+- [📚 Acknowledgements](#-acknowledgements)
+- [📄 License](#-license)
 
 ## Installation
 
