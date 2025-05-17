@@ -1,11 +1,10 @@
 from pydantic import Field, create_model
 from typing import Optional, Any, Callable, Type, List, Union
-import json
 
 from ..core.logging import logger
 from ..models.base_model import BaseLLM
 from .action import Action, ActionInput, ActionOutput
-from ..core.message import Message, MessageType
+from ..core.message import Message
 from ..prompts.tool_caller import TOOL_CALLER_PROMPT, TOOL_CALLER_PROMPT_TEMPLATE
 from ..tools.tool import Tool
 from ..utils.utils import generate_dynamic_class_name

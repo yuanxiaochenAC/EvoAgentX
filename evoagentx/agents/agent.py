@@ -15,7 +15,6 @@ from ..memory.memory_manager import MemoryManager
 from ..storages.base import StorageHandler
 from ..actions.action import Action
 from ..actions.action import ContextExtraction
-from ..core.logging import logger
 
 
 class Agent(BaseModule):

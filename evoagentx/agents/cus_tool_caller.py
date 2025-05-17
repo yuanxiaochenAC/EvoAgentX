@@ -1,12 +1,7 @@
-from typing import Dict, Any, Optional, Callable
-import asyncio
-import json
-from .customize_agent import CustomizeAgent, OUTPUT_EXTRACTION_PROMPT
+from typing import Dict, Optional, Callable
+from .customize_agent import CustomizeAgent
 from ..actions.tool_calling import ToolCalling
 from ..prompts.tool_caller import CUSTOM_TOOL_CALLER_PROMPT
-from ..core.message import Message, MessageType
-from ..core.module_utils import parse_json_from_llm_output
-from ..models.base_model import LLMOutputParser
 from ..tools.tool import Tool
 
 class CusToolCaller(CustomizeAgent):
@@ -78,93 +73,4 @@ class CusToolCaller(CustomizeAgent):
         self.tool_calling_action.add_tools(tools)
         self._initialized = True
     
-    def execute(self, **kwargs) -> Message:
-        """Execute the tool caller agent"""
-        
-        print("_____________________ Start Executing _____________________")
-        
-        try:
-            # # Always use the tool_calling_action for CusToolCaller, override the action_name
-            action_name = kwargs.get("action_name", self.tool_calling_action_name)
-            if action_name == self.tool_calling_action_name:
-                self.system_prompt = self.tool_calling_prompt
-                action_input_data = kwargs.get("action_input_data", {})
-                if not action_input_data.get("query") and "query" not in action_input_data:
-                    # If no query is provided, create one from the task description or goal
-                    goal = kwargs.get("wf_goal", "")
-                    task_desc = kwargs.get("wf_task_desc", "")
-                    if task_desc:
-                        action_input_data["query"] = f"Task: {task_desc}\nGoal: {goal}"
-                    elif goal:
-                        action_input_data["query"] = goal
-                    
-                    # action_input_data["query"] += "\n\n current query/goal and config: \n" + json.dumps(kwargs.get("action_input_data", {}), indent=4)
-                kwargs["action_input_data"] = action_input_data
-                
-                additional_info = Message(
-                    content=json.dumps(kwargs.get("action_input_data", {}), indent=4),
-                    agent=self.name,
-                    action=action_name,
-                    msg_type=MessageType.RESPONSE,
-                    wf_goal=kwargs.get("wf_goal", ""),
-                    wf_task=kwargs.get("wf_task", ""),
-                    wf_task_desc=kwargs.get("wf_task_desc", "")
-                )
-                kwargs["history"] = [additional_info]
-                
-                kwargs["system_prompt"] = self.tool_calling_prompt
-                
-            else:
-                self.system_prompt = self.ori_prompt
-            
-            # from pdb import set_trace; set_trace()
-            
-            # # Execute using the parent's  method
-            llm_output = super().execute(**kwargs)
-            print(f"Agent {self.name} execution completed successfully")
-            
-            
-            if action_name != self.tool_calling_action_name:
-                return llm_output
-            
-            print("_____________________ Start Extracting Output _____________________")
-            attr_descriptions: dict = self.outputs_format.get_attr_descriptions()
-            output_description_list = [] 
-            for i, (name, desc) in enumerate(attr_descriptions.items()):
-                output_description_list.append(f"{i+1}. {name}\nDescription: {desc}")
-            output_description = "\n\n".join(output_description_list)
-            extraction_prompt = self.ori_prompt + "\n\n" + OUTPUT_EXTRACTION_PROMPT.format(text=llm_output.answer, output_description=output_description)
-            llm_extracted_output: LLMOutputParser = self.llm.generate(prompt=extraction_prompt, history=kwargs.get("history", []) + [llm_output])
-            llm_extracted_data: dict = parse_json_from_llm_output(llm_extracted_output.content)
-            output = self.outputs_format.from_dict(llm_extracted_data)
-            
-            # Create a proper Message with the output
-            return_msg_type = kwargs.get("return_msg_type", MessageType.RESPONSE)
-            
-            # Create a message with the extracted output as content
-            message = Message(
-                content=output,
-                agent=self.name,
-                action=action_name,
-                msg_type=return_msg_type,
-                wf_goal=kwargs.get("wf_goal", ""),
-                wf_task=kwargs.get("wf_task", ""),
-                wf_task_desc=kwargs.get("wf_task_desc", "")
-            )
-            return message
-            
-        except Exception as e:
-            print(f"Error in CusToolCaller.execute for agent {self.name}: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            
-            # Create an error message to return
-            error_message = Message(
-                content=f"Error executing agent {self.name}: {str(e)}",
-                agent=self.name,
-                action=kwargs.get("action_name", self.tool_calling_action_name),
-                msg_type=MessageType.ERROR
-            )
-            return error_message
-
 
