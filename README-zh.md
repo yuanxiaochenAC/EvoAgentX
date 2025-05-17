@@ -11,7 +11,7 @@
 
 <div align="center">
 
-[![EvoAgentX 主页](https://img.shields.io/badge/EvoAgentX-主页-blue?logo=homebridge)](https://evo-agent-x-landing-page.vercel.app/)
+[![EvoAgentX 主页](https://img.shields.io/badge/EvoAgentX-主页-blue?logo=homebridge)](https://evoagentx.org/)
 [![文档](https://img.shields.io/badge/-文档-0A66C2?logo=readthedocs&logoColor=white&color=7289DA&labelColor=grey)](https://EvoAgentX.github.io/EvoAgentX/)
 [![Discord](https://img.shields.io/badge/Chat-Discord-5865F2?&logo=discord&logoColor=white)](https://discord.gg/SUEkfTYn)
 [![Twitter](https://img.shields.io/badge/Follow-@EvoAgentX-e3dee5?&logo=x&logoColor=white)](https://x.com/EvoAgentX)
@@ -46,13 +46,26 @@
 - **[2025年5月]** 🎉 **EvoAgentX** 正式发布！
 
 ## ⚡ 快速开始
+- [🔥 最新消息](#-最新消息)
+- [⚡ 快速开始](#-快速开始)
 - [安装](#安装)
 - [LLM配置](#llm配置)
+  - [API密钥配置](#api密钥配置)
+  - [配置并使用LLM](#配置并使用llm)
 - [自动工作流生成](#自动工作流生成)
 - [演示视频](#演示视频)
+  - [✨ 最终结果](#-最终结果)
 - [进化算法](#进化算法)
+  - [📊 结果](#-结果)
 - [应用案例](#应用案例)
 - [教程与使用案例](#教程与使用案例)
+- [🎯 路线图](#-路线图)
+- [🙋 支持](#-支持)
+  - [加入社区](#加入社区)
+  - [联系信息](#联系信息)
+- [🙌 为EvoAgentX做贡献](#-为evoagentx做贡献)
+- [📚 致谢](#-致谢)
+- [📄 许可证](#-许可证)
 
 ## 安装
 
