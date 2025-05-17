@@ -8,7 +8,7 @@ This quickstart guide will walk you through the essential steps to set up and st
 
 ## Installation
 ```bash
-pip install evoagentx 
+pip install git+https://github.com/EvoAgentX/EvoAgentX.git
 ```
 Please refere to [Installation Guide](./installation.md) for more details about the installation. 
 
@@ -138,19 +138,3 @@ print(output)
 
 For a complete working example, check out the [full workflow demo](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/workflow_demo.py).
 
-<!-- ## Next Steps
-
-Now that you've learned the basics of EvoAgentX, you can:
-
-- Explore the [API documentation](../api.md) to learn about more advanced features
-- Try building more complex workflows with conditional branching and loops
-- Experiment with different agent configurations and tool integrations -->
-
-
-<!-- - Check out the [example projects](../examples/index.md) for inspiration
-
-For more advanced topics, see our guides on:
-- [Advanced Workflow Patterns](../advanced/workflow_patterns.md)
-- [Custom Tool Development](../advanced/custom_tools.md)
-- [Memory Systems](../advanced/memory_systems.md)
-- [Evolutionary Optimization](../advanced/evolutionary_optimization.md) -->

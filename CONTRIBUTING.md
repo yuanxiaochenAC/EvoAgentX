@@ -2,41 +2,60 @@
 
 Thank you for considering contributing to **EvoAgentX** – an automatic agentic workflow generation and evolving framework! We appreciate your interest and contributions to improving the project.
 
-## 🚀 Getting Started
+## 🚀 Getting Started for Contributors
 
-1. **Fork the Repository**: Click the 'Fork' button on the top right of this repo to create your own copy.
-2. **Clone Your Fork**:
-   ```bash
-   git clone https://github.com/your-username/EvoAgentX.git
-   ```
-3. **Navigate to the Project Directory**:
-   ```bash
-   cd EvoAgentX
-   ```
-4. **Create a Virtual Environment**:
-   ```bash
-   conda create -n agent python=3.10
-   conda activate agent
-   ```
-5. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+If you're interested in contributing code:
+
+1. Clone the repo and set up your Python environment
+2. Install dependencies in development mode via `pip install -e .`
+3. Make changes in a new branch
+4. Submit a Pull Request
+
+📌 New to EvoAgentX? Try the [Quickstart Guide](./docs/quickstart.md)
+
+🔧 To report bugs, request features, or ask questions
+
+Please scroll down to the **Contributing Guide** below 👇 — detailed templates are available there.
 
 ## 🛠 How to Contribute
 
 ### **1. Reporting Bugs** 🐞
-- Ensure the bug has not been reported in the [Issues](https://github.com/EvoAgentX/issues) tab.
-- Provide detailed steps to reproduce the issue.
+
+If you encounter a bug, error, or unexpected behavior:
+- ✅ First, check our [Issues](https://github.com/EvoAgentX/EvoAgentX/issues) and [Discussions](https://github.com/EvoAgentX/EvoAgentX/discussions) to see if it's already been reported. 
+
+- ✅ Then, use the [🐞 Bug Report Template](https://github.com/EvoAgentX/EvoAgentX/issues/new?template=bug_report.yml) to submit it.
+
+Please make sure to:
+- Use a clear title and concise description of the bug.
+- Provide environment details (OS, Python version, etc.)
+- Include steps to reproduce the issue.
 - Include logs, screenshots, and environment details.
-- Use a clear title and concise description.
+
 
 ### **2. Suggesting Features** 💡
-- Check if a similar feature request exists in [Issues](https://github.com/EvoAgentX/issues).
+To propose a new feature or enhancement:
+- ✅ First, check existing [feature requests](https://github.com/EvoAgentX/EvoAgentX/issues?q=label%3Aenhancement) to see if it's already been requested. 
+- ✅ Then, use the [💡 Feature Request Template](https://github.com/EvoAgentX/EvoAgentX/issues/new?template=feature_request.yml) to submit it.  
+
+Please make sure to:
+- Use a clear title and concise description of the feature.
 - Provide a use case explaining why this feature is beneficial.
 - Suggest a possible implementation approach if possible.
 
-### **3. Code Contributions** 👨‍💻
+### **3. Asking Questions / Getting Help** 🤔 
+For usage questions or general help:
+- ✅ We encourage you to use the [Discussions](https://github.com/EvoAgentX/EvoAgentX/discussions) area first.
+- ✅ If you can't find an answer, use the [🤔 Question Template](https://github.com/EvoAgentX/EvoAgentX/issues/new?template=question.yml) to submit it.
+
+Please make sure to:
+- Provide a clear and concise description of your question.
+- Include relevant details such as code snippets, configs, links, error messages, or screenshots.
+
+#### ✨ Tip
+You can also find links to all issue types when you click “New Issue” on the [Issues tab](https://github.com/EvoAgentX/EvoAgentX/issues).
+
+### **4. Code Contributions** 👨‍💻
 #### **Step 1: Create a Branch**
 Before making changes, create a new branch:
 ```bash
