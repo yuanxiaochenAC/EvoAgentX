@@ -30,8 +30,6 @@ class SearchWiki(SearchBase):
         descriptions = kwargs.pop('descriptions', None) or self.get_tool_descriptions()
         tools = kwargs.pop('tools', None)
         tools = self.get_tools()
-        num_search_pages = kwargs.pop('num_search_pages', 5)
-        max_content_words = kwargs.pop('max_content_words', None)
         # Pass these to the parent class initialization
         super().__init__(
             name=name,

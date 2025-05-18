@@ -11,7 +11,7 @@ class SearchBase(Tool):
     """
     
     num_search_pages: int = Field(default=5, description="Number of search results to retrieve")
-    max_content_words: int = Field(default=None, description="Maximum number of words to include in content. Default None means no limit.")
+    max_content_words: int = Field(default=1000, description="Maximum number of words to include in content. Default None means no limit.")
     
     def __init__(
         self, 
@@ -20,7 +20,7 @@ class SearchBase(Tool):
         descriptions: Optional[List[str]] = None,
         tools: Optional[List[Callable]] = None,
         num_search_pages: int = 5, 
-        max_content_words: int = None, 
+        max_content_words: int = 1000, 
         **kwargs
     ):
         """

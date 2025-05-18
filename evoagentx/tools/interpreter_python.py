@@ -13,16 +13,16 @@ from pydantic import Field
 class PythonInterpreter(BaseInterpreter):
 
 
-    project_path:Optional[str] = Field(default=None, description="Path to the project directory")
+    project_path:Optional[str] = Field(default=".", description="Path to the project directory")
     directory_names:Optional[List[str]] = Field(default_factory=list, description="List of directory names to check for imports")
     allowed_imports:Optional[Set[str]] = Field(default_factory=set, description="Set of allowed imports")
 
     def __init__(
         self, 
         name: str = 'PythonInterpreter',
-        project_path:Optional[str] = None,
-        directory_names:Optional[List[str]] = None,
-        allowed_imports:Optional[Set[str]] = None,
+        project_path:Optional[str] = ".",
+        directory_names:Optional[List[str]] = [],
+        allowed_imports:Optional[Set[str]] = {},
         **kwargs
     ):
         """

@@ -12,7 +12,7 @@ class SearchGoogleFree(SearchBase):
         self, 
         name: str = "Free Google Search",
         num_search_pages: int = 5, 
-        max_content_words: int = None, 
+        max_content_words: int = 1000, 
        **kwargs 
     ):
         """
