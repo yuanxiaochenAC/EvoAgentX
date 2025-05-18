@@ -1,4 +1,6 @@
 site_name: EvoAgentX
+site_url: https://evoagentx.github.io/EvoAgentX/
+use_directory_urls: false
 theme:
   name: material
   custom_dir: docs/overrides
