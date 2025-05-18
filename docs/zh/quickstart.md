@@ -6,7 +6,7 @@
 
 ## 安装
 ```bash
-pip install evoagentx 
+pip install git+https://github.com/EvoAgentX/EvoAgentX.git
 ```
 请参阅 [安装指南](./installation.md) 获取更多详细信息。
 
