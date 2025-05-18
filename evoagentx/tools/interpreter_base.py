@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional, List, Callable
+from typing import Optional, List, Callable
 from .tool import Tool
 
 class BaseInterpreter(Tool):

@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from typing import Dict, Any, List, Tuple, Callable, Optional
+from typing import List, Tuple, Callable, Optional
 from .tool import Tool
 from pydantic import Field
 
