@@ -20,8 +20,21 @@ class PythonInterpreter(BaseInterpreter):
     def __init__(
         self, 
         name: str = 'PythonInterpreter',
+        project_path:Optional[str] = None,
+        directory_names:Optional[List[str]] = None,
+        allowed_imports:Optional[Set[str]] = None,
         **kwargs
     ):
+        """
+        Initialize a Python interpreter for executing code in a controlled environment.
+        
+        Args:
+            name (str): The name of the interpreter
+            project_path (Optional[str]): Path to the project directory for module resolution
+            directory_names (Optional[List[str]]): List of directory names to check for imports
+            allowed_imports (Optional[Set[str]]): Set of allowed module imports to enforce security
+            **kwargs: Additional data to pass to the parent class
+        """
         # Set default name if not provided
         # name = kwargs.get('name', 'PythonInterpreter')
         # Get schemas, descriptions and tools before passing to parent
@@ -37,6 +50,9 @@ class PythonInterpreter(BaseInterpreter):
             tools=tools,
             **kwargs
         )
+        self.project_path = project_path
+        self.directory_names = directory_names
+        self.allowed_imports = allowed_imports
 
     def _get_file_and_folder_names(self, target_path: str) -> List[str]:
         """Retrieves the names of files and folders (without extensions) in a given directory.
@@ -353,19 +369,20 @@ class PythonInterpreter(BaseInterpreter):
             "type": "function",
             "function": {
                 "name": "execute",
-                "description": "The Python Interpreter Tool provides a secure execution environment for running Python code. It performs static analysis using AST to detect unauthorized imports and security risks before execution.",
+                "description": "Execute Python code in a secure environment with safety checks.",
                 "parameters": {
-                "type": "object",
-                "properties": {
-                    "code": {
-                        "type": "string",
-                        "description": "The code to execute"
+                    "type": "object",
+                    "properties": {
+                        "code": {
+                            "type": "string",
+                            "description": "The Python code to execute"
+                        },
+                        "language": {
+                            "type": "string",
+                            "description": "The programming language of the code (only 'python' is supported)",
+                            "enum": ["python"]
+                        }
                     },
-                    "language": {
-                        "type": "string",
-                        "description": "The programming language of the code"
-                    }
-                },
                     "required": ["code"]
                 }
             }
@@ -374,17 +391,18 @@ class PythonInterpreter(BaseInterpreter):
             "type": "function",
             "function": {
                 "name": "execute_script",
-                "description": "The Python Interpreter Tool provides a secure execution environment for running Python code from a file with safety checks.",
+                "description": "Execute Python code from a file in a secure environment with safety checks.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "file_path": {
                             "type": "string",
-                            "description": "The path to the Python file to be executed."
+                            "description": "The path to the Python file to be executed"
                         },
                         "language": {
                             "type": "string",
-                            "description": "The programming language of the code"
+                            "description": "The programming language of the code (only 'python' is supported)",
+                            "enum": ["python"]
                         }
                     },
                     "required": ["file_path"]
@@ -400,9 +418,9 @@ class PythonInterpreter(BaseInterpreter):
         Returns a brief description of the Python interpreter tool.
         
         Returns:
-            str: Tool description
+            list[str]: Tool descriptions
         """
         return [
-            "Python Interpreter Tool that provides a secure execution environment for running Python code with safety checks.",
-            "Python Interpreter Tool that provides a secure execution environment for running Python code from a file with safety checks."
+            "Execute Python code in a secure environment with safety checks.",
+            "Execute Python code from a file in a secure environment with safety checks."
         ]

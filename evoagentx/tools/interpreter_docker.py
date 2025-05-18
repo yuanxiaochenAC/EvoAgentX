@@ -38,12 +38,35 @@ class DockerInterpreter(BaseInterpreter):
         arbitrary_types_allowed = True  # Allow non-pydantic types like sets
 
     def __init__(
-                    self, 
-                    name:str = "DockerInterpreter",
-                    image_tag:str = None,
-                    dockerfile_path:str = None,
-                    **data
-                ):
+        self, 
+        name:str = "DockerInterpreter",
+        image_tag:str = None,
+        dockerfile_path:str = None,
+        require_confirm:bool = False,
+        print_stdout:bool = True,
+        print_stderr:bool = True,
+        host_directory:str = "",
+        container_directory:str = "/home/app/",
+        container_command:str = "tail -f /dev/null",
+        tmp_directory:str = "/tmp",
+        **data
+    ):
+        """
+        Initialize a Docker-based interpreter for executing code in an isolated environment.
+        
+        Args:
+            name (str): The name of the interpreter
+            image_tag (str, optional): The Docker image tag to use. Must be provided if dockerfile_path is not.
+            dockerfile_path (str, optional): Path to the Dockerfile to build. Must be provided if image_tag is not.
+            require_confirm (bool): Whether to require confirmation before executing code
+            print_stdout (bool): Whether to print stdout from code execution
+            print_stderr (bool): Whether to print stderr from code execution
+            host_directory (str): The path to the host directory to mount in the container
+            container_directory (str): The target directory inside the container
+            container_command (str): The command to run in the container
+            tmp_directory (str): The temporary directory to use for file creation in the container
+            **data: Additional data to pass to the parent class
+        """
         # Extract or generate schemas, descriptions, tools
         schemas = data.pop('schemas', None) or self.get_tool_schemas()
         descriptions = data.pop('descriptions', None) or self.get_tool_descriptions()
@@ -58,6 +81,13 @@ class DockerInterpreter(BaseInterpreter):
             tools=tools,
             **data
         )
+        self.require_confirm = require_confirm
+        self.print_stdout = print_stdout
+        self.print_stderr = print_stderr
+        self.host_directory = host_directory
+        self.container_directory = container_directory
+        self.container_command = container_command
+        self.tmp_directory = tmp_directory
         
         # Initialize Docker client and container
         self.client = docker.from_env()
@@ -239,19 +269,20 @@ class DockerInterpreter(BaseInterpreter):
                 "type": "function",
                 "function": {
                     "name": "execute",
-                    "description": "The Docker Interpreter Tool provides a secure and isolated environment for executing code inside a Docker container.",
+                    "description": "Execute code in a secure Docker container environment.",
                     "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "code": {
-                            "type": "string",
-                            "description": "The code to execute"
+                        "type": "object",
+                        "properties": {
+                            "code": {
+                                "type": "string",
+                                "description": "The code to execute"
+                            },
+                            "language": {
+                                "type": "string",
+                                "description": "The programming language of the code (e.g., python, py, python3)",
+                                "enum": list(self.CODE_TYPE_MAPPING.keys())
+                            }
                         },
-                        "language": {
-                            "type": "string",
-                            "description": "The programming language of the code (e.g., python, py, python3)"
-                        }
-                    },
                         "required": ["code", "language"]
                     }
                 }
@@ -262,17 +293,18 @@ class DockerInterpreter(BaseInterpreter):
                     "name": "execute_script",
                     "description": "Execute code from a script file in a secure Docker container environment.",
                     "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "file_path": {
-                            "type": "string",
-                            "description": "The path to the script file to execute"
+                        "type": "object",
+                        "properties": {
+                            "file_path": {
+                                "type": "string",
+                                "description": "The path to the script file to execute"
+                            },
+                            "language": {
+                                "type": "string",
+                                "description": "The programming language of the code. If not provided, will be determined from file extension.",
+                                "enum": list(self.CODE_TYPE_MAPPING.keys())
+                            }
                         },
-                        "language": {
-                            "type": "string",
-                            "description": "The programming language of the code. If not provided, will be determined from file extension."
-                        }
-                    },
                         "required": ["file_path"]
                     }
                 }
@@ -288,8 +320,8 @@ class DockerInterpreter(BaseInterpreter):
             List[str]: Tool description
         """
         return [
-            "Docker Interpreter Tool that provides a secure and isolated environment for executing code inside Docker containers.",
-            "Docker Script Execution Tool that allows running code from script files in a containerized environment."
+            "Execute code in a secure Docker container environment.",
+            "Execute code from script files in a secure Docker container environment."
         ]
         
     def get_tools(self) -> List[callable]:

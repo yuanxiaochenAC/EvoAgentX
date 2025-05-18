@@ -1,6 +1,6 @@
 import wikipedia
 from .search_base import SearchBase
-from typing import Dict, Any, Optional, List, Callable
+from typing import Dict, Any
 from pydantic import Field
 from evoagentx.core.logging import logger
 
@@ -11,11 +11,21 @@ class SearchWiki(SearchBase):
     def __init__(
         self, 
         name: str = 'Wikipedia Search',
+        num_search_pages: int = 5, 
+        max_content_words: int = None,
         max_sentences: int = 10,
         **kwargs
     ):
-        # Set default name if not provided
-        # name = data.get('name', 'WikipediaSearch')
+        """
+        Initialize the Wikipedia Search tool.
+        
+        Args:
+            name (str): The name of the search tool
+            num_search_pages (int): Number of search results to retrieve
+            max_content_words (int, optional): Maximum number of words to include in content, None means no limit
+            max_sentences (int): Maximum number of sentences in the summary
+            **kwargs: Additional data to pass to the parent class
+        """
         schemas = kwargs.pop('schemas', None) or self.get_tool_schemas()
         descriptions = kwargs.pop('descriptions', None) or self.get_tool_descriptions()
         tools = kwargs.pop('tools', None)
@@ -109,22 +119,28 @@ class SearchWiki(SearchBase):
             "type": "function",
             "function": {
                 "name": "search",
-                "description": "Search Wikipedia for relevant articles and extract key information including titles, summaries, and content.",
+                "description": "Search Wikipedia for relevant articles and content.",
                 "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The search query to look up on Wikipedia."
-                    }
-                },
-                "required": ["query"]
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query to look up on Wikipedia"
+                        }
+                    },
+                    "required": ["query"]
                 }
             }
         }]
         
     def get_tool_descriptions(self) -> list[str]:
+        """
+        Returns a brief description of the Wikipedia search tool.
+        
+        Returns:
+            list[str]: Tool descriptions
+        """
         return [
-            "Search Wikipedia for relevant articles and extract key information including titles, summaries, and content."
+            "Search Wikipedia for relevant articles and content."
         ]
 

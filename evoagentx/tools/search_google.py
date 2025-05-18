@@ -1,8 +1,7 @@
 import requests
 import os
-from typing import Dict, Any, Optional, List, Callable
+from typing import Dict, Any
 from .search_base import SearchBase
-from pydantic import Field
 from evoagentx.core.logging import logger
 import dotenv
 dotenv.load_dotenv()
@@ -12,8 +11,19 @@ class SearchGoogle(SearchBase):
     def __init__(
         self, 
         name: str = 'Google Search',
+        num_search_pages: int = 5, 
+        max_content_words: int = None, 
         **kwargs
     ):
+        """
+        Initialize the Google Search tool.
+        
+        Args:
+            name (str): The name of the search tool
+            num_search_pages (int): Number of search results to retrieve
+            max_content_words (int, optional): Maximum number of words to include in content, None means no limit
+            **kwargs: Additional data to pass to the parent class
+        """
         schemas = kwargs.pop('schemas', None) or self.get_tool_schemas()
         descriptions = kwargs.pop('descriptions', None) or self.get_tool_descriptions()
         tools = kwargs.pop('tools', None)
@@ -24,6 +34,8 @@ class SearchGoogle(SearchBase):
             schemas=schemas,
             descriptions=descriptions,
             tools=tools,
+            num_search_pages=num_search_pages,
+            max_content_words=max_content_words,
             **kwargs
         )
     
@@ -113,15 +125,15 @@ class SearchGoogle(SearchBase):
             "type": "function",
             "function": {
                 "name": "search",
-                "description": "Search Google using the Custom Search API and retrieve detailed search results with content snippets.",
+                "description": "Search Google and retrieve content from search results.",
                 "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The search query to execute on Google"
-                    }
-                },
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query to execute on Google"
+                        }
+                    },
                     "required": ["query"]
                 }
             }
@@ -135,6 +147,6 @@ class SearchGoogle(SearchBase):
         Returns a brief description of the Google search tool.
         
         Returns:
-            list[str]: Tool description
+            list[str]: Tool descriptions
         """
-        return ["Search Google using the Custom Search API and retrieve detailed search results with content snippets."]
+        return ["Search Google and retrieve content from search results."]

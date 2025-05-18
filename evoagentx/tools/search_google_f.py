@@ -1,6 +1,6 @@
 from .search_base import SearchBase
 from googlesearch import search as google_f_search
-from typing import Dict, Any, Optional, List, Callable
+from typing import Dict, Any, List, Callable
 from evoagentx.core.logging import logger
 
 class SearchGoogleFree(SearchBase):
@@ -11,21 +11,19 @@ class SearchGoogleFree(SearchBase):
     def __init__(
         self, 
         name: str = "Free Google Search",
+        num_search_pages: int = 5, 
+        max_content_words: int = None, 
         **kwargs 
     ):
         """
         Initialize the Free Google Search tool.
         
         Args:
-            name (str): Name of the tool
-            schemas (Optional[List[dict]]): Tool schemas
-            descriptions (Optional[List[str]]): Tool descriptions
-            tools (Optional[List[Callable]]): Tool functions
+            name (str): The name of the search tool
             num_search_pages (int): Number of search results to retrieve
-            max_content_words (int): Maximum number of words to include in content
-            **kwargs: Additional keyword arguments for parent class initialization
+            max_content_words (int, optional): Maximum number of words to include in content, None means no limit
+            **kwargs: Additional data to pass to the parent class
         """
-        # name = kwargs.get('name', "FreeGoogleSearch")
         schemas = kwargs.pop('schemas', None) or self.get_tool_schemas()
         descriptions = kwargs.pop('descriptions', None) or self.get_tool_descriptions()
         tools = kwargs.pop('tools', None)
@@ -37,6 +35,8 @@ class SearchGoogleFree(SearchBase):
             schemas=schemas,
             descriptions=descriptions,
             tools=tools,
+            num_search_pages=num_search_pages,
+            max_content_words=max_content_words,
             **kwargs
         )
 
@@ -114,22 +114,22 @@ class SearchGoogleFree(SearchBase):
         Returns the OpenAI-compatible function schema for the free Google search tool.
         
         Returns:
-            list[Dict[str, Any]]: Function schema in OpenAI format
+            List[Dict[str, Any]]: Function schema in OpenAI format
         """
         return [{
             "type": "function",
             "function": {
                 "name": "search",
-                "description": "Search Google without requiring an API key and retrieve content from search results.",
+                "description": "Search Google without requiring an API key.",
                 "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The search query to execute on Google"
-                    }
-                },
-                "required": ["query"]
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query to execute on Google"
+                        }
+                    },
+                    "required": ["query"]
                 }
             }
         }]
@@ -138,7 +138,13 @@ class SearchGoogleFree(SearchBase):
         return [self.search]
 
     def get_tool_descriptions(self) -> List[str]:
+        """
+        Returns a brief description of the free Google search tool.
+        
+        Returns:
+            List[str]: Tool descriptions
+        """
         return [
-            "Free Google Search Tool that queries Google without requiring an API key."
+            "Search Google without requiring an API key."
         ]
 
