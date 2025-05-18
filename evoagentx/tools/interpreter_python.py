@@ -5,16 +5,38 @@ import importlib
 import sys
 import os
 import traceback
-from typing import List, Set, Optional, Union, Dict, Any
+from typing import List, Set, Optional, Union, Dict, Any, Callable
 from .interpreter_base import BaseInterpreter
+from pydantic import Field
 
-class InterpreterPython(BaseInterpreter):
+
+class PythonInterpreter(BaseInterpreter):
 
 
-    project_path:str = ""
-    directory_names:List[str] = []
-    allowed_imports:Set[str] = set()
-    namespace:Dict[str, Any] = {}
+    project_path:Optional[str] = Field(default=None, description="Path to the project directory")
+    directory_names:Optional[List[str]] = Field(default_factory=list, description="List of directory names to check for imports")
+    allowed_imports:Optional[Set[str]] = Field(default_factory=set, description="Set of allowed imports")
+
+    def __init__(
+        self, 
+        name: str = 'PythonInterpreter',
+        **kwargs
+    ):
+        # Set default name if not provided
+        # name = kwargs.get('name', 'PythonInterpreter')
+        # Get schemas, descriptions and tools before passing to parent
+        schemas = kwargs.pop('schemas', None) or self.get_tool_schemas()
+        descriptions = kwargs.pop('descriptions', None) or self.get_tool_descriptions()
+        tools = kwargs.pop('tools', None)
+        tools = self.get_tools()
+        # Pass these to the parent class initialization
+        super().__init__(
+            name=name,
+            schemas=schemas,
+            descriptions=descriptions,
+            tools=tools,
+            **kwargs
+        )
 
     def _get_file_and_folder_names(self, target_path: str) -> List[str]:
         """Retrieves the names of files and folders (without extensions) in a given directory.
@@ -240,13 +262,21 @@ class InterpreterPython(BaseInterpreter):
     def execute(self, code: str, language: str = "python") -> str:
         """
         Analyzes and executes the provided Python code in a controlled environment.
+        
+        NOTE: This method only returns content printed to stdout during execution.
+        It does not return any values from the code itself. To see results, use
+        print statements in your code.
+        
+        WARNING: This method uses Python's exec() function internally, which executes
+        code with full privileges. While safety checks are performed, there is still
+        a security risk. Do not use with untrusted code.
 
         Args:
             code (str): The Python code to execute.
             language (str, optional): The programming language of the code. Defaults to "python".
 
         Returns:
-            str: The output of the executed code, or a list of violations if found.
+            str: The output of the executed code (printed content only), or a list of violations if found.
         """
         # Verify language is python
         if language.lower() != "python":
@@ -256,6 +286,8 @@ class InterpreterPython(BaseInterpreter):
         self.namespace = {}
 
         # Change to the project directory and update sys.path for module resolution
+        if not self.project_path:
+            raise ValueError("Project path (project_path) is not set")
         os.chdir(self.project_path)
         sys.path.insert(0, self.project_path)
 
@@ -282,13 +314,21 @@ class InterpreterPython(BaseInterpreter):
     def execute_script(self, file_path: str, language: str = "python") -> str:
         """
         Reads Python code from a file and executes it using the `execute` method.
+        
+        NOTE: This method only returns content printed to stdout during execution.
+        It does not return any values from the code itself. To see results, use
+        print statements in your code.
+        
+        WARNING: This method uses Python's exec() function internally, which executes
+        code with full privileges. While safety checks are performed, there is still
+        a security risk. Do not use with untrusted code.
 
         Args:
             file_path (str): The path to the Python file to be executed.
             language (str, optional): The programming language of the code. Defaults to "python".
 
         Returns:
-            str: The output of the executed code, or an error message if the execution fails.
+            str: The output of the executed code (printed content only), or an error message if the execution fails.
         """
         
         if not os.path.isfile(file_path):
@@ -326,15 +366,36 @@ class InterpreterPython(BaseInterpreter):
                         "description": "The programming language of the code"
                     }
                 },
-                    "required": ["code", "language"]
+                    "required": ["code"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "execute_script",
+                "description": "The Python Interpreter Tool provides a secure execution environment for running Python code from a file with safety checks.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "file_path": {
+                            "type": "string",
+                            "description": "The path to the Python file to be executed."
+                        },
+                        "language": {
+                            "type": "string",
+                            "description": "The programming language of the code"
+                        }
+                    },
+                    "required": ["file_path"]
                 }
             }
         }]
     
-    def get_tools(self):
-        return [self.execute]
+    def get_tools(self) -> list[Callable]:
+        return [self.execute, self.execute_script]
 
-    def get_tool_descriptions(self) -> str:
+    def get_tool_descriptions(self) -> list[str]:
         """
         Returns a brief description of the Python interpreter tool.
         
@@ -342,5 +403,6 @@ class InterpreterPython(BaseInterpreter):
             str: Tool description
         """
         return [
-            "Python Interpreter Tool that provides a secure execution environment for running Python code with safety checks."
+            "Python Interpreter Tool that provides a secure execution environment for running Python code with safety checks.",
+            "Python Interpreter Tool that provides a secure execution environment for running Python code from a file with safety checks."
         ]

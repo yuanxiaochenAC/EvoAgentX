@@ -7,11 +7,10 @@ This tool is inspired / modified from MCP Python SDK and mcpadapt projects. You 
 import threading
 import asyncio
 from functools import partial
-from typing import Optional, Dict, Any, List, Callable, AsyncGenerator
+from typing import Optional, Any, List, Callable
 from evoagentx.tools.tool import Tool
 from evoagentx.core.logging import logger
 from contextlib import AsyncExitStack, asynccontextmanager
-from urllib.parse import urlparse
 
 import mcp
 import os
@@ -136,7 +135,7 @@ class MCPClient:
         elif isinstance(server_config, dict):
             client = sse_client(**server_config)
         else:
-            raise ValueError(f"Invalid server config type: {type(server_config)}")
+            raise ValueError("Invalid server config type: {}".format(type(server_config)))
         
         async with client as (read, write):
             async with ClientSession(read, write) as session:
@@ -219,7 +218,6 @@ class MCPClient:
     
 class MCPToolkit:
     def __init__(self, servers: Optional[list[MCPClient]] = None, config_path: Optional[str] = None, config: Optional[dict[str, Any]] = None):
-        self.servers: list[MCPClient] = servers
         
         parameters = []
         if config_path:
@@ -228,10 +226,12 @@ class MCPToolkit:
             parameters += self._from_config(config)
         
         self.servers = [MCPClient(parameters)]
+        if servers:
+            self.servers += servers
         for server in self.servers:
             try:
                 server._connect()
-                logger.info(f"Successfully connected to MCP servers")
+                logger.info("Successfully connected to MCP servers")
             except TimeoutError as e:
                 logger.warning(f"Timeout connecting to MCP servers: {str(e)}. Some tools may not be available.")
             except Exception as e:
@@ -275,6 +275,10 @@ class MCPToolkit:
             logger.info(f"Configured MCP server: {name} with command: {command_or_url}")
             
         return parameters
+    
+    def disconnect(self):
+        for server in self.servers:
+            server._disconnect()
         
     def get_tools(self):
         """Return a flattened list of all tools across all servers"""

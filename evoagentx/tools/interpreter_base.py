@@ -1,59 +1,58 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional, List, Callable
 from .tool import Tool
 
 class BaseInterpreter(Tool):
     """
     Base class for interpreter tools that execute code securely.
-    Implements the standard tool interface with get_tool_schema and execute methods.
+    Implements the standard tool interface with get_tool_schemas and execute methods.
     """
 
-    def get_tool_schema(self) -> Dict[str, Any]:
+    def __init__(
+        self, 
+        name: str = 'Base Interpreter',
+        schemas: Optional[List[dict]] = None,
+        descriptions: Optional[List[str]] = None,
+        tools: Optional[List[Callable]] = None, 
+        **kwargs
+    ):
+        # Get default values for required attributes
+        name = name or 'Base Interpreter'
+        schemas = schemas or self.get_tool_schemas()
+        descriptions = descriptions or self.get_tool_descriptions()
+        tools = tools or self.get_tools()
+        
+        # Pass these to the parent class initialization
+        super().__init__(
+            name=name,
+            schemas=schemas,
+            descriptions=descriptions,
+            tools=tools,
+            **kwargs
+        )
+
+    def get_tool_schemas(self) -> Dict[str, Any]:
         """
         Returns the OpenAI-compatible function schema for the interpreter.
         
         Returns:
             Dict[str, Any]: Function schema in OpenAI format
         """
-        return {
-            "type": "function",
-            "function": {
-                "name": "execute_code",
-                "description": self.get_tool_description(),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "code": {
-                            "type": "string",
-                            "description": "The code to execute"
-                        },
-                        "language": {
-                            "type": "string",
-                            "description": "The programming language of the code"
-                        }
-                    },
-                    "required": ["code", "language"]
-                }
-            }
-        }
+        pass
 
-    def get_tool_description(self) -> str:
+    def get_tool_descriptions(self) -> str:
         """
         Returns a brief description of the interpreter tool.
         
         Returns:
             str: Tool description
         """
-        return "BaseInterpreter is an abstract class for interpreters that execute code securely. It enforces safety checks before execution and serves as the foundation for language-specific interpreters."
+        pass
 
-    def execute(self, code: str, language: str) -> str:
+    def get_tools(self):
         """
-        Checks the code for safety before execution.
+        Returns a list of callable methods provided by this tool.
         
-        Args:
-            code (str): The code to execute
-            language (str): The programming language of the code
-            
         Returns:
-            str: Execution result
+            list: List of callable methods
         """
-        raise NotImplementedError("Subclasses must implement execute")
+        pass
