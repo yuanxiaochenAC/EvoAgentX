@@ -52,36 +52,6 @@ class SearchBase(Tool):
         # Override default values if provided
         self.num_search_pages = num_search_pages
         self.max_content_words = max_content_words
-
-    def get_tool_schemas(self) -> List[Dict[str, Any]]:
-        """
-        Returns the OpenAI-compatible function schema for the search tool.
-        
-        Returns:
-            List[Dict[str, Any]]: Function schema in OpenAI format
-        """
-        # pass
-        return [] 
-    
-    def get_tool_descriptions(self) -> List[str]:
-        """
-        Returns a brief description of the search tool.
-        
-        Returns:
-            List[str]: Tool description
-        """
-        # pass
-        return [] 
-
-    def get_tools(self) -> List[Callable]:
-        """
-        Returns a list of callable methods provided by this tool.
-        
-        Returns:
-            List[Callable]: List of callable methods
-        """
-        # pass
-        return [] 
     
     def _scrape_page(self, url: str) -> Tuple[str, str]:
         """
