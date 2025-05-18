@@ -210,7 +210,7 @@ print(output)
 [![在YouTube上观看](https://img.shields.io/badge/-在YouTube上观看-red?logo=youtube&labelColor=grey)](https://www.youtube.com/watch?v=Wu0ZydYDqgg)
 
 <div align="center">
-  <video src="https://github.com/user-attachments/assets/5cc5d0e5-51fe-425d-943d-4c95b1f0fa8f.mp4" autoplay loop muted playsinline width="600">
+  <video src="https://github.com/user-attachments/assets/4497029b-6279-4267-bff6-d3539a4a446b.mp4" autoplay loop muted playsinline width="600">
     您的浏览器不支持视频标签。
   </video>
 </div>
