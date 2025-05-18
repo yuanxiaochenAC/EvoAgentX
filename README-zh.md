@@ -242,7 +242,7 @@ print(output)
 
 为了评估性能，我们使用它们在三个不同任务上优化相同的智能体系统：多跳问答(HotPotQA)、代码生成(MBPP)和推理(MATH)。我们随机抽取50个样本进行验证，另外100个样本用于测试。
 
-> 提示：我们已将这些基准测试和评估代码集成到EvoAgentX中。有关更多详情，请参考[基准测试和评估教程](https://github.com/EvoAgentX/EvoAgentX/blob/main/docs/tutorial/benchmark_and_evaluation.md)。
+> 提示：我们已将这些基准测试和评估代码集成到EvoAgentX中。有关更多详情，请参考[基准测试和评估教程](https://github.com/EvoAgentX/EvoAgentX/blob/main/docs/zh/tutorial/benchmark_and_evaluation.md)。
 
 ### 📊 结果 
 
@@ -285,13 +285,13 @@ print(output)
 
 | 指南 | 描述 |
 |:---|:---|
-| **[构建您的第一个智能体](./docs/tutorial/first_agent.md)** | 快速创建和管理具有多动作能力的智能体。 |
-| **[构建您的第一个工作流](./docs/tutorial/first_workflow.md)** | 学习如何使用多个智能体构建协作工作流。 |
-| **[自动工作流生成](./docs/quickstart.md#automatic-workflow-generation-and-execution)** | 从自然语言目标自动生成工作流。 |
-| **[基准测试与评估教程](./docs/tutorial/benchmark_and_evaluation.md)** | 使用基准数据集评估智能体性能。 |
-| **[TextGrad优化器教程](./docs/tutorial/textgrad_optimizer.md)** | 使用TextGrad自动优化多智能体工作流中的提示词。 |
-| **[AFlow优化器教程](./docs/tutorial/aflow_optimizer.md)** | 使用AFlow自动优化多智能体工作流的提示词和结构。 |
-<!-- | **[SEW优化器教程](./docs/tutorial/sew_optimizer.md)** | 创建SEW（自进化工作流）来增强智能体系统。 | -->
+| **[构建您的第一个智能体](./docs/zh/tutorial/first_agent.md)** | 快速创建和管理具有多动作能力的智能体。 |
+| **[构建您的第一个工作流](./docs/zh/tutorial/first_workflow.md)** | 学习如何使用多个智能体构建协作工作流。 |
+| **[自动工作流生成](./docs/zh/quickstart.md#automatic-workflow-generation-and-execution)** | 从自然语言目标自动生成工作流。 |
+| **[基准测试与评估教程](./docs/zh/tutorial/benchmark_and_evaluation.md)** | 使用基准数据集评估智能体性能。 |
+| **[TextGrad优化器教程](./docs/zh/tutorial/textgrad_optimizer.md)** | 使用TextGrad自动优化多智能体工作流中的提示词。 |
+| **[AFlow优化器教程](./docs/zh/tutorial/aflow_optimizer.md)** | 使用AFlow自动优化多智能体工作流的提示词和结构。 |
+<!-- | **[SEW优化器教程](./docs/zh/tutorial/sew_optimizer.md)** | 创建SEW（自进化工作流）来增强智能体系统。 | -->
 
 🛠️ 通过这些教程构建和优化您的EvoAgentX工作流。
 
