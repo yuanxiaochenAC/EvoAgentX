@@ -20,7 +20,6 @@ class SearchBase(Tool):
         descriptions: Optional[List[str]] = None,
         tools: Optional[List[Callable]] = None,
         num_search_pages: int = 5, 
-        max_content_words: int = 1000, 
         **kwargs
     ):
         """
@@ -51,7 +50,6 @@ class SearchBase(Tool):
 
         # Override default values if provided
         self.num_search_pages = num_search_pages
-        self.max_content_words = max_content_words
     
     def _scrape_page(self, url: str) -> Tuple[str, str]:
         """

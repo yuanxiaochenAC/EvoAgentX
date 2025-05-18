@@ -12,7 +12,6 @@ class SearchGoogle(SearchBase):
         self, 
         name: str = 'Google Search',
         num_search_pages: int = 5, 
-        max_content_words: int = 1000, 
         **kwargs
     ):
         """
@@ -35,7 +34,6 @@ class SearchGoogle(SearchBase):
             descriptions=descriptions,
             tools=tools,
             num_search_pages=num_search_pages,
-            max_content_words=max_content_words,
             **kwargs
         )
     
@@ -100,14 +98,33 @@ class SearchGoogle(SearchBase):
                     title, content = self._scrape_page(url)
                     if content:  # Ensure valid content exists
                         # Truncate content if needed and add ellipsis only if truncated
-                        words = content.split()
-                        is_truncated = len(words) > max_content_words
-                        truncated_content = ' '.join(words[:max_content_words])
-                        content = truncated_content + (" ..." if is_truncated else "")
+                        if max_content_words is not None and max_content_words > 0:
+                            # This preserves the original spacing while limiting word count
+                            words = content.split()
+                            is_truncated = len(words) > max_content_words
+                            word_count = 0
+                            truncated_content = ""
+                            
+                            # Rebuild the content preserving original whitespace
+                            for i, char in enumerate(content):
+                                if char.isspace():
+                                    if i > 0 and not content[i-1].isspace():
+                                        word_count += 1
+                                    if word_count >= max_content_words:
+                                        break
+                                truncated_content += char
+                                
+                            # Add ellipsis only if truncated
+                            display_content = truncated_content
+                            if is_truncated:
+                                display_content += " ..."
+                        else:
+                            # Use full content if max_content_words is None or <= 0
+                            display_content = content
                         
                         results.append({
                             "title": title,
-                            "content": content,
+                            "content": display_content,
                             "url": url,
                         })
                 except Exception as e:
@@ -145,7 +162,7 @@ class SearchGoogle(SearchBase):
                         },
                         "max_content_words": {
                             "type": "integer",
-                            "description": "Maximum number of words to include in content per result (default: 1000)"
+                            "description": "Maximum number of words to include in content per result. None means no limit, default: None."
                         }
                     },
                     "required": ["query"]

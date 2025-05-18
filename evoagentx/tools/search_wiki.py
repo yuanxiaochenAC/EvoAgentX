@@ -12,7 +12,6 @@ class SearchWiki(SearchBase):
         self, 
         name: str = 'Wikipedia Search',
         num_search_pages: int = 5, 
-        max_content_words: int = 1000,
         max_sentences: int = 50,
         **kwargs
     ):
@@ -37,7 +36,6 @@ class SearchWiki(SearchBase):
             descriptions=descriptions,
             tools=tools,
             num_search_pages=num_search_pages,
-            max_content_words=max_content_words,
             **kwargs
         )
         self.max_sentences = max_sentences
@@ -57,8 +55,6 @@ class SearchWiki(SearchBase):
         """
         if num_search_pages is None:
             num_search_pages = self.num_search_pages
-        if max_content_words is None:
-            max_content_words = self.max_content_words
         if max_sentences is None:
             max_sentences = self.max_sentences
             
@@ -77,22 +73,42 @@ class SearchWiki(SearchBase):
                     page = wikipedia.page(title, auto_suggest=False)
                     
                     # Handle the max_sentences parameter
-                    if max_sentences > 0:
+                    if max_sentences is not None and max_sentences > 0:
                         summary = wikipedia.summary(title, sentences=max_sentences)
                     else:
                         # Get the full summary without limiting sentences
                         summary = wikipedia.summary(title)
 
-                    # Truncate the full content to the first max_content_words words
-                    words = page.content.split()
-                    is_truncated = len(words) > max_content_words
-                    truncated_content = ' '.join(words[:max_content_words])
-                    content = truncated_content + (" ..." if is_truncated else "")
-
+                    # Truncate content if needed and add ellipsis only if truncated
+                    if max_content_words is not None and max_content_words > 0:
+                        # This preserves the original spacing while limiting word count
+                        words = page.content.split()
+                        is_truncated = len(words) > max_content_words
+                        word_count = 0
+                        truncated_content = ""
+                        
+                        # Rebuild the content preserving original whitespace
+                        for i, char in enumerate(page.content):
+                            if char.isspace():
+                                if i > 0 and not page.content[i-1].isspace():
+                                    word_count += 1
+                                if word_count >= max_content_words:
+                                    break
+                            truncated_content += char
+                            
+                        # Add ellipsis only if truncated
+                        display_content = truncated_content
+                        if is_truncated:
+                            display_content += " ..."
+                    else:
+                        # Use full content if max_content_words is None or <= 0
+                        display_content = page.content
+                    
+                    
                     results.append({
                         "title": page.title,
                         "summary": summary,
-                        "content": content,
+                        "content": display_content,
                         "url": page.url,
                     })
                 except wikipedia.exceptions.DisambiguationError:
@@ -133,15 +149,15 @@ class SearchWiki(SearchBase):
                         },
                         "num_search_pages": {
                             "type": "integer",
-                            "description": "Number of search results to retrieve (default: 5)"
+                            "description": "Number of search results to retrieve. Default: 5"
                         },
                         "max_content_words": {
                             "type": "integer",
-                            "description": "Maximum number of words to include in content per result (default: 1000)"
+                            "description": "Maximum number of words to include in content per result. None means no limit. Default: None."
                         },
                         "max_sentences": {
                             "type": "integer",
-                            "description": "Maximum number of sentences in the summary (default: 50)"
+                            "description": "Maximum number of sentences in the summary. Default: 50"
                         }
                     },
                     "required": ["query"]

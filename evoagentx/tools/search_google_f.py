@@ -12,7 +12,6 @@ class SearchGoogleFree(SearchBase):
         self, 
         name: str = "Free Google Search",
         num_search_pages: int = 5, 
-        max_content_words: int = 1000, 
        **kwargs 
     ):
         """
@@ -40,7 +39,6 @@ class SearchGoogleFree(SearchBase):
             descriptions=descriptions,
             tools=tools,
             num_search_pages=num_search_pages,
-            max_content_words=max_content_words,
             *kwargs
         )
 
@@ -59,8 +57,6 @@ class SearchGoogleFree(SearchBase):
         # Use class defaults
         if num_search_pages is None:
             num_search_pages = self.num_search_pages
-        if max_content_words is None:
-            max_content_words = self.max_content_words
             
         results = []
         try:
