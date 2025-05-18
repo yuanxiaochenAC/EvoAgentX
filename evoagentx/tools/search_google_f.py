@@ -13,17 +13,21 @@ class SearchGoogleFree(SearchBase):
         name: str = "Free Google Search",
         num_search_pages: int = 5, 
         max_content_words: int = None, 
-        **kwargs 
+       **kwargs 
     ):
         """
         Initialize the Free Google Search tool.
         
         Args:
-            name (str): The name of the search tool
+            name (str): Name of the tool
+            schemas (Optional[List[dict]]): Tool schemas
+            descriptions (Optional[List[str]]): Tool descriptions
+            tools (Optional[List[Callable]]): Tool functions
             num_search_pages (int): Number of search results to retrieve
-            max_content_words (int, optional): Maximum number of words to include in content, None means no limit
-            **kwargs: Additional data to pass to the parent class
+            max_content_words (int): Maximum number of words to include in content
+            **kwargs: Additional keyword arguments for parent class initialization
         """
+        # name = kwargs.get('name', "FreeGoogleSearch")
         schemas = kwargs.pop('schemas', None) or self.get_tool_schemas()
         descriptions = kwargs.pop('descriptions', None) or self.get_tool_descriptions()
         tools = kwargs.pop('tools', None)
@@ -37,22 +41,26 @@ class SearchGoogleFree(SearchBase):
             tools=tools,
             num_search_pages=num_search_pages,
             max_content_words=max_content_words,
-            **kwargs
+            *kwargs
         )
 
-    def search(self, query: str) -> Dict[str, Any]:
+    def search(self, query: str, num_search_pages: int = None, max_content_words: int = None) -> Dict[str, Any]:
         """
         Searches Google for the given query and retrieves content from multiple pages.
 
         Args:
             query (str): The search query.
+            num_search_pages (int): Number of search results to retrieve
+            max_content_words (int): Maximum number of words to include in content, None means no limit
 
         Returns:
             Dict[str, Any]: Contains a list of search results and optional error message.
         """
         # Use class defaults
-        num_search_pages = self.num_search_pages
-        max_content_words = self.max_content_words
+        if num_search_pages is None:
+            num_search_pages = self.num_search_pages
+        if max_content_words is None:
+            max_content_words = self.max_content_words
             
         results = []
         try:
@@ -114,37 +122,39 @@ class SearchGoogleFree(SearchBase):
         Returns the OpenAI-compatible function schema for the free Google search tool.
         
         Returns:
-            List[Dict[str, Any]]: Function schema in OpenAI format
+            list[Dict[str, Any]]: Function schema in OpenAI format
         """
         return [{
             "type": "function",
             "function": {
                 "name": "search",
-                "description": "Search Google without requiring an API key.",
+                "description": "Search Google without requiring an API key and retrieve content from search results.",
                 "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "The search query to execute on Google"
-                        }
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query to execute on Google"
                     },
-                    "required": ["query"]
+                    "num_search_pages": {
+                        "type": "integer",
+                        "description": "Number of search results to retrieve (default: 5)"
+                    },
+                    "max_content_words": {
+                        "type": "integer",
+                        "description": "Maximum number of words to include in content per result. Set to null for no limit."
+                    }
+                },
+                "required": ["query"]
                 }
             }
         }]
-        
+
     def get_tools(self) -> List[Callable]:
         return [self.search]
 
     def get_tool_descriptions(self) -> List[str]:
-        """
-        Returns a brief description of the free Google search tool.
-        
-        Returns:
-            List[str]: Tool descriptions
-        """
         return [
-            "Search Google without requiring an API key."
+            "Free Google Search Tool that queries Google without requiring an API key."
         ]
 

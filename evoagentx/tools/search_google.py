@@ -12,7 +12,7 @@ class SearchGoogle(SearchBase):
         self, 
         name: str = 'Google Search',
         num_search_pages: int = 5, 
-        max_content_words: int = None, 
+        max_content_words: int = 1000, 
         **kwargs
     ):
         """
@@ -39,16 +39,22 @@ class SearchGoogle(SearchBase):
             **kwargs
         )
     
-    def search(self, query: str) -> Dict[str, Any]:
+    def search(self, query: str, num_search_pages: int = None, max_content_words: int = None) -> Dict[str, Any]:
         """
         Search Google using the Custom Search API and retrieve detailed search results with content snippets.
         
         Args:
             query (str): The search query to execute on Google
+            num_search_pages (int): Number of search results to retrieve
+            max_content_words (int): Maximum number of words to include in content, None means no limit
             
         Returns:
             Dict[str, Any]: Contains search results and optional error message
         """
+        if num_search_pages is None:
+            num_search_pages = self.num_search_pages
+        if max_content_words is None:
+            max_content_words = self.max_content_words
         results = []
         
         # Get API credentials from environment variables
@@ -69,13 +75,13 @@ class SearchGoogle(SearchBase):
         
         try:
             # Step 1: Query Google Custom Search API
-            logger.info(f"Searching Google for: {query}, num_results={self.num_search_pages}")
+            logger.info(f"Searching Google for: {query}, num_results={num_search_pages}")
             search_url = "https://www.googleapis.com/customsearch/v1"
             params = {
                 "key": api_key,
                 "cx": search_engine_id,
                 "q": query,
-                "num": self.num_search_pages,
+                "num": num_search_pages,
             }
             response = requests.get(search_url, params=params)
             data = response.json()
@@ -95,8 +101,8 @@ class SearchGoogle(SearchBase):
                     if content:  # Ensure valid content exists
                         # Truncate content if needed and add ellipsis only if truncated
                         words = content.split()
-                        is_truncated = len(words) > self.max_content_words
-                        truncated_content = ' '.join(words[:self.max_content_words])
+                        is_truncated = len(words) > max_content_words
+                        truncated_content = ' '.join(words[:max_content_words])
                         content = truncated_content + (" ..." if is_truncated else "")
                         
                         results.append({
@@ -132,6 +138,14 @@ class SearchGoogle(SearchBase):
                         "query": {
                             "type": "string",
                             "description": "The search query to execute on Google"
+                        },
+                        "num_search_pages": {
+                            "type": "integer",
+                            "description": "Number of search results to retrieve (default: 5)"
+                        },
+                        "max_content_words": {
+                            "type": "integer",
+                            "description": "Maximum number of words to include in content per result (default: 1000)"
                         }
                     },
                     "required": ["query"]

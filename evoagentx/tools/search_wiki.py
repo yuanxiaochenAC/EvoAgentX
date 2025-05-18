@@ -12,8 +12,8 @@ class SearchWiki(SearchBase):
         self, 
         name: str = 'Wikipedia Search',
         num_search_pages: int = 5, 
-        max_content_words: int = None,
-        max_sentences: int = 10,
+        max_content_words: int = 1000,
+        max_sentences: int = 50,
         **kwargs
     ):
         """
@@ -44,19 +44,25 @@ class SearchWiki(SearchBase):
         )
         self.max_sentences = max_sentences
 
-    def search(self, query: str) -> Dict[str, Any]:
+    def search(self, query: str, num_search_pages: int = None, max_content_words: int = None, max_sentences: int = None) -> Dict[str, Any]:
         """
         Searches Wikipedia for the given query and returns the summary and truncated full content.
 
         Args:
             query (str): The search query.
+            num_search_pages (int): Number of search results to retrieve
+            max_content_words (int): Maximum number of words to include in content, None means no limit
+            max_sentences (int): Maximum number of sentences in the summary
 
         Returns:
             dict: A dictionary with the title, summary, truncated content, and Wikipedia page link.
         """
-        num_search_pages = self.num_search_pages
-        max_content_words = self.max_content_words
-        max_sentences = self.max_sentences
+        if num_search_pages is None:
+            num_search_pages = self.num_search_pages
+        if max_content_words is None:
+            max_content_words = self.max_content_words
+        if max_sentences is None:
+            max_sentences = self.max_sentences
             
         try:
             logger.info(f"Searching wikipedia: {query}, max_sentences={max_sentences}, num_results={num_search_pages}")
@@ -126,6 +132,18 @@ class SearchWiki(SearchBase):
                         "query": {
                             "type": "string",
                             "description": "The search query to look up on Wikipedia"
+                        },
+                        "num_search_pages": {
+                            "type": "integer",
+                            "description": "Number of search results to retrieve (default: 5)"
+                        },
+                        "max_content_words": {
+                            "type": "integer",
+                            "description": "Maximum number of words to include in content per result (default: 1000)"
+                        },
+                        "max_sentences": {
+                            "type": "integer",
+                            "description": "Maximum number of sentences in the summary (default: 50)"
                         }
                     },
                     "required": ["query"]
