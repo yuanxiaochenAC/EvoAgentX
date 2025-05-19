@@ -176,4 +176,4 @@ optimizer.test(humaneval)
 !!! 注意 
     在测试期间，工作流将在测试集上进行 `eval_rounds` 次评估。确保基准 `humaneval` 包含测试集（即 `self._test_data` 不为空）。
 
-有关完整的工作示例，请参阅 [aflow_humaneval.py](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/optimization/aflow_humaneval.py)。
+有关完整的工作示例，请参阅 [aflow_humaneval.py](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/optimization/aflow/aflow_humaneval.py)。

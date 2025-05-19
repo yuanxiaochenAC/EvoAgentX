@@ -11,7 +11,7 @@
 
 <div align="center">
 
-[![EvoAgentX 主页](https://img.shields.io/badge/EvoAgentX-主页-blue?logo=homebridge)](https://evo-agent-x-landing-page.vercel.app/)
+[![EvoAgentX 主页](https://img.shields.io/badge/EvoAgentX-主页-blue?logo=homebridge)](https://evoagentx.org/)
 [![文档](https://img.shields.io/badge/-文档-0A66C2?logo=readthedocs&logoColor=white&color=7289DA&labelColor=grey)](https://EvoAgentX.github.io/EvoAgentX/)
 [![Discord](https://img.shields.io/badge/Chat-Discord-5865F2?&logo=discord&logoColor=white)](https://discord.gg/SUEkfTYn)
 [![Twitter](https://img.shields.io/badge/Follow-@EvoAgentX-e3dee5?&logo=x&logoColor=white)](https://x.com/EvoAgentX)
@@ -46,13 +46,26 @@
 - **[2025年5月]** 🎉 **EvoAgentX** 正式发布！
 
 ## ⚡ 快速开始
+- [🔥 最新消息](#-最新消息)
+- [⚡ 快速开始](#-快速开始)
 - [安装](#安装)
 - [LLM配置](#llm配置)
+  - [API密钥配置](#api密钥配置)
+  - [配置并使用LLM](#配置并使用llm)
 - [自动工作流生成](#自动工作流生成)
 - [演示视频](#演示视频)
+  - [✨ 最终结果](#-最终结果)
 - [进化算法](#进化算法)
+  - [📊 结果](#-结果)
 - [应用案例](#应用案例)
 - [教程与使用案例](#教程与使用案例)
+- [🎯 路线图](#-路线图)
+- [🙋 支持](#-支持)
+  - [加入社区](#加入社区)
+  - [联系信息](#联系信息)
+- [🙌 为EvoAgentX做贡献](#-为evoagentx做贡献)
+- [📚 致谢](#-致谢)
+- [📄 许可证](#-许可证)
 
 ## 安装
 
@@ -197,7 +210,7 @@ print(output)
 [![在YouTube上观看](https://img.shields.io/badge/-在YouTube上观看-red?logo=youtube&labelColor=grey)](https://www.youtube.com/watch?v=Wu0ZydYDqgg)
 
 <div align="center">
-  <video src="https://github.com/user-attachments/assets/5cc5d0e5-51fe-425d-943d-4c95b1f0fa8f.mp4" autoplay loop muted playsinline width="600">
+  <video src="https://github.com/user-attachments/assets/8f65d1af-9398-40c3-a625-4f493e13e5a5.mp4" autoplay loop muted playsinline width="600">
     您的浏览器不支持视频标签。
   </video>
 </div>
@@ -229,7 +242,7 @@ print(output)
 
 为了评估性能，我们使用它们在三个不同任务上优化相同的智能体系统：多跳问答(HotPotQA)、代码生成(MBPP)和推理(MATH)。我们随机抽取50个样本进行验证，另外100个样本用于测试。
 
-> 提示：我们已将这些基准测试和评估代码集成到EvoAgentX中。有关更多详情，请参考[基准测试和评估教程](https://github.com/EvoAgentX/EvoAgentX/blob/main/docs/tutorial/benchmark_and_evaluation.md)。
+> 提示：我们已将这些基准测试和评估代码集成到EvoAgentX中。有关更多详情，请参考[基准测试和评估教程](https://github.com/EvoAgentX/EvoAgentX/blob/main/docs/zh/tutorial/benchmark_and_evaluation.md)。
 
 ### 📊 结果 
 
@@ -272,13 +285,13 @@ print(output)
 
 | 指南 | 描述 |
 |:---|:---|
-| **[构建您的第一个智能体](./docs/tutorial/first_agent.md)** | 快速创建和管理具有多动作能力的智能体。 |
-| **[构建您的第一个工作流](./docs/tutorial/first_workflow.md)** | 学习如何使用多个智能体构建协作工作流。 |
-| **[自动工作流生成](./docs/quickstart.md#automatic-workflow-generation-and-execution)** | 从自然语言目标自动生成工作流。 |
-| **[基准测试与评估教程](./docs/tutorial/benchmark_and_evaluation.md)** | 使用基准数据集评估智能体性能。 |
-| **[TextGrad优化器教程](./docs/tutorial/textgrad_optimizer.md)** | 使用TextGrad自动优化多智能体工作流中的提示词。 |
-| **[AFlow优化器教程](./docs/tutorial/aflow_optimizer.md)** | 使用AFlow自动优化多智能体工作流的提示词和结构。 |
-<!-- | **[SEW优化器教程](./docs/tutorial/sew_optimizer.md)** | 创建SEW（自进化工作流）来增强智能体系统。 | -->
+| **[构建您的第一个智能体](./docs/zh/tutorial/first_agent.md)** | 快速创建和管理具有多动作能力的智能体。 |
+| **[构建您的第一个工作流](./docs/zh/tutorial/first_workflow.md)** | 学习如何使用多个智能体构建协作工作流。 |
+| **[自动工作流生成](./docs/zh/quickstart.md#automatic-workflow-generation-and-execution)** | 从自然语言目标自动生成工作流。 |
+| **[基准测试与评估教程](./docs/zh/tutorial/benchmark_and_evaluation.md)** | 使用基准数据集评估智能体性能。 |
+| **[TextGrad优化器教程](./docs/zh/tutorial/textgrad_optimizer.md)** | 使用TextGrad自动优化多智能体工作流中的提示词。 |
+| **[AFlow优化器教程](./docs/zh/tutorial/aflow_optimizer.md)** | 使用AFlow自动优化多智能体工作流的提示词和结构。 |
+<!-- | **[SEW优化器教程](./docs/zh/tutorial/sew_optimizer.md)** | 创建SEW（自进化工作流）来增强智能体系统。 | -->
 
 🛠️ 通过这些教程构建和优化您的EvoAgentX工作流。
 
