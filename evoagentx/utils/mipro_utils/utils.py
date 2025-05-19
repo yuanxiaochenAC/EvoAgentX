@@ -6,14 +6,12 @@ import tqdm
 import copy
 import random
 import json
-import logging
 import datetime
 import itertools
 from collections import defaultdict
 from evoagentx.utils.mipro_utils.labeledfewshot import LabeledFewShot
 from evoagentx.utils.mipro_utils.bootstrap import BootstrapFewShot
-
-logger = logging.getLogger("MIPRO")
+from evoagentx.core.logging import logger
 
 def print_message(*s, condition=True, pad=False, sep=None):
     s = " ".join([str(x) for x in s])
@@ -22,6 +20,7 @@ def print_message(*s, condition=True, pad=False, sep=None):
     if condition:
         msg = msg if not pad else f"\n{msg}\n"
         print(msg, flush=True, sep=sep)
+        logger.info(msg)
 
     return msg
 
