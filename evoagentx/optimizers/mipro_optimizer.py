@@ -46,14 +46,14 @@ ENDC = "\033[0m"  # Resets the color to default
 class MiproOptimizer(BaseModule):
     # load graph
     graph: Optional[Union[WorkFlowGraph, ActionGraph]] = Field(default=None, description="The workflow to optimize.")
-    grpah_path: Optional[str] = Field(default=None, description="Path to the workflow to optimize.")
+    graph_path: Optional[str] = Field(default=None, description="Path to the workflow to optimize.")
     
-    metric: Optional[Callable] = Field(default=None, description="Evaluation function used to assess the quality of generated results")
-    metric_threshold: Optional[float] = Field(default=None, description="Metric threshold to stop optimization when reached")
-    metric_instance: Optional[str] = Field(default=None, description="Metric instance to use")
+    metric: Optional[Callable] = Field(default=None, description="Evaluation function used to assess the quality of generated results. Not required if `benchmark` is provided in `optimize` method. If provided, the `metric` should return a single float/bool value.")
+    metric_threshold: Optional[float] = Field(default=None, description="Evaluate the quality of generated results. If the metric is greater than or equal to the threshold, the result is considered successful.")
+    metric_instance: Optional[str] = Field(default=None, description="Metric instance to use. Only used when `benchmark` is provided in `optimize` method. The `evaluate` function within `benchmark` typically returns a dictionary of metrics. `metric_instance` specifies the key of the metric to use during optimization. If not provided, the first key will be used.")
     
-    executor_llm: OpenAILLMConfig = Field(default=settings.lm, description="Language model used for task execution")
-    optimizer_llm: OpenAILLMConfig = Field(default=settings.lm, description="Language model used for prompt generation")
+    executor_llm: OpenAILLMConfig = Field(default=None, description="Language model used for task execution")
+    optimizer_llm: OpenAILLMConfig = Field(default=None, description="Language model used for prompt generation")
     
     max_bootstrapped_demos: int = Field(default=4, description="Maximum number of bootstrapped examples")
     max_labeled_demos: int = Field(default=4, description="Maximum number of labeled examples")
@@ -82,12 +82,21 @@ class MiproOptimizer(BaseModule):
         self.executor_llm_total_calls = 0
         self.rng = None
         if not self.graph and not self.graph_path:
-            raise ValueError("Either graph or graph_path must be provided")
+            raise ValueError("Either `graph` or `graph_path` must be provided")
         self.graph = self.graph or WorkFlowGraph.from_file(self.graph_path)
-        if self.executor_llm:
-            settings.executor_llm = self.executor_llm
-        if self.optimizer_llm:
-            settings.optimizer_llm = self.optimizer_llm
+        if self.executor_llm is None or self.optimizer_llm is None:
+            if getattr(settings, 'llm_config', None) is None:
+                raise ValueError(
+                    "Either `executor_llm` or `optimizer_llm` is not provided. You need to specify both of them. "
+                    "Or you can configure the llm_config in evoagentx.configure, i.e., `evoagentx.configure(llm_config=...)`, "
+                    "which will be used as the default llm_config for both executor and optimizer."
+                )
+        if self.executor_llm is None:
+            self.executor_llm = settings.llm_config 
+        if self.optimizer_llm is None:
+            self.optimizer_llm = settings.llm_config
+        settings.executor_llm = self.executor_llm
+        settings.optimizer_llm = self.optimizer_llm
         
     def optimize(
         self,
@@ -110,6 +119,12 @@ class MiproOptimizer(BaseModule):
         provide_traceback: Optional[bool] = None,
         **kwargs, # 接收任何额外的关键字参数,确保向后兼容性
     ) -> Any:
+        
+        # Validate that either benchmark or trainset is provided, but not both
+        if benchmark is None and trainset is None:
+            raise ValueError("Either `benchmark` or `trainset` must be provided")
+        if benchmark is not None and trainset is not None:
+            raise ValueError("Cannot provide both `benchmark` and `trainset` - please provide only one")
         
         self.collate_func = collate_func
         seed = seed or self.seed
@@ -141,8 +156,6 @@ class MiproOptimizer(BaseModule):
             self.metric = evaluation_metric
         trainset, valset = self._set_and_validate_datasets(trainset, valset)
         
-        
-        
         zeroshot_opt = (self.max_bootstrapped_demos == 0) and (self.max_labeled_demos == 0)
         num_trials, valset, minibatch = self._set_hyperparams_from_run_mode(
             self.graph, self.max_steps, minibatch, zeroshot_opt, valset
@@ -166,11 +179,9 @@ class MiproOptimizer(BaseModule):
             provide_traceback = provide_traceback,
         )
         
-
         # Step 1: Bootstrap few-shot examples
         demo_candidates = self._bootstrap_fewshot_examples(program, trainset, seed, self.optimizer_llm)
 
-        
         # Step 2: Propose instruction candidates
         instruction_candidates = self._propose_instructions(
             program,
@@ -183,13 +194,10 @@ class MiproOptimizer(BaseModule):
             fewshot_aware_proposer,
         )
 
-
         # If zero-shot, discard demos
         if zeroshot_opt:
             demo_candidates = None
-
-
-
+        
         # Step 3: Find optimal prompt parameters
         best_program = self._optimize_prompt_parameters(
             program,
@@ -218,8 +226,6 @@ class MiproOptimizer(BaseModule):
             result_lst.append(score)
         
         return np.mean(result_lst)
-
-
             
     def _set_and_validate_datasets(self, trainset: List, valset: Optional[List]):
         if not trainset:

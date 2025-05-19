@@ -1,12 +1,12 @@
 # MIPRO Optimizer Tutorial
 
-This tutorial will guide you through setting up and running the MIPRO (Multi-agent Interactive Prompt Optimization) optimizer in EvoAgentX. We'll use the MATH benchmark as an example to demonstrate how to optimize a multi-agent workflow.
+This tutorial will guide you through setting up and running the [MIPRO](https://arxiv.org/abs/2406.11695) optimizer in EvoAgentX. We'll use the MATH benchmark as an example to demonstrate how to optimize a multi-agent workflow.
 
 ## 1. Overview
 
 The MIPRO optimizer is a powerful tool in EvoAgentX that enables you to:
 
-- Automatically optimize multi-agent workflows (prompts and workflow structure)
+- Automatically optimize prompts within multi-agent workflows 
 - Evaluate optimization results on benchmark datasets
 - Support zero-shot and few-shot optimization
 - Provide automated optimization strategies
@@ -16,18 +16,16 @@ The MIPRO optimizer is a powerful tool in EvoAgentX that enables you to:
 First, let's import the necessary modules for setting up the MIPRO optimizer:
 
 ```python
-from evoagentx.optimizers.mipro_optimizer import MiproOptimizer
-from evoagentx.models import OpenAILLMConfig, OpenAILLM
-from evoagentx.utils.mipro_utils.settings import settings
-from evoagentx.evaluators.mipro_evaluator import Evaluate as mipro_evaluator
-from evoagentx.workflow import SequentialWorkFlowGraph
 import os
 from dotenv import load_dotenv
-```
-
-Note: For this tutorial, we'll be using the MATH benchmark dataset. You can import it when needed:
-```python
-from evoagentx.benchmark.math import MATH
+from evoagentx.agents import AgentManager
+from evoagentx.models import OpenAILLM, OpenAILLMConfig
+from evoagentx.benchmark import MATH
+from evoagentx.workflow import SequentialWorkFlowGraph, WorkFlowGraph
+from evoagentx.core.callbacks import suppress_logger_info
+from evoagentx.optimizers import MiproOptimizer
+from evoagentx.evaluators import Evaluator
+import evoagentx
 ```
 
 ### Configure the LLM Model
@@ -38,127 +36,164 @@ Similar to other components in EvoAgentX, you'll need a valid OpenAI API key to 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY)
-executor_llm = OpenAILLM(config=openai_config)
-settings.lm = openai_config
+evoagentx.configure(lm=openai_config)
 ```
 
 ## 3. Setting Up Components
 
-### Step 1: Initialize the Workflow
+### Step 1: Customize the Benchmark Dataset
 
-First, we need to define a task list to create a sequential workflow:
+For this tutorial, we'll create a custom class that splits the MATH benchmark data into training and test sets:
 
 ```python
-tasks = [
-    {
-        "name": "answer",
-        "description": "provide answer to the math problem",
-        "inputs": [
-            {"name": "problem", "type": "str", "required": True, "description": ""},
-        ],
-        "outputs": [
-            {"name": "answer", "type": "str", "required": True, "description": ""}
-        ],
-        "prompt": "Problem: {problem} You must provide the answer in box format E.g. \\boxed{{123}}",
-        "parse_mode": "str",
-    }
-]
-
-# Create a sequential workflow
-graph = SequentialWorkFlowGraph(
-    goal="Generate answer to math question",
-    tasks=tasks,
-)
+class MathSplits(MATH):
+    def _load_data(self):
+        # load the original test data 
+        super()._load_data()
+        # split the data into dev and test
+        import numpy as np 
+        np.random.seed(42)
+        permutation = np.random.permutation(len(self._test_data))
+        full_test_data = self._test_data
+        # randomly select 50 samples for dev and 100 samples for test
+        self._train_data = [full_test_data[idx] for idx in permutation[:50]]
+        self._test_data = [full_test_data[idx] for idx in permutation[50:150]]
 ```
 
-### Step 2: Prepare Evaluation Metric
+### Step 2: Define the Workflow
 
-MIPRO optimizer needs an evaluation metric function to evaluate optimization results. Here's an example for a mathematical problem evaluation:
+We'll define a workflow for solving math problems:
 
 ```python
+math_graph_data = {
+    "goal": r"Answer the math question. The answer should be in box format, e.g., \boxed{{123}}",
+    "tasks": [
+        {
+            "name": "answer_generate",
+            "description": "Answer generation for Math.",
+            "inputs": [
+                {"name": "problem", "type": "str", "required": True, "description": "The problem to solve."}
+            ],
+            "outputs": [
+                {"name": "answer", "type": "str", "required": True, "description": "The generated answer."}
+            ],
+            "prompt": "Answer the math question. The answer should be in box format, e.g., \\boxed{{123}}\n\nProblem: {problem}",
+            "parse_mode": "str"
+        }
+    ] 
+}
+
+workflow_graph = SequentialWorkFlowGraph.from_dict(math_graph_data)
+```
+
+### Step 3: Prepare Dataset and Evaluation
+
+```python
+def collate_func(example: dict) -> dict:
+    return {"problem": example["problem"]}
+
+benchmark = MathSplits()
+trainset = [{"problem": collate_func(example)["problem"], "solution": example["solution"]} 
+           for example in benchmark._train_data]
+
 def evaluate_metric(example, prediction, trace=None):
-    example_ans = math.extract_answer(example["solution"])
-    prediction_ans = math.extract_answer(prediction)
-    return math.math_equal(prediction_ans, example_ans)
-```
-
-### Step 3: Prepare Dataset
-
-```python
-math = MATH()
-math._load_data()
-trainset = math._test_data[:100]  # Training set
-devset = math._test_data[100:200]  # Development set
+    example_ans = benchmark.extract_answer(example["solution"])
+    prediction_ans = benchmark.extract_answer(prediction)
+    return benchmark.math_equal(prediction_ans, example_ans)
 ```
 
 ## 4. Configuring and Running the MIPRO Optimizer
 
-MIPRO optimizer can be configured with various parameters:
+### Step 1: Set up the Agent Manager and Evaluator
 
 ```python
-optimizer = MiproOptimizer(
-    graph=graph,                    # Workflow graph to optimize
-    metric=evaluate_metric,         # Evaluation metric function
-    prompt_model=executor_llm,      # Language model
-    max_bootstrapped_demos=0,       # Maximum number of bootstrapped demos for zero-shot optimization
-    max_labeled_demos=0,           # Maximum number of labeled demos for zero-shot optimization
-    auto="medium",                 # Automation level, options include "low", "medium", "high"
-    num_threads=32,                # Number of parallel threads
-    log_dir="examples/output/logs"  # Directory to save optimization process logs
+agent_manager = AgentManager()
+agent_manager.add_agents_from_workflow(workflow_graph, llm_config=openai_config)
+
+evaluate = Evaluator(
+    llm = OpenAILLM(config=openai_config),
+    agent_manager = agent_manager,
+    collate_func = collate_func,
+    num_workers = 32,
+    verbose = True
 )
 ```
 
-### Running Optimization
+### Step 2: Configure and Run the Optimizer
 
-To start the optimization process:
+The MIPRO optimizer requires either a benchmark or a training dataset to be provided, but not both. This is because:
+- If a benchmark is provided, it will use the benchmark's training data for optimization
+- If a training dataset is provided, it will use that dataset directly for optimization
+
+Here's how to configure the optimizer:
 
 ```python
-# Set up evaluator
-evaluate = mipro_evaluator(
-    devset=devset,
-    metric=evaluate_metric,
-    num_threads=32,
-    display_progress=True,
-    display_table=False,
+# Option 1: Using a benchmark
+optimizer = MiproOptimizer(
+    graph = workflow_graph,
+    metric = evaluate_metric,
+    executor_llm = openai_config,
+    benchmark = benchmark,  # Provide the benchmark
+    max_bootstrapped_demos = 4,
+    max_labeled_demos = 4,
+    num_candidates = 5,
+    auto = "light",
+    num_threads = 32,
+    save_path = "examples/mipro/output/logs",
+    evaluator = evaluate
 )
 
-# Evaluate results before optimization
-prev_results = evaluate(program=graph, with_inputs={"problem":"problem"})
-
-# Run optimization
-best_program = optimizer.optimize(
-    trainset=trainset, 
-    with_inputs={"problem":"problem"}, 
-    provide_traceback=True
+# OR Option 2: Using a training dataset
+optimizer = MiproOptimizer(
+    graph = workflow_graph,
+    metric = evaluate_metric,
+    executor_llm = openai_config,
+    trainset = trainset,  # Provide the training dataset
+    max_bootstrapped_demos = 4,
+    max_labeled_demos = 4,
+    num_candidates = 5,
+    auto = "light",
+    num_threads = 32,
+    save_path = "examples/mipro/output/logs",
+    evaluator = evaluate
 )
 
-# Save optimized workflow
+# Run optimization with suppressed logging
+with suppress_logger_info():
+    best_program = optimizer.optimize(
+        collate_func = collate_func,
+    )
+
+# Save the optimized program
 output_path = "examples/mipro/output/best_program_math.json"
 best_program.save_module(output_path)
 
-# Evaluate results after optimization
-post_results = evaluate(
-    program=WorkFlowGraph.from_file(output_path), 
-    with_inputs={"problem":"problem"}
-)
-
-print(f"Previous results: {prev_results}")
-print(f"Optimized results: {post_results}")
+# Evaluate the optimized program
+# If using benchmark, you can evaluate directly on the benchmark
+if benchmark:
+    result = optimizer.evaluate(graph = best_program, benchmark = benchmark, eval_mode = "test")
+else:
+    # If using trainset, you'll need to provide your own evaluation dataset
+    result = optimizer.evaluate(graph = best_program, eval_dataset = test_dataset)
+print(result)
 ```
 
 ## 5. Important Parameter Notes
 
-- `max_bootstrapped_demos`: Maximum number of demos for bootstrapped optimization, set to 0 for zero-shot optimization
-- `max_labeled_demos`: Maximum number of demos for labeled optimization, set to 0 for zero-shot optimization
-- `auto`: Automation level, options include "low", "medium", "high"
-- `num_threads`: Number of threads for parallel processing
-- `log_dir`: Directory to save optimization process logs
+- `benchmark` or `trainset`: You must provide exactly one of these parameters. The optimizer will raise an error if both are provided or if neither is provided.
+- `max_bootstrapped_demos`: Number of bootstrapped demonstrations for optimization (default: 4)
+- `max_labeled_demos`: Number of labeled demonstrations for optimization (default: 4)
+- `num_candidates`: Number of candidate programs to generate (default: 5)
+- `auto`: Automation level, options include "light", "medium", "heavy"
+- `num_threads`: Number of threads for parallel processing (default: 32)
+- `save_path`: Directory to save optimization process logs
 
 ## 6. Notes
 
-1. Ensure your evaluation metric function can handle input and output formats correctly
-2. Adjust task definitions in the workflow based on your specific task
-3. Set appropriate dataset size to avoid excessive optimization time
-4. Adjust `num_threads` parameter based on your hardware configuration
+1. The tutorial uses a custom `MathSplits` class to split the MATH benchmark data into training and test sets
+2. The workflow is defined using a dictionary format that gets converted to a `SequentialWorkFlowGraph`
+3. The evaluation metric uses the benchmark's built-in answer extraction and comparison functions
+4. The optimizer uses an `AgentManager` and `Evaluator` for managing agents and evaluating results
+5. Make sure to adjust the number of workers and threads based on your hardware capabilities
 
-Complete example code can be found in [mipro_example.py](../../examples/mipro_example.py). 
+Complete example code can be found in [mipro_math.py](../../examples/optimization/mipro/mipro_math.py). 

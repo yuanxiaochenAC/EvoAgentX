@@ -1,4 +1,4 @@
-# 复制黏贴的dspy/dspy/dsp/utils/settings.py
+# Modified from dspy/dspy/dsp/utils/settings.py
 
 import copy
 import threading
@@ -31,7 +31,8 @@ class dotdict(dict):
     
     
 DEFAULT_CONFIG = dotdict(
-    lm=None,
+    lm=None, 
+    llm_config=None, 
     adapter=None,
     rm=None,
     trace=[],
@@ -68,7 +69,7 @@ thread_local_overrides = ThreadLocalOverrides()
 
 class Settings:
     """
-    A singleton class for DSPy configuration settings.
+    A singleton class for EvoAgentX configuration settings.
     Thread-safe global configuration.
     - 'configure' can be called by only one 'owner' thread (the first thread that calls it).
     - Other threads see the configured global values from 'main_thread_config'.

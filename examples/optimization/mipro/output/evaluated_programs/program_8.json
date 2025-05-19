@@ -1,0 +1,64 @@
+{
+    "class_name": "SequentialWorkFlowGraph",
+    "goal": "Answer the math question. The answer should be in box format, e.g., \\boxed{{123}}",
+    "tasks": [
+        {
+            "name": "answer_generate",
+            "description": "Answer generation for Math.",
+            "inputs": [
+                {
+                    "name": "problem",
+                    "type": "str",
+                    "description": "The problem to solve.",
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "answer",
+                    "type": "str",
+                    "description": "The generated answer.",
+                    "required": true
+                }
+            ],
+            "prompt": "Here\u2019s an enhanced instruction prompt for the language model that incorporates elements for clarity, context, and guidance to improve answer generation:\n\n---\n\n**Instruction Prompt:**\n\nPlease analyze and solve the following mathematical problem. Ensure that your solution is clear and presents the final answer in the specified boxed format for easy reading. If applicable, include a brief explanation of your thought process or solution steps to provide additional context. \n\n**Problem:** {problem}\n\n**Format the answer as follows:** \\(\\boxed{{\\text{your answer}}}\\)\n\n---\n\nThis revised instruction provides clear expectations for both the answer and any additional context that might help the user understand the solution better. It encourages a detailed response while still enforcing the required output format.",
+            "system_prompt": "You are a helpful and highly intelligent assistant.",
+            "parse_mode": "str",
+            "parse_func": null,
+            "parse_title": null,
+            "demos": [
+                {
+                    "id": "test-2414",
+                    "problem": "The complex number $z = re^{i \\theta}$ satisfies\n\\[\\left| 2z + \\frac{1}{z} \\right| = 1.\\]Find the minimum value of $\\sin^2 \\theta.$",
+                    "level": "Level 5",
+                    "type": "Precalculus",
+                    "solution": "Setting $z = re^{i \\theta}$ in the given equation, we get\n\\[\\left| 2re^{i \\theta} + \\frac{1}{r} e^{-i \\theta} \\right| = 1.\\]Then\n\\[\\left| 2r \\cos \\theta + 2ri \\sin \\theta + \\frac{1}{r} \\cos \\theta - \\frac{i}{r} \\sin \\theta \\right| = 1.\\]Thus,\n\\[\\left( 2r \\cos \\theta + \\frac{1}{r} \\cos \\theta \\right)^2 + \\left( 2r \\sin \\theta - \\frac{1}{r} \\sin \\theta \\right)^2 = 1.\\]Expanding, we get\n\\[4r^2 \\cos^2 \\theta + 4 \\cos^2 \\theta + \\frac{1}{r^2} \\cos^2 \\theta + 4r^2 \\sin^2 \\theta - 4 \\sin^2 \\theta + \\frac{1}{r^2} \\sin^2 \\theta = 1,\\]which simplifies to\n\\[4r^2 + 4 \\cos^2 \\theta - 4 \\sin^2 \\theta + \\frac{1}{r^2} = 1.\\]Since $\\cos^2 \\theta = 1 - \\sin^2 \\theta,$\n\\[4r^2 + 4 - 4 \\sin^2 \\theta - 4 \\sin^2 \\theta + \\frac{1}{r^2} = 1,\\]so\n\\[8 \\sin^2 \\theta = 4r^2 + \\frac{1}{r^2} + 3.\\]By AM-GM, $4r^2 + \\frac{1}{r^2} \\ge 2 \\sqrt{4r^2 \\cdot \\frac{1}{r^2}} = 4,$ so $8 \\sin^2 \\ge 7,$ or\n\\[\\sin^2 \\theta \\ge \\frac{7}{8}.\\]Equality occurs when $r = \\frac{1}{\\sqrt{2}},$ so the minimum value of $\\sin^2 \\theta$ is $\\boxed{\\frac{7}{8}}.$"
+                },
+                {
+                    "id": "test-1502",
+                    "problem": "What is the product (in base 10) of the first and last digits of the base-6 representation of $682_{10}$?",
+                    "level": "Level 3",
+                    "type": "Number Theory",
+                    "solution": "We begin by converting $682_{10}$ into base-6. We see that $6^3=216$ is the largest power of 6 that is less than 682, and that $3\\cdot216=648$ is the largest multiple of 216 that is less than 682. This leaves us with a remainder of $682-648=34$, which we can express as $5\\cdot6^1+4\\cdot6^0$. So, $682_{10}=3\\cdot6^3+0\\cdot6^2+5\\cdot{6^1}+4\\cdot6^0=3054_6$. The first and last digits are 3 and 4, respectively, making the product of the two equal to $\\boxed{12}$."
+                },
+                {
+                    "id": "test-2654",
+                    "problem": "The product $ab = 1200$, $a$ is an integer, and $b$ is an odd integer. What is the largest possible value of $b$?",
+                    "level": "Level 4",
+                    "type": "Prealgebra",
+                    "solution": "Factoring out the highest power of 2 from 1200, we find that $1200=2^4\\cdot75$. Therefore, the largest possible value of $b$ is $\\boxed{75}$."
+                },
+                {
+                    "id": "test-107",
+                    "problem": "A committee is to be made up from a group of 10 candidates. The committee must consist of a chairman and some (not necessarily nonzero) number of members-at-large. How many ways can the committee be chosen? (For example, suppose that Alex is chair while Betty, Carl, and D'Angelo make up the committee. This counts as the same as Alex being chair while Carl, Betty, and D'Angelo make up the committee. It is not the same as Betty being the chair, with Alex, Carl, and D'Angelo making up the committee. It is also not the same as Alex being chair with the committee consisting of Betty and Carl.)",
+                    "level": "Level 5",
+                    "type": "Counting & Probability",
+                    "solution": "There are 10 ways to choose the chairman.  After choosing the chairman, we must form the rest of the committee.  For each of the other 9 candidates, we have 2 choices: either the candidate is on the committee or not.  So, the total number of ways we can form a committee with a given chairman is $2^9$.  Therefore, there are $10\\cdot 2^9 =\\boxed{5120}$ ways to form the committee."
+                }
+            ],
+            "traces": [],
+            "train": []
+        }
+    ],
+    "graph_path": "examples/optimization/mipro/output/evaluated_programs/program_8.json"
+}

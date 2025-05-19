@@ -1,10 +1,10 @@
 {
     "class_name": "SequentialWorkFlowGraph",
-    "goal": "Generate a functional and correct Python code for the given problem.",
+    "goal": "Answer the math question. The answer should be in box format, e.g., \\boxed{{123}}",
     "tasks": [
         {
-            "name": "code_generate",
-            "description": "Code generation for MBPP.",
+            "name": "answer_generate",
+            "description": "Answer generation for Math.",
             "inputs": [
                 {
                     "name": "problem",
@@ -15,14 +15,14 @@
             ],
             "outputs": [
                 {
-                    "name": "code",
+                    "name": "answer",
                     "type": "str",
-                    "description": "The generated code.",
+                    "description": "The generated answer.",
                     "required": true
                 }
             ],
-            "prompt": "Generate a functional and correct Python code for the given problem.\n\nProblem: {problem}",
-            "system_prompt": null,
+            "prompt": "Answer the math question. The answer should be in box format, e.g., \\boxed{{123}}\n\nProblem: {problem}",
+            "system_prompt": "You are a helpful and highly intelligent assistant.",
             "parse_mode": "str",
             "parse_func": null,
             "parse_title": null,
@@ -31,5 +31,5 @@
             "train": []
         }
     ],
-    "graph_path": "examples/mipro/output\\evaluated_programs\\program_9.json"
+    "graph_path": "examples/optimization/mipro/output/evaluated_programs/program_9.json"
 }

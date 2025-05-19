@@ -11,8 +11,9 @@ from evoagentx.workflow.workflow_graph import WorkFlowGraph
 
 from .labeledfewshot import LabeledFewShot
 from evoagentx.core.module import BaseModule
+from evoagentx.core.registry import MODEL_REGISTRY 
 from evoagentx.utils.mipro_utils.settings import settings
-from evoagentx.models import OpenAILLM
+
 logger = logging.getLogger("MIPRO")
 
 class BootstrapFewShot(BaseModule):
@@ -142,9 +143,10 @@ class BootstrapFewShot(BaseModule):
         agent_cache = {}
         try:
 
-            lm = (settings.executor_llm or settings.lm).copy()
+            # llm_config  = (settings.executor_llm or settings.llm_config).copy()
+            llm_config = getattr(settings, 'executor_llm', settings.llm_config).copy() # TODO: check if this is correct
             if round_idx > 0:
-                lm.temperature = 0.7 + 0.001 * round_idx
+                llm_config.temperature = 0.7 + 0.001 * round_idx
                 
             for agent in teacher.agents():
                 name = agent['name']
@@ -156,12 +158,13 @@ class BootstrapFewShot(BaseModule):
             agent_manager.clear_agents()
             agent_manager.add_agents_from_workflow(
                 teacher,
-                llm_config= lm
+                llm_config= llm_config
             )
             
             program_copy = WorkFlowGraph(goal=teacher.goal, graph=teacher.graph)
             program_copy.reset_graph()
-            workflow = WorkFlow(graph=teacher, agent_manager= agent_manager, llm=OpenAILLM(lm))
+            cls = MODEL_REGISTRY.get_model(llm_config.llm_type)
+            workflow = WorkFlow(graph=teacher, agent_manager= agent_manager, llm=cls(llm_config)) # llm=OpenAILLM(lm))
             
             prediction = workflow.execute(inputs = self.collate_func(example))
             

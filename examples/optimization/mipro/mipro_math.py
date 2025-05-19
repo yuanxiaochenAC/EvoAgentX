@@ -1,9 +1,9 @@
 import os
 from dotenv import load_dotenv
-from evoagentx.agents.agent_manager import AgentManager
+from evoagentx.agents import AgentManager
 from evoagentx.models import OpenAILLM, OpenAILLMConfig
 from evoagentx.benchmark import MATH
-from evoagentx.workflow import SequentialWorkFlowGraph, WorkFlowGraph
+from evoagentx.workflow import SequentialWorkFlowGraph # , WorkFlowGraph
 from evoagentx.core.callbacks import suppress_logger_info
 from evoagentx.optimizers import MiproOptimizer
 from evoagentx.evaluators import Evaluator
@@ -21,7 +21,7 @@ class MathSplits(MATH):
         np.random.seed(42)
         permutation = np.random.permutation(len(self._test_data))
         full_test_data = self._test_data
-        # radnomly select 50 samples for dev and 100 samples for test
+        # radnomly select 50 samples for training and 100 samples for test
         self._train_data = [full_test_data[idx] for idx in permutation[:50]]
         self._test_data = [full_test_data[idx] for idx in permutation[50:150]]
 
@@ -94,7 +94,7 @@ def main():
             collate_func = collate_func,
         )
     
-    output_path = r"C:\Users\31646\Desktop\EvoAgentX\examples\mipro\output\best_program_math.json"
+    output_path = r"examples/mipro/output/best_program_math.json"
     best_program.save_module(output_path)
     result = optimizer.evaluate(graph = best_program, benchmark = benchmark, eval_mode = "test")
     print(result)

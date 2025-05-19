@@ -111,7 +111,7 @@ def generate_instruction_class(
                     "description": "Propose an instruction that will be used to prompt a Language Model to perform this task."
                 }
             ],
-            llm_config=settings.lm,
+            llm_config=getattr(settings, 'executor_llm', settings.llm_config), # settings.lm,
             parse_mode='str'
         )
 
@@ -119,7 +119,7 @@ logger = logging.getLogger("MIPRO")
 
 class GroundedProposer(BaseModule):
     optimizer_llm: Any = Field(
-        default=settings.lm,
+        default=getattr(settings, 'optimizer_llm', settings.llm_config), # TODO: check if this is correct
         description="The optimizer llm to use for generating instructions"
     )
     program: Any = Field(
@@ -361,7 +361,7 @@ class GenerateModuleInstruction(BaseModule):
                         count += 1
                         if count >= max_examples:
                             return
-        lm = settings.lm.copy()
+        lm = getattr(settings, 'optimizer_llm', settings.llm_config).copy() # TODO: check if this is correct
         epsilon = rng.uniform(0.01, 0.05)
         lm.temperature = T + epsilon
 

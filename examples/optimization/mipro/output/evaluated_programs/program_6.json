@@ -1,0 +1,64 @@
+{
+    "class_name": "SequentialWorkFlowGraph",
+    "goal": "Answer the math question. The answer should be in box format, e.g., \\boxed{{123}}",
+    "tasks": [
+        {
+            "name": "answer_generate",
+            "description": "Answer generation for Math.",
+            "inputs": [
+                {
+                    "name": "problem",
+                    "type": "str",
+                    "description": "The problem to solve.",
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "answer",
+                    "type": "str",
+                    "description": "The generated answer.",
+                    "required": true
+                }
+            ],
+            "prompt": "Here\u2019s an enhanced instruction prompt for the language model that incorporates elements for clarity, context, and guidance to improve answer generation:\n\n---\n\n**Instruction Prompt:**\n\nPlease analyze and solve the following mathematical problem. Ensure that your solution is clear and presents the final answer in the specified boxed format for easy reading. If applicable, include a brief explanation of your thought process or solution steps to provide additional context. \n\n**Problem:** {problem}\n\n**Format the answer as follows:** \\(\\boxed{{\\text{your answer}}}\\)\n\n---\n\nThis revised instruction provides clear expectations for both the answer and any additional context that might help the user understand the solution better. It encourages a detailed response while still enforcing the required output format.",
+            "system_prompt": "You are a helpful and highly intelligent assistant.",
+            "parse_mode": "str",
+            "parse_func": null,
+            "parse_title": null,
+            "demos": [
+                {
+                    "id": "test-1056",
+                    "problem": "Let $f : \\mathbb{Q} \\to \\mathbb{Q}$ be a function such that $f(1) = 2$ and\n\\[f(xy) = f(x) f(y) - f(x + y) + 1\\]for all $x,$ $y \\in \\mathbb{Q}.$\n\nLet $n$ be the number of possible values of $f \\left( \\frac{1}{2} \\right),$ and let $s$ be the sum of all possible values of $f \\left( \\frac{1}{2} \\right).$  Find $n \\times s.$",
+                    "level": "Level 4",
+                    "type": "Intermediate Algebra",
+                    "solution": "Setting $y = 1,$ we get\n\\[f(x) = 2f(x) - f(x + 1) + 1,\\]so $f(x + 1) = f(x) + 1$ for all $x \\in \\mathbb{Q}.$  Then\n\\begin{align*}\nf(x + 2) &= f(x + 1) + 1 = f(x) + 2, \\\\\nf(x + 3) &= f(x + 2) + 1 = f(x) + 3,\n\\end{align*}and so on.  In general,\n\\[f(x + n) = f(x) + n\\]for all $x \\in \\mathbb{Q}$ and all integers $n.$\n\nSince $f(1) = 2,$ it follows that\n\\[f(n) = n + 1\\]for all integers $n.$\n\nLet $x = \\frac{a}{b},$ where $a$ and $b$ are integers and $b \\neq 0.$  Setting $x = \\frac{a}{b}$ and $y = b,$ we get\n\\[f(a) = f \\left( \\frac{a}{b} \\right) f(b) - f \\left( \\frac{a}{b} + b \\right) + 1.\\]Since $f(a) = a + 1,$ $f(b) = b + 1,$ and $f \\left( \\frac{a}{b} + b \\right) = f \\left( \\frac{a}{b} \\right) + b,$\n\\[a + 1 = (b + 1) f \\left( \\frac{a}{b} \\right) - f \\left( \\frac{a}{b} \\right) - b + 1.\\]Solving, we find\n\\[f \\left( \\frac{a}{b} \\right) = \\frac{a + b}{b} = \\frac{a}{b} + 1.\\]Therefore, $f(x) = x + 1$ for all $x \\in \\mathbb{Q}.$\n\nWe can check that this function works.  Therefore, $n = 1$ and $s = \\frac{3}{2},$ so $n \\times s = \\boxed{\\frac{3}{2}}.$"
+                },
+                {
+                    "id": "test-107",
+                    "problem": "A committee is to be made up from a group of 10 candidates. The committee must consist of a chairman and some (not necessarily nonzero) number of members-at-large. How many ways can the committee be chosen? (For example, suppose that Alex is chair while Betty, Carl, and D'Angelo make up the committee. This counts as the same as Alex being chair while Carl, Betty, and D'Angelo make up the committee. It is not the same as Betty being the chair, with Alex, Carl, and D'Angelo making up the committee. It is also not the same as Alex being chair with the committee consisting of Betty and Carl.)",
+                    "level": "Level 5",
+                    "type": "Counting & Probability",
+                    "solution": "There are 10 ways to choose the chairman.  After choosing the chairman, we must form the rest of the committee.  For each of the other 9 candidates, we have 2 choices: either the candidate is on the committee or not.  So, the total number of ways we can form a committee with a given chairman is $2^9$.  Therefore, there are $10\\cdot 2^9 =\\boxed{5120}$ ways to form the committee."
+                },
+                {
+                    "id": "test-706",
+                    "problem": "Find the constant $k$ so that the graphs of the parabolas $y = x^2 + k$ and $x = y^2 + k$ are tangent to each other.",
+                    "level": "Level 4",
+                    "type": "Intermediate Algebra",
+                    "solution": "Note that the graphs of $y = x^2 + k$ and $x = y^2 + k$ are reflections of each other in the line $y = x,$ so if they are tangent to each other, then the point of tangency must lie on the line $y = x.$  Furthermore, both graphs will be tangent to the line $y = x.$\n\n[asy]\nunitsize(1 cm);\n\nreal func (real x) {\n  return(x^2 + 1/4);\n}\n\ndraw(graph(func,-2,2));\ndraw(reflect((0,0),(1,1))*graph(func,-2,2));\ndraw((-2,-2)--(4,4),dashed);\n\nlabel(\"$y = x$\", (4,4), NE);\nlabel(\"$y = x^2 + k$\", (2,4 + 1/4), N);\nlabel(\"$x = y^2 + k$\", (4 + 1/4,2), E);\n[/asy]\n\nThis means that the quadratic $x^2 + k = x$ will have a double root.  We can arrange the equation to get\n\\[x^2 - x + k = 0.\\]We want the discriminant of this quadratic to be 0, giving us $1 - 4k = 0,$ or $k = \\boxed{\\frac{1}{4}}.$"
+                },
+                {
+                    "id": "test-2414",
+                    "problem": "The complex number $z = re^{i \\theta}$ satisfies\n\\[\\left| 2z + \\frac{1}{z} \\right| = 1.\\]Find the minimum value of $\\sin^2 \\theta.$",
+                    "level": "Level 5",
+                    "type": "Precalculus",
+                    "solution": "Setting $z = re^{i \\theta}$ in the given equation, we get\n\\[\\left| 2re^{i \\theta} + \\frac{1}{r} e^{-i \\theta} \\right| = 1.\\]Then\n\\[\\left| 2r \\cos \\theta + 2ri \\sin \\theta + \\frac{1}{r} \\cos \\theta - \\frac{i}{r} \\sin \\theta \\right| = 1.\\]Thus,\n\\[\\left( 2r \\cos \\theta + \\frac{1}{r} \\cos \\theta \\right)^2 + \\left( 2r \\sin \\theta - \\frac{1}{r} \\sin \\theta \\right)^2 = 1.\\]Expanding, we get\n\\[4r^2 \\cos^2 \\theta + 4 \\cos^2 \\theta + \\frac{1}{r^2} \\cos^2 \\theta + 4r^2 \\sin^2 \\theta - 4 \\sin^2 \\theta + \\frac{1}{r^2} \\sin^2 \\theta = 1,\\]which simplifies to\n\\[4r^2 + 4 \\cos^2 \\theta - 4 \\sin^2 \\theta + \\frac{1}{r^2} = 1.\\]Since $\\cos^2 \\theta = 1 - \\sin^2 \\theta,$\n\\[4r^2 + 4 - 4 \\sin^2 \\theta - 4 \\sin^2 \\theta + \\frac{1}{r^2} = 1,\\]so\n\\[8 \\sin^2 \\theta = 4r^2 + \\frac{1}{r^2} + 3.\\]By AM-GM, $4r^2 + \\frac{1}{r^2} \\ge 2 \\sqrt{4r^2 \\cdot \\frac{1}{r^2}} = 4,$ so $8 \\sin^2 \\ge 7,$ or\n\\[\\sin^2 \\theta \\ge \\frac{7}{8}.\\]Equality occurs when $r = \\frac{1}{\\sqrt{2}},$ so the minimum value of $\\sin^2 \\theta$ is $\\boxed{\\frac{7}{8}}.$"
+                }
+            ],
+            "traces": [],
+            "train": []
+        }
+    ],
+    "graph_path": "examples/optimization/mipro/output/evaluated_programs/program_6.json"
+}

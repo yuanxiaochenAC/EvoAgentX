@@ -18,8 +18,8 @@ from evoagentx.utils.mipro_utils.settings import settings
 from evoagentx.utils.mipro_utils.parallelizer import ParallelExecutor
 from evoagentx.workflow import  WorkFlow
 from evoagentx.agents import AgentManager
-from evoagentx.models import  OpenAILLM
 from evoagentx.workflow.workflow_graph import WorkFlowGraph
+from evoagentx.core.registry import MODEL_REGISTRY
 
 try:
     from IPython.display import HTML, display
@@ -146,28 +146,24 @@ class MiproEvaluator:
             max_errors=self.max_errors,
             provide_traceback=self.provide_traceback,
             compare_results=True,
-           
         )
         
         def process_item(example):
             agent_manager = AgentManager()
             agent_manager.clear_agents()
             # program.save_module("examples/mipro/output/saved_program.json")
-            llm = settings.executor_llm if settings.executor_llm is not None else settings.lm
-            
+
+            llm_config = getattr(settings, 'executor_llm', settings.llm_config) # TODO: check if this is correct
             agent_manager.add_agents_from_workflow(
                 program,
-                llm_config=llm
+                llm_config = llm_config
             )
             program_copy = WorkFlowGraph(goal=program.goal, graph=program.graph)
             program_copy.reset_graph()
-            workflow = WorkFlow(graph=program_copy, agent_manager=agent_manager, llm = OpenAILLM(llm))
-            
-            
-            prediction = workflow.execute(
-                inputs =collate_func(example),
-            )
-            
+            cls = MODEL_REGISTRY.get_model(llm_config.llm_type)
+            workflow = WorkFlow(graph=program_copy, agent_manager=agent_manager, llm=cls(llm_config))
+
+            prediction = workflow.execute(inputs =collate_func(example))
             
             score = metric(example, prediction)
             # Increment assert and suggest failures to program's attributes
