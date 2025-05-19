@@ -215,6 +215,7 @@ class MiproOptimizer(BaseModule):
 
     def evaluate(self, *,graph, benchmark=None, eval_mode='test', **kwargs):
         result_lst = []
+        self.benchmark = benchmark
         for i in range(self.eval_rounds):
             if self.benchmark:
                 result = self.evaluator.evaluate(graph, self.benchmark, eval_mode)

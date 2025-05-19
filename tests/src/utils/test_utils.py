@@ -49,6 +49,3 @@ class TestUtils(unittest.TestCase):
         result = append_inputs_to_prompt(prompt, inputs)
         expected = "这是一个{变量}测试，包含{{双括号}}和{{另一个变量}}\n新变量 : {新变量}"
         self.assertEqual(result, expected)
-
-if __name__ == '__main__':
-    unittest.main() 

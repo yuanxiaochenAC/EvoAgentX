@@ -49,7 +49,7 @@ math_graph_data = {
 
 def main():
     openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY)
-    evoagentx.configure(lm=openai_config)
+    evoagentx.configure(llm_config=openai_config)
     
     benchmark = MathSplits()
     trainset = [{"problem": collate_func(example)["problem"], "solution": example["solution"]} for example in benchmark._train_data]
@@ -81,8 +81,8 @@ def main():
         executor_llm = openai_config,
         max_bootstrapped_demos = 4,
         max_labeled_demos = 4,
-        num_candidates = 5,
-        auto = "light",
+        num_candidates = 15,
+        auto = "medium",
         num_threads = 32,
         save_path = "examples/mipro/output/logs",
         evaluator = evaluate
