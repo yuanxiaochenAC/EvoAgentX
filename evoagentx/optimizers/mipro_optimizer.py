@@ -394,7 +394,7 @@ class MiproOptimizer(BaseModule):
         tip_aware_proposer: bool,
         fewshot_aware_proposer: bool,
     ) -> Dict[int, List[str]]:
-        logger.info("\n==> STEP 2: PROPOSE INSTRUCTION CANDIDATES <==")
+        logger.info("==> STEP 2: PROPOSE INSTRUCTION CANDIDATES <==")
         logger.info(
             "We will use the few-shot examples from the previous step, a generated dataset summary, a summary of the program code, and a randomly selected prompting tip to propose instructions."
         )
@@ -416,7 +416,7 @@ class MiproOptimizer(BaseModule):
             rng=self.rng,
         )
 
-        logger.info("\nProposing instructions...\n")
+        logger.info("Proposing instructions...")
         instruction_candidates = proposer.propose_instructions_for_program(
             trainset=trainset,
             program=program,
