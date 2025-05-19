@@ -28,9 +28,9 @@ theme:
     - navigation.search.highlight
     - navigation.search.share
     - navigation.search.suggest
-    - navigation.instant
-    - navigation.instant.prefetch
-    - navigation.instant.progress
+    # - navigation.instant # Instant loading not supported
+    # - navigation.instant.prefetch
+    # - navigation.instant.progress
     - content.code.annotate
     - content.heading.auto-number 
     # - navigation.tabs.sticky
