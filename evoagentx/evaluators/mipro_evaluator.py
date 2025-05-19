@@ -153,7 +153,7 @@ class MiproEvaluator:
             agent_manager.clear_agents()
             # program.save_module("examples/mipro/output/saved_program.json")
 
-            llm_config = getattr(settings, 'executor_llm', settings.llm_config) # TODO: check if this is correct
+            llm_config = getattr(settings, 'executor_llm', settings.llm_config)
             agent_manager.add_agents_from_workflow(
                 program,
                 llm_config = llm_config

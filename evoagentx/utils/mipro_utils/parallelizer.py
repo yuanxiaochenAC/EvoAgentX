@@ -1,16 +1,14 @@
 import contextlib
 import copy
-import logging
 import signal
 import sys
 import threading
 import time
 import traceback
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from evoagentx.core.logging import logger
 
 import tqdm
-
-logger = logging.getLogger(__name__)
 
 class ParallelExecutor:
     def __init__(

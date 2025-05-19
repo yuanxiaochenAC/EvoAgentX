@@ -1,5 +1,5 @@
 import random
-import logging
+# import logging
 from pydantic import Field
 from typing import Any, List, Optional
 from evoagentx.agents.customize_agent import CustomizeAgent
@@ -8,10 +8,12 @@ from evoagentx.core.module import BaseModule
 from evoagentx.utils.mipro_utils.utils import get_source_code, strip_prefix, create_predictor_level_history_string, create_example_string
 from evoagentx.utils.mipro_utils.dataset_summary_generator import create_dataset_summary
 from evoagentx.utils.utils import append_inputs_to_prompt
-import os 
-from dotenv import load_dotenv
-load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+from evoagentx.core.logging import logger 
+
+# import os 
+# from dotenv import load_dotenv
+# load_dotenv()
+# OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
 MAX_INSTRUCT_IN_HISTORY = 5  # 10
@@ -111,15 +113,15 @@ def generate_instruction_class(
                     "description": "Propose an instruction that will be used to prompt a Language Model to perform this task."
                 }
             ],
-            llm_config=getattr(settings, 'executor_llm', settings.llm_config), # settings.lm,
+            llm_config=getattr(settings, 'optimizer_llm', settings.llm_config), # settings.lm,
             parse_mode='str'
         )
 
-logger = logging.getLogger("MIPRO")
+# logger = logging.getLogger("MIPRO")
 
 class GroundedProposer(BaseModule):
     optimizer_llm: Any = Field(
-        default=getattr(settings, 'optimizer_llm', settings.llm_config), # TODO: check if this is correct
+        default=getattr(settings, 'optimizer_llm', settings.llm_config), 
         description="The optimizer llm to use for generating instructions"
     )
     program: Any = Field(
@@ -179,9 +181,9 @@ class GroundedProposer(BaseModule):
             try:
                 self.program_code_string = get_source_code(self.program)                    
                 if self.verbose:
-                    print("SOURCE CODE:",self.program_code_string)
+                    logger.info("SOURCE CODE:",self.program_code_string)
             except Exception as e:
-                print(f"Error getting source code: {e}.\n\nRunning without program aware proposer.")
+                logger.info(f"Error getting source code: {e}.\n\nRunning without program aware proposer.")
                 self.program_aware = False
                 self.data_summary  = None
                 
@@ -192,11 +194,11 @@ class GroundedProposer(BaseModule):
                     trainset=self.trainset, view_data_batch_size=self.view_data_batch_size, optimizer_llm=self.optimizer_llm,
                 )
                 if self.verbose:
-                    print(f"DATA SUMMARY: {self.data_summary}")
+                    logger.info(f"DATA SUMMARY: {self.data_summary}")
             except Exception as e:
-                print(f"Error getting data summary: {e}.\n\nRunning without data aware proposer.")
+                logger.info(f"Error getting data summary: {e}.\n\nRunning without data aware proposer.")
                 self.use_dataset_summary = False
-                print("")
+                logger.info("")
 
     def propose_instructions_for_program(
         self,
@@ -215,11 +217,11 @@ class GroundedProposer(BaseModule):
             use_history = self.rng.random() < 0.5
             self.use_instruct_history = use_history
             if self.verbose:
-                print(f"Use history T/F: {self.use_instruct_history}")
+                logger.info(f"Use history T/F: {self.use_instruct_history}")
 
         if not demo_candidates:
             if self.verbose:
-                print("No demo candidates provided. Running without task demos.")
+                logger.info("No demo candidates provided. Running without task demos.")
             self.use_task_demos = False
             # When no demo candidates are provided, defailt to N
             num_demos = N
@@ -234,7 +236,7 @@ class GroundedProposer(BaseModule):
                 selected_tip = None
                 if self.set_tip_randomly:
                     if self.verbose:
-                        print("Using a randomly generated configuration for our grounded proposer.")
+                        logger.info("Using a randomly generated configuration for our grounded proposer.")
                     # Randomly select the tip
                     selected_tip_key = self.rng.choice(list(TIPS.keys()))
                     selected_tip = TIPS[selected_tip_key]
@@ -242,7 +244,7 @@ class GroundedProposer(BaseModule):
                         selected_tip,
                     )
                     if self.verbose:
-                        print(f"Selected tip: {selected_tip_key}")
+                        logger.info(f"Selected tip: {selected_tip_key}")
 
                 proposed_instructions[pred_i].append(
                     self.propose_instruction_for_predictor(
@@ -361,7 +363,7 @@ class GenerateModuleInstruction(BaseModule):
                         count += 1
                         if count >= max_examples:
                             return
-        lm = getattr(settings, 'optimizer_llm', settings.llm_config).copy() # TODO: check if this is correct
+        lm = getattr(settings, 'optimizer_llm', settings.llm_config).copy()
         epsilon = rng.uniform(0.01, 0.05)
         lm.temperature = T + epsilon
 
@@ -399,7 +401,7 @@ class GenerateModuleInstruction(BaseModule):
                 
                 
                 if self.verbose:
-                    print(f"PROGRAM DESCRIPTION: {program_description}")
+                    logger.info(f"PROGRAM DESCRIPTION: {program_description}")
 
                 inputs = []
                 outputs = []
@@ -424,14 +426,14 @@ class GenerateModuleInstruction(BaseModule):
                 
             except Exception as e:
                 if self.verbose:
-                    print("Error getting program description. Running without program aware proposer.")
+                    logger.info("Error getting program description. Running without program aware proposer.")
                 else:
                     logger.error(f"Error getting program description: {e}")
                 self.program_aware = False
 
         # Generate an instruction for our chosen module
         if self.verbose:
-            print(f"task_demos {task_demos}")
+            logger.info(f"task_demos {task_demos}")
 
         input_dict = {}
         if self.use_dataset_summary:

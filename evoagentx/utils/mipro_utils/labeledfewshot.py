@@ -1,7 +1,5 @@
 import random
-import logging
-
-logger = logging.getLogger("MIPRO")
+from evoagentx.core.logging import logger
 
 class LabeledFewShot():
     def __init__(self, k=16):

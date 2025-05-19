@@ -8,7 +8,7 @@ from evoagentx.workflow import SequentialWorkFlowGraph
 from evoagentx.core.callbacks import suppress_logger_info
 from evoagentx.optimizers import MiproOptimizer
 from evoagentx.evaluators import Evaluator
-
+from evoagentx.core.logging import logger
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -76,20 +76,25 @@ def main():
         # optimizer_llm = openai_config,
         max_bootstrapped_demos = 4,
         max_labeled_demos = 4,
-        num_candidates = 5,
-        auto = "light",
+        num_candidates = 15,
+        auto = "medium",
         num_threads = 32,
-        save_path = "examples/optimization/mipro/output/logs",
+        save_path = "examples/optimization/mipro/output/math", 
         evaluator = evaluator
     )
 
+    logger.info("Evaluating workflow on test set...")
     with suppress_logger_info():
-        best_program = optimizer.optimize(benchmark = benchmark, collate_func = collate_func)
-    
-    best_program.save_module("examples/optimization/mipro/output/best_program_math.json")
+        result = optimizer.evaluate(dataset = benchmark, eval_mode = "test")
+    logger.info(f"Evaluation metrics (before optimization): {result}")
+
+    logger.info("Optimizing workflow...")
+    optimizer.optimize(benchmark = benchmark)
+    optimizer.restore_best_graph() # restore the best graph from the saved path
+
     with suppress_logger_info():
-        result = optimizer.evaluate(graph = best_program, benchmark = benchmark, eval_mode = "test")
-    print(result)
+        result = optimizer.evaluate(dataset = benchmark, eval_mode = "test")
+    logger.info(f"Evaluation metrics (after optimization): {result}")
 
 if __name__ == "__main__":
     main()

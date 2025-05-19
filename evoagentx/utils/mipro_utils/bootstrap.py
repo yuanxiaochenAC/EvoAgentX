@@ -1,5 +1,4 @@
 import random
-import logging
 import threading
 from pydantic import Field
 from typing import  Callable, Optional
@@ -13,8 +12,8 @@ from .labeledfewshot import LabeledFewShot
 from evoagentx.core.module import BaseModule
 from evoagentx.core.registry import MODEL_REGISTRY 
 from evoagentx.utils.mipro_utils.settings import settings
-
-logger = logging.getLogger("MIPRO")
+from evoagentx.core.callbacks import suppress_logger_info
+from evoagentx.core.logging import logger
 
 class BootstrapFewShot(BaseModule):
     """
@@ -144,7 +143,7 @@ class BootstrapFewShot(BaseModule):
         try:
 
             # llm_config  = (settings.executor_llm or settings.llm_config).copy()
-            llm_config = getattr(settings, 'executor_llm', settings.llm_config).copy() # TODO: check if this is correct
+            llm_config = getattr(settings, 'optimizer_llm', settings.llm_config).copy()
             if round_idx > 0:
                 llm_config.temperature = 0.7 + 0.001 * round_idx
                 
@@ -166,7 +165,8 @@ class BootstrapFewShot(BaseModule):
             cls = MODEL_REGISTRY.get_model(llm_config.llm_type)
             workflow = WorkFlow(graph=teacher, agent_manager= agent_manager, llm=cls(llm_config)) # llm=OpenAILLM(lm))
             
-            prediction = workflow.execute(inputs = self.collate_func(example))
+            with suppress_logger_info():
+                prediction = workflow.execute(inputs = self.collate_func(example))
             
             trace = settings.trace
             for agent in teacher.agents():

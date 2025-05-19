@@ -1,4 +1,4 @@
-# 复制黏贴的dspy/dspy/dsp/utils/utils.py
+# copy from dspy/dspy/dsp/utils/utils.py
 import os
 import re
 import numpy as np
@@ -305,7 +305,7 @@ def create_n_fewshot_demo_sets(
     # Go through and create each candidate set
     for seed in range(-3, num_candidate_sets):
 
-        print(f"Bootstrapping set {seed+4}/{num_candidate_sets+3}")
+        logger.info(f"Bootstrapping set {seed+4}/{num_candidate_sets+3}")
 
         trainset_copy = list(trainset)
 
@@ -463,7 +463,12 @@ def eval_candidate_program(batch_size, trainset, collate_func, candidate_program
     try:
         # Evaluate on the full trainset
         if batch_size >= len(trainset):
-            return evaluate(candidate_program, devset=trainset, return_all_scores=return_all_scores, collate_func=collate_func)
+            return evaluate(
+                candidate_program, 
+                devset=trainset, 
+                return_all_scores=return_all_scores, 
+                collate_func=collate_func
+            )
         # Or evaluate on a minibatch
         else:
             return evaluate(
@@ -522,7 +527,8 @@ def save_candidate_program(program, save_path, trial_num, note=None):
         return None
 
     # 只保留目录部分
-    save_dir = os.path.dirname(save_path)
+    # save_dir = os.path.dirname(save_path)
+    save_dir = save_path
 
     # 确保目录存在
     eval_programs_dir = os.path.join(save_dir, "evaluated_programs")
