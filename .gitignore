@@ -118,4 +118,4 @@ examples/output/**
 !examples/output/tetris_game/workflow_demo_4o_mini.json
 debug/
 debug*.py
-
+logs/
