@@ -210,7 +210,7 @@ You can also:
 [![Watch on YouTube](https://img.shields.io/badge/-Watch%20on%20YouTube-red?logo=youtube&labelColor=grey)](https://www.youtube.com/watch?v=Wu0ZydYDqgg)
 
 <div align="center">
-  <video src="https://github.com/user-attachments/assets/4497029b-6279-4267-bff6-d3539a4a446b.mp4" autoplay loop muted playsinline width="600">
+  <video src="https://github.com/user-attachments/assets/8f65d1af-9398-40c3-a625-4f493e13e5a5.mp4" autoplay loop muted playsinline width="600">
     Your browser does not support the video tag.
   </video>
 </div>

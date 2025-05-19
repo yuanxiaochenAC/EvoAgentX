@@ -1,4 +1,6 @@
 site_name: EvoAgentX
+site_url: https://evoagentx.github.io/EvoAgentX/
+use_directory_urls: false
 theme:
   name: material
   custom_dir: docs/overrides
@@ -185,6 +187,7 @@ plugins:
               - Benchmark and Evaluation: tutorial/benchmark_and_evaluation.md
               - AFlow Optimizer: tutorial/aflow_optimizer.md
               - SEW Optimizer: tutorial/sew_optimizer.md
+              - TextGrad Optimizer: tutorial/textgrad_optimizer.md
             - Key Modules:
               - LLM: modules/llm.md 
               - Agent: modules/agent.md
@@ -220,6 +223,7 @@ plugins:
               - 基准测试与评估: tutorial/benchmark_and_evaluation.md
               - AFlow 优化器: tutorial/aflow_optimizer.md
               - SEW 优化器: tutorial/sew_optimizer.md
+              - TextGrad 优化器: tutorial/textgrad_optimizer.md
           - 核心模块:
               - 大语言模型（LLM）: modules/llm.md 
               - Agent 模块: modules/agent.md
