@@ -28,6 +28,7 @@ class ToolCalling(Action):
     max_tool_try: int = 2
     tools_schema: Optional[dict] = None
     tools_caller: Optional[dict[str, Callable]] = None
+    tool_calling_instruction: Optional[str] = None
     conversation: Optional[Message] = None
     tool_generating_output_format: Optional[Any] = None
     inputs: dict = {}
@@ -117,6 +118,7 @@ class ToolCalling(Action):
         tools_callers = [tool.get_tools() for tool in tools]
         tools_callers = [j for i in tools_callers for j in i]
         tools_names = [i["function"]["name"] for i in tools_schemas]
+        self.tool_calling_instructions = [tool.get_tool_prompt() for tool in tools]
         if not self.tools_schema:
             self.tools_schema = {}
             self.tools_caller = {}
@@ -160,9 +162,14 @@ class ToolCalling(Action):
                 return self._extract_output("{content}".format(content = self.execution_history), llm = llm), self.task_description
             return self._extract_output("{content}".format(content = self.execution_history), llm = llm) 
         
-        
         tool_call_args = llm.generate(
-            prompt = TOOL_CALLER_PROMPT_TEMPLATE.format(tool_descriptions=self.tools_schema, goal = self.task_description, inputs = prompt_params_values, history = self.execution_history), 
+            prompt = TOOL_CALLER_PROMPT_TEMPLATE.format(
+                tool_descriptions=self.tools_schema, 
+                goal = self.task_description, 
+                inputs = prompt_params_values, 
+                history = self.execution_history, 
+                tool_calling_instruction = self.tool_calling_instructions
+            ), 
             system_message = TOOL_CALLER_PROMPT["system_prompt"], 
             parser=self.tool_generating_output_format,
             parse_mode="json"
@@ -185,7 +192,6 @@ class ToolCalling(Action):
                     errors.append("No function name provided")
                     break
                 
-                print(self.tools_caller)
                 # Try to get the callable from our tools_caller dictionary
                 callable_fn = None
                 if self.tools_caller and function_name in self.tools_caller:

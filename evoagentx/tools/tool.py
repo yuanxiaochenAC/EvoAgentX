@@ -41,3 +41,12 @@ class Tool(BaseModule):
         if not self.descriptions:
             raise NotImplementedError("All tools must implement get_tool_descriptions")
         return self.descriptions
+    
+    def get_tool_prompt(self) -> str:
+        """
+        Returns a tool using instruction prompt for agent to use the tool.
+        
+        Returns:
+            str: Tool description
+        """
+        return ""

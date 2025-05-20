@@ -2,7 +2,6 @@ import requests
 import os
 from typing import Dict, Any, Optional, List, Callable
 from .search_base import SearchBase
-from pydantic import Field
 from evoagentx.core.logging import logger
 import dotenv
 dotenv.load_dotenv()

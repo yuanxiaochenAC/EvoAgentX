@@ -21,7 +21,6 @@ module_save_path = "examples/output/jobs/jobs_demo_4o_mini.json"
 def main(goal=None):
 
     # LLM configuration
-    print(OPENAI_API_KEY)
     openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=True, max_tokens=16000)
     # Initialize the language model
     llm = OpenAILLM(config=openai_config)

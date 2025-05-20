@@ -281,6 +281,9 @@ _____________ Let's start the task _____________
 ## History
 {history}
 
+## Additional tool calling instruction
+{tool_calling_instruction}
+
 """
 
 TOOL_CALLER_PROMPT = {
