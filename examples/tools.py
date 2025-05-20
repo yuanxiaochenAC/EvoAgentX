@@ -16,6 +16,7 @@ from evoagentx.tools.interpreter_docker import DockerInterpreter
 from evoagentx.tools.search_wiki import SearchWiki
 from evoagentx.tools.search_google import SearchGoogle
 from evoagentx.tools.search_google_f import SearchGoogleFree
+from evoagentx.tools.mcp import MCPToolkit
 
 
 def run_simple_hello_world(interpreter):
@@ -314,18 +315,80 @@ def run_docker_interpreter_examples():
         print("You may need to pull the python:3.9-slim image first using: docker pull python:3.9-slim")
 
 
+def run_mcp_example():
+    """
+    Run an example using the MCP toolkit to search for job information about 'data scientist'.
+    This uses the sample_mcp.config file to configure the MCP client.
+    """
+    print("\n===== MCP TOOLKIT EXAMPLE =====\n")
+    
+    # Get the path to the sample_mcp.config file
+    config_path = os.path.join(os.getcwd(), "examples", "sample_mcp.config")
+    
+    print(f"Loading MCP configuration from: {config_path}")
+    
+    try:
+        # Initialize the MCP toolkit with the sample config
+        toolkit = MCPToolkit(config_path=config_path)
+        
+        # Get all available tools
+        tools = toolkit.get_tools()
+        
+        print(f"Available MCP tools: {len(tools)}")
+        for i, tool in enumerate(tools):
+            print(f"Tool {i+1}: {tool.name}")
+            print(f"Description: {tool.descriptions[0]}")
+            print("-" * 30)
+        
+        # Find and use the hirebase search tool
+        hirebase_tool = None
+        for tool in tools:
+            if "hire" in tool.name.lower() or "search" in tool.name.lower():
+                hirebase_tool = tool
+                break
+        
+        if hirebase_tool:
+            print(f"Using tool: {hirebase_tool.name}")
+            
+            # Search for 'data scientist' job information
+            search_query = "data scientist"
+            print(f"Searching for job information about: '{search_query}'")
+            
+            # Call the tool with the search query
+            # Note: The actual parameter name might differ based on the tool's schema
+            result = hirebase_tool.tools[0](**{"query": search_query})
+            
+            print("\nSearch Results:")
+            print("-" * 50)
+            print(result)
+            print("-" * 50)
+        else:
+            print("No suitable hiring or search tool found in the MCP configuration.")
+    except Exception as e:
+        print(f"Error running MCP example: {str(e)}")
+        print("Make sure the hirebase MCP server is properly configured with a valid API key.")
+    finally:
+        if 'toolkit' in locals():
+            toolkit.disconnect()
+
+
 def main():
     """Main function to run all examples"""
     print("===== INTERPRETER TOOL EXAMPLES =====")
     
-    # Run Python interpreter examples
-    run_python_interpreter_examples()
+    # Run MCP toolkit example
+    run_mcp_example()
     
-    # Run Docker interpreter examples
-    run_docker_interpreter_examples()
+    # # Run Python interpreter examples
+    # run_python_interpreter_examples()
     
-    # Run search tools examples
-    run_search_examples()
+    # # Run Docker interpreter examples
+    # run_docker_interpreter_examples()
+    
+    # # Run search tools examples
+    # run_search_examples()
+    
+
     
     print("\n===== ALL EXAMPLES COMPLETED =====")
 

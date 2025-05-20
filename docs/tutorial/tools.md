@@ -5,6 +5,7 @@ This tutorial walks you through using EvoAgentX's powerful tool ecosystem. Tools
 1. **Understanding the Tool Architecture**: Learn about the base Tool class and its functionality
 2. **Code Interpreters**: Execute Python code safely using Python and Docker interpreters
 3. **Search Tools**: Access information from the web using Wikipedia and Google search tools
+4. **MCP Tools**: Connect to external services using the Model Context Protocol
 
 By the end of this tutorial, you'll understand how to leverage these tools in your own agents and workflows.
 
@@ -451,6 +452,145 @@ for i, result in enumerate(results.get("results", [])):
 
 ---
 
+## 4. MCP Tools
+
+**The Model Context Protocol (MCP) toolkit provides a standardized way to connect to external services through the MCP protocol. It enables agents to access specialized tools like job search services, data processing utilities, and other MCP-compatible APIs without requiring direct integration of each service.**
+
+### 4.1 MCPToolkit
+
+#### 4.1.1 Setup
+
+```python
+from evoagentx.tools.mcp import MCPToolkit
+
+# Initialize with a configuration file
+mcp_toolkit = MCPToolkit(config_path="examples/sample_mcp.config")
+
+# Or initialize with a configuration dictionary
+config = {
+    "mcpServers": {
+        "hirebase": {
+            "command": "uvx",
+            "args": ["hirebase-mcp"],
+            "env": {"HIREBASE_API_KEY": "your_api_key_here"}
+        }
+    }
+}
+mcp_toolkit = MCPToolkit(config=config)
+```
+
+#### 4.1.2 Available Methods
+
+The `MCPToolkit` provides the following callable methods:
+
+##### Method 1: get_tools()
+
+**Description**: Returns a list of all available tools from connected MCP servers.
+
+**Usage Example**:
+```python
+# Get all available MCP tools
+tools = mcp_toolkit.get_tools()
+
+# Display available tools
+for i, tool in enumerate(tools):
+    print(f"Tool {i+1}: {tool.name}")
+    print(f"Description: {tool.descriptions[0]}")
+```
+
+**Return Type**: `List[Tool]`
+
+**Sample Return**:
+```
+[MCPTool(name="HirebaseSearch", descriptions=["Search for job information by providing keywords"]), 
+ MCPTool(name="HirebaseAnalyze", descriptions=["Analyze job market trends for given skills"])]
+```
+
+---
+
+##### Method 2: disconnect()
+
+**Description**: Disconnects from all MCP servers and cleans up resources.
+
+**Usage Example**:
+```python
+# When done with the MCP toolkit
+mcp_toolkit.disconnect()
+```
+
+**Return Type**: `None`
+
+#### 4.1.3 Using MCP Tools
+
+Once you have obtained the tools from the MCPToolkit, you can use them like any other EvoAgentX tool:
+
+```python
+# Get all tools from the toolkit
+tools = mcp_toolkit.get_tools()
+
+# Find a specific tool
+hirebase_tool = None
+for tool in tools:
+    if "hire" in tool.name.lower() or "search" in tool.name.lower():
+        hirebase_tool = tool
+        break
+
+if hirebase_tool:
+    # Use the tool to search for information
+    search_query = "data scientist"
+    result = hirebase_tool.tools[0](**{"query": search_query})
+    
+    print(f"Search results for '{search_query}':")
+    print(result)
+```
+
+#### 4.1.4 Setup Hints
+
+- **Configuration File**: The configuration file should follow the MCP protocol's server configuration format:
+  ```json
+  {
+      "mcpServers": {
+          "serverName": {
+              "command": "executable_command",
+              "args": ["command_arguments"],
+              "env": {"ENV_VAR_NAME": "value"}
+          }
+      }
+  }
+  ```
+
+- **Server Types**:
+  - **Command-based servers**: Use the `command` field to specify an executable
+  - **URL-based servers**: Use the `url` field to specify a server endpoint
+
+- **Connection Management**:
+  - Always call `disconnect()` when you're done using the MCPToolkit to free resources
+  - Use a try-finally block for automatic cleanup:
+    ```python
+    try:
+        toolkit = MCPToolkit(config_path="config.json")
+        tools = toolkit.get_tools()
+        # Use tools here
+    finally:
+        toolkit.disconnect()
+    ```
+
+- **Error Handling**:
+  - The MCPToolkit will log warning messages if it can't connect to servers
+  - It's good practice to implement error handling around tool calls:
+    ```python
+    try:
+        result = tool.tools[0](**{"query": "example query"})
+    except Exception as e:
+        print(f"Error calling MCP tool: {str(e)}")
+    ```
+
+- **Environment Variables**:
+  - API keys and other sensitive information can be provided via environment variables in the config
+  - You can also set them in your environment before running your application
+
+---
+
 ## Summary
 
 In this tutorial, we've explored the tool ecosystem in EvoAgentX:
@@ -458,6 +598,7 @@ In this tutorial, we've explored the tool ecosystem in EvoAgentX:
 1. **Tool Architecture**: Understood the base Tool class and its standardized interface
 2. **Code Interpreters**: Learned how to execute Python code securely using both Python and Docker interpreters
 3. **Search Tools**: Discovered how to access web information using Wikipedia and Google search tools
+4. **MCP Tools**: Learned how to connect to external services using the Model Context Protocol
 
 Tools in EvoAgentX extend your agents' capabilities by providing access to external resources and computation. By combining these tools with agents and workflows, you can build powerful AI systems that can retrieve information, perform calculations, and interact with the world.
 
