@@ -270,7 +270,6 @@ Comments in the json object is not allowed. (They are just for demonstration)
    - ALWAYS set "continue_after_tool_call" to false unless you explicitly need to make more tool calls
    - Only set "continue_after_tool_call" to true when absolutely necessary and you have a specific next tool in mind
 
-
 _____________ Let's start the task _____________
 ## Goal
 {goal}

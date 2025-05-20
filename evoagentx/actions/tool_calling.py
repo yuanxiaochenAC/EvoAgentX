@@ -162,6 +162,10 @@ class ToolCalling(Action):
                 return self._extract_output("{content}".format(content = self.execution_history), llm = llm), self.task_description
             return self._extract_output("{content}".format(content = self.execution_history), llm = llm) 
         
+        print("_______________________ Execution History _______________________")
+        print("execution_history:")
+        print(self.execution_history)
+        
         tool_call_args = llm.generate(
             prompt = TOOL_CALLER_PROMPT_TEMPLATE.format(
                 tool_descriptions=self.tools_schema, 
@@ -227,7 +231,7 @@ class ToolCalling(Action):
         print("results:")
         print(results)
         
-        self.execution_history.append((tool_call_args, results))
+        self.execution_history.append({"tool_call_args": tool_call_args, "results": results})
         
         ### Continue Execution or Returning Extracted Answer
         if tool_call_args.continue_after_tool_call:
