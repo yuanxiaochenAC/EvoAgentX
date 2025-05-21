@@ -296,7 +296,7 @@ def run_docker_interpreter_examples():
     try:
         # Initialize the Docker interpreter with a standard Python image
         interpreter = DockerInterpreter(
-            image_tag="fundingsocietiesdocker/python3.9-slim",  # Smaller and more compatible image
+            image_tag="python:3.9-slim",  # Using official Python image
             print_stdout=True,
             print_stderr=True,
             container_directory="/app"  # Better working directory for containerized apps
@@ -377,7 +377,7 @@ def main():
     print("===== INTERPRETER TOOL EXAMPLES =====")
     
     # Run MCP toolkit example
-    run_mcp_example()
+    # run_mcp_example()
     
     # # Run Python interpreter examples
     run_python_interpreter_examples()

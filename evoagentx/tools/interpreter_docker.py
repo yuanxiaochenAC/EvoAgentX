@@ -130,7 +130,13 @@ class DockerInterpreter(BaseInterpreter):
             dockerfile_dir = dockerfile_path.parent
             self.client.images.build(path=str(dockerfile_dir), tag=image_tag, rm=True, buildargs={})
 
-        # Run the container using the image (whether pre-existing or newly built)
+        # Check if Docker daemon is running
+        try:
+            self.client.ping()
+        except Exception as e:
+            raise RuntimeError(f"Docker daemon is not running: {e}")
+
+        # Run the container using the image with resource limits
         self.container = self.client.containers.run(
             image_tag, 
             detach=True, 
@@ -178,16 +184,30 @@ class DockerInterpreter(BaseInterpreter):
         tar_stream = io.BytesIO()
         with tarfile.open(fileobj=tar_stream, mode='w') as tar:
             tarinfo = tarfile.TarInfo(name=filename)
-            tarinfo.size = len(content)
+            tarinfo.size = len(content.encode('utf-8'))
             tar.addfile(tarinfo, io.BytesIO(content.encode('utf-8')))
         tar_stream.seek(0)
 
         if self.container is None:
             raise RuntimeError("Container is not initialized.")
-        self.container.put_archive(self.tmp_directory, tar_stream)
+            
+        try:
+            self.container.put_archive(self.tmp_directory, tar_stream)
+        except Exception as e:
+            raise RuntimeError(f"Failed to create file in container: {e}")
+            
         return Path(f"{self.tmp_directory}/{filename}")
 
     def _run_file_in_container(self, file: Path, language: str) -> str:
+        """Execute a file in the container with timeout and security checks."""
+        if not self.container:
+            raise RuntimeError("Container is not initialized")
+            
+        # Check container status
+        container_info = self.client.api.inspect_container(self.container.id)
+        if not container_info['State']['Running']:
+            raise RuntimeError("Container is not running")
+            
         language = self._check_language(language)
         command = shlex.split(self.CODE_EXECUTE_CMD_MAPPING[language].format(file_name=file.as_posix()))
         if self.container is None:
@@ -214,40 +234,77 @@ class DockerInterpreter(BaseInterpreter):
             
         Returns:
             str: The execution output
+            
+        Raises:
+            RuntimeError: If container is not properly initialized or execution fails
+            ValueError: If code content is invalid or exceeds limits
         """
+        if not code or not code.strip():
+            raise ValueError("Code content cannot be empty")
+            
+        if not self.container:
+            raise RuntimeError("Container is not initialized")
+            
+        # Check container status
+        try:
+            container_info = self.client.api.inspect_container(self.container.id)
+            if not container_info['State']['Running']:
+                raise RuntimeError("Container is not running")
+        except Exception as e:
+            raise RuntimeError(f"Failed to check container status: {e}")
+
         if self.host_directory:
             code = f"import sys; sys.path.insert(0, '{self.container_directory}');" + code
+            
         language = self._check_language(language)
+        
         if self.require_confirm:
             confirmation = input(f"Confirm execution of {language} code? [Y/n]: ")
             if confirmation.lower() not in ["y", "yes", ""]:
                 raise RuntimeError("Execution aborted by user.")
         
-        
-        file_path = self._create_file_in_container(code)
-        return self._run_file_in_container(file_path, language)
-        
+        try:
+            file_path = self._create_file_in_container(code)
+            return self._run_file_in_container(file_path, language)
+        except Exception as e:
+            raise RuntimeError(f"Code execution failed: {e}")
+        finally:
+            # Clean up temporary files
+            try:
+                if hasattr(self, 'container') and self.container:
+                    self.container.exec_run(f"rm -f {file_path}")
+            except Exception:
+                pass  # Ignore cleanup errors
+
     def execute_script(self, file_path: str, language: str = None) -> str:
         """
         Reads code from a file and executes it in a Docker container.
         
         Args:
             file_path (str): The path to the script file to execute
-            language (str, optional): The programming language of the code. If None, 
-                                      will be determined from the file extension.
-                                      
+            language (str, optional): The programming language of the code. If None, will be determined from the file extension.
+                                    
         Returns:
             str: The execution output
+            
+        Raises:
+            FileNotFoundError: If the script file does not exist
+            RuntimeError: If container is not properly initialized or execution fails
+            ValueError: If file content is invalid or exceeds limits
         """
-        # Check if file exists
+        # Check if file exists and is readable
         if not os.path.isfile(file_path):
-            return f"Error: File '{file_path}' does not exist."
+            raise FileNotFoundError(f"Script file not found: {file_path}")
+            
+        if not os.access(file_path, os.R_OK):
+            raise PermissionError(f"Cannot read script file: {file_path}")
+        
         # Read the file content
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 code = f.read()
         except Exception as e:
-            return f"Error reading file: {e}"
+            raise RuntimeError(f"Failed to read script file: {e}")
             
         # Execute the code
         return self.execute(code, language)
@@ -332,3 +389,23 @@ class DockerInterpreter(BaseInterpreter):
             List[callable]: List of callable methods
         """
         return [self.execute, self.execute_script]
+
+    def cleanup(self):
+        """Explicitly clean up the container and any temporary resources."""
+        try:
+            if hasattr(self, 'container') and self.container is not None:
+                try:
+                    self.container.stop(timeout=1)
+                except Exception:
+                    pass
+                try:
+                    self.container.remove(force=True)
+                except Exception:
+                    pass
+                self.container = None
+        except Exception as e:
+            print(f"Warning: Error during cleanup: {e}")
+
+    def __del__(self):
+        """Destructor to ensure container cleanup."""
+        self.cleanup()

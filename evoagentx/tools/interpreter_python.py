@@ -9,6 +9,8 @@ from typing import List, Set, Optional, Union, Dict, Any, Callable
 from .interpreter_base import BaseInterpreter
 from pydantic import Field
 
+# Constants
+DEFAULT_ENCODING = 'utf-8'
 
 class PythonInterpreter(BaseInterpreter):
 
@@ -22,7 +24,7 @@ class PythonInterpreter(BaseInterpreter):
         name: str = 'PythonInterpreter',
         project_path:Optional[str] = ".",
         directory_names:Optional[List[str]] = [],
-        allowed_imports:Optional[Set[str]] = {},
+        allowed_imports:Optional[Set[str]] = None,
         **kwargs
     ):
         """
@@ -35,24 +37,14 @@ class PythonInterpreter(BaseInterpreter):
             allowed_imports (Optional[Set[str]]): Set of allowed module imports to enforce security
             **kwargs: Additional data to pass to the parent class
         """
-        # Set default name if not provided
-        # name = kwargs.get('name', 'PythonInterpreter')
-        # Get schemas, descriptions and tools before passing to parent
-        schemas = kwargs.pop('schemas', None) or self.get_tool_schemas()
-        descriptions = kwargs.pop('descriptions', None) or self.get_tool_descriptions()
-        tools = kwargs.pop('tools', None)
-        tools = self.get_tools()
-        # Pass these to the parent class initialization
         super().__init__(
-            name=name,
-            schemas=schemas,
-            descriptions=descriptions,
-            tools=tools,
+            name=name, 
+            project_path=project_path,
+            directory_names=directory_names,
+            allowed_imports=allowed_imports,
             **kwargs
         )
-        self.project_path = project_path
-        self.directory_names = directory_names
-        self.allowed_imports = allowed_imports
+        self.allowed_imports = allowed_imports or set()
 
     def _get_file_and_folder_names(self, target_path: str) -> List[str]:
         """Retrieves the names of files and folders (without extensions) in a given directory.
@@ -94,7 +86,7 @@ class PythonInterpreter(BaseInterpreter):
 
         
         # Read the module file to perform code analysis
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, "r", encoding=DEFAULT_ENCODING) as f:
             code = f.read()
 
         # Perform safety check before adding functions/classes
@@ -304,6 +296,13 @@ class PythonInterpreter(BaseInterpreter):
         # Change to the project directory and update sys.path for module resolution
         if not self.project_path:
             raise ValueError("Project path (project_path) is not set")
+        
+        if not os.path.exists(self.project_path):
+            raise ValueError(f"Project path '{self.project_path}' does not exist")
+            
+        if not os.path.isdir(self.project_path):
+            raise ValueError(f"Project path '{self.project_path}' is not a directory")
+            
         os.chdir(self.project_path)
         sys.path.insert(0, self.project_path)
 
@@ -317,8 +316,8 @@ class PythonInterpreter(BaseInterpreter):
         stdout_capture = io.StringIO()
         with contextlib.redirect_stdout(stdout_capture):
             try:
-                # Execute the code
-                exec(code, {})
+                # Execute the code with basic builtins
+                exec(code, {"__builtins__": __builtins__})
             except Exception:
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 error_msg = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
@@ -351,7 +350,7 @@ class PythonInterpreter(BaseInterpreter):
             return f"Error: File '{file_path}' does not exist."
         
         try:
-            with open(file_path, 'r', encoding='utf-8') as file:
+            with open(file_path, 'r', encoding=DEFAULT_ENCODING) as file:
                 code = file.read()
         except Exception as e:
             return f"Error reading file: {e}"

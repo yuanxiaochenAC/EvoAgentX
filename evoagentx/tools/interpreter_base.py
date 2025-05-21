@@ -1,4 +1,3 @@
-from typing import Optional, List, Callable
 from .tool import Tool
 
 class BaseInterpreter(Tool):
@@ -9,24 +8,8 @@ class BaseInterpreter(Tool):
 
     def __init__(
         self, 
-        name: str = 'Base Interpreter',
-        schemas: Optional[List[dict]] = None,
-        descriptions: Optional[List[str]] = None,
-        tools: Optional[List[Callable]] = None, 
+        name: str = 'BaseInterpreter',
         **kwargs
     ):
-        # Get default values for required attributes
-        name = name or 'Base Interpreter'
-        schemas = schemas or self.get_tool_schemas()
-        descriptions = descriptions or self.get_tool_descriptions()
-        tools = tools or self.get_tools()
-        
-        # Pass these to the parent class initialization
-        super().__init__(
-            name=name,
-            schemas=schemas,
-            descriptions=descriptions,
-            tools=tools,
-            **kwargs
-        )
+        super().__init__(name=name, **kwargs)
 
