@@ -211,7 +211,7 @@ You can also:
 [![Watch on Bilibili](https://img.shields.io/badge/-Watch%20on%20Bilibili-00A1D6?logo=bilibili&labelColor=white)](https://www.bilibili.com/video/BV1mEJizyE7H/?vd_source=02f8f3a7c8865b3af6378d9680393f5a)
 
 <div align="center">
-  <video src="https://github.com/user-attachments/assets/3d899bad-6edc-498a-8c72-ce2107c13da1.mp4" autoplay loop muted playsinline width="600">
+  <video src="https://github.com/user-attachments/assets/906a6086-e98d-4df3-84b0-808020ddd520.mp4" autoplay loop muted playsinline width="600">
     Your browser does not support the video tag.
   </video>
 </div>
