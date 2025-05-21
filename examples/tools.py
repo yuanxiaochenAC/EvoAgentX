@@ -380,13 +380,13 @@ def main():
     run_mcp_example()
     
     # # Run Python interpreter examples
-    # run_python_interpreter_examples()
+    run_python_interpreter_examples()
     
     # # Run Docker interpreter examples
-    # run_docker_interpreter_examples()
+    run_docker_interpreter_examples()
     
     # # Run search tools examples
-    # run_search_examples()
+    run_search_examples()
     
 
     

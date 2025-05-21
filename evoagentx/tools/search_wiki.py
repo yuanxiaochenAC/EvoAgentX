@@ -1,18 +1,20 @@
 import wikipedia
 from .search_base import SearchBase
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from pydantic import Field
 from evoagentx.core.logging import logger
 
 
 class SearchWiki(SearchBase):
-    max_sentences: int = Field(default=10, description="Maximum number of sentences in the summary. Default 0 means return all available content.")
+
+    max_summary_sentences: Optional[int] = Field(default=None, description="Maximum number of sentences in the summary. Default None means return all available content.")
     
     def __init__(
         self, 
-        name: str = 'Wikipedia Search',
-        num_search_pages: int = 5, 
-        max_sentences: int = 50,
+        name: str = 'SearchWiki',
+        num_search_pages: Optional[int] = 5, 
+        max_content_words: Optional[int] = None,
+        max_summary_sentences: Optional[int] = None,
         **kwargs
     ):
         """
@@ -22,25 +24,19 @@ class SearchWiki(SearchBase):
             name (str): The name of the search tool
             num_search_pages (int): Number of search results to retrieve
             max_content_words (int, optional): Maximum number of words to include in content, None means no limit
-            max_sentences (int): Maximum number of sentences in the summary
+            max_summary_sentences (int, optional): Maximum number of sentences in the summary, None means no limit
             **kwargs: Additional data to pass to the parent class
         """
-        schemas = kwargs.pop('schemas', None) or self.get_tool_schemas()
-        descriptions = kwargs.pop('descriptions', None) or self.get_tool_descriptions()
-        tools = kwargs.pop('tools', None)
-        tools = self.get_tools()
-        # Pass these to the parent class initialization
+
         super().__init__(
             name=name,
-            schemas=schemas,
-            descriptions=descriptions,
-            tools=tools,
             num_search_pages=num_search_pages,
+            max_content_words=max_content_words,
+            max_summary_sentences=max_summary_sentences,
             **kwargs
         )
-        self.max_sentences = max_sentences
 
-    def search(self, query: str, num_search_pages: int = None, max_content_words: int = None, max_sentences: int = None) -> Dict[str, Any]:
+    def search(self, query: str, num_search_pages: int = None, max_content_words: int = None, max_summary_sentences: int = None) -> Dict[str, Any]:
         """
         Searches Wikipedia for the given query and returns the summary and truncated full content.
 
@@ -48,18 +44,17 @@ class SearchWiki(SearchBase):
             query (str): The search query.
             num_search_pages (int): Number of search results to retrieve
             max_content_words (int): Maximum number of words to include in content, None means no limit
-            max_sentences (int): Maximum number of sentences in the summary
+            max_summary_sentences (int): Maximum number of sentences in the summary, None means no limit
 
         Returns:
             dict: A dictionary with the title, summary, truncated content, and Wikipedia page link.
         """
-        if num_search_pages is None:
-            num_search_pages = self.num_search_pages
-        if max_sentences is None:
-            max_sentences = self.max_sentences
+        num_search_pages = num_search_pages or self.num_search_pages
+        max_content_words = max_content_words or self.max_content_words
+        max_summary_sentences = max_summary_sentences or self.max_summary_sentences
             
         try:
-            logger.info(f"Searching wikipedia: {query}, max_sentences={max_sentences}, num_results={num_search_pages}")
+            logger.info(f"Searching wikipedia: {query}, num_results={num_search_pages}, max_content_words={max_content_words}, max_summary_sentences={max_summary_sentences}")
             # Search for top matching titles
             search_results = wikipedia.search(query, results=num_search_pages)
             logger.info(f"Search results: {search_results}")
@@ -72,38 +67,15 @@ class SearchWiki(SearchBase):
                 try:
                     page = wikipedia.page(title, auto_suggest=False)
                     
-                    # Handle the max_sentences parameter
-                    if max_sentences is not None and max_sentences > 0:
-                        summary = wikipedia.summary(title, sentences=max_sentences)
+                    # Handle the max_summary_sentences parameter
+                    if max_summary_sentences is not None and max_summary_sentences > 0:
+                        summary = wikipedia.summary(title, sentences=max_summary_sentences)
                     else:
                         # Get the full summary without limiting sentences
                         summary = wikipedia.summary(title)
 
-                    # Truncate content if needed and add ellipsis only if truncated
-                    if max_content_words is not None and max_content_words > 0:
-                        # This preserves the original spacing while limiting word count
-                        words = page.content.split()
-                        is_truncated = len(words) > max_content_words
-                        word_count = 0
-                        truncated_content = ""
-                        
-                        # Rebuild the content preserving original whitespace
-                        for i, char in enumerate(page.content):
-                            if char.isspace():
-                                if i > 0 and not page.content[i-1].isspace():
-                                    word_count += 1
-                                if word_count >= max_content_words:
-                                    break
-                            truncated_content += char
-                            
-                        # Add ellipsis only if truncated
-                        display_content = truncated_content
-                        if is_truncated:
-                            display_content += " ..."
-                    else:
-                        # Use full content if max_content_words is None or <= 0
-                        display_content = page.content
-                    
+                    # Use the base class's content truncation method
+                    display_content = self._truncate_content(page.content, max_content_words)
                     
                     results.append({
                         "title": page.title,
@@ -118,8 +90,8 @@ class SearchWiki(SearchBase):
                     # Skip non-existing pages and try the next
                     continue
             
-            logger.info(f"get results from wikipedia: {results}")
-            return {"results": results}
+            # logger.info(f"get results from wikipedia: {results}")
+            return {"results": results, "error": None}
         
         except Exception as e:
             logger.error(f"Error searching Wikipedia: {str(e)}")
@@ -153,11 +125,11 @@ class SearchWiki(SearchBase):
                         },
                         "max_content_words": {
                             "type": "integer",
-                            "description": "Maximum number of words to include in content per result. None means no limit. Default: None."
+                            "description": "Maximum number of words to include in content per result. None means no limit. Default: None"
                         },
-                        "max_sentences": {
+                        "max_summary_sentences": {
                             "type": "integer",
-                            "description": "Maximum number of sentences in the summary. Default: 50"
+                            "description": "Maximum number of sentences in the summary. None means no limit. Default: None"
                         }
                     },
                     "required": ["query"]

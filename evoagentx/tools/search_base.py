@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from typing import List, Tuple, Callable, Optional
+from typing import Tuple, Optional
 from .tool import Tool
 from pydantic import Field
 
@@ -10,16 +10,14 @@ class SearchBase(Tool):
     Implements the standard tool interface with get_tool_schemas and execute methods.
     """
     
-    num_search_pages: int = Field(default=5, description="Number of search results to retrieve")
-    max_content_words: int = Field(default=1000, description="Maximum number of words to include in content. Default None means no limit.")
+    num_search_pages: Optional[int] = Field(default=5, description="Number of search results to retrieve")
+    max_content_words: Optional[int] = Field(default=None, description="Maximum number of words to include in content. Default None means no limit.")
     
     def __init__(
         self, 
-        name: str = "Base Search Tool",
-        schemas: Optional[List[dict]] = None,
-        descriptions: Optional[List[str]] = None,
-        tools: Optional[List[Callable]] = None,
-        num_search_pages: int = 5, 
+        name: str = "SearchBase",
+        num_search_pages: Optional[int] = 5, 
+        max_content_words: Optional[int] = None, 
         **kwargs
     ):
         """
@@ -27,31 +25,45 @@ class SearchBase(Tool):
         
         Args:
             name (str): Name of the tool
-            schemas (List[dict], optional): Tool schemas
-            descriptions (List[str], optional): Tool descriptions
-            tools (List[Any], optional): Tool functions
             num_search_pages (int): Number of search results to retrieve
             max_content_words (int): Maximum number of words to include in content, default None means no limit. 
             **kwargs: Additional keyword arguments for parent class initialization
-        """
-        # Set default values if not provided
-        schemas = schemas or self.get_tool_schemas()
-        descriptions = descriptions or self.get_tool_descriptions()
-        tools = tools or self.get_tools()
-            
+        """ 
         # Pass to parent class initialization
-        super().__init__(
-            name=name,
-            schemas=schemas,
-            descriptions=descriptions,
-            tools=tools,
-            **kwargs
-        )
-
-        # Override default values if provided
-        self.num_search_pages = num_search_pages
+        super().__init__(name=name, num_search_pages=num_search_pages, max_content_words=max_content_words, **kwargs)
     
-    def _scrape_page(self, url: str) -> Tuple[str, str]:
+    def _truncate_content(self, content: str, max_words: Optional[int]) -> str:
+        """
+        Truncates content to a maximum number of words while preserving original spacing.
+        
+        Args:
+            content (str): The content to truncate
+            max_words (Optional[int]): Maximum number of words to include. None means no limit.
+            
+        Returns:
+            str: Truncated content with ellipsis if truncated
+        """
+        if max_words is None or max_words <= 0:
+            return content
+            
+        words = content.split()
+        is_truncated = len(words) > max_words
+        word_count = 0
+        truncated_content = ""
+        
+        # Rebuild the content preserving original whitespace
+        for i, char in enumerate(content):
+            if char.isspace():
+                if i > 0 and not content[i-1].isspace():
+                    word_count += 1
+                if word_count >= max_words:
+                    break
+            truncated_content += char
+            
+        # Add ellipsis only if truncated
+        return truncated_content + (" ..." if is_truncated else "")
+    
+    def _scrape_page(self, url: str) -> Tuple[Optional[str], Optional[str]]:
         """
         Fetches the title and main text content from a web page.
 
@@ -59,7 +71,7 @@ class SearchBase(Tool):
             url (str): The URL of the web page.
 
         Returns:
-            tuple: (title, main textual content)
+            tuple: (Optional[title], Optional[main textual content])
         """
         headers = {"User-Agent": "Mozilla/5.0"}
         response = requests.get(url, headers=headers, timeout=5)
