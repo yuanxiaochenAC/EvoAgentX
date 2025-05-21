@@ -1,21 +1,19 @@
-# TextGrad Optimizer Tutorial
+# TextGrad 优化器教程
 
-This tutorial will guide you through the process of setting up and running the TextGrad optimizer in EvoAgentX. We'll use the [MATH](https://www.modelscope.cn/datasets/opencompass/competition_math) dataset as an example to demonstrate how to optimize the prompts
-and system prompts in a workflow.
+本教程将指导您设置和运行 EvoAgentX 中的 TextGrad 优化器的过程。我们将使用 [MATH](https://www.modelscope.cn/datasets/opencompass/competition_math) 数据集作为示例，演示如何优化工作流中的提示词和系统提示词。
 
 ## 1. TextGrad
-TextGrad uses textual feedback from LLM to improve text variables. In EvoAgentX, we use TextGrad to optimize 
-agents' prompts and system prompts. For more information on TextGrad, see their [paper](https://arxiv.org/abs/2406.07496) and [GitHub](https://github.com/zou-group/textgrad).
+TextGrad 使用来自 LLM 的文本反馈来改进文本变量。在 EvoAgentX 中，我们使用 TextGrad 来优化代理的提示词和系统提示词。有关 TextGrad 的更多信息，请参阅他们的[论文](https://arxiv.org/abs/2406.07496)和 [GitHub](https://github.com/zou-group/textgrad)。
 
-## 2. TextGrad Optimizer
-The TextGrad optimizer in EvoAgentX enables you to:
+## 2. TextGrad 优化器
+EvoAgentX 中的 TextGrad 优化器使您能够：
 
-- Automatically optimize multi-agent workflows (prompts and/or system prompts)
-- Evaluate optimization results on datasets
+- 自动优化多代理工作流（提示词和/或系统提示词）
+- 在数据集上评估优化结果
 
-## 3. Setting Up the Environment
+## 3. 设置环境
 
-First, let's import the necessary modules for setting up the TextGrad optimizer:
+首先，让我们导入设置 TextGrad 优化器所需的模块：
 
 ```python
 from evoagentx.benchmark import MATH
@@ -25,10 +23,10 @@ from evoagentx.workflow import SequentialWorkFlowGraph
 from evoagentx.core.callbacks import suppress_logger_info
 ```
 
-### Configure the LLM Model
-You'll need a valid API key to initialize the LLM. See [Quickstart](../quickstart.md) for more details on how to set up your API key.
+### 配置 LLM 模型
+您需要有效的 API 密钥来初始化 LLM。有关如何设置 API 密钥的更多详细信息，请参阅[快速入门](../quickstart.md)。
 
-`TextGradOptimizer` allows the use of different LLMs for workflow execution and optimization. For example, we can use GPT 4o-mini for workflow execution and GPT 4o for optimization.
+`TextGradOptimizer` 允许在工作流执行和优化中使用不同的 LLM。例如，我们可以使用 GPT 4o-mini 进行工作流执行，使用 GPT 4o 进行优化。
 
 ```python
 executor_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key="your_openai_api_key")
@@ -38,11 +36,10 @@ optimizer_config = OpenAILLMConfig(model="gpt-4o", openai_key="your_openai_api_k
 optimizer_llm = OpenAILLM(config=optimizer_config)
 ```
 
-## 3. Setting Up the Components
+## 3. 设置组件
 
-### Step 1: Initialize the Workflow
-Currently, `TextGradOptimizer` only supports `SequentialWorkFlowGraph`. See [Workflow Graph](../modules/workflow_graph.md) for more information on `SequentialWorkFlowGraph`. For this example, let us create the
-simplest workflow with only a single node.
+### 步骤 1：初始化工作流
+目前，`TextGradOptimizer` 仅支持 `SequentialWorkFlowGraph`。有关 `SequentialWorkFlowGraph` 的更多信息，请参阅[工作流图](../modules/workflow_graph.md)。对于此示例，让我们创建只有单个节点的最简单工作流。
 
 ```python
 math_graph_data = {
@@ -66,10 +63,9 @@ math_graph_data = {
 workflow_graph = SequentialWorkFlowGraph.from_dict(math_graph_data)
 ```
 
-### Step 2: Prepare the dataset
+### 步骤 2：准备数据集
 
-For this tutorial, we will use the MATH dataset which consists of challenging competition mathematics problems,
-spanning various difficulty levels and subject areas. The dataset is split into 7.5K training problems and 5K test problems. For demonstration purpose, let's take a smaller subset of the dataset to speed up the validation and evaluation process.
+对于本教程，我们将使用 MATH 数据集，该数据集包含各种难度级别和主题领域的具有挑战性的竞赛数学问题。该数据集分为 7.5K 训练问题和 5K 测试问题。出于演示目的，让我们取数据集的一个较小子集，以加快验证和评估过程。
 
 ```python
 class MathSplits(MATH):
@@ -79,7 +75,7 @@ class MathSplits(MATH):
         np.random.seed(42)
         permutation = np.random.permutation(len(self._test_data))
         full_test_data = self._test_data
-        # randomly select 10 samples for train, 40 for dev and 100 for test
+        # 随机选择10个样本用于训练，40个用于开发，100个用于测试
         self._train_data = [full_test_data[idx] for idx in permutation[:10]]
         self._dev_data = [full_test_data[idx] for idx in permutation[10:50]]
         self._test_data = [full_test_data[idx] for idx in permutation[50:150]]
@@ -87,16 +83,14 @@ class MathSplits(MATH):
 math_splits = MathSplits()
 ```
 
-During optimization, the `TextGradOptimizer` will evaluate the performance on the development set by default. Please make sure the dataset has a development set properly set up (i.e., `benchmark._dev_data` is not None). You can either:
-   - Use a dataset that already provides a development set
-   - Split your dataset to create a development set (like in the example above)
-   - Implement a custom dataset (inherits from `evoagentx.benchmark.Benchmark`) that properly sets up the development set. 
+在优化过程中，`TextGradOptimizer` 默认会在开发集上评估性能。请确保数据集有一个正确设置的开发集（即 `benchmark._dev_data` 不为 None）。您可以：
+   - 使用已经提供开发集的数据集
+   - 拆分您的数据集以创建一个开发集（如上例所示）
+   - 实现一个自定义数据集（继承自 `evoagentx.benchmark.Benchmark`），正确设置开发集
 
+### 步骤 3：设置评估器
 
-### Step 3: Set Up the Evaluator
-
-The evaluator is responsible for assessing the performance of the workflow during optimization. For more detailed information about how to set up and use the evaluator, please refer to the [Benchmark and Evaluation Tutorial](./benchmark_and_evaluation.md).
-
+评估器负责在优化过程中评估工作流的性能。有关如何设置和使用评估器的更详细信息，请参考[基准测试和评估教程](./benchmark_and_evaluation.md)。
 
 ```python
 def collate_func(example: dict) -> dict:
@@ -111,27 +105,26 @@ evaluator = Evaluator(
 )
 ```
 
-## 4. Configuring and Running the TextGrad Optimizer
+## 4. 配置和运行 TextGrad 优化器
 
-The TextGradOptimizer can be configured with various parameters to control the optimization process:
+TextGradOptimizer 可以通过各种参数配置来控制优化过程：
 
-- `graph`: The workflow graph to optimize
-- `optimize_mode`: The mode of optimization:
-    * "all": optimize prompts and system prompts
-    * "prompt": optimize only the prompts
-    * "system_prompt": optimize only the system prompts
-- `executor_llm`: The LLM used to execute the workflow
-- `optimizer_llm`: The LLM used to optimize the workflow
-- `batch_size`: The batch size for optimization
-- `max_steps`: The maximum number of optimization steps
-- `evaluator`: The evaluator to perform evaluation during optimization.
-- `eval_interval`: The number of steps between evaluations
-- `eval_rounds`: The number of evaluation rounds
-- `eval_config`: The evaluation configuration during optimization (passed to `TextGradOptimizer.evaluate()`). For example, if we don't want to evaluate on the entire development set, we can set  `eval_config = {"sample_k": 100}` to only evaluate on 100 random samples from the development set.
-- `save_interval`: The number of steps between saving the workflow graph
-- `save_path`: The path to save the workflow graph
-- `rollback`: Whether to rollback to the best workflow graph during optimization
-
+- `graph`：要优化的工作流图
+- `optimize_mode`：优化模式：
+    * "all"：优化提示词和系统提示词
+    * "prompt"：仅优化提示词
+    * "system_prompt"：仅优化系统提示词
+- `executor_llm`：用于执行工作流的 LLM
+- `optimizer_llm`：用于优化工作流的 LLM
+- `batch_size`：优化的批量大小
+- `max_steps`：最大优化步数
+- `evaluator`：在优化期间执行评估的评估器
+- `eval_interval`：评估之间的步数
+- `eval_rounds`：评估轮数
+- `eval_config`：优化期间的评估配置（传递给 `TextGradOptimizer.evaluate()`）。例如，如果我们不想在整个开发集上进行评估，可以设置 `eval_config = {"sample_k": 100}` 以仅在开发集中的 100 个随机样本上进行评估。
+- `save_interval`：保存工作流图之间的步数
+- `save_path`：保存工作流图的路径
+- `rollback`：是否在优化过程中回滚到最佳工作流图
 
 ```python
 textgrad_optimizer = TextGradOptimizer(
@@ -150,33 +143,30 @@ textgrad_optimizer = TextGradOptimizer(
 )
 ```
 
-### Running the Optimization
+### 运行优化
 
-To start the optimization process:
+要开始优化过程：
 ```python
 textgrad_optimizer.optimize(dataset=math_splits, seed=8)
 ```
-The `seed` is used for shuffling the training data. The training data is automatically re-shuffled every epoch. If `seed` is
-provided, the effective seed for shuffling the training data is `seed + epoch`.
+`seed` 用于随机打乱训练数据。训练数据每个轮次会自动重新打乱。如果提供了 `seed`，则用于打乱训练数据的有效种子为 `seed + epoch`。
 
-The final graph at the end of the optimization is not necessarily the best graph. If you wish to restore the graph that performed best on the development set, simply call
+优化结束时的最终图不一定是最好的图。如果您希望恢复在开发集上表现最好的图，只需调用
 ```python
 textgrad_optimizer.restore_best_graph()
 ```
 
-We can evaluate the workflow again to see the improvement after optimization.
+我们可以再次评估工作流，看看优化后的改进情况。
 ```python
 with suppress_logger_info():
     result = textgrad_optimizer.evaluate(dataset=math_splits, eval_mode="test")
 print(f"Evaluation result (after optimization):\n{result}")
 ```
 
-`TextGradOptimizer` always saves the final workflow graph and the best workflow graph to `save_path`. It also saves graphs during optimization if `save_interval` is not `None`. You can also save the workflow graph manually by calling `textgrad_optimizer.save()`.
+`TextGradOptimizer` 始终将最终工作流图和最佳工作流图保存到 `save_path`。如果 `save_interval` 不为 `None`，它也会在优化过程中保存图。您也可以通过调用 `textgrad_optimizer.save()` 手动保存工作流图。
 
-
-Note that `TextGradOptimizer` does not change the workflow structure but saving the workflow graph also saves the prompts and system prompts which will be different after optimization.
-Below is an example of a saved workflow graph after optimization using `TextGradOptimizer`.
-
+请注意，`TextGradOptimizer` 不会更改工作流结构，但保存工作流图也会保存在优化后会有所不同的提示词和系统提示词。
+以下是使用 `TextGradOptimizer` 优化后保存的工作流图示例。
 
 ```json
 {
@@ -212,4 +202,4 @@ Below is an example of a saved workflow graph after optimization using `TextGrad
 }
 ```
 
-For a complete working example, please refer to [examples/textgrad/math_textgrad.py](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/optimization/textgrad/math_textgrad.py). Additional TextGrad optimization scripts for other datasets (e.g., [`hotpotqa_textgrad.py`](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/optimization/textgrad/hotpotqa_textgrad.py) and [`mbqq_textgrad.py`](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/optimization/textgrad/mbpp_textgrad.py)) are available in the [examples/optimization/textgrad](https://github.com/EvoAgentX/EvoAgentX/tree/main/examples/optimization/textgrad) directory.
+完整的工作示例，请参阅 [examples/textgrad/math_textgrad.py](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/optimization/textgrad/math_textgrad.py)。其他数据集的 TextGrad 优化脚本（例如，[`hotpotqa_textgrad.py`](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/optimization/textgrad/hotpotqa_textgrad.py) 和 [`mbqq_textgrad.py`](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/optimization/textgrad/mbpp_textgrad.py)）可以在 [examples/optimization/textgrad](https://github.com/EvoAgentX/EvoAgentX/tree/main/examples/optimization/textgrad) 目录中找到。

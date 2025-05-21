@@ -57,6 +57,12 @@ class LiteLLMConfig(LLMConfig):
     openai_key: Optional[str] = Field(default=None, description="the API key used to authenticate OpenAI requests")
     anthropic_key: Optional[str] = Field(default=None, description="the API key used to authenticate Anthropic requests")
     deepseek_key: Optional[str] = Field(default=None, description="the API key used to authenticate Deepseek requests")
+    gemini_key: Optional[str] = Field(default=None, description="the API key used to authenticate Gemini requests")
+    meta_llama_key: Optional[str] = Field(default=None, description="the API key used to authenticate Meta Llama requests")
+    openrouter_key: Optional[str] = Field(default=None, description="the API key used to authenticate OpenRouter requests")
+    openrouter_base: Optional[str] = Field(default="https://openrouter.ai/api/v1", description="the base URL used to authenticate OpenRouter requests")
+    perplexity_key: Optional[str] = Field(default=None, description="the API key used to authenticate Perplexity requests")
+    groq_key: Optional[str] = Field(default=None, description="the API key used to authenticate Groq requests")
 
     # generation parameters 
     temperature: Optional[float] = Field(default=None, description="the temperature used to scaling logits")
