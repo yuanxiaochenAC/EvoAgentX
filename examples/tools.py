@@ -377,7 +377,7 @@ def main():
     print("===== INTERPRETER TOOL EXAMPLES =====")
     
     # Run MCP toolkit example
-    # run_mcp_example()
+    run_mcp_example()
     
     # # Run Python interpreter examples
     run_python_interpreter_examples()

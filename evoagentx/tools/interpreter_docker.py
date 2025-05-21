@@ -389,23 +389,3 @@ class DockerInterpreter(BaseInterpreter):
             List[callable]: List of callable methods
         """
         return [self.execute, self.execute_script]
-
-    def cleanup(self):
-        """Explicitly clean up the container and any temporary resources."""
-        try:
-            if hasattr(self, 'container') and self.container is not None:
-                try:
-                    self.container.stop(timeout=1)
-                except Exception:
-                    pass
-                try:
-                    self.container.remove(force=True)
-                except Exception:
-                    pass
-                self.container = None
-        except Exception as e:
-            print(f"Warning: Error during cleanup: {e}")
-
-    def __del__(self):
-        """Destructor to ensure container cleanup."""
-        self.cleanup()
