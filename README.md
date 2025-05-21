@@ -208,9 +208,10 @@ You can also:
 
 
 [![Watch on YouTube](https://img.shields.io/badge/-Watch%20on%20YouTube-red?logo=youtube&labelColor=grey)](https://www.youtube.com/watch?v=Wu0ZydYDqgg)
+[![Watch on Bilibili](https://img.shields.io/badge/-Watch%20on%20Bilibili-00A1D6?logo=bilibili&labelColor=white)](https://www.bilibili.com/video/BV1mEJizyE7H/?vd_source=02f8f3a7c8865b3af6378d9680393f5a)
 
 <div align="center">
-  <video src="https://github.com/user-attachments/assets/8f65d1af-9398-40c3-a625-4f493e13e5a5.mp4" autoplay loop muted playsinline width="600">
+  <video src="https://github.com/user-attachments/assets/3d899bad-6edc-498a-8c72-ce2107c13da1.mp4" autoplay loop muted playsinline width="600">
     Your browser does not support the video tag.
   </video>
 </div>

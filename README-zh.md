@@ -208,9 +208,10 @@ print(output)
 
 
 [![在YouTube上观看](https://img.shields.io/badge/-在YouTube上观看-red?logo=youtube&labelColor=grey)](https://www.youtube.com/watch?v=Wu0ZydYDqgg)
+[![在bilibili上观看](https://img.shields.io/badge/-在bilibili上观看-00A1D6?logo=bilibili&labelColor=white)](https://www.bilibili.com/video/BV1mEJizyE7H/?vd_source=02f8f3a7c8865b3af6378d9680393f5a)
 
 <div align="center">
-  <video src="https://github.com/user-attachments/assets/8f65d1af-9398-40c3-a625-4f493e13e5a5.mp4" autoplay loop muted playsinline width="600">
+  <video src="https://github.com/user-attachments/assets/3d899bad-6edc-498a-8c72-ce2107c13da1.mp4" autoplay loop muted playsinline width="600">
     您的浏览器不支持视频标签。
   </video>
 </div>
