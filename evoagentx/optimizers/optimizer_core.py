@@ -56,53 +56,34 @@ class PromptRegistry:
         return field
 
     def _walk(self, root, path: str, create_missing=False):
-        """
-        Navigates through nested object attributes and indices using a dotted path syntax.
-        
-        This method traverses a nested object structure following a path string like 'a.b.c' 
-        or 'items[0].name' to access deeply nested attributes or indexed elements.
-        
-        Parameters
-        ----------
-        root : Any
-            The root object to start traversal from
-        path : str
-            Dotted path notation for accessing nested attributes. Supports indexing with 
-            square brackets for lists/dicts, e.g. 'users[0].profile.name'
-        create_missing : bool, default=False
-            If True, automatically creates missing intermediate dictionary objects
-            
-        Returns
-        -------
-        tuple
-            A tuple containing (parent_object, leaf_key_or_index) where:
-            - parent_object is the object containing the final attribute
-            - leaf_key_or_index is the key or index for the final attribute
-        
-        Examples
-        --------
-        For obj = {'users': [{'name': 'Alice'}]}:
-        _walk(obj, 'users[0].name') -> (obj['users'][0], 'name')
-        """
-        
         cur = root
         parts = path.split(".")
         for part in parts[:-1]:
             m = _INDEX_RE.match(part)
-            if m:  # list / dict 取下标
+            if m:
                 attr, idx = m.groups()
                 cur = getattr(cur, attr) if attr else cur
-                idx = int(idx) if idx.isdigit() else idx.strip("\"'")
+                idx = idx.strip()
+                if (idx.startswith("'") and idx.endswith("'")) or (idx.startswith('"') and idx.endswith('"')):
+                    idx = idx[1:-1]  # strip quotes if it's a string key
+                elif idx.isdigit():
+                    idx = int(idx)
                 cur = cur[idx]
             else:
                 cur = getattr(cur, part)
+
+        # 最后一个叶子属性
         leaf = parts[-1]
         m = _INDEX_RE.match(leaf)
         if m:
             attr, idx = m.groups()
             parent = getattr(cur, attr) if attr else cur
-            leaf   = int(idx) if idx.isdigit() else idx.strip("\"'")
-            return parent, leaf
+            idx = idx.strip()
+            if (idx.startswith("'") and idx.endswith("'")) or (idx.startswith('"') and idx.endswith('"')):
+                idx = idx[1:-1]
+            elif idx.isdigit():
+                idx = int(idx)
+            return parent, idx
         return cur, leaf
 
 
