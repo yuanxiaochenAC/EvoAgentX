@@ -13,7 +13,7 @@
 
 [![EvoAgentX 主页](https://img.shields.io/badge/EvoAgentX-主页-blue?logo=homebridge)](https://evoagentx.org/)
 [![文档](https://img.shields.io/badge/-文档-0A66C2?logo=readthedocs&logoColor=white&color=7289DA&labelColor=grey)](https://EvoAgentX.github.io/EvoAgentX/)
-[![Discord](https://img.shields.io/badge/Chat-Discord-5865F2?&logo=discord&logoColor=white)](https://discord.gg/SUEkfTYn)
+[![Discord](https://img.shields.io/badge/Chat-Discord-5865F2?&logo=discord&logoColor=white)](https://discord.gg/w3x2YrCa)
 [![Twitter](https://img.shields.io/badge/Follow-@EvoAgentX-e3dee5?&logo=x&logoColor=white)](https://x.com/EvoAgentX)
 [![Wechat](https://img.shields.io/badge/微信-EvoAgentX-brightgreen?logo=wechat&logoColor=white)](./assets/wechat_info.md)
 [![GitHub star chart](https://img.shields.io/github/stars/EvoAgentX/EvoAgentX?style=social)](https://star-history.com/#EvoAgentX/EvoAgentX)
@@ -313,7 +313,7 @@ print(output)
 📢 保持联系，成为**EvoAgentX**旅程的一部分！  
 🚩 加入我们的社区获取最新更新，分享您的想法，并与全球AI爱好者合作。
 
-- [Discord](https://discord.gg/SUEkfTYn) — 实时聊天、讨论和协作。
+- [Discord](https://discord.gg/w3x2YrCa) — 实时聊天、讨论和协作。
 - [X（前Twitter）](https://x.com/EvoAgentX) — 关注我们获取新闻、更新和洞见。
 - [微信](https://github.com/EvoAgentX/EvoAgentX/blob/main/assets/wechat_info.md) — 连接我们的中文社区。
 
