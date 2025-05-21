@@ -234,6 +234,7 @@ def bind_cfg(obj: Any, cfg: Dict[str, Any]) -> None:
 # ───────────────────── ───────────────────── ──────────────────── #
 # ───────────────────── ───────────────────── ──────────────────── #
 # ───────────────────── Demo: 业务对象 & 工作流 ──────────────────── #
+# ─────────────────────── Demo: Workflow & Sampler ─────────────────────── #
 @dataclass
 class Sampler:
     temperature: float = 0.7
@@ -242,37 +243,27 @@ class Sampler:
 class Workflow:
     def __init__(self):
         self.system_prompt = "You are a helpful assistant."
-        self.few_shot      = "Q: 1+1=?\nA: 2"
-        self.sampler       = Sampler()
+        self.few_shot = "Q: 1+1=?\nA: 2"
+        self.sampler = Sampler()
 
-    async def run(self, cfg):
-        # 真实业务里应该是调用 LLM
-        prompt = f"{self.system_prompt}\n{self.few_shot}\nUser: {cfg.get('query','Hi')}"
-        # 对于 demo，返回随机“质量分”
+    def run(self):
+        prompt = f"{self.system_prompt}\n{self.few_shot}\nUser: Hi"
         return {"prompt": prompt, "score": random.uniform(0, 1)}
 
-flow = Workflow()
 
-# ─────────────────────── 注册需要调的字段 ───────────────────────── #
-registry = PromptRegistry()
-registry.register_path(flow, "system_prompt", name="sys_prompt")
-registry.register_path(flow, "sampler.temperature")     # key = sampler_temperature
-registry.register_path(flow, "sampler.top_p")           # key = sampler_top_p
-
-# ─────────────────────── Optimizer 子类 (Random) ────────────────── #
+# ─────────────────────── Optimizer 实现 ─────────────────────── #
 class RandomSearchOptimizer(BaseCodeBlockOptimizer):
     def sample_cfg(self) -> Dict[str, Any]:
         return {
-            # 随机温度 / top_p
             "sampler_temperature": random.uniform(0.3, 1.3),
             "sampler_top_p":       random.uniform(0.5, 1.0),
-            # system_prompt 做两版随机切换
             "sys_prompt": random.choice([
                 "You are a helpful assistant.",
                 "You are a super-concise assistant."
             ]),
         }
-    def update(self, cfg, score):  # 这里我们不用任何复杂算法
+
+    def update(self, cfg, score):
         pass
 
 
@@ -298,15 +289,22 @@ class GreedyLoggerOptimizer(BaseCodeBlockOptimizer):
             self.best_score = score
             print(f"[New Best] score={score:.3f} cfg={cfg}")
 
-# ─────────────────────── CodeBlock & evaluator ──────────────────── #
-code_block = CodeBlock("run_workflow", flow.run)
 
-def evaluator(cfg, result) -> float:
-    # 直接用 flow.run 返回的 score
-    return result["score"]
 
-# ─────────────────────────── 跑起来! ────────────────────────────── #
+# ─────────────────────── 实验入口 ─────────────────────── #
 def main():
+    flow = Workflow()
+
+    registry = PromptRegistry()
+    registry.register_path(flow, "system_prompt", name="sys_prompt")
+    registry.register_path(flow, "sampler.temperature")
+    registry.register_path(flow, "sampler.top_p")
+
+    code_block = CodeBlock("run_workflow", lambda cfg: flow.run())
+
+    def evaluator(cfg, result) -> float:
+        return result["score"]
+
     opt = RandomSearchOptimizer(registry, metric="score", max_trials=10)
     best_cfg, history = opt.run(code_block, evaluator)
 
@@ -316,6 +314,7 @@ def main():
 
     print("\n=== Best ===")
     print(best_cfg)
+
 
 if __name__ == "__main__":
     main()
