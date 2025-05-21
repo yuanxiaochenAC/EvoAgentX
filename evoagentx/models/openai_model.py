@@ -20,7 +20,11 @@ class OpenAILLM(BaseLLM):
     def init_model(self):
         config: OpenAILLMConfig = self.config
         self._client = self._init_client(config) # OpenAI(api_key=config.openai_key)
-        self._default_ignore_fields = ["llm_type", "output_response", "openai_key", "deepseek_key", "anthropic_key"] # parameters in OpenAILLMConfig that are not OpenAI models' input parameters 
+        self._default_ignore_fields = [
+            "llm_type", "output_response", "openai_key", "deepseek_key", "anthropic_key", 
+            "gemini_key", "meta_llama_key", "openrouter_key", "openrouter_base", "perplexity_key", 
+            "groq_key"
+        ] # parameters in OpenAILLMConfig that are not OpenAI models' input parameters 
         if self.config.model not in get_openai_model_cost():
             raise KeyError(f"'{self.config.model}' is not a valid OpenAI model name!")
     
