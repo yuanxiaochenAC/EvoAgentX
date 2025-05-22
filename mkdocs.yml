@@ -184,6 +184,7 @@ plugins:
             - Tutorials:
               - Build Your First Agent: tutorial/first_agent.md
               - Build Your First Workflow: tutorial/first_workflow.md
+              - Tools: tutorial/tools.md
               - Benchmark and Evaluation: tutorial/benchmark_and_evaluation.md
               - AFlow Optimizer: tutorial/aflow_optimizer.md
               - SEW Optimizer: tutorial/sew_optimizer.md
@@ -220,6 +221,7 @@ plugins:
           - 教程:
               - 构建你的第一个 Agent: tutorial/first_agent.md
               - 构建你的第一个工作流: tutorial/first_workflow.md
+              - 使用工具: tutorial/tools.md
               - 基准测试与评估: tutorial/benchmark_and_evaluation.md
               - AFlow 优化器: tutorial/aflow_optimizer.md
               - SEW 优化器: tutorial/sew_optimizer.md

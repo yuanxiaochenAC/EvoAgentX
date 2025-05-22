@@ -288,6 +288,7 @@ print(output)
 |:---|:---|
 | **[构建您的第一个智能体](./docs/zh/tutorial/first_agent.md)** | 快速创建和管理具有多动作能力的智能体。 |
 | **[构建您的第一个工作流](./docs/zh/tutorial/first_workflow.md)** | 学习如何使用多个智能体构建协作工作流。 |
+| **[使用工具](./docs/zh/tutorial/tools.md)** | 掌握 EvoAgentX 强大的工具生态系统，实现智能体交互。 |
 | **[自动工作流生成](./docs/zh/quickstart.md#automatic-workflow-generation-and-execution)** | 从自然语言目标自动生成工作流。 |
 | **[基准测试与评估教程](./docs/zh/tutorial/benchmark_and_evaluation.md)** | 使用基准数据集评估智能体性能。 |
 | **[TextGrad优化器教程](./docs/zh/tutorial/textgrad_optimizer.md)** | 使用TextGrad自动优化多智能体工作流中的提示词。 |
