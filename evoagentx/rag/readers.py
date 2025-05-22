@@ -181,11 +181,3 @@ class LLamaIndexReader:
         except Exception as e:
             self.logger.error(f"Failed to load documents: {str(e)}")
             raise RuntimeError(f"Failed to load documents: {str(e)}")
-
-
-if __name__ == "__main__":
-    import os
-    root = r"/data2/caizijian/shibie/code/EvoAgentX/debug/doc"
-    file_list = [os.path.join(root, path) for path in os.listdir(root)]
-    reader = LLamaIndexReader()
-    doc = reader.load(file_list, merge_by_file=True)
