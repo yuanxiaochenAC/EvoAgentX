@@ -1,4 +1,3 @@
-
 from textgrad.optimizer.optimizer_prompts import GLOSSARY_TEXT
 
 GENERAL_LOSS_PROMPT = (
