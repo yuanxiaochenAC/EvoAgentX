@@ -1,14 +1,10 @@
-import textgrad as tg
-from textgrad import Variable
-from textgrad.loss import TextLoss, MultiFieldEvaluation
-from textgrad.optimizer import TextualGradientDescent
-from textgrad.autograd import StringBasedFunction
 from pydantic import Field, PositiveInt
 import os
 from tqdm import tqdm
 from typing import List, Literal, Optional
 from copy import deepcopy
 import numpy as np
+import shutil
 
 from ..core.logging import logger
 from ..core.module import BaseModule
@@ -18,6 +14,10 @@ from ..benchmark.benchmark import Benchmark, CodingBenchmark
 from ..evaluators import Evaluator
 from ..workflow.workflow_graph import SequentialWorkFlowGraph, WorkFlowNode
 from ..agents import CustomizeAgent
+
+# Check if logs folder exists before importing textgrad
+log_folder_exists = os.path.exists("./logs")
+
 from ..prompts.optimizers.textgrad_optimizer import (
     GENERAL_LOSS_PROMPT, 
     CODE_LOSS_PROMPT, 
@@ -27,6 +27,19 @@ from ..prompts.optimizers.textgrad_optimizer import (
     PERSONAL_FINANCE_ADVISOR_EXAMPLE, 
     FITNESS_COACH_EXAMPLE
 )
+import textgrad as tg
+from textgrad import Variable
+from textgrad.loss import TextLoss, MultiFieldEvaluation
+from textgrad.optimizer import TextualGradientDescent
+from textgrad.autograd import StringBasedFunction
+from textgrad import logger as tg_logger
+from textgrad import sh as tg_file_handler
+
+
+tg_logger.removeHandler(tg_file_handler)
+# remove the logs folder created by textgrad
+if not log_folder_exists and os.path.exists("./logs"):
+    shutil.rmtree("./logs")
 
 
 class CustomAgentCall:
