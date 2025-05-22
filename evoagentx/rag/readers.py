@@ -1,4 +1,5 @@
 import logging
+from uuid import uuid4
 from pathlib import Path
 from typing import Union, List, Tuple, Optional, Callable, Dict
 
@@ -97,6 +98,7 @@ class LLamaIndexReader:
         file_paths: Union[str, List, Tuple],
         exclude_files: Optional[Union[str, List, Tuple]] = None,
         filter_file_by_suffix: Optional[Union[str, List, Tuple]] = None,
+        merge_by_file: bool = False
     ) -> List[Document]:
         """Load documents from files or directories.
 
@@ -152,7 +154,27 @@ class LLamaIndexReader:
             )
 
             llama_docs = reader.load_data(num_workers=self.num_workers)
-            documents = [Document.from_llama_document(doc) for doc in llama_docs]
+            if merge_by_file:
+                file_to_docs = {}
+                for doc in llama_docs:
+                    file_path = doc.metadata.get("file_path", "")
+                    if file_path not in file_to_docs:
+                        file_to_docs[file_path] = []
+                    file_to_docs[file_path].append(doc)
+                
+                documents = []
+                for file_path, docs in file_to_docs.items():
+                    combined_text = "\n".join(doc.text for doc in docs)
+                    combined_metadata = docs[0].metadata.copy()
+                    combined_metadata["page_count"] = len(docs)
+                    documents.append(Document(
+                        text=combined_text,
+                        metadata=combined_metadata,
+                        source=file_path,
+                        doc_id=str(uuid4())
+                    ))
+            else:
+                documents = [Document.from_llama_document(doc) for doc in llama_docs]
             self.logger.info(f"Loaded {len(documents)} documents")
             return documents
 
@@ -163,8 +185,7 @@ class LLamaIndexReader:
 
 if __name__ == "__main__":
     import os
-    root = r"D:\Docker_store\store\MyKits\Project\EvoAgentX\debug\doc"
+    root = r"/data2/caizijian/shibie/code/EvoAgentX/debug/doc"
     file_list = [os.path.join(root, path) for path in os.listdir(root)]
     reader = LLamaIndexReader()
-    doc = reader.load(file_list)
-    import pdb;pdb.set_trace()
+    doc = reader.load(file_list, merge_by_file=True)
