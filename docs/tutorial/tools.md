@@ -52,7 +52,7 @@ from evoagentx.tools.interpreter_python import PythonInterpreter
 
 # Initialize with specific allowed imports and directory access
 interpreter = PythonInterpreter(
-    project_path=os.getcwd(),
+    project_path=".",  # Default is current directory
     directory_names=["examples", "evoagentx"],
     allowed_imports={"os", "sys", "math", "random", "datetime"}
 )
@@ -111,12 +111,12 @@ Script execution completed.
 
 #### 2.1.3 Setup Hints
 
-- **Project Path**: The `project_path` parameter should point to the root directory of your project to ensure proper file access.
+- **Project Path**: The `project_path` parameter should point to the root directory of your project to ensure proper file access. Default is the current directory (".").
 
-- **Directory Names**: The `directory_names` list specifies which directories within your project can be imported from. This is important for security to prevent unauthorized access.
+- **Directory Names**: The `directory_names` list specifies which directories within your project can be imported from. This is important for security to prevent unauthorized access. Default is an empty list `[]`.
 
-- **Allowed Imports**: The `allowed_imports` set restricts which Python modules can be imported in executed code.
-  - **Important**: If `allowed_imports` is set to an empty set `{}`, all import restrictions will be lifted, allowing any module to be imported.
+- **Allowed Imports**: The `allowed_imports` set restricts which Python modules can be imported in executed code. Default is an empty list `[]`.
+  - **Important**: If `allowed_imports` is set to an empty list, no import restrictions are applied.
   - When specified, add only the modules you consider safe:
 
 ```python
@@ -134,7 +134,7 @@ interpreter = PythonInterpreter(
 interpreter = PythonInterpreter(
     project_path=os.getcwd(),
     directory_names=["examples", "evoagentx"],
-    allowed_imports={}  # Allows any module to be imported
+    allowed_imports=[]  # Allows any module to be imported
 )
 ```
 
@@ -142,7 +142,7 @@ interpreter = PythonInterpreter(
 
 ### 2.2 DockerInterpreter
 
-**The DockerInterpreter executes code in isolated Docker containers, providing maximum security and environment isolation. It allows safe execution of potentially risky code with custom environments, dependencies, and complete resource isolation.**
+**The DockerInterpreter executes code in isolated Docker containers, providing maximum security and environment isolation. It allows safe execution of potentially risky code with custom environments, dependencies, and complete resource isolation. Docker must be installed and running on your machine to use this tool.**
 
 #### 2.2.1 Setup
 
@@ -277,7 +277,7 @@ wiki_search = SearchWiki(max_sentences=3)
 
 The `SearchWiki` provides the following callable method:
 
-##### Method: search(query, num_search_pages)
+##### Method: search(query)
 
 **Description**: Searches Wikipedia for articles matching the query.
 
@@ -285,8 +285,7 @@ The `SearchWiki` provides the following callable method:
 ```python
 # Search Wikipedia for information
 results = wiki_search.search(
-    query="artificial intelligence agent architecture",
-    num_search_pages=2
+    query="artificial intelligence agent architecture"
 )
 
 # Process the results
@@ -403,14 +402,17 @@ for i, result in enumerate(results.get("results", [])):
 from evoagentx.tools.search_google_f import SearchGoogleFree
 
 # Initialize the free Google search
-google_free = SearchGoogleFree()
+google_free = SearchGoogleFree(
+    num_search_pages=3,
+    max_content_words=500
+)
 ```
 
 #### 3.3.2 Available Methods
 
 The `SearchGoogleFree` provides the following callable method:
 
-##### Method: search(query, num_search_pages)
+##### Method: search(query)
 
 **Description**: Searches Google for content matching the query without requiring an API key.
 
@@ -418,8 +420,7 @@ The `SearchGoogleFree` provides the following callable method:
 ```python
 # Search Google without an API key
 results = google_free.search(
-    query="reinforcement learning algorithms",
-    num_search_pages=2
+    query="reinforcement learning algorithms"
 )
 
 # Process the results
