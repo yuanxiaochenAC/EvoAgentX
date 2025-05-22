@@ -27,72 +27,118 @@ class DockerInterpreter(BaseInterpreter):
     require_confirm:bool = Field(default=False, description="Whether to require confirmation before executing code")
     print_stdout:bool = Field(default=True, description="Whether to print stdout")
     print_stderr:bool = Field(default=True, description="Whether to print stderr")
-    container:docker.models.containers.Container = Field(default=None, description="The container to use for the interpreter")
-    client:docker.client.DockerClient = Field(default=None, description="Docker client used for container operations")
-    image_tag:str = Field(default=None, description="The image tag to use for the container")
-    dockerfile_path:str = Field(default="", description="The path to the dockerfile to use for the container")
     host_directory:str = Field(default="", description="The path to the host directory to use for the container")
     container_directory:str = Field(default="/home/app/", description="The directory to use for the container")
     container_command:str = Field(default="tail -f /dev/null", description="The command to use for the container")
     tmp_directory:str = Field(default="/tmp", description="The directory to use for the container")
+    image_tag:str = Field(default=None, description="The Docker image tag to use")
+    dockerfile_path:str = Field(default=None, description="Path to the Dockerfile to build")
     
     class Config:
         arbitrary_types_allowed = True  # Allow non-pydantic types like sets
 
-    def __init__(self, **data):
-        # Initialize with default name and tool info
-        name = data.get('name', 'DockerInterpreter')
-        schemas = self.get_tool_schemas()
-        descriptions = self.get_tool_descriptions()
+    def __init__(
+        self, 
+        name:str = "DockerInterpreter",
+        image_tag:str = None,
+        dockerfile_path:str = None,
+        require_confirm:bool = False,
+        print_stdout:bool = True,
+        print_stderr:bool = True,
+        host_directory:str = "",
+        container_directory:str = "/home/app/",
+        container_command:str = "tail -f /dev/null",
+        tmp_directory:str = "/tmp",
+        **data
+    ):
+        """
+        Initialize a Docker-based interpreter for executing code in an isolated environment.
+        
+        Args:
+            name (str): The name of the interpreter
+            image_tag (str, optional): The Docker image tag to use. Must be provided if dockerfile_path is not.
+            dockerfile_path (str, optional): Path to the Dockerfile to build. Must be provided if image_tag is not.
+            require_confirm (bool): Whether to require confirmation before executing code
+            print_stdout (bool): Whether to print stdout from code execution
+            print_stderr (bool): Whether to print stderr from code execution
+            host_directory (str): The path to the host directory to mount in the container
+            container_directory (str): The target directory inside the container
+            container_command (str): The command to run in the container
+            tmp_directory (str): The temporary directory to use for file creation in the container
+            **data: Additional data to pass to the parent class
+        """
+        # Extract or generate schemas, descriptions, tools
+        schemas = data.pop('schemas', None) or self.get_tool_schemas()
+        descriptions = data.pop('descriptions', None) or self.get_tool_descriptions()
+        tools = data.pop('tools', None)
         tools = self.get_tools()
         
         # Pass these to the parent class initialization
         super().__init__(
             name=name,
-            schemas=schemas, 
+            schemas=schemas,
             descriptions=descriptions,
             tools=tools,
             **data
         )
-        self.dockerfile_path = data.get('dockerfile_path', "")
+        self.require_confirm = require_confirm
+        self.print_stdout = print_stdout
+        self.print_stderr = print_stderr
+        self.host_directory = host_directory
+        self.container_directory = container_directory
+        self.container_command = container_command
+        self.tmp_directory = tmp_directory
         
         # Initialize Docker client and container
         self.client = docker.from_env()
+        self.container = None
+        self.image_tag = image_tag
+        self.dockerfile_path = dockerfile_path
         self._initialize_if_needed()
-        self.image_tag = data.get('image_tag', None)
         
         # Upload directory if specified
         if self.host_directory:
             self._upload_directory_to_container(self.host_directory)
 
     def __del__(self):
-        if self.container is not None:
-            self.container.remove(force=True)
+        try:
+            if hasattr(self, 'container') and self.container is not None:
+                import sys
+                if sys.meta_path is not None:  # Check if Python is shutting down
+                    self.container.remove(force=True)
+        except Exception:
+            pass  # Silently ignore errors during shutdown
 
     def _initialize_if_needed(self):
-        if self.container is not None:
-            return
-        if self.image_tag:
+        image_tag = self.image_tag
+        dockerfile_path = self.dockerfile_path
+        if image_tag:
             try:
                 # Try to get the existing image first
-                self.client.images.get(self.image_tag)
+                self.client.images.get(image_tag)
             except Exception as e:
                 raise ValueError(f"Image provided in image_tag but not found: {e}")
         else:
             # Image not found, need to build it - now we check for dockerfile_path
-            if not self.dockerfile_path:
+            if not dockerfile_path:
                 raise ValueError("dockerfile_path or image_tag must be provided to build the image")
                 
-            dockerfile_path = Path(self.dockerfile_path)
+            dockerfile_path = Path(dockerfile_path)
             if not dockerfile_path.exists():
                 raise FileNotFoundError(f"Dockerfile not found at provided path: {dockerfile_path}")
             
             dockerfile_dir = dockerfile_path.parent
-            self.client.images.build(path=str(dockerfile_dir), tag=self.image_tag, rm=True, buildargs={})
+            self.client.images.build(path=str(dockerfile_dir), tag=image_tag, rm=True, buildargs={})
 
-        # Run the container using the image (whether pre-existing or newly built)
+        # Check if Docker daemon is running
+        try:
+            self.client.ping()
+        except Exception as e:
+            raise RuntimeError(f"Docker daemon is not running: {e}")
+
+        # Run the container using the image with resource limits
         self.container = self.client.containers.run(
-            self.image_tag, 
+            image_tag, 
             detach=True, 
             command=self.container_command,
             working_dir=self.container_directory
@@ -138,16 +184,30 @@ class DockerInterpreter(BaseInterpreter):
         tar_stream = io.BytesIO()
         with tarfile.open(fileobj=tar_stream, mode='w') as tar:
             tarinfo = tarfile.TarInfo(name=filename)
-            tarinfo.size = len(content)
+            tarinfo.size = len(content.encode('utf-8'))
             tar.addfile(tarinfo, io.BytesIO(content.encode('utf-8')))
         tar_stream.seek(0)
 
         if self.container is None:
             raise RuntimeError("Container is not initialized.")
-        self.container.put_archive(self.tmp_directory, tar_stream)
+            
+        try:
+            self.container.put_archive(self.tmp_directory, tar_stream)
+        except Exception as e:
+            raise RuntimeError(f"Failed to create file in container: {e}")
+            
         return Path(f"{self.tmp_directory}/{filename}")
 
     def _run_file_in_container(self, file: Path, language: str) -> str:
+        """Execute a file in the container with timeout and security checks."""
+        if not self.container:
+            raise RuntimeError("Container is not initialized")
+            
+        # Check container status
+        container_info = self.client.api.inspect_container(self.container.id)
+        if not container_info['State']['Running']:
+            raise RuntimeError("Container is not running")
+            
         language = self._check_language(language)
         command = shlex.split(self.CODE_EXECUTE_CMD_MAPPING[language].format(file_name=file.as_posix()))
         if self.container is None:
@@ -174,40 +234,77 @@ class DockerInterpreter(BaseInterpreter):
             
         Returns:
             str: The execution output
+            
+        Raises:
+            RuntimeError: If container is not properly initialized or execution fails
+            ValueError: If code content is invalid or exceeds limits
         """
+        if not code or not code.strip():
+            raise ValueError("Code content cannot be empty")
+            
+        if not self.container:
+            raise RuntimeError("Container is not initialized")
+            
+        # Check container status
+        try:
+            container_info = self.client.api.inspect_container(self.container.id)
+            if not container_info['State']['Running']:
+                raise RuntimeError("Container is not running")
+        except Exception as e:
+            raise RuntimeError(f"Failed to check container status: {e}")
+
         if self.host_directory:
             code = f"import sys; sys.path.insert(0, '{self.container_directory}');" + code
+            
         language = self._check_language(language)
+        
         if self.require_confirm:
             confirmation = input(f"Confirm execution of {language} code? [Y/n]: ")
             if confirmation.lower() not in ["y", "yes", ""]:
                 raise RuntimeError("Execution aborted by user.")
         
-        
-        file_path = self._create_file_in_container(code)
-        return self._run_file_in_container(file_path, language)
-        
+        try:
+            file_path = self._create_file_in_container(code)
+            return self._run_file_in_container(file_path, language)
+        except Exception as e:
+            raise RuntimeError(f"Code execution failed: {e}")
+        finally:
+            # Clean up temporary files
+            try:
+                if hasattr(self, 'container') and self.container:
+                    self.container.exec_run(f"rm -f {file_path}")
+            except Exception:
+                pass  # Ignore cleanup errors
+
     def execute_script(self, file_path: str, language: str = None) -> str:
         """
         Reads code from a file and executes it in a Docker container.
         
         Args:
             file_path (str): The path to the script file to execute
-            language (str, optional): The programming language of the code. If None, 
-                                      will be determined from the file extension.
-                                      
+            language (str, optional): The programming language of the code. If None, will be determined from the file extension.
+                                    
         Returns:
             str: The execution output
+            
+        Raises:
+            FileNotFoundError: If the script file does not exist
+            RuntimeError: If container is not properly initialized or execution fails
+            ValueError: If file content is invalid or exceeds limits
         """
-        # Check if file exists
+        # Check if file exists and is readable
         if not os.path.isfile(file_path):
-            return f"Error: File '{file_path}' does not exist."
+            raise FileNotFoundError(f"Script file not found: {file_path}")
+            
+        if not os.access(file_path, os.R_OK):
+            raise PermissionError(f"Cannot read script file: {file_path}")
+        
         # Read the file content
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 code = f.read()
         except Exception as e:
-            return f"Error reading file: {e}"
+            raise RuntimeError(f"Failed to read script file: {e}")
             
         # Execute the code
         return self.execute(code, language)
@@ -229,19 +326,20 @@ class DockerInterpreter(BaseInterpreter):
                 "type": "function",
                 "function": {
                     "name": "execute",
-                    "description": "The Docker Interpreter Tool provides a secure and isolated environment for executing code inside a Docker container.",
+                    "description": "Execute code in a secure Docker container environment.",
                     "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "code": {
-                            "type": "string",
-                            "description": "The code to execute"
+                        "type": "object",
+                        "properties": {
+                            "code": {
+                                "type": "string",
+                                "description": "The code to execute"
+                            },
+                            "language": {
+                                "type": "string",
+                                "description": "The programming language of the code (e.g., python, py, python3)",
+                                "enum": list(self.CODE_TYPE_MAPPING.keys())
+                            }
                         },
-                        "language": {
-                            "type": "string",
-                            "description": "The programming language of the code (e.g., python, py, python3)"
-                        }
-                    },
                         "required": ["code", "language"]
                     }
                 }
@@ -252,17 +350,18 @@ class DockerInterpreter(BaseInterpreter):
                     "name": "execute_script",
                     "description": "Execute code from a script file in a secure Docker container environment.",
                     "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "file_path": {
-                            "type": "string",
-                            "description": "The path to the script file to execute"
+                        "type": "object",
+                        "properties": {
+                            "file_path": {
+                                "type": "string",
+                                "description": "The path to the script file to execute"
+                            },
+                            "language": {
+                                "type": "string",
+                                "description": "The programming language of the code. If not provided, will be determined from file extension.",
+                                "enum": list(self.CODE_TYPE_MAPPING.keys())
+                            }
                         },
-                        "language": {
-                            "type": "string",
-                            "description": "The programming language of the code. If not provided, will be determined from file extension."
-                        }
-                    },
                         "required": ["file_path"]
                     }
                 }
@@ -278,8 +377,8 @@ class DockerInterpreter(BaseInterpreter):
             List[str]: Tool description
         """
         return [
-            "Docker Interpreter Tool that provides a secure and isolated environment for executing code inside Docker containers.",
-            "Docker Script Execution Tool that allows running code from script files in a containerized environment."
+            "Execute code in a secure Docker container environment.",
+            "Execute code from script files in a secure Docker container environment."
         ]
         
     def get_tools(self) -> List[callable]:

@@ -6,8 +6,9 @@ This tool is inspired / modified from MCP Python SDK and mcpadapt projects. You 
 """
 import threading
 import asyncio
+from pydantic import Field
 from functools import partial
-from typing import Optional, Any, List, Callable
+from typing import Optional, Any, List, Dict, Callable
 from evoagentx.tools.tool import Tool
 from evoagentx.core.logging import logger
 from contextlib import AsyncExitStack, asynccontextmanager
@@ -20,12 +21,15 @@ from mcp.client.stdio import stdio_client
 from mcp.client.sse import sse_client
 
 
-
-
 class MCPTool(Tool):
+
+    descriptions: List[str] = Field(default_factory=list, description="A list of descriptions for the tool")
+    schemas: List[dict[str, Any]] = Field(default_factory=list, description="A list of schemas for the tool")
+    tools: List[Callable] = Field(default_factory=list, description="A list of tools for the tool")
+
     def __init__(
         self,
-        name: str = "MCP Tool",
+        name: str = "MCPTool",
         descriptions: List[str] = ["Default MCP Tool description"],
         schemas: List[dict[str, Any]] = [],
         tools: List[Callable] = [],
@@ -36,15 +40,24 @@ class MCPTool(Tool):
             schemas=schemas,
             tools=tools
         )
+
+    def get_tool_schemas(self) -> List[Dict[str, Any]]:
+        return self.schemas
     
+    def get_tool_descriptions(self) -> List[str]:
+        return self.descriptions
+    
+    def get_tools(self) -> List[Callable]:
+        return self.tools
 
 
 class MCPClient:
     
-    def __init__(self, 
-                 server_configs: StdioServerParameters | dict[str, Any] | list[StdioServerParameters | dict[str, Any]],
-                 connect_timeout: float = 120.0,
-                 ):
+    def __init__(
+        self, 
+        server_configs: StdioServerParameters | dict[str, Any] | list[StdioServerParameters | dict[str, Any]],
+        connect_timeout: float = 120.0,
+    ):
         
         if isinstance(server_configs, list):
             self.server_configs = server_configs
@@ -171,10 +184,10 @@ class MCPClient:
         }
         
         tool = MCPTool(
-            mcp_tool.name,
-            [mcp_tool.description or ""],
-            [schema],
-            [function],
+            name=mcp_tool.name,
+            descriptions=[mcp_tool.description or ""],
+            schemas=[schema],
+            tools=[function],
         )
 
         return tool
