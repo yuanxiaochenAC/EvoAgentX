@@ -1,5 +1,7 @@
+import asyncio
 import logging
 from typing import List, Optional, Dict
+from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
 from llama_index.core.node_parser import HierarchicalNodeParser, SentenceSplitter
@@ -11,22 +13,25 @@ from evoagentx.rag.schema import Document, Corpus, Chunk, ChunkMetadata
 
 
 class HierarchicalChunker(BaseChunker):
-    """Enhanced hierarchical chunker with multiple strategies and dynamic chunk size adjustment.
+    """Enhanced hierarchical chunker with dynamic hierarchy level assignment.
 
-    Creates a multi-level hierarchy of chunks:
-    1. Parent nodes: Larger semantic units (e.g., sections, topics).
-    2. Child nodes: Smaller chunks for detailed retrieval.
+    Creates a multi-level hierarchy of chunks with full node relationships:
+    - SOURCE: The source document.
+    - PREVIOUS/NEXT: Sequential nodes in the document.
+    - PARENT/CHILD: Hierarchical relationships.
 
-    Dynamically adjusts chunk sizes to accommodate metadata length, ensuring compatibility
-    with LlamaIndex's HierarchicalNodeParser.
+    Supports custom level parsers or default chunk sizes, with dynamic hierarchy level
+    assignment based on node parser IDs. Uses multi-threading and async parsing.
 
     Attributes:
         level_parsers (Dict[str, BaseChunker]): Custom parsers for each hierarchy level.
-        chunk_sizes (List[int]): Chunk sizes for hierarchical levels (e.g., [2048, 512, 128]).
+        chunk_sizes (List[int]): Chunk sizes for default parsers (e.g., [2048, 512, 128]).
         chunk_overlap (int): Overlap between adjacent chunks.
         parser (HierarchicalNodeParser): LlamaIndex parser for hierarchical chunking.
         include_metadata (bool): Whether to include metadata in nodes.
         include_prev_next_rel (bool): Whether to include previous/next node relationships.
+        max_workers (int): Maximum number of threads for parallel processing.
+        parser_to_level (Dict[str, int]): Mapping of node_parser_id to hierarchy level.
     """
 
     def __init__(
@@ -36,21 +41,24 @@ class HierarchicalChunker(BaseChunker):
         chunk_overlap: int = 20,
         include_metadata: bool = True,
         include_prev_next_rel: bool = True,
+        max_workers: int = 4,
     ):
         """Initialize the HierarchicalChunker.
 
         Args:
             level_parsers (Dict[str, BaseChunker], optional): Custom parsers for hierarchy levels.
-            chunk_sizes (List[int], optional): Chunk sizes for levels (default: [2048, 512, 128]).
+            chunk_sizes (List[int], optional): Chunk sizes for default parsers (default: [2048, 512, 128]).
             chunk_overlap (int): Overlap between adjacent chunks (default: 20).
             include_metadata (bool): Include metadata in nodes (default: True).
             include_prev_next_rel (bool): Include prev/next relationships (default: True).
+            max_workers (int): Maximum number of threads for parallel processing (default: 4).
         """
         self.level_parsers = level_parsers or {}
         self.chunk_sizes = chunk_sizes or [2048, 512, 128]
         self.chunk_overlap = chunk_overlap
         self.include_metadata = include_metadata
         self.include_prev_next_rel = include_prev_next_rel
+        self.max_workers = max_workers
         self.logger = logging.getLogger(__name__)
 
         node_parser_ids = None
@@ -64,7 +72,7 @@ class HierarchicalChunker(BaseChunker):
                     chunk_size=size,
                     chunk_overlap=chunk_overlap,
                     include_metadata=include_metadata,
-                    include_prev_next_rel=include_prev_next_rel
+                    include_prev_next_rel=include_prev_next_rel,
                 ).parser
                 for size, node_id in zip(self.chunk_sizes, node_parser_ids)
             }
@@ -74,32 +82,29 @@ class HierarchicalChunker(BaseChunker):
             node_parser_ids = list(self.level_parsers.keys())
             node_parser_map = {k: v.parser for k, v in self.level_parsers.items()}
 
+        # Map node_parser_id to hierarchy level (1-based)
+        self.parser_to_level = {pid: idx + 1 for idx, pid in enumerate(node_parser_ids)}
+
         self.parser = HierarchicalNodeParser.from_defaults(
             chunk_sizes=None,
             chunk_overlap=self.chunk_overlap,
             node_parser_ids=node_parser_ids,
             node_parser_map=node_parser_map,
             include_metadata=include_metadata,
-            include_prev_next_rel=include_prev_next_rel
+            include_prev_next_rel=include_prev_next_rel,
         )
 
     def _calculate_metadata_length(self, doc: Document) -> int:
         """Calculate the length of serialized metadata for a document.
 
         Args:
-            doc (Document): The Document object to analyze.
+            doc (Document): The document to analyze.
 
         Returns:
             int: Length of the serialized metadata string.
         """
         try:
             serialized = doc.metadata.model_dump(exclude_unset=True, mode="json")
-            # # Include additional LlamaIndex metadata (e.g., start_char_idx)
-            # metadata_dict.update({
-            #     "start_char_idx": 0,
-            #     "end_char_idx": len(doc.text),
-            #     "doc_id": doc.doc_id
-            # })
             return len(serialized)
         except Exception as e:
             self.logger.warning(f"Failed to calculate metadata length for doc {doc.doc_id}: {e}")
@@ -115,19 +120,19 @@ class HierarchicalChunker(BaseChunker):
             List[int]: Adjusted chunk sizes ensuring smallest size accommodates metadata.
         """
         max_metadata_length = max(self._calculate_metadata_length(doc) for doc in documents)
-        buffer = 50  # Extra buffer to avoid edge cases
+        buffer = 50
         min_chunk_size = max_metadata_length + buffer
 
         adjusted_sizes = sorted(
             [size for size in self.chunk_sizes if size >= min_chunk_size] +
-            [min_chunk_size] if min_chunk_size > min(self.chunk_sizes) else [],
-            reverse=True
+            ([min_chunk_size] if min_chunk_size > min(self.chunk_sizes) else []),
+            reverse=True,
         )
 
         if not adjusted_sizes:
-            adjusted_sizes = [max(min_chunk_size, 512)]  # Ensure at least one size
+            adjusted_sizes = [max(min_chunk_size, 512)]
         if len(adjusted_sizes) < 2:
-            adjusted_sizes.insert(0, adjusted_sizes[0] * 2)  # Ensure at least two levels
+            adjusted_sizes.insert(0, adjusted_sizes[0] * 2)
 
         if adjusted_sizes != self.chunk_sizes:
             self.logger.info(
@@ -135,6 +140,101 @@ class HierarchicalChunker(BaseChunker):
                 f"due to metadata length {max_metadata_length}"
             )
         return adjusted_sizes
+
+    async def _process_document_async(self, doc: Document, custom_metadata: Dict = None) -> List[Chunk]:
+        """Asynchronously process a single document into hierarchical chunks.
+
+        Args:
+            doc (Document): The document to chunk.
+            custom_metadata (Dict, optional): User-defined metadata for sections.
+
+        Returns:
+            List[Chunk]: List of Chunk objects with hierarchical metadata.
+        """
+        try:
+            llama_doc = doc.to_llama_document()
+            llama_doc.metadata["doc_id"] = doc.doc_id
+
+            nodes = await self.parser.aget_nodes_from_documents([llama_doc])
+
+            chunks = []
+            custom_metadata = custom_metadata or {}
+
+            for i, node in enumerate(nodes):
+                doc_id = doc.doc_id
+                node_parser_id = node.metadata.get("node_parser_id", None)
+                hierarchy_level = (
+                    self.parser_to_level.get(node_parser_id, len(self.parser_to_level))
+                    if node_parser_id
+                    else len(self.parser_to_level)
+                )
+                if not node_parser_id:
+                    self.logger.warning(f"Node {node.id_} missing node_parser_id, defaulting to level {hierarchy_level}")
+
+                # Extract relationships
+                relationships = node.relationships or {}
+                source_id = relationships.get(NodeRelationship.SOURCE, None)
+                previous_id = relationships.get(NodeRelationship.PREVIOUS, None)
+                next_id = relationships.get(NodeRelationship.NEXT, None)
+                parent_id = relationships.get(NodeRelationship.PARENT, None)
+                child_ids = relationships.get(NodeRelationship.CHILD, None)
+
+                node_chunk_size = node.metadata.get("chunk_size", self.chunk_sizes[-1] if self.chunk_sizes else 512)
+
+                metadata_fields = {
+                    "section_title": custom_metadata.get(doc_id, {}).get("section_title", ""),
+                    "hierarchy_level": hierarchy_level,
+                    "node_chunk_size": node_chunk_size,
+                    "node_parser_id": node_parser_id,  # Store for debugging
+                }
+
+                try:
+                    chunks.append(
+                        Chunk(
+                            text=node.text,
+                            doc_id=doc_id,
+                            metadata=ChunkMetadata(
+                                doc_id=doc_id,
+                                chunk_size=len(node.text),
+                                chunk_overlap=self.chunk_overlap,
+                                chunk_index=i,
+                                chunking_strategy="hierarchical",
+                                custom_fields=metadata_fields,
+                                source_id=source_id.node_id if source_id else None,
+                                previous_id=previous_id.node_id if previous_id else None,
+                                next_id=next_id.node_id if next_id else None,
+                                parent_id=parent_id.node_id if parent_id else None,
+                                child_ids=[child.node_id for child in child_ids] if child_ids else None,
+                            ),
+                            chunk_id=node.id_,
+                        )
+                    )
+                except Exception as e:
+                    self.logger.warning(f"Failed to create chunk for node {node.id_}: {e}")
+                    continue
+
+            self.logger.debug(f"Processed document {doc.doc_id} into {len(chunks)} chunks")
+            return chunks
+        except Exception as e:
+            self.logger.error(f"Failed to process document {doc.doc_id}: {str(e)}")
+            return []
+
+    def _process_document(self, doc: Document, custom_metadata: Dict = None) -> List[Chunk]:
+        """Process a single document into chunks in a thread.
+
+        Args:
+            doc (Document): The document to chunk.
+            custom_metadata (Dict, optional): User-defined metadata for sections.
+
+        Returns:
+            List[Chunk]: List of Chunk objects with metadata.
+        """
+        llama_doc = doc.to_llama_document()
+        llama_doc.metadata["doc_id"] = doc.doc_id
+
+        nodes = self.parser.get_nodes_from_documents([llama_doc])
+        import pdb;pdb.set_trace()
+        # return asyncio.run(self._process_document_async(doc, custom_metadata))
 
     def chunk(self, documents: List[Document], **kwargs) -> Corpus:
         """Chunk documents using hierarchical strategy with dynamic chunk size adjustment.
@@ -147,18 +247,17 @@ class HierarchicalChunker(BaseChunker):
             Corpus: A collection of hierarchically organized chunks.
         """
         if not documents:
+            self.logger.info("No documents provided, returning empty Corpus")
             return Corpus(chunks=[])
 
-        # Dynamically adjust chunk sizes based on metadata length
+        # Dynamically adjust chunk sizes (if using default parsers)
         adjusted_chunk_sizes = self._adjust_chunk_sizes(documents)
-
-        # Reinitialize parser with adjusted chunk sizes if necessary
         if adjusted_chunk_sizes != self.chunk_sizes:
             node_parser_ids = [f"chunk_size_{size}" for size in adjusted_chunk_sizes]
             node_parser_map = {
                 node_id: SentenceSplitter(
                     chunk_size=size,
-                    chunk_overlap=self.chunk_overlap
+                    chunk_overlap=self.chunk_overlap,
                 )
                 for size, node_id in zip(adjusted_chunk_sizes, node_parser_ids)
             }
@@ -168,62 +267,26 @@ class HierarchicalChunker(BaseChunker):
                 node_parser_ids=node_parser_ids,
                 node_parser_map=node_parser_map,
                 include_metadata=self.include_metadata,
-                include_prev_next_rel=self.include_prev_next_rel
+                include_prev_next_rel=self.include_prev_next_rel,
             )
             self.chunk_sizes = adjusted_chunk_sizes
+            self.parser_to_level = {pid: idx + 1 for idx, pid in enumerate(node_parser_ids)}
 
-        # Convert to LlamaIndex documents and parse
-        llama_docs = [d.to_llama_document() for d in documents]
-        nodes = self.parser.get_nodes_from_documents(llama_docs)
+        import pdb;pdb.set_trace()
+        self._process_document(documents[0])
+        # chunks = []
+        # custom_metadata = kwargs.get("custom_metadata", {})
+        # with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+        #     future_to_doc = {
+        #         executor.submit(self._process_document, doc, custom_metadata): doc
+        #         for doc in documents
+        #     }
+        #     for future in future_to_doc:
+        #         doc = future_to_doc[future]
+        #         try:
+        #             chunks.extend(future.result())
+        #         except Exception as e:
+        #             self.logger.error(f"Error processing document {doc.doc_id}: {str(e)}")
 
-        chunks = []
-        custom_metadata = kwargs.get("custom_metadata", {})  # User-defined metadata
-
-        for i, node in enumerate(nodes):
-            doc_id = node.metadata.get("doc_id", "")
-            if not doc_id:
-                self.logger.warning(f"Node {node.id_} missing doc_id, skipping")
-                continue
-
-            # Determine hierarchy level based on chunk size
-            node_chunk_size = node.metadata.get("chunk_size", self.chunk_sizes[-1])
-            hierarchy_level = (
-                self.chunk_sizes.index(node_chunk_size) + 1
-                if node_chunk_size in self.chunk_sizes
-                else len(self.chunk_sizes)
-            )
-
-            # Extract parent node ID for hierarchical relationships
-            parent_id = ""
-            if node.relationships.get(NodeRelationship.PARENT):
-                parent_node = node.relationships[NodeRelationship.PARENT]
-                parent_id = parent_node.node_id if parent_node else ""
-
-            # Merge custom metadata
-            metadata_fields = {
-                "section_title": custom_metadata.get(doc_id, {}).get("section_title", ""),
-                "hierarchy_level": hierarchy_level,
-                "section_id": str(uuid4()),
-                "parent_section_id": parent_id,
-                "node_chunk_size": node_chunk_size
-            }
-
-            try:
-                chunks.append(Chunk(
-                    text=node.text,
-                    doc_id=doc_id,
-                    metadata=ChunkMetadata(
-                        doc_id=doc_id,
-                        chunk_size=len(node.text),
-                        chunk_overlap=self.chunk_overlap,
-                        chunk_index=i,
-                        chunking_strategy="hierarchical",
-                        custom_fields=metadata_fields
-                    ),
-                    chunk_id=node.id_
-                ))
-            except Exception as e:
-                self.logger.warning(f"Failed to create chunk for node {node.id_}: {e}")
-                continue
-
-        return Corpus(chunks=chunks)
+        # self.logger.info(f"Chunked {len(documents)} documents into {len(chunks)} chunks")
+        # return Corpus(chunks=chunks)

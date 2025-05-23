@@ -99,14 +99,11 @@ class ChunkMetadata(BaseModel):
         default_factory=dict,
         description="A dictionary for storing additional user-defined metadata."
     )
-    parent_id: Optional[str] = Field(
-        default=None, 
-        description=""
-    )
-    section_id: Optional[str] = Field(
-        default=None, 
-        description=""
-    )
+    source_id: Optional[str] = Field(default=None, description="ID of the source document node.")
+    previous_id: Optional[str] = Field(default=None, description="ID of the previous node in the document.")
+    next_id: Optional[str] = Field(default=None, description="ID of the next node in the document.")
+    parent_id: Optional[str] = Field(default=None, description="ID of the parent node in the hierarchy.")
+    child_ids: Optional[List[str]] = Field(default=None, description="List of IDs of child nodes in the hierarchy.")
 
 
 class Document:
@@ -219,16 +216,36 @@ class Chunk:
 
     def to_llama_node(self) -> BaseNode:
         """Convert to LlamaIndex Node."""
+        relationships = {}
+        if self.metadata.source_id:
+            relationships["SOURCE"] = self.metadata.source_id
+        if self.metadata.previous_id:
+            relationships["PREVIOUS"] = self.metadata.previous_id
+        if self.metadata.next_id:
+            relationships["NEXT"] = self.metadata.next_id
+        if self.metadata.parent_id:
+            relationships["PARENT"] = self.metadata.parent_id
+        if self.metadata.child_ids:
+            relationships["CHILD"] = self.metadata.child_ids
+
         return BaseNode(
             text=self.text,
             metadata=self.metadata.model_dump(),
             id_=self.chunk_id,
+            relationships=relationships,
         )
 
     @classmethod
     def from_llama_node(cls, node: BaseNode, doc_id: str) -> "Chunk":
         """Create Chunk from LlamaIndex Node."""
         metadata = {k: v for k, v in node.metadata.items() if k != "doc_id"}
+        metadata.update({
+            "source_id": node.relationships.get("SOURCE", None),
+            "previous_id": node.relationships.get("PREVIOUS", None),
+            "next_id": node.relationships.get("NEXT", None),
+            "parent_id": node.relationships.get("PARENT", None),
+            "child_ids": node.relationships.get("CHILD", None),
+        })
         return cls(
             text=node.text,
             doc_id=doc_id,

@@ -4,7 +4,7 @@ from evoagentx.rag import SimpleChunker, HierarchicalChunker, SemanticChunker
 from evoagentx.rag.readers import LLamaIndexReader
 
 
-PATH = r"/data2/caizijian/shibie/code/EvoAgentX/debug/doc"
+PATH = r"debug/doc"
 class TestChunker(unittest.TestCase):
 
     def setUp(self):
