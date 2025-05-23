@@ -41,6 +41,9 @@ class SemanticChunker(BaseChunker):
         Returns:
             Corpus: A collection of Chunk objects with semantic metadata.
         """
+        if not documents:
+            return Corpus([])
+        
         llama_docs = [doc.to_llama_document() for doc in documents]
         nodes = self.parser.get_nodes_from_documents(llama_docs)
 

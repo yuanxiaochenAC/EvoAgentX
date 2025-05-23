@@ -89,7 +89,7 @@ class ChunkMetadata(BaseModel):
     )
     chunking_strategy: Optional[str] = Field(
         default=None,
-        description="The strategy used to create the chunk (e.g., 'simple', 'semantic')."
+        description="The strategy used to create the chunk (e.g., 'simple', 'semantic', 'tree')."
     )
     word_count: Optional[int] = Field(
         default=None,
@@ -365,3 +365,5 @@ class Corpus:
     def __repr__(self) -> str:
         return f"Corpus(chunks={len(self.chunks)}, chunk_index_keys={list(self.chunk_index.keys())})"
 
+    def __len__(self) -> int:
+        return len(self.chunks)

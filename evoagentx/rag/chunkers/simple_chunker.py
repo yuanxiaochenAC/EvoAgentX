@@ -19,7 +19,8 @@ class SimpleChunker(BaseChunker):
     """
 
     def __init__(self, chunk_size: int = 1024, chunk_overlap: int = 20, 
-                 tokenizer=None, chunking_tokenizer_fn=None):
+                 tokenizer=None, chunking_tokenizer_fn=None, 
+                 include_metadata: bool = True, include_prev_next_rel: bool = True):
         """Initialize the SimpleChunker.
 
         Args:
@@ -31,7 +32,8 @@ class SimpleChunker(BaseChunker):
         self.tokenizer = tokenizer
         self.chunking_tokenizer_fn = chunking_tokenizer_fn
         self.parser = SimpleNodeParser(chunk_size=chunk_size, chunk_overlap=chunk_overlap,
-                                       tokenizer=self.tokenizer, chunking_tokenizer_fn=self.chunking_tokenizer_fn)
+                                       tokenizer=self.tokenizer, chunking_tokenizer_fn=self.chunking_tokenizer_fn,
+                                       include_metadata=include_metadata, include_prev_next_rel=include_prev_next_rel)
 
     def chunk(self, documents: List[Document], **kwargs) -> Corpus:
         """Chunk documents into fixed-size chunks.
@@ -42,6 +44,9 @@ class SimpleChunker(BaseChunker):
         Returns:
             Corpus: A collection of Chunk objects with metadata.
         """
+        if not documents:
+            return Corpus([])
+
         llama_docs = [doc.to_llama_document() for doc in documents]
         nodes = self.parser.get_nodes_from_documents(llama_docs)
 

@@ -1,6 +1,7 @@
-from typing import List
 from abc import ABC, abstractmethod
+from typing import List, Dict, Any, Union
 
+from llama_index.core.schema import BaseNode
 from evoagentx.rag.schema import Document, Corpus
 
 
