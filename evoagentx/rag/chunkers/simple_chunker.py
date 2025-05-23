@@ -28,14 +28,16 @@ class SimpleChunker(BaseChunker):
         """
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
-        self.parser = SimpleNodeParser(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+        self.tokenizer = tokenizer
+        self.chunking_tokenizer_fn = chunking_tokenizer_fn
+        self.parser = SimpleNodeParser(chunk_size=chunk_size, chunk_overlap=chunk_overlap,
+                                       tokenizer=self.tokenizer, chunking_tokenizer_fn=self.chunking_tokenizer_fn)
 
     def chunk(self, documents: List[Document], **kwargs) -> Corpus:
         """Chunk documents into fixed-size chunks.
 
         Args:
             documents (List[Document]): List of Document objects to chunk.
-            **kwargs: Additional parameters (ignored in this implementation).
 
         Returns:
             Corpus: A collection of Chunk objects with metadata.

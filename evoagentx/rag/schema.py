@@ -52,6 +52,10 @@ class DocumentMetadata(BaseModel):
         default_factory=dict,
         description="A dictionary for storing additional user-defined metadata."
     )
+    hash_doc: Optional[str] = Field(
+        default=None,
+        description="The hash code of this Document for deduplication"
+    )
 
 
 class ChunkMetadata(BaseModel):
@@ -95,6 +99,14 @@ class ChunkMetadata(BaseModel):
         default_factory=dict,
         description="A dictionary for storing additional user-defined metadata."
     )
+    parent_id: Optional[str] = Field(
+        default=None, 
+        description=""
+    )
+    section_id: Optional[str] = Field(
+        default=None, 
+        description=""
+    )
 
 
 class Document:
@@ -124,15 +136,14 @@ class Document:
         if self.source and not self.metadata.file_path:
             self.metadata.file_path = self.source
         self.metadata.word_count = len(self.text.split())
-        self.llama_doc = LlamaIndexDocument(
+
+    def to_llama_document(self) -> LlamaIndexDocument:
+        """Convert to LlamaIndex Document."""
+        return LlamaIndexDocument(
             text=self.text,
             metadata=self.metadata.model_dump(),
             id_=self.doc_id,
         )
-
-    def to_llama_document(self) -> LlamaIndexDocument:
-        """Convert to LlamaIndex Document."""
-        return self.llama_doc
 
     @classmethod
     def from_llama_document(cls, llama_doc: LlamaIndexDocument) -> "Document":
@@ -174,7 +185,10 @@ class Document:
         )
 
     def __repr__(self) -> str:
-        return f"Document(doc_id={self.doc_id}, source={self.source}, metadata={self.metadata.model_dump()})"
+        return (
+            f"Document(doc_id={self.doc_id}, source={self.source}, metadata={self.metadata.model_dump()},"
+            f"fragment={self.get_fragment(max_length=50)})"
+        )
 
 
 class Chunk:
@@ -202,15 +216,14 @@ class Chunk:
             ChunkMetadata.model_validate(metadata) if isinstance(metadata, dict) else metadata or  ChunkMetadata(doc_id=doc_id)
         )
         self.metadata.word_count = len(self.text.split())
-        self.llama_node = BaseNode(
+
+    def to_llama_node(self) -> BaseNode:
+        """Convert to LlamaIndex Node."""
+        return BaseNode(
             text=self.text,
             metadata=self.metadata.model_dump(),
             id_=self.chunk_id,
         )
-
-    def to_llama_node(self) -> BaseNode:
-        """Convert to LlamaIndex Node."""
-        return self.llama_node
 
     @classmethod
     def from_llama_node(cls, node: BaseNode, doc_id: str) -> "Chunk":
@@ -309,6 +322,10 @@ class Corpus:
     def filter_by_doc_id(self, doc_id: str) -> List[Chunk]:
         """Filter chunks by parent document ID."""
         return [chunk for chunk in self.chunks if chunk.doc_id == doc_id]
+
+    def filter_by_similarity(self, threshold: float) -> List[Chunk]:
+        """Filter chunks by similarity score."""
+        return [chunk for chunk in self.chunks if chunk.metadata.similarity_score and chunk.metadata.similarity_score >= threshold]
 
     def sort_by_similarity(self, reverse: bool = True) -> List[Chunk]:
         """Sort chunks by similarity score (descending by default)."""
