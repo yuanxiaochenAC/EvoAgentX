@@ -296,8 +296,8 @@ def create_n_fewshot_demo_sets(
 
     logger.info("Working with create_n_fewshot_demo_sets")
     # Initialize demo_candidates dictionary
-    for agent in student.agents():
-        demo_candidates[agent['name']] = []
+    for name in student.get_agents():
+        demo_candidates[name] = []
 
 
     rng = rng or random.Random(seed)
@@ -353,15 +353,32 @@ def create_n_fewshot_demo_sets(
                 student, teacher=teacher, trainset=trainset_copy, collate_func=collate_func
             )
 
-        for i, agent in enumerate(student.agents()):
-            demo_candidates[agent['name']].append(program2.agents()[i]['demos'])
+        for i, agent in enumerate(student.get_agents()):
+            demo_candidates[agent].append(program2.registry.get_demos(agent))
     return demo_candidates
 
 def get_source_code(program):
     """
-    Get the source code of a program.
+    获取program的源代码。
+    支持以下类型：
+    1. callable function
+    2. class object
+    3. 实现了get_graph_info方法的对象
+    
+    Args:
+        program: 要获取源代码的对象
+        
+    Returns:
+        str: 对象的源代码字符串
     """
-    return json.dumps(program.get_graph_info(), indent=2, ensure_ascii=False)
+    import inspect
+    
+    try:   # 获取源代码
+        source = inspect.getsource(program)
+        return source
+    except (TypeError, OSError) as e:
+        # 如果无法获取源代码，返回对象的字符串表示
+        return f"无法获取源代码: {str(program)}"
 
 def strip_prefix(text):
     pattern = r'^[\*\s]*(([\w\'\-]+\s+){0,4}[\w\'\-]+):\s*'
@@ -403,10 +420,10 @@ def create_predictor_level_history_string(base_program, predictor_i, trial_logs,
 
     # Aggregate scores for each instruction
     for history_item in instruction_history:
-        agent = history_item["program"].agents()[predictor_i]
+        agent = history_item["program"].get_agents()[predictor_i]
         # TODO: 后续添加关于system prompt的内容
         
-        instruction = agent['prompt']
+        instruction = base_program.registry.get(agent)
         score = history_item["score"]
         
         if instruction in instruction_aggregate:
@@ -541,6 +558,6 @@ def save_candidate_program(program, save_path, trial_num, note=None):
         save_path = os.path.join(eval_programs_dir, f"program_{trial_num}.json")
 
     # 保存程序
-    program.save_module(save_path)
+    program.save_to_file(save_path)
 
     return save_path

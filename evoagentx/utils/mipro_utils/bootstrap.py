@@ -71,10 +71,7 @@ class BootstrapFewShot(BaseModule):
     def _prepare_student_and_teacher(self, student, teacher):
         self.student = student.reset_copy()
         self.teacher = teacher.deep_copy() if teacher is not None else student.deep_copy()
-        for agent in self.teacher.agents():
-            agent.setdefault("demos", [])
-            agent.setdefault("traces", [])
-            agent.setdefault("train", [])
+
         
         assert getattr(self.student, "_compiled", False) is False, "Student must be uncompiled."
 
@@ -85,13 +82,13 @@ class BootstrapFewShot(BaseModule):
     def _prepare_agent_mappings(self):
         name2agent, agent2name = {}, {}
         student, teacher = self.student, self.teacher
-        assert len(student.agents()) == len(
-            teacher.agents(),
+        assert len(student.get_agents()) == len(
+            teacher.get_agents(),
         ), "Student and teacher must have the same number of agents."
 
-        for agent1, agent2 in zip(student.agents(), teacher.agents()):
-            name1 = agent1['name']
-            name2 = agent2['name']
+        for agent1, agent2 in zip(student.get_agents(), teacher.get_agents()):
+            name1 = agent1
+            name2 = agent2
             assert name1 == name2, "Student and teacher must have the same program structure."
 
             name2agent[name1] = None  # dict(student=agent1, teacher=agent2)
@@ -147,30 +144,15 @@ class BootstrapFewShot(BaseModule):
             if round_idx > 0:
                 llm_config.temperature = 0.7 + 0.001 * round_idx
                 
-            for agent in teacher.agents():
-                name = agent['name']
-                
-                agent_cache[name] = agent['demos']
-                agent['demos'] = [x for x in agent['demos'] if x != example]
+            for agent in teacher.get_agents():
+                agent_cache[agent] = teacher.registry.get_demos(agent)
+                teacher.registry.set_demos(agent, [x for x in teacher.registry.get_demos(agent) if x != example])
             
-            agent_manager = AgentManager()
-            agent_manager.clear_agents()
-            agent_manager.add_agents_from_workflow(
-                teacher,
-                llm_config= llm_config
-            )
-            
-            program_copy = WorkFlowGraph(goal=teacher.goal, graph=teacher.graph)
-            program_copy.reset_graph()
-            cls = MODEL_REGISTRY.get_model(llm_config.llm_type)
-            workflow = WorkFlow(graph=teacher, agent_manager= agent_manager, llm=cls(llm_config)) # llm=OpenAILLM(lm))
-            
-            with suppress_logger_info():
-                prediction = workflow.execute(inputs = self.collate_func(example))
+            prediction = teacher.run(settings.epochs) # llm=OpenAILLM(lm))
             
             trace = settings.trace
-            for agent in teacher.agents():
-                agent['demos'] = agent_cache[agent['name']]
+            for agent in teacher.get_agents():
+                teacher.registry.set_demos(agent, agent_cache[agent])
             if self.metric:
                 metric_val = self.metric(example, prediction, trace)
                 if self.metric_threshold:
@@ -228,15 +210,14 @@ class BootstrapFewShot(BaseModule):
         rng = random.Random(0)
         raw_demos = self.validation
         
-        for agent in self.student.agents():
-            name = agent['name']
-            
+        for name in self.student.get_agents():
+
             augmented_demos = self.name2traces[name][:self.max_labeled_demos]
             
             sample_size = min(self.max_labeled_demos - len(augmented_demos), len(raw_demos))
             sample_size = max(sample_size, 0)
             
             raw_demos = rng.sample(raw_demos, sample_size)
-            agent['demos'] = augmented_demos + raw_demos
+            self.student.registry.set_demos(name, augmented_demos + raw_demos)
         return self.student
 

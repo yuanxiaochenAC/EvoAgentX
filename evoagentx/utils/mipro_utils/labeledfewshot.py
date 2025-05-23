@@ -16,11 +16,11 @@ class LabeledFewShot():
 
         rng = random.Random(0)
 
-        for agent in self.student.agents():
+        for agent in self.student.get_agents():
             if sample:
-                agent['demos'] = rng.sample(self.trainset, min(self.k, len(self.trainset)))
+                self.student.registry.set_demos(agent, rng.sample(self.trainset, min(self.k, len(self.trainset))))
             else:
-                agent['demos'] = self.trainset[: min(self.k, len(self.trainset))]
+                self.student.registry.set_demos(agent, self.trainset[: min(self.k, len(self.trainset))])
 
         return self.student
 

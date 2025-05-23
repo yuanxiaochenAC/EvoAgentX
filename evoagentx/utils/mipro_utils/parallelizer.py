@@ -36,6 +36,7 @@ class ParallelExecutor:
         self.cancel_jobs = threading.Event()
 
     def execute(self, function, data):
+        print("execute in progress")
         tqdm.tqdm._instances.clear()
         wrapped = self._wrap_function(function)
         return self._execute_parallel(
@@ -72,10 +73,13 @@ class ParallelExecutor:
 
             # This is the worker function each thread will run.
             def worker(parent_overrides, submission_id, index, item):
+                print(f"[worker] start: index={index}, item={item}")
                 if self.cancel_jobs.is_set():
+                    print(f"[worker] cancel_jobs set, index={index}")
                     return index, job_cancelled
                 # Record actual start time
                 with start_time_lock:
+                    print(f"[worker] acquired start_time_lock, index={index}")
                     start_time_map[submission_id] = time.time()
 
                 # Apply parent's thread-local overrides
@@ -87,11 +91,14 @@ class ParallelExecutor:
                     # Usage tracker needs to be deep copied across threads so that each thread tracks its own usage
                     thread_local_overrides.overrides["usage_tracker"] = copy.deepcopy(parent_overrides["usage_tracker"])
 
-
                 try:
-                    return index, function(item)
+                    print(f"[worker] before function(item), index={index}")
+                    result = function(item)
+                    print(f"[worker] after function(item), index={index}")
+                    return index, result
                 finally:
                     thread_local_overrides.overrides = original
+                    print(f"[worker] end, index={index}")
 
             # Handle Ctrl-C in the main thread
             @contextlib.contextmanager
@@ -111,8 +118,9 @@ class ParallelExecutor:
                         signal.signal(signal.SIGINT, orig_handler)
                 else:
                     yield
-
+            print("executing =-=-=-=-=-==-=-=-=-=-=-=-=-")
             executor = ThreadPoolExecutor(max_workers=self.num_threads)
+            print("[ParallelExecutor] ThreadPoolExecutor created")
             try:
                 with interrupt_manager():
                     from evoagentx.utils.mipro_utils.settings import thread_local_overrides
@@ -141,9 +149,12 @@ class ParallelExecutor:
                         return all(r is not None for r in results)
 
                     while futures_set and not self.cancel_jobs.is_set():
+                        print(f"[ParallelExecutor] waiting for futures, remaining={len(futures_set)}")
                         if all_done():
+                            print("[ParallelExecutor] all_done, breaking loop")
                             break
                         done, not_done = wait(futures_set, timeout=1, return_when=FIRST_COMPLETED)
+                        print(f"[ParallelExecutor] wait returned: done={len(done)}, not_done={len(not_done)}")
                         for f in done:
                             futures_set.remove(f)
                             try:

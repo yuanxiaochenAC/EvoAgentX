@@ -311,10 +311,19 @@ class WorkFlowGraph(BaseModule):
     
 
     def agents(self):
+        """返回所有节点的agents列表。每个agent可以是字符串或字典。"""
         agent_lst = []
         for node in self.nodes:
-            for agent in node.agents:
-                agent_lst.append(agent)
+            if node.agents:
+                for agent in node.agents:
+                    if isinstance(agent, dict):
+                        # 如果是字典类型，返回字典本身
+                        agent_lst.append(agent)
+                    elif isinstance(agent, str):
+                        # 如果是字符串类型，创建一个包含name的字典
+                        agent_lst.append({"name": agent})
+                    else:
+                        raise TypeError(f"未知的agent类型: {type(agent)}")
         return agent_lst
 
     def reset_agents(self):

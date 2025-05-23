@@ -9,8 +9,9 @@ from typing import Union, Any, List, Set
 from ..core.logging import logger
 
 def make_parent_folder(path: str):
-
+    print("inside make_parent_folder")
     dir_folder = os.path.dirname(path)
+    print(dir_folder)
     if not os.path.exists(dir_folder):
         logger.info(f"creating folder {dir_folder} ...")
         os.makedirs(dir_folder, exist_ok=True)

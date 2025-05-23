@@ -227,9 +227,9 @@ class GroundedProposer(BaseModule):
             num_demos = N
         else:
 
-            num_demos = max(len(demo_candidates[program.agents()[0]['name']]), 1)
+            num_demos = max(len(demo_candidates[program.get_agents()[0]]), 1)
         # Create an instruction for each predictor 
-        for pred_i, predictor in enumerate(program.agents()):
+        for pred_i, predictor_name in enumerate(program.get_agents()):
             for demo_set_i in range(num_demos)[:min(N, num_demos)]:
                 if pred_i not in proposed_instructions:
                     proposed_instructions[pred_i] = []
@@ -249,7 +249,7 @@ class GroundedProposer(BaseModule):
                 proposed_instructions[pred_i].append(
                     self.propose_instruction_for_predictor(
                         program=program,
-                        predictor=predictor,
+                        predictor_name=predictor_name,
                         pred_i=pred_i,
                         T=T,
                         demo_candidates=demo_candidates,
@@ -264,7 +264,7 @@ class GroundedProposer(BaseModule):
     def propose_instruction_for_predictor(
         self,
         program,
-        predictor,
+        predictor_name,
         pred_i,
         T,
         demo_candidates,
@@ -281,7 +281,9 @@ class GroundedProposer(BaseModule):
 
         # Create our instruction generator class (given specific criteria for this round of proposal)
         
-        inputs = [input_field["name"] for input_field in predictor['inputs']]
+        # inputs = [input_field["name"] for input_field in predictor['inputs']]
+        
+        inputs = program.registry.get_input_names(predictor_name)
         
         instruction_generator = GenerateModuleInstruction(
             program_code_string=self.program_code_string,
@@ -357,8 +359,8 @@ class GenerateModuleInstruction(BaseModule):
             for candidate_set in candidate_sets:
                 for example in candidate_set:
                     if "augmented" in example.keys():
-                        cur_module = program.agents()[pred_i]
-                        fields_to_use = cur_module["inputs"] + cur_module["outputs"]
+                        cur_module = program.get_agents()[pred_i]
+                        fields_to_use = cur_module.inputs + cur_module.outputs
                         yield create_example_string(fields_to_use, example)
                         count += 1
                         if count >= max_examples:
@@ -368,9 +370,9 @@ class GenerateModuleInstruction(BaseModule):
         lm.temperature = T + epsilon
 
 
-        basic_instruction = program.agents()[pred_i]['prompt']
+        basic_instruction = program.registry.get(program.get_agents()[pred_i])
         task_demos = ""
-        agent_name = program.agents()[pred_i]['name']
+        agent_name = program.get_agents()[pred_i]
     
         if self.use_task_demos:
             adjacent_sets = (
@@ -403,15 +405,10 @@ class GenerateModuleInstruction(BaseModule):
                 if self.verbose:
                     logger.info(f"PROGRAM DESCRIPTION: {program_description}")
 
-                inputs = []
-                outputs = []
+                inputs = program.registry.get_input_names(program.get_agents()[pred_i])
+                outputs = program.get_output_names(program.get_agents()[pred_i])
                 
-                for field in program.agents()[pred_i]["inputs"]:
-                    inputs.append(field["name"])
-                for field in program.agents()[pred_i]["outputs"]:
-                    outputs.append(field["name"])
-                
-                module_code = f"{program.agents()[pred_i]['name']}({', '.join(inputs)}) -> {', '.join(outputs)}"
+                module_code = f"{program.get_agents()[pred_i]}({', '.join(inputs)}) -> {', '.join(outputs)}"
                 
                 describe_module_agent = self._describe_module(lm)
                 
@@ -462,7 +459,7 @@ class GenerateModuleInstruction(BaseModule):
             inputs = input_dict
         )
         
-        proposed_instruction = strip_prefix(append_inputs_to_prompt(instruct.content.proposed_instruction, self.input_fields))
+        proposed_instruction = strip_prefix(append_inputs_to_prompt(instruct.content.proposed_instruction, inputs))
 
         return proposed_instruction
     

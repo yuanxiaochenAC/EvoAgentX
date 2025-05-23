@@ -90,7 +90,7 @@ class MiproEvaluator:
     def __call__(
         self,
         program,
-        collate_func: Callable,
+        collate_func: Callable = None,
         metric: Optional[Callable] = None,
         devset: Optional[List] = None,
         num_threads: Optional[int] = None,
@@ -140,6 +140,7 @@ class MiproEvaluator:
         display_table = display_table if display_table is not None else self.display_table
         return_all_scores = return_all_scores if return_all_scores is not None else self.return_all_scores
         return_outputs = return_outputs if return_outputs is not None else self.return_outputs
+        collate_func = None
         executor = ParallelExecutor(
             num_threads=num_threads,
             disable_progress_bar=not display_progress,
@@ -148,24 +149,14 @@ class MiproEvaluator:
             compare_results=True,
         )
         
+        print("evaluate on call in progress")
+        
         def process_item(example):
-            agent_manager = AgentManager()
-            agent_manager.clear_agents()
-            # program.save_module("examples/mipro/output/saved_program.json")
-
-            llm_config = getattr(settings, 'executor_llm', settings.llm_config)
-            agent_manager.add_agents_from_workflow(
-                program,
-                llm_config = llm_config
-            )
-            program_copy = WorkFlowGraph(goal=program.goal, graph=program.graph)
-            program_copy.reset_graph()
-            cls = MODEL_REGISTRY.get_model(llm_config.llm_type)
-            workflow = WorkFlow(graph=program_copy, agent_manager=agent_manager, llm=cls(llm_config))
-
-            prediction = workflow.execute(inputs =collate_func(example))
-            
+            print("begin working")
+            prediction = program.run(settings.epochs)
+            print("prediction")
             score = metric(example, prediction)
+            
             # Increment assert and suggest failures to program's attributes
             if hasattr(program, "_assert_failures"):
                 program._assert_failures += settings.get("assert_failures")
