@@ -1,6 +1,6 @@
 import logging
 import types
-
+import ollama
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -149,12 +149,12 @@ class MiproEvaluator:
             compare_results=True,
         )
         
-        print("evaluate on call in progress")
+        # print("evaluate on call in progress")
         
         def process_item(example):
-            print("begin working")
+            # print("begin working")
             prediction = program.run(settings.epochs)
-            print("prediction")
+            # print("prediction")
             score = metric(example, prediction)
             
             # Increment assert and suggest failures to program's attributes

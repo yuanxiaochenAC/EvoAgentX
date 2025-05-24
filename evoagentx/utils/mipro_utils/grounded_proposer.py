@@ -179,7 +179,7 @@ class GroundedProposer(BaseModule):
         if self.program_aware:
             logger.info("Getting source code...")
             try:
-                self.program_code_string = get_source_code(self.program)                    
+                self.program_code_string = self.program.get_source_code()                   
                 if self.verbose:
                     logger.info("SOURCE CODE:",self.program_code_string)
             except Exception as e:

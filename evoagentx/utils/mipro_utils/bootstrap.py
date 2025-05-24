@@ -5,7 +5,7 @@ from typing import  Callable, Optional
 from evoagentx.workflow import  WorkFlow
 from evoagentx.agents import AgentManager
 import tqdm
-
+import ollama
 from evoagentx.workflow.workflow_graph import WorkFlowGraph
 
 from .labeledfewshot import LabeledFewShot

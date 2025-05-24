@@ -2,6 +2,7 @@ import os
 from collections import defaultdict
 # import logging
 import random
+import json
 import optuna
 from optuna.distributions import CategoricalDistribution
 import numpy as np
@@ -166,6 +167,10 @@ class MiproOptimizerV2(BaseModule):
         with suppress_cost_logging():
             demo_candidates = self._bootstrap_fewshot_examples(program, trainset, seed, self.optimizer_llm)
 
+        with open(f"{self.save_path}/demo_candidates.txt", "w", encoding="utf-8") as f:
+            f.write(json.dumps(demo_candidates) + "\n")
+
+
         # Step 2: Propose instruction candidate
         with suppress_cost_logging():
             instruction_candidates = self._propose_instructions(
@@ -178,6 +183,9 @@ class MiproOptimizerV2(BaseModule):
                 tip_aware_proposer,
                 fewshot_aware_proposer,
             )
+        
+        with open(f"{self.save_path}/instruction_candidates.txt", "w", encoding="utf-8") as f:
+            f.write(json.dumps(instruction_candidates) + "\n")
 
         # If zero-shot, discard demos
         if zeroshot_opt:
@@ -501,9 +509,9 @@ class MiproOptimizerV2(BaseModule):
         sampler = optuna.samplers.TPESampler(seed=seed, multivariate=True)
         study = optuna.create_study(direction="maximize", sampler=sampler)
 
-        default_params = {f"{i}_predictor_instruction": 0 for i in range(len(program.agents()))}
+        default_params = {f"{i}_predictor_instruction": 0 for i in range(len(program.get_agents()))}
         if demo_candidates:
-            default_params.update({f"{i}_predictor_demos": 0 for i in range(len(program.agents()))})
+            default_params.update({f"{i}_predictor_demos": 0 for i in range(len(program.get_agents()))})
 
         # Add default run as a baseline in optuna (TODO: figure out how to weight this by # of samples evaluated on)
         trial = optuna.trial.create_trial(
