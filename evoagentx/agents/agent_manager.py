@@ -161,8 +161,9 @@ class AgentManager(BaseModule):
             else:
                 raise ValueError(f"llm_config must be a dictionary or an instance of LLMConfig. Got {type(llm_config)}.")
         if agent_data.get("tools", None):
-            agent_data["tools"] = [self.tools_mapping[tool_name] for tool_name in agent_data["tools"]]
-            return CusToolCaller.from_dict(data=agent_data)
+            agent_data["tool_names"] = agent_data["tools"]
+            agent_data["tool_dict"] = self.tools_mapping
+            # return CusToolCaller.from_dict(data=agent_data)
         return CustomizeAgent.from_dict(data=agent_data)
     
     def get_agent_name(self, agent: Union[str, dict, Agent]) -> str:

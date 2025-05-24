@@ -1,17 +1,18 @@
 from pydantic import Field, create_model
 from typing import Optional, Any, Callable, Type, List, Union
+import re
+import json
 
 from ..core.logging import logger
 from ..models.base_model import BaseLLM
 from .action import Action, ActionInput, ActionOutput
 from ..core.message import Message
-from ..prompts.tool_caller import TOOL_CALLER_PROMPT, TOOL_CALLER_PROMPT_TEMPLATE
+from ..prompts.tool_calling import GOAL_BASED_TOOL_CALLING_PROMPT, OUTPUT_EXTRACTION_PROMPT
 from ..tools.tool import Tool
 from ..utils.utils import generate_dynamic_class_name
 from ..core.registry import MODULE_REGISTRY
 from ..models.base_model import LLMOutputParser
 from ..core.module_utils import parse_json_from_llm_output
-from ..prompts.tool_caller import OUTPUT_EXTRACTION_PROMPT
 
 class ToolCallingInput(ActionInput):
     query: str = Field(description="The query that might need to use tools to answer")
@@ -34,7 +35,7 @@ class ToolCalling(Action):
     inputs: dict = {}
     outputs: dict = {}
     output_parser: Optional[Type[ActionOutput]] = None
-    task_description: str = ""
+    prompt: str = ""
     execution_history: list[Any] = []
     llm: BaseLLM = None
     
@@ -50,7 +51,7 @@ class ToolCalling(Action):
         self.tool_generating_output_format = kwargs.pop("intermediate_output_format", ToolGeneratingOutput)
         # Allow max_tool_try to be configured through kwargs
         self.max_tool_try = kwargs.pop("max_tool_try", 2)
-        self.task_description = kwargs.pop("task_description", "")
+        self.prompt = kwargs.pop("prompt", "")
     
     def _generate_inputs_outputs_info(self, inputs: List[dict], outputs: List[dict], output_parser: ActionOutput = None, name: str = None):
         # create the action input type
@@ -126,13 +127,21 @@ class ToolCalling(Action):
             self.tools_schema[tool_name] = tool_schema
             self.tools_caller[tool_name] = tool_caller
     
+    def _extract_tool_calls(self, llm_output: str):
+        match = re.search(r"```(?:ToolCalling)?\s*\n(.*?)\n```", llm_output, re.DOTALL)
+        
+        if match:
+            json_str = match.group(1)
+            return json.loads(json_str)
+        return None
+    
     def _extract_output(self, llm_output: Any, llm: BaseLLM = None, **kwargs):
         attr_descriptions: dict = self.outputs_format.get_attr_descriptions()
         output_description_list = [] 
         for i, (name, desc) in enumerate(attr_descriptions.items()):
             output_description_list.append(f"{i+1}. {name}\nDescription: {desc}")
         output_description = "\n\n".join(output_description_list)
-        extraction_prompt = self.task_description + "\n\n" + OUTPUT_EXTRACTION_PROMPT.format(text=llm_output, output_description=output_description)
+        extraction_prompt = self.prompt + "\n\n" + OUTPUT_EXTRACTION_PROMPT.format(text=llm_output, output_description=output_description)
         llm_extracted_output: LLMOutputParser = llm.generate(prompt=extraction_prompt, history=kwargs.get("history", []) + [llm_output])
         llm_extracted_data: dict = parse_json_from_llm_output(llm_extracted_output.content)
         output = self.outputs_format.from_dict(llm_extracted_data)
@@ -142,47 +151,11 @@ class ToolCalling(Action):
         
         return output
     
-    def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, return_prompt: bool = False, time_out = 0, **kwargs) -> ToolCallingOutput:
-        if not inputs:
-            logger.error("ToolCalling action received invalid `inputs`: None or empty.")
-            raise ValueError('The `inputs` to ToolCalling action is None or empty.')
-
-        if time_out == 0:
-            self.execution_history = []
-        
-        print("_______________________ Start Tool Calling _______________________")
-        ## 1. Generate tool call args
-        input_attributes: dict = self.inputs_format.get_attr_descriptions()
-        prompt_params_values = {k: inputs[k] for k in input_attributes.keys()}
-        print("prompt_params_values:")
-        print(prompt_params_values)
-        
-        if time_out > self.max_tool_try:
-            if return_prompt:
-                return self._extract_output("{content}".format(content = self.execution_history), llm = llm), self.task_description
-            return self._extract_output("{content}".format(content = self.execution_history), llm = llm) 
-        
-        tool_call_args = llm.generate(
-            prompt = TOOL_CALLER_PROMPT_TEMPLATE.format(
-                tool_descriptions=self.tools_schema, 
-                goal = self.task_description, 
-                inputs = prompt_params_values, 
-                history = self.execution_history, 
-                tool_calling_instruction = self.tool_calling_instructions
-            ), 
-            system_message = TOOL_CALLER_PROMPT["system_prompt"], 
-            parser=self.tool_generating_output_format,
-            parse_mode="json"
-        )
-        
-        print("Tool call args:")
-        print(tool_call_args)
-        
+    def _calling_tools(self, tool_call_args:ToolCallingOutput) -> dict:
         ## ___________ Call the tools ___________
-        function_params = tool_call_args.function_params
         errors = []
         results  =[]
-        for function_param in function_params:
+        for function_param in tool_call_args:
             try:
                 function_name = function_param.get("function_name")
                 function_args = function_param.get("function_args") or {}
@@ -208,7 +181,7 @@ class ToolCalling(Action):
                     print("_____________________ Start Function Calling _____________________")
                     print(f"Executing function calling: {function_name} with {function_args}")
                     result = callable_fn(**function_args)
-                        
+                
                 except Exception as e:
                     logger.error(f"Error executing tool {function_name}: {e}")
                     errors.append(f"Error executing tool {function_name}: {str(e)}")
@@ -222,22 +195,60 @@ class ToolCalling(Action):
 
         ## 3. Add the tool call results to the query and continue the conversation
         results = {"result": results, "error": errors}
+        return results
+    
+    def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, return_prompt: bool = False, time_out = 0, **kwargs) -> ToolCallingOutput:
+        if not inputs:
+            logger.error("ToolCalling action received invalid `inputs`: None or empty.")
+            raise ValueError('The `inputs` to ToolCalling action is None or empty.')
+
+        self.execution_history = []
         
+        print("_______________________ Start Tool Calling _______________________")
+        ## 1. Generate tool call args
+        input_attributes: dict = self.inputs_format.get_attr_descriptions()
+        prompt_params_values = {k: inputs[k] for k in input_attributes.keys()}
+        print("prompt_params_values:")
+        print(prompt_params_values)
         
-        print("results:")
-        print(results)
-        
-        self.execution_history.append({"tool_call_args": tool_call_args, "results": results})
-        
-        ### Continue Execution or Returning Extracted Answer
-        if tool_call_args.continue_after_tool_call:
-            if return_prompt:
-                return self.execute(llm, inputs, return_prompt, time_out + 1, **kwargs), self.task_description
-            else:
-                return self.execute(llm, inputs, return_prompt, time_out + 1, **kwargs)
+        while True:
+            ### Generate response from LLM
+            if time_out > self.max_tool_try:
+                if return_prompt:
+                    return self._extract_output("{content}".format(content = self.execution_history), llm = llm), self.prompt
+                return self._extract_output("{content}".format(content = self.execution_history), llm = llm) 
+            
+            tool_call_args = llm.generate(
+                prompt = GOAL_BASED_TOOL_CALLING_PROMPT.format(
+                    goal_prompt = self.prompt, 
+                    inputs = prompt_params_values, 
+                    history = self.execution_history, 
+                    tools_description = self.tools_schema, 
+                    additional_context = self.tool_calling_instructions
+                ), 
+                # parser=self.tool_generating_output_format,
+                parse_mode="json"
+            )
+            
+            print("Tool call args:")
+            print(tool_call_args)
+            
+            tool_call_args = self._extract_tool_calls(tool_call_args.content)
+            if not tool_call_args:
+                break
+            
+            print("Extracted tool call args:")
+            print(tool_call_args)
+            
+            results = self._calling_tools(tool_call_args)
+            
+            print("results:")
+            print(results)
+            
+            self.execution_history.append({"tool_call_args": tool_call_args, "results": results})
         
         if return_prompt:
-            return self._extract_output("{content}".format(content = self.execution_history), llm = llm), self.task_description
+            return self._extract_output("{content}".format(content = self.execution_history), llm = llm), self.prompt
         return self._extract_output("{content}".format(content = self.execution_history), llm = llm) 
         
 

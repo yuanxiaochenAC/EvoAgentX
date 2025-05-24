@@ -13,29 +13,29 @@ from ..models.base_model import BaseLLM, LLMOutputParser, PARSER_VALID_MODE
 from ..prompts.utils import DEFAULT_SYSTEM_PROMPT
 from ..actions.action import Action, ActionInput, ActionOutput
 from ..utils.utils import generate_dynamic_class_name, make_parent_folder
+from ..actions.tool_calling import ToolCalling
+from ..tools.tool import Tool
 
 OUTPUT_EXTRACTION_PROMPT = """
 You are given the following text:
 {text}
 
-We need you to process this text and generate high-quality outputs for each of the following fields:
+Within this text, there are specific outputs we want to extract. Please locate and extract the content for each of the following outputs:
 {output_description}
 
 **Instructions:**
 1. Read through the provided text carefully.
-2. For each of the listed output fields, analyze the relevant information from the text and generate a well-formulated response.
-3. You may summarize, process, restructure, or enhance the information as needed to provide the best possible answer.
-4. Your analysis should be faithful to the content but can go beyond simple extraction - provide meaningful insights where appropriate.
-5. Return your processed outputs in a single JSON object, where the JSON keys **exactly match** the output names given above.
-6. If there is insufficient information for an output, provide your best reasonable inference or set its value to an empty string ("") or `null`.
-7. Do not include any additional keys in the JSON.
-8. Your final output should be valid JSON and should not include any explanatory text.
+2. For each of the listed output names, extract the corresponding content from the text. 
+3. Return your findings in a single JSON object, where the JSON keys **exactly match** the output names given above.
+4. If you cannot find content for an output, set its value to an empty string ("") or `null`.
+5. Do not include any additional keys in the JSON. 
+6. Your final output should be valid JSON and should not include any explanatory text.
 
 **Example JSON format:**
 {{
-  "<OUTPUT_NAME_1>": "Processed content here",
-  "<OUTPUT_NAME_2>": "Processed content here",
-  "<OUTPUT_NAME_3>": "Processed content here"
+  "<OUTPUT_NAME_1>": "Extracted content here",
+  "<OUTPUT_NAME_2>": "Extracted content here",
+  "<OUTPUT_NAME_3>": "Extracted content here"
 }}
 
 Now, based on the text and the instructions above, provide your final JSON output.
@@ -87,6 +87,7 @@ def prepare_extraction_prompt(self, llm_output_content: str) -> str:
         output_description_list.append(f"{i+1}. {name}\nDescription: {desc}")
     output_description = "\n\n".join(output_description_list)
     return OUTPUT_EXTRACTION_PROMPT.format(text=llm_output_content, output_description=output_description)
+
 
 def customize_action_execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, **kwargs) -> ActionOutput:
     """Execute a customized action using the language model.
@@ -204,6 +205,11 @@ class CustomizeAgent(Agent):
             Must accept a "content" parameter and return a dictionary.
         title_format (str, optional): Format string for title parsing mode with {title} placeholder.
             Default is "## {title}".
+        tool_names (list[str], optional): List of tool names to be used by the agent. If provided,
+            tool_dict must also be provided. Both parameters are required when using tools.
+        tool_dict (dict, optional): Dictionary mapping tool names to Tool instances. Required when
+            tool_names is provided.
+        customize_prompting (bool, optional): Whether to use customize prompting. Defaults to False.
     """
     def __init__(
         self, 
@@ -218,6 +224,9 @@ class CustomizeAgent(Agent):
         parse_mode: Optional[str] = "title", 
         parse_func: Optional[Callable] = None, 
         title_format: Optional[str] = None, 
+        tool_names: Optional[list[str]] = None,
+        tool_dict: Optional[dict] = None,
+        customize_prompting: Optional[bool] = False,
         **kwargs
     ):
         system_prompt = system_prompt or DEFAULT_SYSTEM_PROMPT
@@ -256,7 +265,10 @@ class CustomizeAgent(Agent):
             parse_mode=parse_mode, 
             parse_func=parse_func,
             output_parser=output_parser,
-            title_format=title_format
+            title_format=title_format,
+            tool_names=tool_names,
+            customize_prompting=customize_prompting,
+            tool_dict=tool_dict
         )
         super().__init__(
             name=name, 
@@ -271,6 +283,11 @@ class CustomizeAgent(Agent):
         self.parse_mode = parse_mode 
         self.parse_func = parse_func 
         self.title_format = title_format
+        self.tool_names = tool_names
+        self.customize_prompting = customize_prompting
+
+    def _add_tools(self, tools: list[Tool]):
+        self.get_action(self.customize_action_name).add_tools(tools)
 
     @property
     def customize_action_name(self) -> str:
@@ -362,7 +379,10 @@ class CustomizeAgent(Agent):
         parse_mode: str, 
         parse_func: Optional[Callable] = None,
         output_parser: Optional[ActionOutput] = None,
-        title_format: Optional[str] = "## {title}"
+        title_format: Optional[str] = "## {title}",
+        tool_names: Optional[list[str]] = None,
+        customize_prompting: Optional[bool] = False,
+        tool_dict: Optional[dict] = None
     ) -> Action:
         """Create a custom action based on the provided specifications.
         
@@ -370,6 +390,7 @@ class CustomizeAgent(Agent):
         - Input parameters defined by the inputs specification
         - Output format defined by the outputs specification
         - Custom execution logic using the customize_action_execute function
+        - If tool_names is provided, returns a ToolCalling action instead
         
         Args:
             name: Base name for the action
@@ -380,6 +401,8 @@ class CustomizeAgent(Agent):
             parse_mode: Mode to use for parsing LLM output
             parse_func: Optional custom parsing function
             output_parser: Optional custom output parser class
+            tool_names: Optional list of tool names - if provided, creates ToolCalling action
+            customize_prompting: Whether to use customize prompting
             
         Returns:
             A newly created Action instance
@@ -429,28 +452,59 @@ class CustomizeAgent(Agent):
         action_cls_name = self._get_unique_class_name(
             generate_dynamic_class_name(name+" action")
         )
-        customize_action_cls = create_model(
-            action_cls_name,
-            parse_mode=(Optional[str], Field(default="title", description="the parse mode of the action, must be one of: ['title', 'str', 'json', 'xml', 'custom']")),
-            parse_func=(Optional[Callable], Field(default=None, exclude=True, description="the function to parse the LLM output. It receives the LLM output and returns a dict.")),
-            title_format=(Optional[str], Field(default="## {title}", exclude=True, description="the format of the title. It is used when the `parse_mode` is 'title'.")),
-            __base__=Action, 
-            execute=customize_action_execute,
-            async_execute=customize_action_async_execute,
-            prepare_action_prompt=prepare_action_prompt,
-            prepare_extraction_prompt=prepare_extraction_prompt
-        )
 
-        customize_action = customize_action_cls(
-            name = action_cls_name,
-            description=desc, 
-            prompt=prompt, 
-            inputs_format=action_input_type, 
-            outputs_format=action_output_type,
-            parse_mode=parse_mode,
-            parse_func=parse_func,
-            title_format=title_format
-        )
+        # Choose base class and create the action class
+        if tool_names and not customize_prompting:
+            # Create ToolCalling-based action with parsing properties only
+            # (ToolCalling has its own execute logic, don't override it)
+            customize_action_cls = create_model(
+                action_cls_name,
+                parse_mode=(Optional[str], Field(default="title", description="the parse mode of the action, must be one of: ['title', 'str', 'json', 'xml', 'custom']")),
+                parse_func=(Optional[Callable], Field(default=None, exclude=True, description="the function to parse the LLM output. It receives the LLM output and returns a dict.")),
+                title_format=(Optional[str], Field(default="## {title}", exclude=True, description="the format of the title. It is used when the `parse_mode` is 'title'.")),
+                __base__=ToolCalling
+            )
+
+            customize_action = customize_action_cls(
+                name=action_cls_name,
+                description=desc, 
+                inputs=inputs,
+                outputs=outputs,
+                output_parser=output_parser,
+                parse_mode=parse_mode,
+                parse_func=parse_func,
+                title_format=title_format,
+                max_tool_try=2,  # Default value, can be made configurable
+                prompt=prompt  # Use prompt for ToolCalling
+            )
+
+            tools = [tool_dict[tool_name] for tool_name in tool_names if tool_name in tool_dict]
+            customize_action.add_tools(tools)
+        else:
+            # Create regular Action-based action with full customize properties
+            customize_action_cls = create_model(
+                action_cls_name,
+                parse_mode=(Optional[str], Field(default="title", description="the parse mode of the action, must be one of: ['title', 'str', 'json', 'xml', 'custom']")),
+                parse_func=(Optional[Callable], Field(default=None, exclude=True, description="the function to parse the LLM output. It receives the LLM output and returns a dict.")),
+                title_format=(Optional[str], Field(default="## {title}", exclude=True, description="the format of the title. It is used when the `parse_mode` is 'title'.")),
+                execute=customize_action_execute,
+                async_execute=customize_action_async_execute,
+                prepare_action_prompt=prepare_action_prompt,
+                prepare_extraction_prompt=prepare_extraction_prompt,
+                __base__=Action
+            )
+
+            customize_action = customize_action_cls(
+                name = action_cls_name,
+                description=desc, 
+                prompt=prompt, 
+                inputs_format=action_input_type, 
+                outputs_format=action_output_type,
+                parse_mode=parse_mode,
+                parse_func=parse_func,
+                title_format=title_format
+            )
+        
         return customize_action
     
     def _check_output_parser(self, outputs: List[dict], output_parser: Type[ActionOutput]):
@@ -537,7 +591,9 @@ class CustomizeAgent(Agent):
             "output_parser": self.output_parser.__name__ if self.output_parser is not None else None,
             "parse_mode": self.parse_mode,
             "parse_func": self.parse_func.__name__ if self.parse_func is not None else None,
-            "title_format": self.title_format 
+            "title_format": self.title_format,
+            "tool_names": self.tool_names,
+            "customize_prompting": self.customize_prompting
         }
         return config
     
