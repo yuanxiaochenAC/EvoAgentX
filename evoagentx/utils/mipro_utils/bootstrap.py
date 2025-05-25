@@ -148,6 +148,8 @@ class BootstrapFewShot(BaseModule):
                 agent_cache[agent] = teacher.registry.get_demos(agent)
                 teacher.registry.set_demos(agent, [x for x in teacher.registry.get_demos(agent) if x != example])
             
+            
+            settings.current_condition = "bootstrap"
             prediction = teacher.run(settings.epochs) # llm=OpenAILLM(lm))
             
             trace = settings.trace

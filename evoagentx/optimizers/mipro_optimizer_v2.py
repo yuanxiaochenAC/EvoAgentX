@@ -418,7 +418,9 @@ class MiproOptimizerV2(BaseModule):
 
             trial_logs[trial_num] = {}
             
+            settings.current_condition = f"eval_{trial_num}{'_mb' if minibatch else ''}"
             # Create a new candidate program
+           
             candidate_program = program.deep_copy()
 
             # Choose instructions and demos, insert them into the program
@@ -669,7 +671,7 @@ class MiproOptimizerV2(BaseModule):
         demo_candidates: List,
     ):
         logger.info(f"===== Trial {trial_num + 1} / {adjusted_num_trials} - Full Evaluation =====")
-
+        settings.current_condition = f"full_eval_{trial_num+1}"
         # Identify best program to evaluate fully
         highest_mean_program, mean_score, combo_key, params = get_program_with_highest_avg_score(
             param_score_dict, fully_evaled_param_combos
@@ -708,6 +710,10 @@ class MiproOptimizerV2(BaseModule):
         trajectory = "[" + full_eval_scores + "]"
         logger.info(f"Full eval scores so far: {trajectory}")
         logger.info(f"Best full score so far: {best_score}")
+        
+        
+        
+        
         logger.info(len(f"===== Full Eval {len(fully_evaled_param_combos) + 1} =====") * "=")
         logger.info("\n")
 
