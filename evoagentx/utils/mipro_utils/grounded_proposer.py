@@ -406,7 +406,7 @@ class GenerateModuleInstruction(BaseModule):
                     logger.info(f"PROGRAM DESCRIPTION: {program_description}")
 
                 inputs = program.registry.get_input_names(program.get_agents()[pred_i])
-                outputs = program.get_output_names(program.get_agents()[pred_i])
+                outputs = program.registry.get_output_names(program.get_agents()[pred_i])
                 
                 module_code = f"{program.get_agents()[pred_i]}({', '.join(inputs)}) -> {', '.join(outputs)}"
                 

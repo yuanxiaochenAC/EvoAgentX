@@ -170,6 +170,7 @@ class MiproOptimizerV2(BaseModule):
         with open(f"{self.save_path}/demo_candidates.txt", "w", encoding="utf-8") as f:
             f.write(json.dumps(demo_candidates) + "\n")
 
+
         # Step 2: Propose instruction candidate
         with suppress_cost_logging():
             instruction_candidates = self._propose_instructions(
@@ -207,7 +208,7 @@ class MiproOptimizerV2(BaseModule):
         # Step 4: Save the best program 
         if self.save_path:
             self.best_program_path = os.path.join(self.save_path, "best_program.json")
-            best_program.save_module(self.best_program_path)
+            save_candidate_program(best_program, self.best_program_path)
 
         return best_program
 
