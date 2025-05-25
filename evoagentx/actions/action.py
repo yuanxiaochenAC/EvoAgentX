@@ -12,6 +12,7 @@ from ..core.message import Message
 from ..models.base_model import BaseLLM, LLMOutputParser
 from ..tools.tool import Tool 
 from ..prompts.context_extraction import CONTEXT_EXTRACTION
+from ..prompts.template import PromptTemplate  
 
 
 class ActionInput(LLMOutputParser):
@@ -123,6 +124,7 @@ class Action(BaseModule):
     name: str
     description: str
     prompt: Optional[str] = None
+    prompt_template: Optional[PromptTemplate] = None 
     tools: Optional[List[Tool]] = None # specify the possible tool for the action
     inputs_format: Optional[Type[ActionInput]] = None # specify the input format of the action
     outputs_format: Optional[Type[Parser]] = None  # specify the possible structured output format
