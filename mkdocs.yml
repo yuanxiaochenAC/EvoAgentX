@@ -193,6 +193,7 @@ plugins:
               - LLM: modules/llm.md 
               - Agent: modules/agent.md
               - Customize Agent: modules/customize_agent.md
+              - Prompt Template: modules/prompt_template.md
               - Workflow Graph: modules/workflow_graph.md
               - Action Graph: modules/action_graph.md
               - Benchmark: modules/benchmark.md 
@@ -230,6 +231,7 @@ plugins:
               - 大语言模型（LLM）: modules/llm.md 
               - Agent 模块: modules/agent.md
               - 自定义 Agent: modules/customize_agent.md
+              - 提示模板: modules/prompt_template.md
               - 工作流图: modules/workflow_graph.md
               - 动作图: modules/action_graph.md
               - 基准测试模块: modules/benchmark.md 

@@ -82,7 +82,8 @@ prompt = template.format(
 )
 ```
 
-!!! note `inputs_format` and `outputs_format` are required when using `demonstrations` to correctly map the inputs and outputs to the demonstrations. 
+!!! note 
+    `inputs_format` and `outputs_format` are required when using `demonstrations` to correctly map the inputs and outputs to the demonstrations. 
 
 ### Structured Output Formats
 

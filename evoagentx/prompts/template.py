@@ -216,7 +216,7 @@ class PromptTemplate(BaseModule):
             return "### Outputs Format\nPlease generate a response that best fits the task instruction.\n"
         
         ouptut_template, output_keys = self.get_output_template(outputs_format, parse_mode=parse_mode, title_format=title_format)
-        output_str = f"### Outputs Format\nYou MUST strictly follow the following format when generating your output:\n\n"
+        output_str = "### Outputs Format\nYou MUST strictly follow the following format when generating your output:\n\n"
         if parse_mode == "json":
             output_str += "Format your output in json format, such as:\n"
         elif parse_mode == "xml":
@@ -318,7 +318,7 @@ class StringTemplate(PromptTemplate):
             return "" 
         # Check if all required fields are provided
         self.check_required_inputs(inputs_format, values)
-        input_str = f"### Inputs\nThese are the input values provided by the user (with input names emplasized):\n"
+        input_str = "### Inputs\nThese are the input values provided by the user (with input names emplasized):\n"
         input_str += self.render_input_example(inputs_format, values, missing_field_value="Not provided")
         input_str += "\n"
         return input_str
