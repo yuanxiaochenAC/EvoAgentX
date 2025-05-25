@@ -43,13 +43,13 @@ def main(goal=None):
     tools.append(BrowserTool())
     
     
-    ## _______________ Workflow Creation _______________
-    wf_generator = WorkFlowGenerator(llm=llm, tools=tools)
-    workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal=goal, agent_suggestion=PDF_AGENT_SUGGESTION)
-    # [optional] display workflow
-    workflow_graph.display()
-    # [optional] save workflow 
-    workflow_graph.save_module(module_save_path)
+    # ## _______________ Workflow Creation _______________
+    # wf_generator = WorkFlowGenerator(llm=llm, tools=tools)
+    # workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal=goal, agent_suggestion=PDF_AGENT_SUGGESTION)
+    # # [optional] display workflow
+    # workflow_graph.display()
+    # # [optional] save workflow 
+    # workflow_graph.save_module(module_save_path)
     
     
     ## _______________ Workflow Execution _______________

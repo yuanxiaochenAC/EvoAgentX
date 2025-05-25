@@ -14,24 +14,12 @@ from ..core.registry import MODULE_REGISTRY
 from ..models.base_model import LLMOutputParser
 from ..core.module_utils import parse_json_from_llm_output
 
-class ToolCallingInput(ActionInput):
-    query: str = Field(description="The query that might need to use tools to answer")
-
-class ToolGeneratingOutput(ActionOutput):
-    function_params: list[dict[str, Any]] = Field(default_factory=list, description="Parameters to pass to the callable")
-    continue_after_tool_call: bool = Field(description="Whether to continue the conversation after the tool call")
-    
-class ToolCallingOutput(ActionOutput):
-    answer: str = Field(description="The answer to the query")
-
-
 class ToolCalling(Action):
     max_tool_try: int = 2
     tools_schema: Optional[dict] = None
     tools_caller: Optional[dict[str, Callable]] = None
     tool_calling_instruction: Optional[str] = None
     conversation: Optional[Message] = None
-    tool_generating_output_format: Optional[Any] = None
     inputs: dict = {}
     outputs: dict = {}
     output_parser: Optional[Type[ActionOutput]] = None
@@ -39,16 +27,14 @@ class ToolCalling(Action):
     execution_history: list[Any] = []
     llm: BaseLLM = None
     
-    
     def __init__(self, **kwargs):
         name = kwargs.pop("name", "tool_calling")
         description = kwargs.pop("description", "Call a tool function and return the results")
         inputs_format = kwargs.pop("inputs")
         outputs_format = kwargs.pop("outputs")
         output_parser = kwargs.pop("output_parser", None)
-        super().__init__(name=name, description=description, inputs_format=ToolCallingInput, outputs_format=ToolCallingOutput, **kwargs)
+        super().__init__(name=name, description=description, **kwargs)
         self._generate_inputs_outputs_info(inputs_format, outputs_format, output_parser, name)
-        self.tool_generating_output_format = kwargs.pop("intermediate_output_format", ToolGeneratingOutput)
         # Allow max_tool_try to be configured through kwargs
         self.max_tool_try = kwargs.pop("max_tool_try", 2)
         self.prompt = kwargs.pop("prompt", "")
@@ -128,9 +114,7 @@ class ToolCalling(Action):
             self.tools_caller[tool_name] = tool_caller
     
     def _extract_tool_calls(self, llm_output: str):
-        match = re.search(r"```(?:ToolCalling)?\s*\n(.*?)\n```", llm_output, re.DOTALL)
-        
-        if match:
+        if match := re.search(r"```(?:ToolCalling)?\s*\n(.*?)\n```", llm_output, re.DOTALL):
             json_str = match.group(1)
             return json.loads(json_str)
         return None
@@ -151,7 +135,7 @@ class ToolCalling(Action):
         
         return output
     
-    def _calling_tools(self, tool_call_args:ToolCallingOutput) -> dict:
+    def _calling_tools(self, tool_call_args) -> dict:
         ## ___________ Call the tools ___________
         errors = []
         results  =[]
@@ -197,7 +181,7 @@ class ToolCalling(Action):
         results = {"result": results, "error": errors}
         return results
     
-    def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, return_prompt: bool = False, time_out = 0, **kwargs) -> ToolCallingOutput:
+    def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, return_prompt: bool = False, time_out = 0, **kwargs):
         if not inputs:
             logger.error("ToolCalling action received invalid `inputs`: None or empty.")
             raise ValueError('The `inputs` to ToolCalling action is None or empty.')
@@ -208,8 +192,6 @@ class ToolCalling(Action):
         ## 1. Generate tool call args
         input_attributes: dict = self.inputs_format.get_attr_descriptions()
         prompt_params_values = {k: inputs[k] for k in input_attributes.keys()}
-        print("prompt_params_values:")
-        print(prompt_params_values)
         
         while True:
             ### Generate response from LLM
@@ -226,7 +208,6 @@ class ToolCalling(Action):
                     tools_description = self.tools_schema, 
                     additional_context = self.tool_calling_instructions
                 ), 
-                # parser=self.tool_generating_output_format,
                 parse_mode="json"
             )
             
