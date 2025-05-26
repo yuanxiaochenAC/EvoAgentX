@@ -514,3 +514,14 @@ class Agent(BaseModule):
         agent = super().load_module(path=path, **kwargs)
         agent["llm_config"] = llm_config.to_dict()
         return agent 
+    
+    def get_config(self) -> dict:
+        """
+        Get a dictionary containing all necessary configuration to recreate this agent.
+        
+        Returns:
+            dict: A configuration dictionary that can be used to initialize a new Agent instance
+            with the same properties as this one.
+        """
+        config = self.to_dict()
+        return config

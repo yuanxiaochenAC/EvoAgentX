@@ -11,6 +11,7 @@ from ..core.message import Message, MessageType
 from ..models.model_configs import LLMConfig 
 from ..models.base_model import BaseLLM, LLMOutputParser, PARSER_VALID_MODE
 from ..prompts.utils import DEFAULT_SYSTEM_PROMPT
+from ..prompts.template import PromptTemplate
 from ..actions.action import Action, ActionInput, ActionOutput
 from ..utils.utils import generate_dynamic_class_name, make_parent_folder
 from ..actions.tool_calling import ToolCalling
@@ -42,7 +43,7 @@ Now, based on the text and the instructions above, provide your final JSON outpu
 """
 
 
-def prepare_action_prompt(self, inputs: Optional[dict] = None) -> str:
+def prepare_action_prompt(self, inputs: Optional[dict] = None, system_prompt: Optional[str] = None) -> Union[str, List[dict]]:
     """Prepare prompt for action execution.
     
     This helper function transforms the input dictionary into a formatted prompt
@@ -69,7 +70,21 @@ def prepare_action_prompt(self, inputs: Optional[dict] = None) -> str:
         else:
             raise TypeError(f"The input type {type(value)} is invalid! Valid types: [str, dict, list].")
     
-    return self.prompt.format(**prompt_params_values) if prompt_params_values else self.prompt
+    # return self.prompt.format(**prompt_params_values) if prompt_params_values else self.prompt
+    if self.prompt is not None:
+        return self.prompt.format(**prompt_params_values) if prompt_params_values else self.prompt
+    elif self.prompt_template is not None:
+        return self.prompt_template.format(
+            system_prompt=system_prompt, 
+            values=prompt_params_values, 
+            inputs_format=self.inputs_format, 
+            outputs_format=self.outputs_format, 
+            parse_mode=self.parse_mode, 
+            title_format=self.title_format, 
+            custom_output_format=self.custom_output_format
+        )
+    else:
+        raise ValueError("`prompt` or `prompt_template` is required when creating a CustomizeAgent.")
 
 def prepare_extraction_prompt(self, llm_output_content: str) -> str:
     """Prepare extraction prompt for fallback extraction when parsing fails.
@@ -107,10 +122,13 @@ def customize_action_execute(self, llm: Optional[BaseLLM] = None, inputs: Option
     Raises:
         TypeError: If an input value type is not supported
     """
-    prompt = self.prepare_action_prompt(inputs)
+    prompt = self.prepare_action_prompt(inputs, system_prompt=sys_msg)
     
     # Generate output
-    llm_output: LLMOutputParser = llm.generate(prompt=prompt, system_message=sys_msg)
+    if isinstance(prompt, str):
+        llm_output: LLMOutputParser = llm.generate(prompt=prompt, system_message=sys_msg)
+    else:
+        llm_output: LLMOutputParser = llm.generate(messages=prompt)
     
     try:
         output = self.outputs_format.parse(llm_output.content, parse_mode=self.parse_mode, parse_func=self.parse_func, title_format=self.title_format)
@@ -146,10 +164,13 @@ async def customize_action_async_execute(self, llm: Optional[BaseLLM] = None, in
     Raises:
         TypeError: If an input value type is not supported
     """
-    prompt = self.prepare_action_prompt(inputs)
+    prompt = self.prepare_action_prompt(inputs, system_prompt=sys_msg)
     
     # Generate output using async method
-    llm_output: LLMOutputParser = await llm.async_generate(prompt=prompt, system_message=sys_msg)
+    if isinstance(prompt, str):
+        llm_output: LLMOutputParser = await llm.async_generate(prompt=prompt, system_message=sys_msg)
+    else:
+        llm_output: LLMOutputParser = await llm.async_generate(messages=prompt)
     
     try:
         # Parse the output using the specified parsing mode
@@ -179,7 +200,8 @@ class CustomizeAgent(Agent):
     Attributes:
         name (str): The name of the agent.
         description (str): A description of the agent's purpose and capabilities.
-        prompt (str): The prompt template that will be used for the agent's primary action.
+        prompt_template (PromptTemplate, optional): The prompt template that will be used for the agent's primary action. 
+        prompt (str, optional): The prompt template that will be used for the agent's primary action.
             Should contain placeholders in the format `{input_name}` for each input parameter.
         llm_config (LLMConfig, optional): Configuration for the language model.
         inputs (List[dict], optional): List of input specifications, where each dict (e.g., `{"name": str, "type": str, "description": str, ["required": bool]}`) contains:
@@ -210,12 +232,15 @@ class CustomizeAgent(Agent):
         tool_dict (dict, optional): Dictionary mapping tool names to Tool instances. Required when
             tool_names is provided.
         customize_prompting (bool, optional): Whether to use customize prompting. Defaults to False.
+        custom_output_format (str, optional): Specify the output format. Only used when `prompt_template` is used. 
+            If not provided, the output format will be constructed from the `outputs` specification and `parse_mode`. 
     """
     def __init__(
         self, 
         name: str, 
         description: str, 
-        prompt: str, 
+        prompt: Optional[str] = None, 
+        prompt_template: Optional[PromptTemplate] = None, 
         llm_config: Optional[LLMConfig] = None, 
         inputs: Optional[List[dict]] = None, 
         outputs: Optional[List[dict]] = None, 
@@ -227,11 +252,16 @@ class CustomizeAgent(Agent):
         tool_names: Optional[list[str]] = None,
         tool_dict: Optional[dict] = None,
         customize_prompting: Optional[bool] = False,
+        custom_output_format: Optional[str] = None, 
         **kwargs
     ):
         system_prompt = system_prompt or DEFAULT_SYSTEM_PROMPT
         inputs = inputs or [] 
         outputs = outputs or [] 
+
+        if prompt is not None and prompt_template is not None:
+            logger.warning("Both `prompt` and `prompt_template` are provided in `CustomizeAgent`. `prompt_template` will be used.")
+            prompt = None 
 
         if isinstance(parse_func, str):
             if not PARSE_FUNCTION_REGISTRY.has_function(parse_func):
@@ -248,6 +278,7 @@ class CustomizeAgent(Agent):
         # validate the data 
         self.validate_data(
             prompt = prompt, 
+            prompt_template = prompt_template, 
             inputs = inputs, 
             outputs = outputs, 
             output_parser = output_parser, 
@@ -260,12 +291,14 @@ class CustomizeAgent(Agent):
             name=name, 
             desc=description, 
             prompt=prompt, 
+            prompt_template=prompt_template, 
             inputs=inputs, 
             outputs=outputs, 
             parse_mode=parse_mode, 
             parse_func=parse_func,
             output_parser=output_parser,
             title_format=title_format,
+            custom_output_format=custom_output_format ,
             tool_names=tool_names,
             customize_prompting=customize_prompting,
             tool_dict=tool_dict
@@ -285,6 +318,7 @@ class CustomizeAgent(Agent):
         self.title_format = title_format
         self.tool_names = tool_names
         self.customize_prompting = customize_prompting
+        self.custom_output_format = custom_output_format
 
     def _add_tools(self, tools: list[Tool]):
         self.get_action(self.customize_action_name).add_tools(tools)
@@ -322,14 +356,14 @@ class CustomizeAgent(Agent):
         """
         return self.action.prompt
     
-    def validate_data(self, prompt: str, inputs: List[dict], outputs: List[dict], output_parser: Type[ActionOutput], parse_mode: str, parse_func: Callable, title_format: str):
+    def validate_data(self, prompt: str, prompt_template: PromptTemplate, inputs: List[dict], outputs: List[dict], output_parser: Type[ActionOutput], parse_mode: str, parse_func: Callable, title_format: str):
 
         # check if the prompt is provided
-        if prompt is None:
-            raise ValueError("`prompt` is required when creating a CustomizeAgent.")
+        if prompt is None and prompt_template is None:
+            raise ValueError("`prompt` or `prompt_template` is required when creating a CustomizeAgent.")
         
-        # check if all the inputs are in the prompt
-        if inputs:
+        # check if all the inputs are in the prompt (only used when prompt_template is not provided)
+        if prompt_template is None and inputs:
             all_input_names = [input_item["name"] for input_item in inputs]
             inputs_names_not_in_prompt = [name for name in all_input_names if f'{{{name}}}' not in prompt]
             if inputs_names_not_in_prompt:
@@ -374,12 +408,14 @@ class CustomizeAgent(Agent):
         name: str, 
         desc: str, 
         prompt: str, 
+        prompt_template: PromptTemplate, 
         inputs: List[dict], 
         outputs: List[dict], 
         parse_mode: str, 
         parse_func: Optional[Callable] = None,
         output_parser: Optional[ActionOutput] = None,
         title_format: Optional[str] = "## {title}",
+        custom_output_format: Optional[str] = None,
         tool_names: Optional[list[str]] = None,
         customize_prompting: Optional[bool] = False,
         tool_dict: Optional[dict] = None
@@ -396,6 +432,7 @@ class CustomizeAgent(Agent):
             name: Base name for the action
             desc: Description of the action
             prompt: Prompt template for the action
+            prompt_template: Prompt template for the action
             inputs: List of input field specifications
             outputs: List of output field specifications
             parse_mode: Mode to use for parsing LLM output
@@ -407,7 +444,7 @@ class CustomizeAgent(Agent):
         Returns:
             A newly created Action instance
         """
-        assert prompt is not None, "must provide `prompt` when creating CustomizeAgent"
+        assert prompt is not None or prompt_template is not None, "must provide `prompt` or `prompt_template` when creating CustomizeAgent"
 
         # create the action input type
         action_input_fields = {}
@@ -487,6 +524,7 @@ class CustomizeAgent(Agent):
                 parse_mode=(Optional[str], Field(default="title", description="the parse mode of the action, must be one of: ['title', 'str', 'json', 'xml', 'custom']")),
                 parse_func=(Optional[Callable], Field(default=None, exclude=True, description="the function to parse the LLM output. It receives the LLM output and returns a dict.")),
                 title_format=(Optional[str], Field(default="## {title}", exclude=True, description="the format of the title. It is used when the `parse_mode` is 'title'.")),
+            custom_output_format=(Optional[str], Field(default=None, exclude=True, description="the format of the output. It is used when the `prompt_template` is provided.")),
                 execute=customize_action_execute,
                 async_execute=customize_action_async_execute,
                 prepare_action_prompt=prepare_action_prompt,
@@ -498,6 +536,7 @@ class CustomizeAgent(Agent):
                 name = action_cls_name,
                 description=desc, 
                 prompt=prompt, 
+                prompt_template=prompt_template, 
                 inputs_format=action_input_type, 
                 outputs_format=action_output_type,
                 parse_mode=parse_mode,
@@ -635,4 +674,16 @@ class CustomizeAgent(Agent):
                 break
             i += 1 
         return unique_name 
+    
+    def get_config(self) -> dict:
+        """
+        Get a dictionary containing all necessary configuration to recreate this agent.
         
+        Returns:
+            dict: A configuration dictionary that can be used to initialize a new Agent instance
+            with the same properties as this one.
+        """
+        config = self.get_customize_agent_info()
+        config["llm_config"] = self.llm_config.to_dict()
+        return config 
+    

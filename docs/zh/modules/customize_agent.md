@@ -148,6 +148,83 @@ print("\nCOMPLEXITY:")
 print(result.content.complexity)
 ```
 
+
+## 提示模板用法
+
+`CustomizeAgent` 还支持使用 `PromptTemplate` 进行更灵活的提示模板设计。有关提示模板及其高级功能的详细信息，请参阅[提示模板教程](./prompt_template.md)。
+
+### 简单提示模板
+
+以下是使用提示模板的基本示例：
+
+```python
+from evoagentx.prompts import StringTemplate
+
+agent = CustomizeAgent(
+    name="FirstAgent",
+    description="A simple agent that prints hello world",
+    prompt_template=StringTemplate(
+        instruction="Print 'hello world'",
+    ),
+    llm_config=openai_config
+)
+
+message = agent()
+print(message.content.content)
+```
+
+### 带有输入和输出的提示模板
+
+您可以将提示模板与结构化输入和输出结合使用：
+
+```python
+code_writer = CustomizeAgent(
+    name="CodeWriter",
+    description="Writes Python code based on requirements",
+    prompt_template=StringTemplate(
+        instruction="Write Python code that implements the provided `requirement`",
+        # 您可以选择添加示例：
+        # demonstrations=[
+        #     {
+        #         "requirement": "Print 'hello world'",
+        #         "code": "print('hello world')"
+        #     }, 
+        #     {
+        #         "requirement": "Print 'Test Demonstration'",
+        #         "code": "print('Test Demonstration')"
+        #     }
+        # ]
+    ), # 不需要在提示模板的指令中明确指定输入占位符
+    llm_config=openai_config,
+    inputs=[
+        {"name": "requirement", "type": "string", "description": "Coding requirement"}
+    ],
+    outputs=[
+        {"name": "code", "type": "string", "description": "Generated Python code"},
+    ],
+    parse_mode="custom", 
+    parse_func=lambda content: {"code": extract_code_blocks(content)[0]}
+)
+
+message = code_writer(
+    inputs={"requirement": "Write a function that returns the sum of two numbers"}
+)
+print(message.content.code)
+```
+
+`PromptTemplate` 提供了一种更结构化的方式来定义提示，可以包括：
+- 主要指令
+- 可选的上下文，用于提供额外信息
+- 可选的约束，LLM 应该遵循
+- 可选的示例，用于少样本学习
+- 可选的工具信息，LLM 可以使用
+等。
+
+!!! note
+    1. 使用 `prompt_template` 时，您不需要在指令字符串中明确包含输入占位符，如 `{input_name}`。模板将自动处理输入的映射。
+
+    2. 此外，您不需要在 `PromptTemplate` 的 `instruction` 字段中明确指定输出格式。模板将根据 `outputs` 参数和 `parse_mode` 参数自动制定输出格式。但是，`PromptTemplate` 也支持通过指定 `PromptTemplate.format(custom_output_format="...")` 来明确指定输出格式。
+
 ## 解析模式
 
 CustomizeAgent 支持不同的方式来解析 LLM 输出：
