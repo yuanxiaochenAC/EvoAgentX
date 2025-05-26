@@ -80,6 +80,7 @@ class Evaluator:
         sample_k: Optional[int] = None, 
         seed: Optional[int] = None, 
         verbose: Optional[bool] = None,
+        update_agents: Optional[bool] = False,
         **kwargs
     ) -> dict:
         """
@@ -92,12 +93,19 @@ class Evaluator:
             indices (List[int], optional): The indices of the data to evaluate the workflow on.
             sample_k (int, optional): The number of data to evaluate the workflow on. If provided, a random sample of size `sample_k` will be used.
             verbose (bool, optional): Whether to print the evaluation progress. If not provided, the `self.verbose` will be used.
-        
+            update_agents (bool, optional): Whether to update the agents in the agent manager. Only used when the workflow graph is a WorkFlowGraph.
         Returns:
             dict: The average metrics of the workflow evaluation.
         """
         # clear the evaluation records
         self._evaluation_records.clear()
+
+        # update the agents in the agent manager
+        if isinstance(graph, WorkFlowGraph) and update_agents:
+            if self.agent_manager is None:
+                raise ValueError(f"`agent_manager` is not provided in {type(self).__name__}. Please provide an agent manager when evaluating a WorkFlowGraph.")
+            self.agent_manager.update_agents_from_workflow(workflow_graph=graph, llm_config=self.llm.config, **kwargs)
+        
         data = self._get_eval_data(benchmark=benchmark, eval_mode=eval_mode, indices=indices, sample_k=sample_k, seed=seed)
         results = self._evaluate_graph(graph=graph, data=data, benchmark=benchmark, verbose=verbose, **kwargs)
         return results
@@ -115,7 +123,7 @@ class Evaluator:
             str: The output of the workflow graph
         """
         if self.agent_manager is None:
-            raise ValueError("`agent_manager` is not provided. Please provide an agent manager when evaluating a WorkFlowGraph.")
+            raise ValueError(f"`agent_manager` is not provided in {type(self).__name__}. Please provide an agent manager when evaluating a WorkFlowGraph.")
         
         # create a WorkFlow instance
         graph_copy = WorkFlowGraph(goal=graph.goal, graph=graph)

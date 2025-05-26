@@ -193,4 +193,4 @@ By default, the optimizer will choose the workflow with the highest validation p
 !!! note 
     During testing, the workflow will be evaluated on the test set for `eval_rounds` times. Make sure the benchmark `humaneval` contains a test set (i.e., `self._test_data` is not empty).
 
-For a complete working example, please refer to [aflow_humaneval.py](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/optimization/aflow_humaneval.py).
+For a complete working example, please refer to [aflow_humaneval.py](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/optimization/aflow/aflow_humaneval.py).

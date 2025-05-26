@@ -59,7 +59,7 @@ class BaseModule(BaseModel, metaclass=MetaModule):
     """
 
     class_name: str = None 
-    model_config = {"arbitrary_types_allowed": True, "extra": "allow", "protected_namespaces": ()}
+    model_config = {"arbitrary_types_allowed": True, "extra": "allow", "protected_namespaces": (), "validate_assignment": True}
 
     def __init_subclass__(cls, **kwargs):
         """

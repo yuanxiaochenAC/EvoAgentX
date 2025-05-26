@@ -16,6 +16,23 @@ def get_openai_model_cost() -> dict:
         model_cost = json.load(f)
     return model_cost
 
+def infer_litellm_company_from_model(model: str) -> str:
+
+    if "/" in model:
+        company = model.split("/")[0]
+    else:
+        if "claude" in model or "anthropic" in model:
+            company = "anthropic" 
+        elif "gemini" in model:
+            company = "gemini"
+        elif "deepseek" in model:
+            company = "deepseek"
+        elif "openrouter" in model:
+            company = "openrouter"
+        else:
+            company = "openai"
+    return company
+
 
 @dataclass
 class Cost:

@@ -147,6 +147,83 @@ print("\nCOMPLEXITY:")
 print(result.content.complexity)
 ```
 
+## Prompt Template Usage
+
+The `CustomizeAgent` also supports using `PromptTemplate` for more flexible prompt templating. For detailed information about prompt templates and their advanced features, please refer to the [PromptTemplate Tutorial](./prompt_template.md).
+
+### Simple Prompt Template
+
+Here's a basic example using a prompt template:
+
+```python
+from evoagentx.prompts import StringTemplate
+
+agent = CustomizeAgent(
+    name="FirstAgent",
+    description="A simple agent that prints hello world",
+    prompt_template=StringTemplate(
+        instruction="Print 'hello world'",
+    ),
+    llm_config=openai_config
+)
+
+message = agent()
+print(message.content.content)
+```
+
+### Prompt Template with Inputs and Outputs
+
+You can combine prompt templates with structured inputs and outputs:
+
+```python
+code_writer = CustomizeAgent(
+    name="CodeWriter",
+    description="Writes Python code based on requirements",
+    prompt_template=StringTemplate(
+        instruction="Write Python code that implements the provided `requirement`",
+        # You can optionally add demonstrations:
+        # demonstrations=[
+        #     {
+        #         "requirement": "print 'hello world'",
+        #         "code": "print('hello world')"
+        #     }, 
+        #     {
+        #         "requirement": "print 'Test Demonstration'",
+        #         "code": "print('Test Demonstration')"
+        #     }
+        # ]
+    ), # no need to specify input placeholders in the instruction of the prompt template
+    llm_config=openai_config,
+    inputs=[
+        {"name": "requirement", "type": "string", "description": "The coding requirement"}
+    ],
+    outputs=[
+        {"name": "code", "type": "string", "description": "The generated Python code"},
+    ],
+    parse_mode="custom", 
+    parse_func=lambda content: {"code": extract_code_blocks(content)[0]}
+)
+
+message = code_writer(
+    inputs={"requirement": "Write a function that returns the sum of two numbers"}
+)
+print(message.content.code)
+```
+
+The `PromptTemplate` provides a more structured way to define prompts and can include:
+- A main instruction
+- Optional context that can be used to provide additional information
+- Optional constraints that the LLM should follow 
+- Optional demonstrations for few-shot learning
+- Optional tools information that the LLM can use 
+etc. 
+
+!!! note
+    1. When using `prompt_template`, you don't need to explicitly include input placeholders in the instruction string like `{input_name}`. The template will automatically handle the mapping of inputs. 
+
+    2. Also, you don't need to explicitly specify the output format in the `instruction` field of the `PromptTemplate`. The template will automatically formulate the output format based on the `outputs` parameter and the `parse_mode` parameter. However, `PromptTemplate` also supports explicitly specifying the output format by specifying `PromptTemplate.format(custom_output_format="...")`. 
+
+
 ## Parsing Modes
 
 CustomizeAgent supports different ways to parse the LLM output:
@@ -187,8 +264,7 @@ agent = CustomizeAgent(
     # other parameters...
 )
 ```
-
-With this configuration, the LLM should be instructed to format its response like:
+With this configuration, the LLM should be instructed to format its response like (only required when passing the complete prompt with `prompt` parameter to instantiate the `CustomizeAgent`. If using `prompt_template`, you don't need to specify this):
 
 ```
 ### summary
@@ -222,7 +298,7 @@ agent = CustomizeAgent(
     # other parameters...
 )
 ```
-When using this mode, the LLM should output a valid JSON string with keys matching the output field names. For instance, you should instruct the LLM to output:
+When using this mode, the LLM should output a valid JSON string with keys matching the output field names. For instance, you should instruct the LLM to output (only required when passing the complete prompt with `prompt` parameter to instantiate the `CustomizeAgent`. If using `prompt_template`, you don't need to specify this):
 
 ```json
 {
@@ -253,7 +329,7 @@ agent = CustomizeAgent(
 )
 ```
 
-When using this mode, the LLM should generte texts containing xml tags with keys matching the output field names. For instance, you should instruct the LLM to output:
+When using this mode, the LLM should generte texts containing xml tags with keys matching the output field names. For instance, you should instruct the LLM to output (only required when passing the complete prompt with `prompt` parameter to instantiate the `CustomizeAgent`. If using `prompt_template`, you don't need to specify this):
 
 ```xml
 The people mentioned in the text are: <people>John Doe and Jane Smith</people>.
