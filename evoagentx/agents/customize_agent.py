@@ -338,7 +338,8 @@ class CustomizeAgent(Agent):
             title_format=title_format,
             max_tool_try=2,  # Default value, can be made configurable
             customize_prompting = customize_prompting,
-            prompt=prompt  # Use prompt for ToolCalling
+            prompt=prompt,  # Use prompt for ToolCalling
+            prompt_template=prompt_template
         )
 
         # Use dict to deduplicate tools by id to avoid adding the same tool multiple times
