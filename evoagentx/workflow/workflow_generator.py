@@ -54,7 +54,7 @@ class WorkFlowGenerator(BaseModule):
         if self.agent_generator is None:
             if self.llm is None:
                 raise ValueError("Must provide `llm` when `agent_generator` is None")
-            self.agent_generator = AgentGenerator(llm=self.llm, tool_info=self.tool_info)
+            self.agent_generator = AgentGenerator(llm=self.llm, tools=self.tool_info)
         
         # TODO add WorkFlowReviewer
         # if self.workflow_reviewer is None:
