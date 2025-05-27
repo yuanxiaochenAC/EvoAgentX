@@ -25,6 +25,8 @@ We need you to process this text and generate high-quality outputs for each of t
 Now, based on the text and the instructions above, provide your final JSON output.
 """
 
+
+
 GOAL_BASED_TOOL_CALLING_PROMPT = """
 You are an intelligent agent tasked with achieving a specific goal. You have access to various tools that can help you accomplish your task.
 
@@ -82,6 +84,53 @@ After using a tool, analyze its output and determine next steps. You may need to
 - You should not avoid using the tool if you have the information
 - You should not call any tool if you completed the goal
 - The tool you called must exist in the available tools
-
-
 """
+
+TOOL_CALLING_TEMPLATE = """
+### Tools Calling Instructions
+You may have access to various tools that can help you accomplish your task.
+If you are provided with tools, you should use them if you need to.
+Once you have completed all preparations, you should not call any tool and just generate the final answer.
+You should also include the very short thinking process in the output to explain why you need to use the tool, before you call the tool and stop generating the output. 
+Tool call is only part of the output.
+
+** Example Output **
+Base on the goal, I found out that I need to use the following tools:
+```ToolCalling
+[{{
+    "function_name": "search_repositories",
+    "function_args": {{
+        "query": "camel",
+        "owner": "camel-ai",
+        "repo": "camel",
+        ...
+    }}
+}},{{
+    "function_name": "search_jobs",
+    "function_args": {{
+        "query": "Data Scientist",
+        "limit": 5
+    }}
+}},...]
+```
+** Tool Calling Notes **
+Remember, when you need to make a tool call, use ONLY the exact format specified above, as it will be parsed programmatically. The tool calls should be enclosed in triple backticks with the ToolCalling identifier, followed by JSON that specifies the tool name and parameters.
+After using a tool, analyze its output and determine next steps. You may need to:
+- Use additional tools to complete the task
+- Process and transform the information received
+- Present the final output according to the specified format
+
+**Available Tools**
+{tools_description}
+
+**Additional Tool Calling Instructions**
+{additional_context}
+
+** Tool Calling Key Points **
+- You should check the history to determine if you have the information
+- You should try to use tools to get the information you need
+- You should not avoid using the tool if you have the information
+- You should not call any tool if you completed the goal
+- The tool you called must exist in the available tools
+"""
+

@@ -17,179 +17,6 @@ from ..utils.utils import generate_dynamic_class_name, make_parent_folder
 from ..actions.tool_calling import ToolCalling
 from ..tools.tool import Tool
 
-OUTPUT_EXTRACTION_PROMPT = """
-You are given the following text:
-{text}
-
-Within this text, there are specific outputs we want to extract. Please locate and extract the content for each of the following outputs:
-{output_description}
-
-**Instructions:**
-1. Read through the provided text carefully.
-2. For each of the listed output names, extract the corresponding content from the text. 
-3. Return your findings in a single JSON object, where the JSON keys **exactly match** the output names given above.
-4. If you cannot find content for an output, set its value to an empty string ("") or `null`.
-5. Do not include any additional keys in the JSON. 
-6. Your final output should be valid JSON and should not include any explanatory text.
-
-**Example JSON format:**
-{{
-  "<OUTPUT_NAME_1>": "Extracted content here",
-  "<OUTPUT_NAME_2>": "Extracted content here",
-  "<OUTPUT_NAME_3>": "Extracted content here"
-}}
-
-Now, based on the text and the instructions above, provide your final JSON output.
-"""
-
-
-def prepare_action_prompt(self, inputs: Optional[dict] = None, system_prompt: Optional[str] = None) -> Union[str, List[dict]]:
-    """Prepare prompt for action execution.
-    
-    This helper function transforms the input dictionary into a formatted prompt
-    for the language model.
-    
-    Args:
-        self: The action instance
-        inputs: Dictionary of input parameters
-        
-    Returns:
-        str: Formatted prompt ready for LLM
-        
-    Raises:
-        TypeError: If an input value type is not supported
-    """
-    prompt_params_names = self.inputs_format.get_attrs()
-    prompt_params_values = {}
-    for param in prompt_params_names:
-        value = inputs.get(param, "")
-        if isinstance(value, str):
-            prompt_params_values[param] = value
-        elif isinstance(value, (dict, list)):
-            prompt_params_values[param] = json.dumps(value, indent=4)
-        else:
-            raise TypeError(f"The input type {type(value)} is invalid! Valid types: [str, dict, list].")
-    
-    # return self.prompt.format(**prompt_params_values) if prompt_params_values else self.prompt
-    if self.prompt is not None:
-        return self.prompt.format(**prompt_params_values) if prompt_params_values else self.prompt
-    elif self.prompt_template is not None:
-        return self.prompt_template.format(
-            system_prompt=system_prompt, 
-            values=prompt_params_values, 
-            inputs_format=self.inputs_format, 
-            outputs_format=self.outputs_format, 
-            parse_mode=self.parse_mode, 
-            title_format=self.title_format, 
-            custom_output_format=self.custom_output_format
-        )
-    else:
-        raise ValueError("`prompt` or `prompt_template` is required when creating a CustomizeAgent.")
-
-def prepare_extraction_prompt(self, llm_output_content: str) -> str:
-    """Prepare extraction prompt for fallback extraction when parsing fails.
-    
-    Args:
-        self: The action instance
-        llm_output_content: Raw output content from LLM
-        
-    Returns:
-        str: Formatted extraction prompt
-    """
-    attr_descriptions: dict = self.outputs_format.get_attr_descriptions()
-    output_description_list = [] 
-    for i, (name, desc) in enumerate(attr_descriptions.items()):
-        output_description_list.append(f"{i+1}. {name}\nDescription: {desc}")
-    output_description = "\n\n".join(output_description_list)
-    return OUTPUT_EXTRACTION_PROMPT.format(text=llm_output_content, output_description=output_description)
-
-
-def customize_action_execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, **kwargs) -> ActionOutput:
-    """Execute a customized action using the language model.
-    
-    Args:
-        self: The action instance
-        llm: Language model to use for generating outputs
-        inputs: Dictionary of input parameters to format the prompt
-        sys_msg: Optional system message to provide to the LLM
-        return_prompt: Whether to return the formatted prompt alongside the output
-        **kwargs: Additional parameters to pass to the language model
-        
-    Returns:
-        If return_prompt is False, returns the parsed output
-        If return_prompt is True, returns a tuple (parsed_output, formatted_prompt)
-        
-    Raises:
-        TypeError: If an input value type is not supported
-    """
-    prompt = self.prepare_action_prompt(inputs, system_prompt=sys_msg)
-    
-    # Generate output
-    if isinstance(prompt, str):
-        llm_output: LLMOutputParser = llm.generate(prompt=prompt, system_message=sys_msg)
-    else:
-        llm_output: LLMOutputParser = llm.generate(messages=prompt)
-    
-    try:
-        output = self.outputs_format.parse(llm_output.content, parse_mode=self.parse_mode, parse_func=self.parse_func, title_format=self.title_format)
-    except Exception:
-        logger.warning(f"Couldn't automatically extract output data for '{self.name}'. Use LLM to extract output data ...")
-        extraction_prompt = self.prepare_extraction_prompt(llm_output.content)
-        llm_extracted_output: LLMOutputParser = llm.generate(prompt=extraction_prompt)
-        llm_extracted_data: dict = parse_json_from_llm_output(llm_extracted_output.content)
-        output = self.outputs_format.from_dict(llm_extracted_data)
-
-    if return_prompt:
-        return output, prompt
-    
-    return output
-
-async def customize_action_async_execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, **kwargs) -> ActionOutput:
-    """Asynchronously execute a customized action using the language model.
-    
-    This is the async version of customize_action_execute method, using async_generate instead of generate.
-    
-    Args:
-        self: The action instance
-        llm: Language model to use for generating outputs
-        inputs: Dictionary of input parameters to format the prompt
-        sys_msg: Optional system message to provide to the LLM
-        return_prompt: Whether to return the formatted prompt alongside the output
-        **kwargs: Additional parameters to pass to the language model
-        
-    Returns:
-        If return_prompt is False, returns the parsed output
-        If return_prompt is True, returns a tuple (parsed_output, formatted_prompt)
-        
-    Raises:
-        TypeError: If an input value type is not supported
-    """
-    prompt = self.prepare_action_prompt(inputs, system_prompt=sys_msg)
-    
-    # Generate output using async method
-    if isinstance(prompt, str):
-        llm_output: LLMOutputParser = await llm.async_generate(prompt=prompt, system_message=sys_msg)
-    else:
-        llm_output: LLMOutputParser = await llm.async_generate(messages=prompt)
-    
-    try:
-        # Parse the output using the specified parsing mode
-        output = self.outputs_format.parse(llm_output.content, parse_mode=self.parse_mode, parse_func=self.parse_func, title_format=self.title_format)
-    except Exception:
-        # Fallback to extracting output via LLM if parsing fails
-        logger.warning(f"Couldn't automatically extract output data for '{self.name}'. Use LLM to extract output data ...")
-        extraction_prompt = self.prepare_extraction_prompt(llm_output.content)
-        
-        # Use async_generate for the extraction too
-        llm_extracted_output: LLMOutputParser = await llm.async_generate(prompt=extraction_prompt)
-        llm_extracted_data: dict = parse_json_from_llm_output(llm_extracted_output.content)
-        output = self.outputs_format.from_dict(llm_extracted_data)
-
-    if return_prompt:
-        return output, prompt
-    
-    return output
-
 class CustomizeAgent(Agent):
 
     """
@@ -490,59 +317,39 @@ class CustomizeAgent(Agent):
             generate_dynamic_class_name(name+" action")
         )
 
-        # Choose base class and create the action class
-        if tool_names and not customize_prompting:
-            # Create ToolCalling-based action with parsing properties only
-            # (ToolCalling has its own execute logic, don't override it)
-            customize_action_cls = create_model(
-                action_cls_name,
-                parse_mode=(Optional[str], Field(default="title", description="the parse mode of the action, must be one of: ['title', 'str', 'json', 'xml', 'custom']")),
-                parse_func=(Optional[Callable], Field(default=None, exclude=True, description="the function to parse the LLM output. It receives the LLM output and returns a dict.")),
-                title_format=(Optional[str], Field(default="## {title}", exclude=True, description="the format of the title. It is used when the `parse_mode` is 'title'.")),
-                __base__=ToolCalling
-            )
+        # Create ToolCalling-based action with parsing properties only
+        # (ToolCalling has its own execute logic, don't override it)
+        customize_action_cls = create_model(
+            action_cls_name,
+            parse_mode=(Optional[str], Field(default="title", description="the parse mode of the action, must be one of: ['title', 'str', 'json', 'xml', 'custom']")),
+            parse_func=(Optional[Callable], Field(default=None, exclude=True, description="the function to parse the LLM output. It receives the LLM output and returns a dict.")),
+            title_format=(Optional[str], Field(default="## {title}", exclude=True, description="the format of the title. It is used when the `parse_mode` is 'title'.")),
+            __base__=ToolCalling
+        )
 
-            customize_action = customize_action_cls(
-                name=action_cls_name,
-                description=desc, 
-                inputs=inputs,
-                outputs=outputs,
-                output_parser=output_parser,
-                parse_mode=parse_mode,
-                parse_func=parse_func,
-                title_format=title_format,
-                max_tool_try=2,  # Default value, can be made configurable
-                prompt=prompt  # Use prompt for ToolCalling
-            )
+        customize_action = customize_action_cls(
+            name=action_cls_name,
+            description=desc, 
+            inputs=inputs,
+            outputs=outputs,
+            output_parser=output_parser,
+            parse_mode=parse_mode,
+            parse_func=parse_func,
+            title_format=title_format,
+            max_tool_try=2,  # Default value, can be made configurable
+            customize_prompting = customize_prompting,
+            prompt=prompt  # Use prompt for ToolCalling
+        )
 
-            tools = [tool_dict[tool_name] for tool_name in tool_names if tool_name in tool_dict]
-            customize_action.add_tools(tools)
-        else:
-            # Create regular Action-based action with full customize properties
-            customize_action_cls = create_model(
-                action_cls_name,
-                parse_mode=(Optional[str], Field(default="title", description="the parse mode of the action, must be one of: ['title', 'str', 'json', 'xml', 'custom']")),
-                parse_func=(Optional[Callable], Field(default=None, exclude=True, description="the function to parse the LLM output. It receives the LLM output and returns a dict.")),
-                title_format=(Optional[str], Field(default="## {title}", exclude=True, description="the format of the title. It is used when the `parse_mode` is 'title'.")),
-            custom_output_format=(Optional[str], Field(default=None, exclude=True, description="the format of the output. It is used when the `prompt_template` is provided.")),
-                execute=customize_action_execute,
-                async_execute=customize_action_async_execute,
-                prepare_action_prompt=prepare_action_prompt,
-                prepare_extraction_prompt=prepare_extraction_prompt,
-                __base__=Action
-            )
-
-            customize_action = customize_action_cls(
-                name = action_cls_name,
-                description=desc, 
-                prompt=prompt, 
-                prompt_template=prompt_template, 
-                inputs_format=action_input_type, 
-                outputs_format=action_output_type,
-                parse_mode=parse_mode,
-                parse_func=parse_func,
-                title_format=title_format
-            )
+        # Use dict to deduplicate tools by id to avoid adding the same tool multiple times
+        tools_by_id = {}
+        if tool_names:
+            for tool_name in tool_names:
+                if tool_name in tool_dict:
+                    tool = tool_dict[tool_name]
+                    tools_by_id[id(tool)] = tool
+        tools = list(tools_by_id.values())
+        customize_action.add_tools(tools)
         
         return customize_action
     
