@@ -26,7 +26,7 @@ from dspy.teleprompt.utils import (
 ) 
 
 from ..core.logging import logger 
-from ..core.callbacks import suppress_cost_logging
+from ..core.callbacks import suppress_cost_logging, suppress_logger_info
 from ..models.base_model import BaseLLM 
 from ..benchmark.benchmark import Benchmark 
 from .engine.base import BaseOptimizer
@@ -139,6 +139,31 @@ class MiproEvaluator:
         self._log_counter = 0
         self._log_lock = threading.Lock()
 
+    def _extract_score_from_dict(self, score_dict: Dict[str, float]) -> float:
+        """Extract a single score from a dictionary of scores.
+        
+        Args:
+            score_dict (Dict[str, float]): Dictionary containing metric scores
+            
+        Returns:
+            float: The extracted score based on the following rules:
+                1. If dict has only one score, return that score
+                2. If metric_name is specified, return that metric's score
+                3. Otherwise, return average of all scores
+        """
+        if len(score_dict) == 1:
+            return list(score_dict.values())[0]
+        elif self.metric_name is not None:
+            return score_dict[self.metric_name]
+        else:
+            avg_score = sum(score_dict.values()) / len(score_dict)
+            # Use thread-safe counter to ensure message is only logged once
+            with self._log_lock:
+                if self._log_counter == 0:
+                    logger.info(f"`{type(self.benchmark)}.evaluate` returned a dictionary of scores, but no metric name was provided. Will return the average score across all metrics.")
+                    self._log_counter += 1
+            return avg_score
+
     def metric(self, example: dspy.Example, prediction: Any, *args, **kwargs):
 
         if isinstance(self.benchmark.get_train_data()[0], dspy.Example):
@@ -157,21 +182,7 @@ class MiproEvaluator:
             raise ValueError(f"Unsupported example type in `{type(self.benchmark)}`! Expected `dspy.Example` or `dict`, got {type(self.benchmark.get_train_data()[0])}")
         
         if isinstance(score, dict):
-            if len(score) == 1:
-                score = list(score.values())[0]
-            elif self.metric_name is not None:
-                score = score[self.metric_name]
-            else:
-                # first_score_key, first_score_value = list(score.items())[0]
-                avg_score = sum(score.values()) / len(score)
-                # Use thread-safe counter to ensure message is only logged once
-                with self._log_lock:
-                    if self._log_counter == 0:
-                        # logger.info(f"`{type(self.benchmark)}.evaluate` returned a dictionary of scores, but no metric name was provided. Will return the first score ({first_score_key}).")
-                        logger.info(f"`{type(self.benchmark)}.evaluate` returned a dictionary of scores, but no metric name was provided. Will return the average score across all metrics.")
-                        self._log_counter += 1
-                    # score = first_score_value
-                    score = avg_score
+            score = self._extract_score_from_dict(score)
         
         return score
         
@@ -597,32 +608,26 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         program = student.deepcopy()
 
         # check the evaluator (If None, will construct a default evaluator using the `evaluate` method in the benchmark) and wrap it with runtime checks
-        # TODO 
         evaluator = self._validate_evaluator(evaluator=self.evaluator, benchmark=dataset, metric_name=metric_name)
         self.metric = evaluator.metric
 
         # Step 1: Bootstrap few-shot examples 
-        # with suppress_cost_logging():
-        #     demo_candidates = self._bootstrap_fewshot_examples(program, trainset, seed, teacher=None)
-        
-        import pickle
-        demo_candidates = pickle.load(open("debug/demo_candidates.pkl", "rb"))
+        with suppress_cost_logging():
+            demo_candidates = self._bootstrap_fewshot_examples(program, trainset, seed, teacher=None)
 
         # Step 2: Propose instruction candidates 
-        # with suppress_cost_logging():
-        #     instruction_candidates = self._propose_instructions(
-        #         program,
-        #         trainset,
-        #         demo_candidates,
-        #         self.view_data_batch_size,
-        #         self.program_aware_proposer,
-        #         self.data_aware_proposer,
-        #         self.tip_aware_proposer,
-        #         self.fewshot_aware_proposer,
-        #     )
-
-        instruction_candidates = pickle.load(open("debug/instruction_candidates.pkl", "rb"))
-
+        with suppress_cost_logging():
+            instruction_candidates = self._propose_instructions(
+                program,
+                trainset,
+                demo_candidates,
+                self.view_data_batch_size,
+                self.program_aware_proposer,
+                self.data_aware_proposer,
+                self.tip_aware_proposer,
+                self.fewshot_aware_proposer,
+            )
+        
         # Step 3: Find optimal prompt parameters 
         with suppress_cost_logging():
             best_program = self._optimize_prompt_parameters(
@@ -641,8 +646,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         if self.save_path:
             os.makedirs(self.save_path, exist_ok=True)
             self.best_program_path = os.path.join(self.save_path, "best_program.json")
-            best_program.save(self.best_program_path) 
-        from pdb import set_trace; set_trace()
+            best_program.save(self.best_program_path)
 
     def _get_input_keys(self, dataset: Benchmark) -> Optional[List[str]]:
 
@@ -1158,16 +1162,40 @@ class WorkFlowGraphProgram:
     def load(self, path: str):
         return WorkFlowGraph.from_file(path=path) 
 
-class MiproEvaluatorWrapper: 
+class MiproEvaluatorWrapper(MiproEvaluator): 
 
-    def __init__(self, evaluator: Evaluator):
+    def __init__(self, evaluator: Evaluator, benchmark: Benchmark, metric_name: str = None):
+
         self.evaluator = evaluator 
+        self.benchmark = benchmark 
+        self.metric_name = metric_name 
 
-    def metric(self, example):
-        pass 
+    def metric(self, example: dspy.Example, prediction: Any, *args, **kwargs):
+        return super().metric(example, prediction, *args, **kwargs)
 
-    def __call__(self, program: WorkFlowGraphProgram, evalset: List[Any], **kwargs) -> float: 
-        pass 
+    def __call__(self, program: WorkFlowGraphProgram, evalset: List[dspy.Example], **kwargs) -> float: 
+        
+        graph = program.graph
+        self.evaluator._evaluation_records.clear()
+
+        # update agents
+        self.evaluator.agent_manager.update_agents_from_workflow(workflow_graph=graph, llm_config=self.evaluator.llm.config, **kwargs)
+        
+        if isinstance(self.benchmark.get_train_data()[0], dspy.Example):
+            data = evalset
+        else:
+            data = [example.toDict() for example in evalset]
+        
+        with suppress_logger_info():
+            metrics = self.evaluator._evaluate_graph(
+                graph=graph, data=data, benchmark=self.benchmark, verbose=True, **kwargs
+            )
+        if isinstance(metrics, dict):
+            score = self._extract_score_from_dict(metrics)
+        else:
+            score = metrics 
+        
+        return score 
 
 
 class WorkFlowMiproOptimizer(MiproOptimizer):
@@ -1225,7 +1253,14 @@ class WorkFlowMiproOptimizer(MiproOptimizer):
             registry=None, # todo replace this placeholder 
             program=workflow_graph_program, 
             optimizer_llm=optimizer_llm or evaluator.llm, 
-            evaluator=MiproEvaluatorWrapper(evaluator),
-            **kwargs 
+            evaluator=evaluator,
+            **kwargs
         )
+
+    def _validate_evaluator(self, evaluator: Callable = None, benchmark: Benchmark = None, metric_name: str = None) -> Callable:
+        if evaluator and isinstance(evaluator, Evaluator):
+            # if evaluator is an Evaluator, convert it to a MiproEvaluatorWrapper
+            evaluator = MiproEvaluatorWrapper(evaluator=evaluator, benchmark=benchmark)
+        return super()._validate_evaluator(evaluator, benchmark, metric_name)
+    
         
