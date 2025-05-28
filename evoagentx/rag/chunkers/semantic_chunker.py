@@ -48,13 +48,7 @@ class SemanticChunker(BaseChunker):
             llama_doc = doc.to_llama_document()
             llama_doc.metadata["doc_id"] = doc.doc_id
 
-            # Parse document into nodes
-            try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            nodes = loop.run_until_complete(self.parser.aget_nodes_from_documents([llama_doc]))
+            nodes = asyncio.run(self.parser.aget_nodes_from_documents([llama_doc]))
 
             # Convert nodes to Chunks
             chunks = []

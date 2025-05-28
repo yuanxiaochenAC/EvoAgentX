@@ -109,7 +109,7 @@ class HierarchicalChunker(BaseChunker):
             llama_doc = doc.to_llama_document()
             llama_doc.metadata["doc_id"] = doc.doc_id
 
-            nodes = asyncio.run(self.parser.aget_nodes_from_documents([llama_doc]))
+            nodes = self.parser.get_nodes_from_documents([llama_doc])
 
             chunks = []
             custom_metadata = custom_metadata or {}

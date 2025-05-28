@@ -2,13 +2,13 @@
 import json
 import hashlib
 from uuid import uuid4
-from datetime import datetime
 from typing import List, Dict, Optional, Union, Any
 
 from pydantic import BaseModel, Field
 from llama_index.core import Document as LlamaIndexDocument
 from llama_index.core.schema import BaseNode, TextNode
-
+from llama_index.core import VectorStoreIndex
+from llama_index.embeddings import openai
 
 DEAFULT_EXCLUDED = ['file_name', 'file_type', 'file_size', 'page_count', 'creation_date', 
                         'last_modified_date', 'language', 'word_count', 'custom_fields', 'hash_doc']
@@ -75,8 +75,8 @@ class Document:
             DocumentMetadata.model_validate(metadata) if isinstance(metadata, dict) else metadata or DocumentMetadata()
         )
         self.embedding = embedding
-        self.excluded_embed_metadata_keys = excluded_embed_metadata_keys
-        self.excluded_llm_metadata_keys = excluded_llm_metadata_keys
+        self.excluded_embed_metadata_keys = list(set(DEAFULT_EXCLUDED + excluded_embed_metadata_keys))
+        self.excluded_llm_metadata_keys = list(set(DEAFULT_EXCLUDED + excluded_llm_metadata_keys))
         self.relationships = relationships
         self.metadata_template = metadata_template
         self.metadata_separator = metadata_separator
@@ -189,8 +189,8 @@ class Chunk:
         self.embedding = embedding
         self.start_char_idx = start_char_idx
         self.end_char_idx = end_char_idx
-        self.excluded_embed_metadata_keys = excluded_embed_metadata_keys
-        self.excluded_llm_metadata_keys = excluded_llm_metadata_keys
+        self.excluded_embed_metadata_keys = list(set(DEAFULT_EXCLUDED + excluded_embed_metadata_keys))
+        self.excluded_llm_metadata_keys = list(set(DEAFULT_EXCLUDED + excluded_llm_metadata_keys))
         self.text_template = text_template
         self.relationships = relationships
         # init metadata
@@ -313,10 +313,14 @@ class Corpus:
         """
         return cls([Chunk.from_llama_node(node, doc_id) for node in nodes])
 
-    def add_chunk(self, chunk: Chunk):
-        """Add a chunk to the corpus and update index."""
-        self.chunks.append(chunk)
-        self.chunk_index[chunk.chunk_id] = chunk
+    def add_chunk(self, batch_chunk: Union[Chunk, List[Chunk]]):
+        """Add a batch chunk to the corpus and update index."""
+        if isinstance(batch_chunk, Chunk):
+            batch_chunk = [batch_chunk]
+
+        for chunk in batch_chunk:
+            self.chunks.append(chunk)
+            self.chunk_index[chunk.chunk_id] = chunk
 
     def get_chunk(self, chunk_id: str) -> Optional[Chunk]:
         """Retrieve a chunk by its ID."""

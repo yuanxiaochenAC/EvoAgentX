@@ -168,16 +168,9 @@ class LLamaIndexReader:
                 for file_path, docs in file_to_docs.items():
                     combined_text = "\n".join(doc.text for doc in docs)
                     combined_metadata = docs[0].metadata.copy()
+                    combined_metadata.text = combined_text
                     combined_metadata["page_count"] = len(docs)
-                    documents.append(Document(
-                        text=combined_text,
-                        metadata=combined_metadata,
-                        doc_id=str(uuid4()),
-                        relationships=docs[0].relationships,
-                        metadata_template=docs[0].metadata_template,
-                        metadata_separator=docs[0].metadata_separator,
-                        text_template=docs[0].text_template,
-                    ))
+                    documents.append(Document.from_llama_document(combined_metadata))
             else:
                 documents = [Document.from_llama_document(doc) for doc in llama_docs]
             self.logger.info(f"Loaded {len(documents)} documents")
