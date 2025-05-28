@@ -1,7 +1,7 @@
 from enum import Enum
 from pydantic import Field, model_validator
 from datetime import datetime
-from typing import Optional, Callable, Any, List
+from typing import Optional, Callable, Any, List, Union
 
 from .module import BaseModule
 from .module_utils import generate_id, get_timestamp
@@ -39,7 +39,7 @@ class Message(BaseModule):
     agent: Optional[str] = None
     # receivers: Optional[Union[str, List[str]]] = None
     action: Optional[str] = None
-    prompt: Optional[str] = None
+    prompt: Optional[Union[str, List[dict]]] = None
     next_actions: Optional[List[str]] = None
     msg_type: Optional[MessageType] = MessageType.UNKNOWN
     wf_goal: Optional[str] = None

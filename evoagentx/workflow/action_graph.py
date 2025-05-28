@@ -94,7 +94,18 @@ class ActionGraph(BaseModule):
             json.dump(config, f, indent=4)
 
         return path
-
+    
+    def get_config(self) -> dict:
+        """
+        Get a dictionary containing all necessary configuration to recreate this action graph.
+        
+        Returns:
+            dict: A configuration dictionary that can be used to initialize a new ActionGraph instance
+            with the same properties as this one.
+        """
+        config = self.get_graph_info()
+        config["llm_config"] = self.llm_config.to_dict()
+        return config
 
 class QAActionGraph(ActionGraph):
 

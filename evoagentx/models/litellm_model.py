@@ -11,7 +11,7 @@ from ..core.registry import register_model
 from .model_configs import LiteLLMConfig
 # from .base_model import BaseLLM, LLMOutputParser
 from .openai_model import OpenAILLM
-
+from .model_utils import infer_litellm_company_from_model
 
 @register_model(config_cls=LiteLLMConfig, alias=["litellm"])
 class LiteLLM(OpenAILLM):
@@ -26,8 +26,9 @@ class LiteLLM(OpenAILLM):
 
         # Set model and extract the company name
         self.model = self.config.model
-        company = self.model.split("/")[0] if "/" in self.model else "openai"
-
+        # company = self.model.split("/")[0] if "/" in self.model else "openai"
+        company = infer_litellm_company_from_model(self.model)
+        
         # Set environment variables based on the company
         if company == "openai":
             if not self.config.openai_key:
@@ -41,11 +42,36 @@ class LiteLLM(OpenAILLM):
             if not self.config.anthropic_key:
                 raise ValueError("Anthropic API key is required for Anthropic models. You should set `anthropic_key` in LiteLLMConfig")
             os.environ["ANTHROPIC_API_KEY"] = self.config.anthropic_key
+        elif company == "gemini":
+            if not self.config.gemini_key:
+                raise ValueError("Gemini API key is required for Gemini models. You should set `gemini_key` in LiteLLMConfig")
+            os.environ["GEMINI_API_KEY"] = self.config.gemini_key 
+        elif company == "meta_llama":
+            if not self.config.meta_llama_key:
+                raise ValueError("Meta Llama API key is required for Meta Llama models. You should set `meta_llama_key` in LiteLLMConfig")
+            os.environ["LLAMA_API_KEY"] = self.config.meta_llama_key
+        elif company == "openrouter":
+            if not self.config.openrouter_key:
+                raise ValueError("OpenRouter API key is required for OpenRouter models. You should set `openrouter_key` in LiteLLMConfig. You can also set `openrouter_base` in LiteLLMConfig to use a custom base URL [optional]")
+            os.environ["OPENROUTER_API_KEY"] = self.config.openrouter_key
+            os.environ["OPENROUTER_API_BASE"] = self.config.openrouter_base # [optional]
+        elif company == "perplexity":
+            if not self.config.perplexity_key:
+                raise ValueError("Perplexity API key is required for Perplexity models. You should set `perplexity_key` in LiteLLMConfig")
+            os.environ["PERPLEXITYAI_API_KEY"] = self.config.perplexity_key
+        elif company == "groq":
+            if not self.config.groq_key:
+                raise ValueError("Groq API key is required for Groq models. You should set `groq_key` in LiteLLMConfig")
+            os.environ["GROQ_API_KEY"] = self.config.groq_key
         else:
             raise ValueError(f"Unsupported company: {company}")
 
-        self._default_ignore_fields = ["llm_type", "output_response", "openai_key", "deepseek_key", "anthropic_key"] # parameters in LiteLLMConfig that are not LiteLLM models' input parameters
-
+        self._default_ignore_fields = [
+            "llm_type", "output_response", "openai_key", "deepseek_key", "anthropic_key", 
+            "gemini_key", "meta_llama_key", "openrouter_key", "openrouter_base", "perplexity_key", 
+            "groq_key"
+        ] # parameters in OpenAILLMConfig that are not OpenAI models' input parameters 
+    
     @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(5))
     def single_generate(self, messages: List[dict], **kwargs) -> str:
 

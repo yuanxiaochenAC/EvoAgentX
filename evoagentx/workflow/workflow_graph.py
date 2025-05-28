@@ -14,6 +14,7 @@ from ..core.logging import logger
 from ..core.module import BaseModule
 from ..core.base_config import Parameter
 from .action_graph import ActionGraph
+from ..agents.agent import Agent 
 from ..utils.utils import generate_dynamic_class_name, make_parent_folder
 from ..prompts.workflow.sew_workflow import SEW_WORKFLOW
 from ..prompts.utils import DEFAULT_SYSTEM_PROMPT
@@ -63,14 +64,23 @@ class WorkFlowNode(BaseModule):
     action_graph: Optional[ActionGraph] = None
     status: Optional[WorkFlowNodeState] = WorkFlowNodeState.PENDING
 
-    @field_validator('agents')
+    @field_validator('agents', mode="before")
     @classmethod
-    def check_agent_format(cls, agents: List[Union[str, dict]]):
+    def check_agent_format(cls, agents: List[Union[str, dict, Agent]]):
+        if agents is None:
+            return None
+
+        validated_agents = []
         for agent in agents:
-            if isinstance(agent, dict):
+            if isinstance(agent, str):
+                validated_agents.append(agent)
+            elif isinstance(agent, Agent):
+                validated_agents.append(agent.get_config())
+            elif isinstance(agent, dict):
                 assert "name" in agent and "description" in agent, \
                     "must provide the name and description of an agent when specifying an agent with a dict."
-        return agents
+                validated_agents.append(agent)
+        return validated_agents
 
     @model_validator(mode="after")
     @classmethod
@@ -1049,6 +1059,18 @@ class WorkFlowGraph(BaseModule):
                 if any([param in another_node_input_params for param in node_output_params]):
                     edges.append(WorkFlowEdge(edge_tuple=(node.name, another_node.name)))
         return edges
+    
+    def get_config(self) -> dict:
+        """
+        Get a dictionary containing all necessary configuration to recreate this agent.
+        
+        Returns:
+            dict: A configuration dictionary that can be used to initialize a new WorkFlowGraph instance
+            with the same properties as this one.
+        """
+        config = self.to_dict() 
+        config.pop("graph", None)
+        return config
 
 
 class SequentialWorkFlowGraph(WorkFlowGraph):
@@ -1164,6 +1186,16 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
         with open(path, "w", encoding="utf-8") as f:
             json.dump(config, f, indent=4)
         return path
+    
+    def get_config(self) -> Dict:
+        """
+        Get a dictionary containing all necessary configuration to recreate this workflow graph.
+        
+        Returns:
+            dict: A configuration dictionary that can be used to initialize a new SequentialWorkFlowGraph instance
+            with the same properties as this one.
+        """
+        return self.get_graph_info()
     
 
 class SEWWorkFlowGraph(SequentialWorkFlowGraph):

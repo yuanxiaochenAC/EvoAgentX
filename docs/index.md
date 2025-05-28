@@ -34,7 +34,7 @@ EvoAgentX uses a modular architecture with the following core components:
 
 ## 👥 Community
 
-- **Discord**: Join our [Discord Channel](https://discord.gg/SUEkfTYn) for discussions and support
+- **Discord**: Join our [Discord Channel](https://discord.gg/w3x2YrCa) for discussions and support
 - **GitHub**: Contribute to the project on [GitHub](https://github.com/EvoAgentX/EvoAgentX/)
 - **Email**: Contact us at [evoagentx.ai@gmail.com](mailto:evoagentx.ai@gmail.com)
 - **WeChat**: Connect with us on [WeChat](https://github.com/EvoAgentX/EvoAgentX/blob/main/assets/wechat_info.md) for updates and support.

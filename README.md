@@ -11,9 +11,9 @@
 
 <div align="center">
 
-[![EvoAgentX Homepage](https://img.shields.io/badge/EvoAgentX-Homepage-blue?logo=homebridge)](https://evo-agent-x-landing-page.vercel.app/)
+[![EvoAgentX Homepage](https://img.shields.io/badge/EvoAgentX-Homepage-blue?logo=homebridge)](https://evoagentx.org/)
 [![Docs](https://img.shields.io/badge/-Documentation-0A66C2?logo=readthedocs&logoColor=white&color=7289DA&labelColor=grey)](https://EvoAgentX.github.io/EvoAgentX/)
-[![Discord](https://img.shields.io/badge/Chat-Discord-5865F2?&logo=discord&logoColor=white)](https://discord.gg/SUEkfTYn)
+[![Discord](https://img.shields.io/badge/Chat-Discord-5865F2?&logo=discord&logoColor=white)](https://discord.gg/w3x2YrCa)
 [![Twitter](https://img.shields.io/badge/Follow-@EvoAgentX-e3dee5?&logo=x&logoColor=white)](https://x.com/EvoAgentX)
 [![Wechat](https://img.shields.io/badge/WeChat-EvoAgentX-brightgreen?logo=wechat&logoColor=white)](./assets/wechat_info.md)
 [![GitHub star chart](https://img.shields.io/github/stars/EvoAgentX/EvoAgentX?style=social)](https://star-history.com/#EvoAgentX/EvoAgentX)
@@ -46,13 +46,26 @@
 - **[May 2025]** 🎉 **EvoAgentX** has been officially released!
 
 ## ⚡ Get Started
+- [🔥 Latest News](#-latest-news)
+- [⚡ Get Started](#-get-started)
 - [Installation](#installation)
 - [LLM Configuration](#llm-configuration)
+  - [API Key Configuration](#api-key-configuration)
+  - [Configure and Use the LLM](#configure-and-use-the-llm)
 - [Automatic WorkFlow Generation](#automatic-workflow-generation)
 - [Demo Video](#demo-video)
+  - [✨ Final Results](#-final-results)
 - [Evolution Algorithms](#evolution-algorithms)
+  - [📊 Results](#-results)
 - [Applications](#applications)
 - [Tutorial and Use Cases](#tutorial-and-use-cases)
+- [🎯 Roadmap](#-roadmap)
+- [🙋 Support](#-support)
+  - [Join the Community](#join-the-community)
+  - [Contact Information](#contact-information)
+- [🙌 Contributing to EvoAgentX](#-contributing-to-evoagentx)
+- [📚 Acknowledgements](#-acknowledgements)
+- [📄 License](#-license)
 
 ## Installation
 
@@ -195,9 +208,10 @@ You can also:
 
 
 [![Watch on YouTube](https://img.shields.io/badge/-Watch%20on%20YouTube-red?logo=youtube&labelColor=grey)](https://www.youtube.com/watch?v=Wu0ZydYDqgg)
+[![Watch on Bilibili](https://img.shields.io/badge/-Watch%20on%20Bilibili-00A1D6?logo=bilibili&labelColor=white)](https://www.bilibili.com/video/BV1mEJizyE7H/?vd_source=02f8f3a7c8865b3af6378d9680393f5a)
 
 <div align="center">
-  <video src="https://github.com/user-attachments/assets/5cc5d0e5-51fe-425d-943d-4c95b1f0fa8f.mp4" autoplay loop muted playsinline width="600">
+  <video src="https://github.com/user-attachments/assets/906a6086-e98d-4df3-84b0-808020ddd520.mp4" autoplay loop muted playsinline width="600">
     Your browser does not support the video tag.
   </video>
 </div>
@@ -274,6 +288,7 @@ Explore how to effectively use EvoAgentX with the following resources:
 |:---|:---|
 | **[Build Your First Agent](./docs/tutorial/first_agent.md)** | Quickly create and manage agents with multi-action capabilities. |
 | **[Build Your First Workflow](./docs/tutorial/first_workflow.md)** | Learn to build collaborative workflows with multiple agents. |
+| **[Working with Tools](./docs/tutorial/tools.md)** | Master EvoAgentX's powerful tool ecosystem for agent interactions |
 | **[Automatic Workflow Generation](./docs/quickstart.md#automatic-workflow-generation-and-execution)** | Automatically generate workflows from natural language goals. |
 | **[Benchmark and Evaluation Tutorial](./docs/tutorial/benchmark_and_evaluation.md)** | Evaluate agent performance using benchmark datasets. |
 | **[TextGrad Optimizer Tutorial](./docs/tutorial/textgrad_optimizer.md)** | Automatically optimise the prompts within multi-agent workflow with TextGrad. |
@@ -299,7 +314,7 @@ Explore how to effectively use EvoAgentX with the following resources:
 📢 Stay connected and be part of the **EvoAgentX** journey!  
 🚩 Join our community to get the latest updates, share your ideas, and collaborate with AI enthusiasts worldwide.
 
-- [Discord](https://discord.gg/SUEkfTYn) — Chat, discuss, and collaborate in real-time.
+- [Discord](https://discord.gg/w3x2YrCa) — Chat, discuss, and collaborate in real-time.
 - [X (formerly Twitter)](https://x.com/EvoAgentX) — Follow us for news, updates, and insights.
 - [WeChat](https://github.com/EvoAgentX/EvoAgentX/blob/main/assets/wechat_info.md) — Connect with our Chinese community.
 
