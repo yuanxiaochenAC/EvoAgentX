@@ -94,68 +94,22 @@ class HierarchicalChunker(BaseChunker):
             include_prev_next_rel=include_prev_next_rel,
         )
 
-    def _calculate_metadata_length(self, doc: Document) -> int:
-        """Calculate the length of serialized metadata for a document.
-
-        Args:
-            doc (Document): The document to analyze.
-
-        Returns:
-            int: Length of the serialized metadata string.
-        """
-        try:
-            serialized = doc.metadata.model_dump(exclude_unset=True, mode="json")
-            return len(serialized)
-        except Exception as e:
-            self.logger.warning(f"Failed to calculate metadata length for doc {doc.doc_id}: {e}")
-            return 0
-
-    def _adjust_chunk_sizes(self, documents: List[Document]) -> List[int]:
-        """Dynamically adjust chunk sizes based on maximum metadata length.
-
-        Args:
-            documents (List[Document]): List of documents to analyze.
-
-        Returns:
-            List[int]: Adjusted chunk sizes ensuring smallest size accommodates metadata.
-        """
-        max_metadata_length = max(self._calculate_metadata_length(doc) for doc in documents)
-        buffer = 50
-        min_chunk_size = max_metadata_length + buffer
-
-        adjusted_sizes = sorted(
-            [size for size in self.chunk_sizes if size >= min_chunk_size] +
-            ([min_chunk_size] if min_chunk_size > min(self.chunk_sizes) else []),
-            reverse=True,
-        )
-
-        if not adjusted_sizes:
-            adjusted_sizes = [max(min_chunk_size, 512)]
-        if len(adjusted_sizes) < 2:
-            adjusted_sizes.insert(0, adjusted_sizes[0] * 2)
-
-        if adjusted_sizes != self.chunk_sizes:
-            self.logger.info(
-                f"Adjusted chunk sizes from {self.chunk_sizes} to {adjusted_sizes} "
-                f"due to metadata length {max_metadata_length}"
-            )
-        return adjusted_sizes
-
-    async def _process_document_async(self, doc: Document, custom_metadata: Dict = None) -> List[Chunk]:
-        """Asynchronously process a single document into hierarchical chunks.
+    def _process_document(self, doc: Document, custom_metadata: Dict = None) -> List[Chunk]:
+        """Process a single document into chunks in a thread.
 
         Args:
             doc (Document): The document to chunk.
             custom_metadata (Dict, optional): User-defined metadata for sections.
 
         Returns:
-            List[Chunk]: List of Chunk objects with hierarchical metadata.
+            List[Chunk]: List of Chunk objects with metadata.
         """
         try:
+            import pdb;pdb.set_trace()
             llama_doc = doc.to_llama_document()
             llama_doc.metadata["doc_id"] = doc.doc_id
 
-            nodes = await self.parser.aget_nodes_from_documents([llama_doc])
+            nodes = asyncio.run(self.parser.aget_nodes_from_documents([llama_doc]))
 
             chunks = []
             custom_metadata = custom_metadata or {}
@@ -219,23 +173,6 @@ class HierarchicalChunker(BaseChunker):
             self.logger.error(f"Failed to process document {doc.doc_id}: {str(e)}")
             return []
 
-    def _process_document(self, doc: Document, custom_metadata: Dict = None) -> List[Chunk]:
-        """Process a single document into chunks in a thread.
-
-        Args:
-            doc (Document): The document to chunk.
-            custom_metadata (Dict, optional): User-defined metadata for sections.
-
-        Returns:
-            List[Chunk]: List of Chunk objects with metadata.
-        """
-        llama_doc = doc.to_llama_document()
-        llama_doc.metadata["doc_id"] = doc.doc_id
-
-        nodes = self.parser.get_nodes_from_documents([llama_doc])
-        import pdb;pdb.set_trace()
-        # return asyncio.run(self._process_document_async(doc, custom_metadata))
-
     def chunk(self, documents: List[Document], **kwargs) -> Corpus:
         """Chunk documents using hierarchical strategy with dynamic chunk size adjustment.
 
@@ -250,43 +187,19 @@ class HierarchicalChunker(BaseChunker):
             self.logger.info("No documents provided, returning empty Corpus")
             return Corpus(chunks=[])
 
-        # Dynamically adjust chunk sizes (if using default parsers)
-        adjusted_chunk_sizes = self._adjust_chunk_sizes(documents)
-        if adjusted_chunk_sizes != self.chunk_sizes:
-            node_parser_ids = [f"chunk_size_{size}" for size in adjusted_chunk_sizes]
-            node_parser_map = {
-                node_id: SentenceSplitter(
-                    chunk_size=size,
-                    chunk_overlap=self.chunk_overlap,
-                )
-                for size, node_id in zip(adjusted_chunk_sizes, node_parser_ids)
+        chunks = []
+        custom_metadata = kwargs.get("custom_metadata", {})
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            future_to_doc = {
+                executor.submit(self._process_document, doc, custom_metadata): doc
+                for doc in documents
             }
-            self.parser = HierarchicalNodeParser.from_defaults(
-                chunk_sizes=None,
-                chunk_overlap=self.chunk_overlap,
-                node_parser_ids=node_parser_ids,
-                node_parser_map=node_parser_map,
-                include_metadata=self.include_metadata,
-                include_prev_next_rel=self.include_prev_next_rel,
-            )
-            self.chunk_sizes = adjusted_chunk_sizes
-            self.parser_to_level = {pid: idx + 1 for idx, pid in enumerate(node_parser_ids)}
+            for future in future_to_doc:
+                doc = future_to_doc[future]
+                try:
+                    chunks.extend(future.result())
+                except Exception as e:
+                    self.logger.error(f"Error processing document {doc.doc_id}: {str(e)}")
 
-        import pdb;pdb.set_trace()
-        self._process_document(documents[0])
-        # chunks = []
-        # custom_metadata = kwargs.get("custom_metadata", {})
-        # with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-        #     future_to_doc = {
-        #         executor.submit(self._process_document, doc, custom_metadata): doc
-        #         for doc in documents
-        #     }
-        #     for future in future_to_doc:
-        #         doc = future_to_doc[future]
-        #         try:
-        #             chunks.extend(future.result())
-        #         except Exception as e:
-        #             self.logger.error(f"Error processing document {doc.doc_id}: {str(e)}")
-
-        # self.logger.info(f"Chunked {len(documents)} documents into {len(chunks)} chunks")
-        # return Corpus(chunks=chunks)
+        self.logger.info(f"Chunked {len(documents)} documents into {len(chunks)} chunks")
+        return Corpus(chunks=chunks)

@@ -57,8 +57,8 @@ class SimpleChunker(BaseChunker):
         )
         self.logger = logging.getLogger(__name__)
 
-    async def _process_document_async(self, doc: Document) -> List[Chunk]:
-        """Asynchronously process a single document into chunks.
+    def _process_document(self, doc: Document) -> List[Chunk]:
+        """Process a single document into chunks in a thread.
 
         Args:
             doc (Document): The document to chunk.
@@ -67,13 +67,13 @@ class SimpleChunker(BaseChunker):
             List[Chunk]: List of Chunk objects with metadata.
         """
         try:
-            # Convert to LlamaIndex Document
             llama_doc = doc.to_llama_document()
             llama_doc.metadata["doc_id"] = doc.doc_id
 
             # Parse document into nodes using async method
-            nodes = await self.parser.aget_nodes_from_documents([llama_doc])
+            nodes = asyncio.run(self.parser.aget_nodes_from_documents([llama_doc]))
 
+            import pdb;pdb.set_trace()
             # Convert nodes to Chunks
             chunks = []
             for idx, node in enumerate(nodes):
@@ -97,17 +97,6 @@ class SimpleChunker(BaseChunker):
             self.logger.error(f"Failed to process document {doc.doc_id}: {str(e)}")
             return []
 
-    def _process_document(self, doc: Document) -> List[Chunk]:
-        """Process a single document into chunks in a thread.
-
-        Args:
-            doc (Document): The document to chunk.
-
-        Returns:
-            List[Chunk]: List of Chunk objects with metadata.
-        """
-        return asyncio.run(self._process_document_async(doc))
-
     def chunk(self, documents: List[Document], **kwargs) -> Corpus:
         """Chunk documents into fixed-size chunks using multi-threading.
 
@@ -122,14 +111,14 @@ class SimpleChunker(BaseChunker):
             return Corpus([])
 
         chunks = []
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            future_to_doc = {executor.submit(self._process_document, doc): doc for doc in documents}
-            for future in future_to_doc:
-                doc = future_to_doc[future]
-                try:
-                    chunks.extend(future.result())
-                except Exception as e:
-                    self.logger.error(f"Error processing document {doc.doc_id}: {str(e)}")
-
+        # with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+        #     future_to_doc = {executor.submit(self._process_document, doc): doc for doc in documents}
+        #     for future in future_to_doc:
+        #         doc = future_to_doc[future]
+        #         try:
+        #             chunks.extend(future.result())
+        #         except Exception as e:
+        #             self.logger.error(f"Error processing document {doc.doc_id}: {str(e)}")
+        self._process_document(documents[0])
         self.logger.info(f"Chunked {len(documents)} documents into {len(chunks)} chunks")
         return Corpus(chunks=chunks)

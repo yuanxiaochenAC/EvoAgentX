@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from uuid import uuid4
 from pathlib import Path
@@ -98,7 +99,8 @@ class LLamaIndexReader:
         file_paths: Union[str, List, Tuple],
         exclude_files: Optional[Union[str, List, Tuple]] = None,
         filter_file_by_suffix: Optional[Union[str, List, Tuple]] = None,
-        merge_by_file: bool = False
+        merge_by_file: bool = False,
+        show_progress: bool = False,
     ) -> List[Document]:
         """Load documents from files or directories.
 
@@ -153,7 +155,7 @@ class LLamaIndexReader:
                 errors=self.errors,
             )
 
-            llama_docs = reader.load_data(num_workers=self.num_workers)
+            llama_docs = asyncio.run(reader.aload_data(show_progress=show_progress, num_workers=self.num_workers))
             if merge_by_file:
                 file_to_docs = {}
                 for doc in llama_docs:
@@ -170,8 +172,11 @@ class LLamaIndexReader:
                     documents.append(Document(
                         text=combined_text,
                         metadata=combined_metadata,
-                        source=file_path,
-                        doc_id=str(uuid4())
+                        doc_id=str(uuid4()),
+                        relationships=docs[0].relationships,
+                        metadata_template=docs[0].metadata_template,
+                        metadata_separator=docs[0].metadata_separator,
+                        text_template=docs[0].text_template,
                     ))
             else:
                 documents = [Document.from_llama_document(doc) for doc in llama_docs]

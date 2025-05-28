@@ -6,9 +6,12 @@ from datetime import datetime
 from typing import List, Dict, Optional, Union, Any
 
 from pydantic import BaseModel, Field
-from llama_index.core.schema import BaseNode
 from llama_index.core import Document as LlamaIndexDocument
+from llama_index.core.schema import BaseNode, TextNode
 
+
+DEAFULT_EXCLUDED = ['file_name', 'file_type', 'file_size', 'page_count', 'creation_date', 
+                        'last_modified_date', 'language', 'word_count', 'custom_fields', 'hash_doc']
 
 class DocumentMetadata(BaseModel):
     """
@@ -16,94 +19,30 @@ class DocumentMetadata(BaseModel):
     such as file information, creation date, and custom fields.
     """
 
-    file_path: Optional[str] = Field(
-        default=None,
-        description="The file path or URL where the document is stored."
-    )
-    file_type: Optional[str] = Field(
-        default=None,
-        description="The type of the document (e.g., '.pdf', '.docx', '.md', '.txt')."
-    )
-    file_name: Optional[str] = Field(
-        default=None,
-        description="The name of the document file, excluding the path."
-    )
-    page_count: Optional[int] = Field(
-        default=None,
-        description="The number of pages in the document, if applicable (e.g., for PDFs)."
-    )
-    creation_date: Optional[datetime] = Field(
-        default=None,
-        description="The creation date and time of the document."
-    )
-    language: Optional[str] = Field(
-        default=None,
-        description="The primary language of the document (e.g., 'en', 'zh')."
-    )
-    source: Optional[str] = Field(
-        default=None,
-        description="The source of the document, such as a file path, URL, or other identifier."
-    )
-    word_count: Optional[int] = Field(
-        default=None,
-        description="The number of words in the document, calculated during initialization."
-    )
-    custom_fields: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="A dictionary for storing additional user-defined metadata."
-    )
-    hash_doc: Optional[str] = Field(
-        default=None,
-        description="The hash code of this Document for deduplication"
-    )
+    file_name: Optional[str] = Field(default=None, description="The name of the document file, excluding the path.")
+    file_path: Optional[str] = Field(default=None, description="The file path or URL where the document is stored.")
+    file_type: Optional[str] = Field(default=None, description="The type of the document (e.g., '.pdf', '.docx', '.md', '.txt').")
+    file_size: Optional[int] = Field(default=None, description="The size of the document.")
+    page_count: Optional[int] = Field(default=None, description="The number of pages in the document, if applicable (e.g., for PDFs).")
+    creation_date: Optional[str] = Field(default=None, description="The creation date and time of the document.")
+    last_modified_date: Optional[str] = Field(default=None, description="The last modified date and time of the document.")
+    language: Optional[str] = Field(default=None, description="The primary language of the document (e.g., 'en', 'zh').")
+    word_count: Optional[int] = Field(default=None, description="The number of words in the document, calculated during initialization.")
+    custom_fields: Dict[str, Any] = Field(default_factory=dict, description="A dictionary for storing additional user-defined metadata.")
+    hash_doc: Optional[str] = Field(default=None, description="The hash code of this Document for deduplication")
 
 
-class ChunkMetadata(BaseModel):
+class ChunkMetadata(DocumentMetadata):
     """
     This class holds metadata for a chunk, including its relationship to the parent document,
     chunking parameters, and retrieval-related information.
     """
 
-    doc_id: str = Field(
-        description="The unique identifier of the parent document."
-    )
-    chunk_size: Optional[int] = Field(
-        default=None,
-        description="The size of the chunk in characters, if applicable."
-    )
-    chunk_overlap: Optional[int] = Field(
-        default=None,
-        description="The number of overlapping characters between adjacent chunks."
-    )
-    chunk_index: Optional[int] = Field(
-        default=None,
-        description="The index of the chunk within the parent document."
-    )
-    embedding: Optional[List[float]] = Field(
-        default=None,
-        description="The embedding vector representing the chunk's content."
-    )
-    similarity_score: Optional[float] = Field(
-        default=None,
-        description="The similarity score of the chunk during retrieval."
-    )
-    chunking_strategy: Optional[str] = Field(
-        default=None,
-        description="The strategy used to create the chunk (e.g., 'simple', 'semantic', 'tree')."
-    )
-    word_count: Optional[int] = Field(
-        default=None,
-        description="The number of words in the chunk, calculated during initialization."
-    )
-    custom_fields: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="A dictionary for storing additional user-defined metadata."
-    )
-    source_id: Optional[str] = Field(default=None, description="ID of the source document node.")
-    previous_id: Optional[str] = Field(default=None, description="ID of the previous node in the document.")
-    next_id: Optional[str] = Field(default=None, description="ID of the next node in the document.")
-    parent_id: Optional[str] = Field(default=None, description="ID of the parent node in the hierarchy.")
-    child_ids: Optional[List[str]] = Field(default=None, description="List of IDs of child nodes in the hierarchy.")
+    doc_id: str = Field(description="The unique identifier of the parent document.")
+    chunk_size: Optional[int] = Field(default=None, description="The size of the chunk in characters, if applicable.")
+    chunk_overlap: Optional[int] = Field(default=None, description="The number of overlapping characters between adjacent chunks.")
+    chunk_index: Optional[int] = Field(default=None, description="The index of the chunk within the parent document.")
+    chunking_strategy: Optional[str] = Field(default=None, description="The strategy used to create the chunk (e.g., 'simple', 'semantic', 'tree').")
 
 
 class Document:
@@ -121,17 +60,28 @@ class Document:
         self,
         text: str,
         metadata: Optional[Union[Dict, DocumentMetadata]] = None,
-        source: Optional[str] = None,
+        embedding: Optional[List[float]] = None,
         doc_id: Optional[str] = None,
+        excluded_embed_metadata_keys: List[str] = DEAFULT_EXCLUDED,
+        excluded_llm_metadata_keys: List[str] = DEAFULT_EXCLUDED,
+        relationships: Dict = {}, 
+        metadata_template: str = '{key}: {value}', 
+        metadata_separator: str = '\n',
+        text_template: str = '{metadata_str}\n\n{content}'
     ):
         self.text = text.strip()
         self.doc_id = doc_id or str(uuid4())
         self.metadata = (
             DocumentMetadata.model_validate(metadata) if isinstance(metadata, dict) else metadata or DocumentMetadata()
         )
-        self.source = source or self.metadata.file_path or ""   # Fallback to file_path or empty string
-        if self.source and not self.metadata.file_path:
-            self.metadata.file_path = self.source
+        self.embedding = embedding
+        self.excluded_embed_metadata_keys = excluded_embed_metadata_keys
+        self.excluded_llm_metadata_keys = excluded_llm_metadata_keys
+        self.relationships = relationships
+        self.metadata_template = metadata_template
+        self.metadata_separator = metadata_separator
+        self.text_template = text_template
+        # metadata init
         self.metadata.word_count = len(self.text.split())
 
     def to_llama_document(self) -> LlamaIndexDocument:
@@ -140,6 +90,13 @@ class Document:
             text=self.text,
             metadata=self.metadata.model_dump(),
             id_=self.doc_id,
+            embedding=self.embedding,
+            excluded_llm_metadata_keys=self.excluded_llm_metadata_keys,
+            excluded_embed_metadata_keys=self.excluded_embed_metadata_keys,
+            relationships=self.relationships,
+            metadata_template=self.metadata_template,
+            metadata_separator=self.metadata_separator,
+            text_template=self.text_template,
         )
 
     @classmethod
@@ -149,9 +106,19 @@ class Document:
         return cls(
             text=llama_doc.text,
             metadata=metadata,
-            source=llama_doc.metadata.get("file_path", ""),
             doc_id=llama_doc.id_,
+            embedding=llama_doc.embedding,
+            excluded_llm_metadata_keys=llama_doc.excluded_llm_metadata_keys,
+            excluded_embed_metadata_keys=llama_doc.excluded_llm_metadata_keys,
+            relationships=llama_doc.relationships,
+            metadata_template=llama_doc.metadata_template,
+            metadata_separator=llama_doc.metadata_separator,
+            text_template=llama_doc.text_template
         )
+
+    def set_embedding(self, embedding: List[float]):
+        """Set the embedding vector for the Document."""
+        self.embedding = embedding
 
     def compute_hash(self) -> str:
         """Compute a hash of the document text for deduplication."""
@@ -166,8 +133,14 @@ class Document:
         return {
             "doc_id": self.doc_id,
             "text": self.text,
-            "source": self.source,
             "metadata": self.metadata.model_dump(),
+            "embedding": self.embedding,
+            "excluded_embed_metadata_keys": self.excluded_embed_metadata_keys,
+            "excluded_llm_metadata_keys": self.excluded_llm_metadata_keys,
+            "relationships": {str(k): v for k, v in self.relationships.items()},
+            "metadata_template": self.metadata_template,
+            "metadata_separator": self.metadata_separator,
+            "text_template": self.text_template,
         }
 
     def to_json(self, indent: int = 2) -> str:
@@ -176,15 +149,14 @@ class Document:
 
     def __str__(self) -> str:
         return (
-            f"Document(id={self.doc_id}, source={self.source}, "
-            f"file_type={self.metadata.file_type}, word_count={self.metadata.word_count}, "
-            f"fragment={self.get_fragment(max_length=50)})"
+            f"Document(id={self.doc_id}, embedding={self.embedding}, metadata={self.metadata.model_dump()}"
+            f"fragment={self.get_fragment(max_length=300)})"
         )
 
     def __repr__(self) -> str:
         return (
-            f"Document(doc_id={self.doc_id}, source={self.source}, metadata={self.metadata.model_dump()},"
-            f"fragment={self.get_fragment(max_length=50)})"
+            f"Document(doc_id={self.doc_id}, embedding={self.embedding}, metadata={self.metadata.model_dump()},"
+            f"fragment={self.get_fragment(max_length=300)})"
         )
 
 
@@ -202,66 +174,66 @@ class Chunk:
     def __init__(
         self,
         text: str,
-        doc_id: str,
-        metadata: Optional[Union[Dict, ChunkMetadata]] = None,
         chunk_id: Optional[str] = None,
+        embedding: Optional[List[float]] = None,
+        start_char_idx: Optional[int] = None,
+        end_char_idx: Optional[int] = None,
+        excluded_embed_metadata_keys: List[str] = DEAFULT_EXCLUDED,
+        excluded_llm_metadata_keys: List[str] = DEAFULT_EXCLUDED,
+        text_template: str = '{metadata_str}\n\n{content}',
+        relationships: Dict = {}, 
+        metadata: Optional[Union[Dict, ChunkMetadata]] = None,
     ):
         self.text = text.strip()
-        self.doc_id = doc_id
         self.chunk_id = chunk_id or str(uuid4())
+        self.embedding = embedding
+        self.start_char_idx = start_char_idx
+        self.end_char_idx = end_char_idx
+        self.excluded_embed_metadata_keys = excluded_embed_metadata_keys
+        self.excluded_llm_metadata_keys = excluded_llm_metadata_keys
+        self.text_template = text_template
+        self.relationships = relationships
+        # init metadata
         self.metadata = (
-            ChunkMetadata.model_validate(metadata) if isinstance(metadata, dict) else metadata or  ChunkMetadata(doc_id=doc_id)
+            ChunkMetadata.model_validate(metadata) if isinstance(metadata, dict) else metadata or  ChunkMetadata()
         )
         self.metadata.word_count = len(self.text.split())
 
-    def to_llama_node(self) -> BaseNode:
+    def to_llama_node(self) -> TextNode:
         """Convert to LlamaIndex Node."""
-        relationships = {}
-        if self.metadata.source_id:
-            relationships["SOURCE"] = self.metadata.source_id
-        if self.metadata.previous_id:
-            relationships["PREVIOUS"] = self.metadata.previous_id
-        if self.metadata.next_id:
-            relationships["NEXT"] = self.metadata.next_id
-        if self.metadata.parent_id:
-            relationships["PARENT"] = self.metadata.parent_id
-        if self.metadata.child_ids:
-            relationships["CHILD"] = self.metadata.child_ids
-
-        return BaseNode(
+        return TextNode(
             text=self.text,
             metadata=self.metadata.model_dump(),
             id_=self.chunk_id,
-            relationships=relationships,
+            embedding=self.embedding,
+            start_char_idx=self.start_char_idx,
+            end_char_idx=self.end_char_idx,
+            excluded_llm_metadata_keys=self.excluded_llm_metadata_keys,
+            excluded_embed_metadata_keys=self.excluded_embed_metadata_keys,
+            text_template=self.text_template,
+            relationships=self.relationships
         )
 
     @classmethod
-    def from_llama_node(cls, node: BaseNode, doc_id: str) -> "Chunk":
+    def from_llama_node(cls, node: TextNode) -> "Chunk":
         """Create Chunk from LlamaIndex Node."""
-        metadata = {k: v for k, v in node.metadata.items() if k != "doc_id"}
-        metadata.update({
-            "source_id": node.relationships.get("SOURCE", None),
-            "previous_id": node.relationships.get("PREVIOUS", None),
-            "next_id": node.relationships.get("NEXT", None),
-            "parent_id": node.relationships.get("PARENT", None),
-            "child_ids": node.relationships.get("CHILD", None),
-        })
+        metadata = ChunkMetadata.model_validate(node.metadata)
         return cls(
-            text=node.text,
-            doc_id=doc_id,
-            metadata=ChunkMetadata(doc_id=doc_id, **metadata),
             chunk_id=node.id_,
+            text=node.text,
+            metadata=metadata,
+            embedding=node.embedding,
+            start_char_idx=node.start_char_idx,
+            end_char_idx=node.end_char_idx,
+            excluded_embed_metadata_keys=node.excluded_embed_metadata_keys,
+            excluded_llm_metadata_keys=node.excluded_llm_metadata_keys,
+            text_template=node.text_template,
+            relationships=node.relationships
         )
 
     def set_embedding(self, embedding: List[float]):
         """Set the embedding vector for the chunk."""
         self.metadata.embedding = embedding
-        self.llama_node.metadata["embedding"] = embedding
-
-    def set_similarity_score(self, score: float):
-        """Set the similarity score for retrieval."""
-        self.metadata.similarity_score = score
-        self.llama_node.metadata["similarity_score"] = score
 
     def get_fragment(self, max_length: int = 100) -> str:
         """Return a fragment of the chunk text."""
@@ -271,9 +243,14 @@ class Chunk:
         """Convert chunk to dictionary for serialization."""
         return {
             "chunk_id": self.chunk_id,
-            "doc_id": self.doc_id,
             "text": self.text,
             "metadata": self.metadata.model_dump(),
+            "embedding": self.embedding,
+            "start_char_idx": self.start_char_idx,
+            "end_char_idx": self.end_char_idx,
+            "excluded_embed_metadata_keys": self.excluded_embed_metadata_keys,
+            "excluded_llm_metadata_keys": self.excluded_llm_metadata_keys,
+            "relationships": {str(k): v for k, v in self.relationships.items()}
         }
 
     def to_json(self, indent: int = 2) -> str:
@@ -282,15 +259,29 @@ class Chunk:
 
     def __str__(self) -> str:
         return (
-            f"Chunk(id={self.chunk_id}, doc_id={self.doc_id}, "
+            f"Chunk(id={self.chunk_id}, text={self.text}, "
             f"chunking_strategy={self.metadata.chunking_strategy}, "
-            f"word_count={self.metadata.word_count}, "
-            f"similarity_score={self.metadata.similarity_score}, "
-            f"fragment={self.get_fragment(max_length=50)})"
+            f"embedding={self.embedding}), "
+            f"start_char_idx={self.start_char_idx}, "
+            f"end_char_idx={self.end_char_idx}, "
+            f"excluded_embed_metadata_keys={self.excluded_embed_metadata_keys}",
+            f"excluded_llm_metadata_keys={self.excluded_llm_metadata_keys}",
+            f"text_template={self.text_template}",
+            f"metadata={self.metadata.model_dump()}"
         )
 
     def __repr__(self) -> str:
-        return f"Chunk(chunk_id={self.chunk_id}, doc_id={self.doc_id}, metadata={self.metadata.model_dump()})"
+        return (
+            f"Chunk(id={self.chunk_id}, text={self.text}, "
+            f"chunking_strategy={self.metadata.chunking_strategy}, "
+            f"embedding={self.embedding}), "
+            f"start_char_idx={self.start_char_idx}, "
+            f"end_char_idx={self.end_char_idx}, "
+            f"excluded_embed_metadata_keys={self.excluded_embed_metadata_keys}",
+            f"excluded_llm_metadata_keys={self.excluded_llm_metadata_keys}",
+            f"text_template={self.text_template}",
+            f"metadata={self.metadata.model_dump()}"
+        )
 
 
 class Corpus:
