@@ -11,7 +11,7 @@ class EntryPoint:
     def get_entry(cls) -> Optional[Callable]:
         return cls._entry_func
 
-class OptParam:
+class OptimizeParam:
     """
     Class-based decorator for registering tunable optimization parameters.
 
@@ -87,4 +87,8 @@ class OptParam:
         return []
 
 
+# 用函数封装装饰器实例
+def optimize_param(*args, **kwargs):
+    return OptimizeParam(*args, **kwargs)
 
+__all__ = ["optimize_param"]

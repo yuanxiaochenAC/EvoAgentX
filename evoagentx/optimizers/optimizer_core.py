@@ -222,10 +222,16 @@ class Sampler:
     top_p: float = 0.9
 
 class Workflow:
+
     def __init__(self):
         self.system_prompt = "You are a helpful assistant."
         self.few_shot = "Q: 1+1=?\nA: 2"
         self.sampler = Sampler()
+
+    @parameter_registry("name", ["a", "self.system_prompt"])
+    def execute(self):
+        a = 000 
+        pass 
 
     def run(self):
         prompt = f"{self.system_prompt}\n{self.few_shot}\nUser: Hi"
