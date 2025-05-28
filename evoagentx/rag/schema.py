@@ -1,16 +1,35 @@
 
 import json
 import hashlib
+from enum import Enum
 from uuid import uuid4
 from typing import List, Dict, Optional, Union, Any
 
 from pydantic import BaseModel, Field
 from llama_index.core import Document as LlamaIndexDocument
-from llama_index.core.schema import BaseNode, TextNode
+from llama_index.core.schema import BaseNode, TextNode, NodeRelationship
 from llama_index.core import VectorStoreIndex
 from llama_index.embeddings import openai
 
 
+class EmbeddingProvider(str, Enum):
+    OPENAI = "openai"
+    HUGGINGFACE = "huggingface"
+    CUSTOM = "custom"
+    
+
+# Enum for chunking strategies
+class ChunkingStrategy(str, Enum):
+    SIMPLE = "simple"
+    TOKEN = "token"
+    SEMANTIC = "semantic"
+
+
+# Enum for Index type
+class IndexType(Enum):
+    VECTOR = "vector"
+    TREE = "tree"
+    LIST = "list"
 
 
 DEAFULT_EXCLUDED = ['file_name', 'file_type', 'file_size', 'page_count', 'creation_date', 
@@ -45,6 +64,7 @@ class ChunkMetadata(DocumentMetadata):
     chunk_overlap: Optional[int] = Field(default=None, description="The number of overlapping characters between adjacent chunks.")
     chunk_index: Optional[int] = Field(default=None, description="The index of the chunk within the parent document.")
     chunking_strategy: Optional[str] = Field(default=None, description="The strategy used to create the chunk (e.g., 'simple', 'semantic', 'tree').")
+    similarity_score: Optional[float] = Field(default=None, description="Similarity score from retrieval.")
 
 
 class Document:
@@ -183,7 +203,7 @@ class Chunk:
         excluded_embed_metadata_keys: List[str] = DEAFULT_EXCLUDED,
         excluded_llm_metadata_keys: List[str] = DEAFULT_EXCLUDED,
         text_template: str = '{metadata_str}\n\n{content}',
-        relationships: Dict = {}, 
+        relationships: Dict[NodeRelationship] = {}, 
         metadata: Optional[Union[Dict, ChunkMetadata]] = None,
     ):
         self.text = text.strip()
@@ -303,7 +323,7 @@ class Corpus:
         return [chunk.to_llama_node() for chunk in self.chunks]
 
     @classmethod
-    def from_llama_nodes(cls, nodes: List[BaseNode], doc_id: str) -> "Corpus":
+    def from_llama_nodes(cls, nodes: List[BaseNode]) -> "Corpus":
         """Create a Corpus from a list of LlamaIndex Nodes.
 
         Args:
@@ -313,7 +333,7 @@ class Corpus:
         Returns:
             Corpus: A new Corpus instance.
         """
-        return cls([Chunk.from_llama_node(node, doc_id) for node in nodes])
+        return cls([Chunk.from_llama_node(node) for node in nodes])
 
     def add_chunk(self, batch_chunk: Union[Chunk, List[Chunk]]):
         """Add a batch chunk to the corpus and update index."""

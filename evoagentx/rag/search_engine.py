@@ -1,195 +1,194 @@
-
-from typing import List, Optional, Union, Dict, Any, Callable
-from enum import Enum
-from llama_index.core import (
-    VectorStoreIndex, TreeIndex, ListIndex, StorageContext, SimpleDirectoryReader,
-    SentenceSplitter, TokenTextSplitter, SemanticSplitter, BaseEmbedding, LLM
-)
-from llama_index.core.vector_stores import VectorStore, BasePydanticVectorStore
-from llama_index.core.retrievers import VectorIndexRetriever, BaseRetriever
+import logging
+from typing import List, Dict, Any, Optional
+from llama_index.core import StorageContext, BaseRetriever
 from llama_index.core.query_engine import RetrieverQueryEngine
-from llama_index.core.node_parser import NodeParser
-from llama_index.core.postprocessor import SimilarityPostprocessor
-from llama_index.core.embeddings import OpenAIEmbedding, HuggingFaceEmbedding
-from schema import Document, Chunk, Corpus, DocumentMetadata, ChunkMetadata
+from llama_index.core.retrievers import VectorIndexRetriever, BaseRetriever
+from llama_index.core.postprocessor import SimilarityPostprocessor, KeywordNodePostprocessor
 
-# Enum for chunking strategies
-class ChunkingStrategy(str, Enum):
-    SIMPLE = "simple"
-    TOKEN = "token"
-    SEMANTIC = "semantic"
+from .rag_config import RAGConfig
+from .schema import Corpus, Document, Chunk, ChunkingStrategy
+from .embeddings.base import EmbeddingFactory, EmbeddingProvider
+from .retrievers.base import IndexFactory, IndexType
+from evoagentx.storages.base import StorageHandler
+from .chunkers import SimpleChunker, SemanticChunker, HierarchicalChunker
 
-# Enum for index types
-class IndexType(str, Enum):
-    VECTOR = "vector"
-    TREE = "tree"
-    LIST = "list"
-
-# Enum for embedding providers
-class EmbeddingProvider(str, Enum):
-    OPENAI = "openai"
-    HUGGINGFACE = "huggingface"
-    CUSTOM = "custom"
 
 class SearchEngine:
-    """SearchEngine for integrating LlamaIndex with the framework's Agent."""
-
-    def __init__(
-        self,
-        vector_store: BasePydanticVectorStore,
-        embedding_provider: EmbeddingProvider = EmbeddingProvider.OPENAI,
-        embedding_model: Optional[BaseEmbedding] = None,
-        llm: Optional[LLM] = None,
-        chunking_strategy: ChunkingStrategy = ChunkingStrategy.SIMPLE,
-        chunk_size: int = 1024,
-        chunk_overlap: int = 20,
-        index_type: IndexType = IndexType.VECTOR,
-        sqlite_handler: Optional[Any] = None,
-        storage_context: Optional[StorageContext] = None,
-        pre_retrieval_transform: Optional[Callable[[str], str]] = None,
-        post_retrieval_processor: Optional[Callable[[List[Chunk]], List[Chunk]]] = None,
-    ):
-        """Initialize the middleware with configurable components."""
-        self.vector_store = vector_store
-        self.embedding_provider = embedding_provider
-        self.llm = llm
-        self.sqlite_handler = sqlite_handler
-        self.storage_context = storage_context or StorageContext.from_defaults(
-            vector_store=vector_store
+    def __init__(self, config: RAGConfig, storage_handler: StorageHandler):
+        self.config = config
+        self.storage_handler = storage_handler
+        self.embedding_factory = EmbeddingFactory()
+        self.index_factory = IndexFactory()
+        self.embed_model = self.embedding_factory.create(
+            provider=config.embedding_provider,
+            model_config=config.embedding_config
         )
-        self.pre_retrieval_transform = pre_retrieval_transform or (lambda x: x)
-        self.post_retrieval_processor = post_retrieval_processor or (lambda x: x)
-
-        # Initialize embedding model
-        self.embed_model = embedding_model or self._get_embedding_model()
-        
-        # Initialize chunking strategy
-        self.text_splitter = self._get_text_splitter(
-            chunking_strategy, chunk_size, chunk_overlap
+        self.chunker = self._get_chunker()
+        self.index = self.index_factory.create(
+            index_type=config.index_type,
+            embed_model=self.embed_model,
+            node_parser=None,  # Handled by chunker
+            storage_context=self.storage_handler.storage_context,
+            index_config=config.index_config
         )
-
-        # Initialize index
-        self.index = self._get_index(index_type)
-        self.corpus = Corpus()
-
-    def _get_embedding_model(self) -> BaseEmbedding:
-        """Select embedding model based on provider."""
-        if self.embedding_provider == EmbeddingProvider.OPENAI:
-            return OpenAIEmbedding()
-        elif self.embedding_provider == EmbeddingProvider.HUGGINGFACE:
-            return HuggingFaceEmbedding(model_name="BAAI/bge-small-en")
-        elif self.embedding_provider == EmbeddingProvider.CUSTOM:
-            raise ValueError("Custom embedding model must be provided.")
-        else:
-            raise ValueError(f"Unsupported embedding provider: {self.embedding_provider}")
-
-    def _get_text_splitter(
-        self, strategy: ChunkingStrategy, chunk_size: int, chunk_overlap: int
-    ) -> NodeParser:
-        """Select text splitter based on chunking strategy."""
-        if strategy == ChunkingStrategy.SIMPLE:
-            return SentenceSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-        elif strategy == ChunkingStrategy.TOKEN:
-            return TokenTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-        elif strategy == ChunkingStrategy.SEMANTIC:
-            return SemanticSplitter(embed_model=self.embed_model)
-        else:
-            raise ValueError(f"Unsupported chunking strategy: {strategy}")
-
-    def _get_index(self, index_type: IndexType) -> Any:
-        """Select index type for retrieval."""
-        if index_type == IndexType.VECTOR:
-            return VectorStoreIndex(
-                nodes=[], embed_model=self.embed_model, storage_context=self.storage_context
+        self.retriever = None
+        self.query_engine = None
+        self.logger = logging.getLogger(__name__)
+    
+    def _get_chunker(self):
+        if self.config.chunking_strategy == ChunkingStrategy.SIMPLE:
+            return SimpleChunker(
+                chunk_size=self.config.node_parser_config.get("chunk_size", 1024),
+                chunk_overlap=self.config.node_parser_config.get("chunk_overlap", 20)
             )
-        elif index_type == IndexType.TREE:
-            return TreeIndex(
-                nodes=[], embed_model=self.embed_model, storage_context=self.storage_context
+        elif self.config.chunking_strategy == ChunkingStrategy.SEMANTIC:
+            return SemanticChunker(
+                embed_model=self.embed_model,
+                similarity_threshold=self.config.node_parser_config.get("similarity_threshold", 0.7)
             )
-        elif index_type == IndexType.LIST:
-            return ListIndex(
-                nodes=[], embed_model=self.embed_model, storage_context=self.storage_context
+        elif self.config.chunking_strategy == ChunkingStrategy.HIERARCHICAL:
+            return HierarchicalChunker(
+                chunk_sizes=self.config.node_parser_config.get("chunk_sizes", [2048, 512, 128]),
+                chunk_overlap=self.config.node_parser_config.get("chunk_overlap", 20)
             )
         else:
-            raise ValueError(f"Unsupported index type: {index_type}")
-
-    def load_documents(self, directory: str, file_types: Optional[List[str]] = None) -> List[Document]:
-        """Load documents from a directory."""
-        reader = SimpleDirectoryReader(directory, file_extensions=file_types)
-        llama_docs = reader.load_data()
-        documents = [Document.from_llama_document(doc) for doc in llama_docs]
-        for doc in documents:
-            doc.metadata.hash_doc = doc.compute_hash()
-            if self.sqlite_handler:
-                self.sqlite_handler.store_metadata(doc.doc_id, doc.metadata.model_dump())
-        return documents
-
-    def chunk_document(self, document: Document) -> Corpus:
-        """Chunk a document into a Corpus of Chunks."""
-        llama_doc = document.to_llama_document()
-        nodes = self.text_splitter.split_text_with_metadata(llama_doc)
-        corpus = Corpus.from_llama_nodes(nodes)
+            raise ValueError(f"Unsupported chunking strategy: {self.config.chunking_strategy}")
+    
+    def add_documents(self, documents: List[Document]):
+        try:
+            corpus = self.chunker.chunk(documents)
+            nodes = corpus.to_llama_nodes()
+            self.index.insert_nodes(nodes)
+            
+            if self.storage_handler.storage_db:
+                for doc in documents:
+                    self.storage_handler.storage_db.insert(
+                        metadata={"memory_id": doc.doc_id, "doc_id": doc.doc_id, "metadata": doc.metadata.model_dump()},
+                        store_type="memory",
+                        table="memory"
+                    )
+                for chunk in corpus.chunks:
+                    self.storage_handler.storage_db.insert(
+                        metadata={"chunk_id": chunk.chunk_id, "doc_id": chunk.metadata.doc_id, "metadata": chunk.metadata.model_dump()},
+                        store_type="memory_chunks",
+                        table="memory_chunks"
+                    )
+            
+            if self.index_type == IndexType.GRAPH:
+                triples = self._generate_triples(corpus)
+                self.storage_handler.storage_graph.add_triples(triples)
+            
+            self.logger.info(f"Indexed {len(documents)} documents and {len(corpus.chunks)} chunks")
+            return corpus
+        except Exception as e:
+            self.logger.error(f"Failed to index documents: {str(e)}")
+            raise
+    
+    def _generate_triples(self, corpus: Corpus) -> List[Dict]:
+        triples = []
         for chunk in corpus.chunks:
-            chunk.metadata.doc_id = document.doc_id
-            chunk.metadata.chunking_strategy = self.text_splitter.__class__.__name__
-            if self.sqlite_handler:
-                self.sqlite_handler.store_chunk_metadata(
-                    chunk.chunk_id, chunk.metadata.model_dump()
-                )
-        return corpus
-
-    def index_corpus(self, corpus: Corpus):
-        """Index a Corpus into the selected index type."""
-        nodes = corpus.to_llama_nodes()
-        self.index.insert_nodes(nodes)
-        self.corpus.add_chunk(corpus.chunks)
-        if self.sqlite_handler:
-            for chunk in corpus.chunks:
-                self.sqlite_handler.store_chunk(chunk.to_dict())
-
-    def retrieve(self, query: str, top_k: int = 5) -> Corpus:
-        """Retrieve relevant chunks for a query with pre- and post-processing."""
-        # Pre-retrieval transformation
-        transformed_query = self.pre_retrieval_transform(query)
-        
-        # Retrieval
-        retriever = VectorIndexRetriever(index=self.index, similarity_top_k=top_k)
-        nodes = retriever.retrieve(transformed_query)
-        
-        # Convert to Corpus and add similarity scores
-        corpus = Corpus.from_llama_nodes(nodes)
-        for chunk, node in zip(corpus.chunks, nodes):
-            chunk.metadata.similarity_score = node.score
-        
-        # Post-retrieval processing
-        corpus.chunks = self.post_retrieval_processor(corpus.chunks)
-        return corpus
-
-    def query(self, query: str, top_k: int = 5) -> str:
-        """Query the index and generate a response using LLM."""
-        if not self.llm:
-            raise ValueError("LLM not provided for query generation.")
-        query_engine = RetrieverQueryEngine(
-            retriever=VectorIndexRetriever(index=self.index, similarity_top_k=top_k),
-            llm=self.llm,
-            node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.7)],
+            if chunk.metadata.custom_fields.get("section_title"):
+                triples.append({
+                    "subject": chunk.metadata.doc_id,
+                    "relation": "has_section",
+                    "object": chunk.metadata.custom_fields["section_title"]
+                })
+        return triples
+    
+    def configure_retrieval(
+        self,
+        top_k: int = 5,
+        similarity_cutoff: Optional[float] = None,
+        keyword_filters: Optional[List[str]] = None,
+        use_graph: bool = False
+    ):
+        try:
+            retrievers = []
+            if self.config.index_type in [IndexType.VECTOR, IndexType.SUMMARY, IndexType.TREE]:
+                retrievers.append(VectorIndexRetriever(
+                    index=self.index,
+                    similarity_top_k=top_k
+                ))
+            if use_graph and self.config.index_type == IndexType.GRAPH:
+                retrievers.append(self._create_graph_retriever(top_k))
+            
+            self.retriever = self._combine_retrievers(retrievers)
+            
+            node_postprocessors = []
+            if similarity_cutoff:
+                node_postprocessors.append(SimilarityPostprocessor(similarity_cutoff=similarity_cutoff))
+            if keyword_filters:
+                node_postprocessors.append(KeywordNodePostprocessor(required_keywords=keyword_filters))
+            
+            self.query_engine = RetrieverQueryEngine(
+                retriever=self.retriever,
+                node_postprocessors=node_postprocessors
+            )
+            
+            self.logger.info("Configured retriever and query engine")
+        except Exception as e:
+            self.logger.error(f"Failed to configure retrieval: {str(e)}")
+            raise
+    
+    def _create_graph_retriever(self, top_k: int) -> BaseRetriever:
+        from llama_index.core.indices.property_graph import VectorContextRetriever
+        return VectorContextRetriever(
+            graph_store=self.storage_handler.storage_graph.get_graph_store(),
+            embed_model=self.embed_model,
+            similarity_top_k=top_k
         )
-        response = query_engine.query(self.pre_retrieval_transform(query))
-        return str(response)
-
-    def delete_document(self, doc_id: str):
-        """Delete a document and its chunks."""
-        self.index.delete_ref_doc(doc_id, delete_from_docstore=True)
-        if self.sqlite_handler:
-            self.sqlite_handler.delete_document(doc_id)
-        self.corpus = Corpus(
-            [chunk for chunk in self.corpus.chunks if chunk.metadata.doc_id != doc_id]
-        )
-
+    
+    def _combine_retrievers(self, retrievers: List[BaseRetriever]) -> BaseRetriever:
+        from llama_index.core.retrievers import RouterRetriever
+        return RouterRetriever(retrievers=retrievers)
+    
+    def retrieve(self, query: str) -> Corpus:
+        if not self.query_engine:
+            raise ValueError("Query engine not configured. Call configure_retrieval first.")
+        
+        try:
+            response = self.query_engine.query(query)
+            nodes = response.source_nodes
+            corpus = Corpus.from_llama_nodes(nodes)
+            for chunk, node in zip(corpus.chunks, nodes):
+                chunk.metadata.similarity_score = node.score
+            
+            self.logger.info(f"Retrieved {len(corpus.chunks)} chunks for query")
+            return corpus
+        except Exception as e:
+            self.logger.error(f"Retrieval failed: {str(e)}")
+            raise
+    
+    def get_index_data(self) -> Dict[str, Any]:
+        try:
+            nodes = self.index.docstore.docs.values()
+            corpus = Corpus.from_llama_nodes(nodes)
+            
+            documents = {}
+            if self.storage_handler.storage_db:
+                for chunk in corpus.chunks:
+                    doc_id = chunk.metadata.doc_id
+                    if doc_id not in documents:
+                        doc_metadata = self.storage_handler.storage_db.get_by_id(
+                            metadata_id=doc_id,
+                            store_type="memory",
+                            table="memory"
+                        )
+                        if doc_metadata:
+                            documents[doc_id] = Document(
+                                text="",
+                                metadata=doc_metadata["metadata"],
+                                doc_id=doc_id
+                            )
+            
+            return {
+                "documents": list(documents.values()),
+                "corpus": corpus,
+                "embeddings": {chunk.chunk_id: chunk.embedding for chunk in corpus.chunks if chunk.embedding}
+            }
+        except Exception as e:
+            self.logger.error(f"Failed to extract index data: {str(e)}")
+            raise
+    
     def persist(self, persist_dir: str):
-        """Persist the index to disk."""
-        self.index.storage_context.persist(persist_dir=persist_dir)
-
-    def get_stats(self) -> Dict:
-        """Get statistics about the corpus."""
-        return self.corpus.get_stats()
+        self.storage_handler.persist(persist_dir)

@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from llama_index.core.node_parser import SimpleNodeParser
 from .base import BaseChunker
-from evoagentx.rag.schema import Document, Corpus, Chunk, ChunkMetadata
+from evoagentx.rag.schema import Document, Corpus, Chunk, ChunkingStrategy
 
 
 class SimpleChunker(BaseChunker):
@@ -77,7 +77,8 @@ class SimpleChunker(BaseChunker):
             chunks = []
             for idx, node in enumerate(nodes):
                 chunk = Chunk.from_llama_node(node)
-                chunk.metadata.chunking_strategy = "simple"
+                
+                chunk.metadata.chunking_strategy = ChunkingStrategy.SIMPLE
                 chunks.extend([chunk])
             self.logger.debug(f"Processed document {doc.doc_id} into {len(chunks)} chunks")
             return chunks
