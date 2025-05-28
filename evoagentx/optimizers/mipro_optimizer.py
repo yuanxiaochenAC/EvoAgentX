@@ -31,6 +31,10 @@ from ..models.base_model import BaseLLM
 from ..benchmark.benchmark import Benchmark 
 from .engine.base import BaseOptimizer
 from .engine.registry import ParamRegistry
+from ..agents.agent_manager import AgentManager 
+from ..workflow.workflow_graph import WorkFlowGraph
+from ..workflow.workflow import WorkFlow 
+from ..evaluators.evaluator import Evaluator 
 
 
 # Constants
@@ -135,9 +139,23 @@ class MiproEvaluator:
         self._log_counter = 0
         self._log_lock = threading.Lock()
 
-    def metric(self, example, prediction, *args, **kwargs):
+    def metric(self, example: dspy.Example, prediction: Any, *args, **kwargs):
 
-        score = self.benchmark.evaluate(prediction=prediction, label=self.benchmark.get_label(example))
+        if isinstance(self.benchmark.get_train_data()[0], dspy.Example):
+            # the data in original benchmark is a dspy.Example
+            score = self.benchmark.evaluate(
+                prediction=prediction, 
+                label=self.benchmark.get_label(example)
+            )
+        elif isinstance(self.benchmark.get_train_data()[0], dict):
+            # the data in original benchmark is a dict, convert the dspy.Example to a dict
+            score = self.benchmark.evaluate(
+                prediction=prediction, 
+                label=self.benchmark.get_label(example.toDict()) # convert the dspy.Example to a dict
+            )
+        else:
+            raise ValueError(f"Unsupported example type in `{type(self.benchmark)}`! Expected `dspy.Example` or `dict`, got {type(self.benchmark.get_train_data()[0])}")
+        
         if isinstance(score, dict):
             if len(score) == 1:
                 score = list(score.values())[0]
@@ -512,7 +530,8 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         if isinstance(program, dspy.Module):
             return program
         
-        # todo: convert the program to a dspy module  
+        # todo: convert the program to a dspy module 
+        return program 
                 
     def optimize(self, dataset: Benchmark, metric_name: Optional[str] = None, **kwargs):
 
@@ -583,26 +602,26 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         self.metric = evaluator.metric
 
         # Step 1: Bootstrap few-shot examples 
-        with suppress_cost_logging():
-            demo_candidates = self._bootstrap_fewshot_examples(program, trainset, seed, teacher=None)
+        # with suppress_cost_logging():
+        #     demo_candidates = self._bootstrap_fewshot_examples(program, trainset, seed, teacher=None)
         
-        # import pickle
-        # demo_candidates = pickle.load(open("debug/demo_candidates.pkl", "rb"))
+        import pickle
+        demo_candidates = pickle.load(open("debug/demo_candidates.pkl", "rb"))
 
         # Step 2: Propose instruction candidates 
-        with suppress_cost_logging():
-            instruction_candidates = self._propose_instructions(
-                program,
-                trainset,
-                demo_candidates,
-                self.view_data_batch_size,
-                self.program_aware_proposer,
-                self.data_aware_proposer,
-                self.tip_aware_proposer,
-                self.fewshot_aware_proposer,
-            )
+        # with suppress_cost_logging():
+        #     instruction_candidates = self._propose_instructions(
+        #         program,
+        #         trainset,
+        #         demo_candidates,
+        #         self.view_data_batch_size,
+        #         self.program_aware_proposer,
+        #         self.data_aware_proposer,
+        #         self.tip_aware_proposer,
+        #         self.fewshot_aware_proposer,
+        #     )
 
-        # instruction_candidates = pickle.load(open("debug/instruction_candidates.pkl", "rb"))
+        instruction_candidates = pickle.load(open("debug/instruction_candidates.pkl", "rb"))
 
         # Step 3: Find optimal prompt parameters 
         with suppress_cost_logging():
@@ -622,7 +641,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         if self.save_path:
             os.makedirs(self.save_path, exist_ok=True)
             self.best_program_path = os.path.join(self.save_path, "best_program.json")
-            program.save(self.best_program_path) 
+            best_program.save(self.best_program_path) 
         from pdb import set_trace; set_trace()
 
     def _get_input_keys(self, dataset: Benchmark) -> Optional[List[str]]:
@@ -1102,3 +1121,111 @@ def eval_candidate_program(
         if return_all_scores:
             return 0.0, [0.0] * len(evalset)
         return 0.0 
+
+
+class WorkFlowGraphProgram:
+
+    def __init__(
+        self, 
+        graph: WorkFlowGraph, 
+        agent_manager: AgentManager,
+        executor_llm: BaseLLM, 
+        collate_func: Optional[Callable] = None, 
+        output_postprocess_func: Optional[Callable] = None, 
+    ):
+        self.graph = graph 
+        self.agent_manager = agent_manager
+        self.executor_llm = executor_llm
+        self.collate_func = collate_func or (lambda x: x)
+        self.output_postprocess_func = output_postprocess_func or (lambda x: x)
+
+    def __call__(self, **input_data):
+
+        new_config = deepcopy(self.graph.get_config())
+        new_graph: WorkFlowGraph = WorkFlowGraph.from_dict(new_config)
+        new_graph.reset_graph() 
+
+        # execute the graph with WorkFlow 
+        workflow = WorkFlow(llm=self.executor_llm, graph=new_graph, agent_manager=self.agent_manager)
+        output: str = workflow.execute(inputs=self.collate_func(input_data))
+        output = self.output_postprocess_func(output)
+
+        return output 
+    
+    def save(self, path: str):
+        self.graph.save_module(path=path)
+
+    def load(self, path: str):
+        return WorkFlowGraph.from_file(path=path) 
+
+class MiproEvaluatorWrapper: 
+
+    def __init__(self, evaluator: Evaluator):
+        self.evaluator = evaluator 
+
+    def metric(self, example):
+        pass 
+
+    def __call__(self, program: WorkFlowGraphProgram, evalset: List[Any], **kwargs) -> float: 
+        pass 
+
+
+class WorkFlowMiproOptimizer(MiproOptimizer):
+
+    def __init__(
+        self, 
+        graph: WorkFlowGraph,
+        evaluator: Evaluator, 
+        optimizer_llm: Optional[BaseLLM] = None, 
+        **kwargs, 
+    ):
+        """
+        MiproOptimizer tailored for workflow graphs. 
+
+        Args:
+            graph (WorkFlowGraph): the workflow graph to optimize.
+            evaluator (Evaluator): the evaluator to use for the optimization.
+            optimizer_llm (BaseLLM): the LLM to use for the optimization. If None, will use the LLM model in the evaluator.
+            **kwargs: additional keyword arguments to pass to the MiproOptimizer. Available options:
+                - metric_threshold (Optional[int]): threshold for the metric score. If provided, only examples with scores above this threshold will be used as demonstrations.
+                - max_bootstrapped_demos (int): maximum number of bootstrapped demonstrations to use. Defaults to 4.
+                - max_labeled_demos (int): maximum number of labeled demonstrations to use. Defaults to 4.
+                - auto (Optional[Literal["light", "medium", "heavy"]]): automatic configuration mode. If set, will override num_candidates and max_steps. 
+                    "light": n=6, val_size=100; "medium": n=12, val_size=300; "heavy": n=18, val_size=1000. Defaults to "medium".
+                - max_steps (int): maximum number of optimization steps. Required if auto is None.
+                - num_candidates (Optional[int]): number of candidates to generate for each optimization step. Required if auto is None.
+                - num_threads (Optional[int]): number of threads to use for parallel evaluation. If None, will use single thread.
+                - max_errors (int): maximum number of errors allowed during evaluation before stopping. Defaults to 10.
+                - seed (int): random seed for reproducibility. Defaults to 9.
+                - init_temperature (float): initial temperature for instruction generation. Defaults to 0.5.
+                - track_stats (bool): whether to track optimization statistics. Defaults to True.
+                - save_path (Optional[str]): path to save optimization results. If None, results will not be saved.
+                - minibatch (bool): whether to use minibatch evaluation during optimization. Defaults to True.
+                - minibatch_size (int): size of minibatch for evaluation. Defaults to 35.
+                - minibatch_full_eval_steps (int): number of minibatch steps between full evaluations. Defaults to 5.
+                - program_aware_proposer (bool): whether to use program-aware instruction proposer. Defaults to True.
+                - data_aware_proposer (bool): whether to use data-aware instruction proposer. Defaults to True.
+                - view_data_batch_size (int): batch size for viewing data during instruction proposal. Defaults to 10.
+                - tip_aware_proposer (bool): whether to use tip-aware instruction proposer. Defaults to True.
+                - fewshot_aware_proposer (bool): whether to use fewshot-aware instruction proposer. Defaults to True.
+                - requires_permission_to_run (bool): whether to require user permission before running optimization. Defaults to False.
+                - provide_traceback (Optional[bool]): whether to provide traceback for evaluation errors. If None, will use default setting.
+        """
+        
+        # convert the workflow graph to a callable program  
+        workflow_graph_program = WorkFlowGraphProgram(
+            graph=graph, 
+            agent_manager=evaluator.agent_manager, 
+            executor_llm=evaluator.llm, 
+            collate_func=evaluator.collate_func, 
+            output_postprocess_func=evaluator.output_postprocess_func, 
+        )
+
+        super().__init__(
+            registry=None, # todo replace this placeholder 
+            program=workflow_graph_program, 
+            optimizer_llm=optimizer_llm or evaluator.llm, 
+            evaluator=MiproEvaluatorWrapper(evaluator),
+            **kwargs 
+        )
+        
