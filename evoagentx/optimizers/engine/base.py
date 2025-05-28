@@ -4,12 +4,21 @@ from .decorators import EntryPoint
 from .registry import ParamRegistry
 
 class BaseOptimizer(abc.ABC):
+<<<<<<< HEAD
     def __init__(
         self,
         registry: ParamRegistry,
         program: Callable, 
         evaluator: Callable[[Dict[str, Any]], float],
         **kwargs
+=======
+    
+    def __init__(
+        self,
+        registry: ParamRegistry,
+        program: Callable[..., Dict[str, Any]] = None,
+        evaluator: Optional[Callable[..., Any]] = None,
+>>>>>>> 6563399 (update)
     ):
         """
         Abstract base class for optimization routines.
@@ -17,14 +26,12 @@ class BaseOptimizer(abc.ABC):
         Parameters:
         - registry (ParamRegistry): parameter access layer
         - evaluator (Callable): function that evaluates the result dict and returns a float
-        - metric (str): name of the metric used for optimization (optional, for logging)
-        - maximize (bool): whether to maximize (True) or minimize (False) the metric
-        - max_trials (int): how many trials to run
         """
+        self.program = program
         self.registry = registry
         self.program = program
         self.evaluator = evaluator
-
+        
     def get_param(self, name: str) -> Any:
         """Retrieve the current value of a parameter by name."""
         return self.registry.get(name)
@@ -36,6 +43,10 @@ class BaseOptimizer(abc.ABC):
     def param_names(self) -> List[str]:
         """Return the list of all registered parameter names."""
         return self.registry.names()
+    
+    def get_current_cfg(self) -> Dict[str, Any]:
+        """Return current config as a dictionary."""
+        return {name: self.get_param(name) for name in self.param_names()}
 
     def apply_cfg(self, cfg: Dict[str, Any]):
         """Apply a configuration dictionary to the registered parameters."""
@@ -44,7 +55,7 @@ class BaseOptimizer(abc.ABC):
                 self.registry.set(k, v)
 
     @abc.abstractmethod
-    def optimize(self, program_entry: Optional[Callable] = None):
+    def optimize(self):
         """
         Abstract optimization loop. Should be implemented by subclasses.
 
@@ -54,9 +65,9 @@ class BaseOptimizer(abc.ABC):
         Returns:
         - (best_cfg, history): best config found and full search history
         """
-        if program_entry is None:
-            program_entry = EntryPoint.get_entry()
-        if program_entry is None:
+        if self.program is None:
+            program = EntryPoint.get_entry()
+        if self.program is None:
             raise RuntimeError("No entry function provided or registered.")
         print(f"Starting optimization from entry: {program_entry.__name__}")
         raise NotImplementedError
