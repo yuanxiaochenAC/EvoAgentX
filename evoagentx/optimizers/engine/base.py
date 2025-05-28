@@ -4,9 +4,13 @@ from .decorators import EntryPoint
 from .registry import ParamRegistry
 
 class BaseOptimizer(abc.ABC):
-    def __init__(self,
-                 registry: ParamRegistry,
-                 evaluator: Callable[[Dict[str, Any]], float],):
+    def __init__(
+        self,
+        registry: ParamRegistry,
+        program: Callable, 
+        evaluator: Callable[[Dict[str, Any]], float],
+        **kwargs
+    ):
         """
         Abstract base class for optimization routines.
 
@@ -18,6 +22,7 @@ class BaseOptimizer(abc.ABC):
         - max_trials (int): how many trials to run
         """
         self.registry = registry
+        self.program = program
         self.evaluator = evaluator
 
     def get_param(self, name: str) -> Any:
