@@ -10,9 +10,11 @@ from llama_index.core.schema import BaseNode, TextNode
 from llama_index.core import VectorStoreIndex
 from llama_index.embeddings import openai
 
+
+
+
 DEAFULT_EXCLUDED = ['file_name', 'file_type', 'file_size', 'page_count', 'creation_date', 
                         'last_modified_date', 'language', 'word_count', 'custom_fields', 'hash_doc']
-
 class DocumentMetadata(BaseModel):
     """
     This class ensures type safety and validation for metadata associated with a document,
