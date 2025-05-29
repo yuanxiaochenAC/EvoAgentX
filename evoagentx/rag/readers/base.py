@@ -6,7 +6,7 @@ from typing import Union, List, Tuple, Optional, Callable, Dict
 
 from llama_index.core import SimpleDirectoryReader
 
-from evoagentx.rag.schema import Document
+from ..schema import Document
 
 
 # You Could fllow the llama_index tutorial to develop a valid Reader for new file format:

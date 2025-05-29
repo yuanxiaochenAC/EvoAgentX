@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Any
 
-from llama_index.embedding.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
 from .base import BaseEmbeddingWrapper
 

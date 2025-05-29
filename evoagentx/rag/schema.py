@@ -1,35 +1,12 @@
 
 import json
 import hashlib
-from enum import Enum
 from uuid import uuid4
 from typing import List, Dict, Optional, Union, Any
 
 from pydantic import BaseModel, Field
 from llama_index.core import Document as LlamaIndexDocument
 from llama_index.core.schema import BaseNode, TextNode, NodeRelationship
-from llama_index.core import VectorStoreIndex
-from llama_index.embeddings import openai
-
-
-class EmbeddingProvider(str, Enum):
-    OPENAI = "openai"
-    HUGGINGFACE = "huggingface"
-    CUSTOM = "custom"
-    
-
-# Enum for chunking strategies
-class ChunkingStrategy(str, Enum):
-    SIMPLE = "simple"
-    TOKEN = "token"
-    SEMANTIC = "semantic"
-
-
-# Enum for Index type
-class IndexType(Enum):
-    VECTOR = "vector"
-    TREE = "tree"
-    LIST = "list"
 
 
 DEAFULT_EXCLUDED = ['file_name', 'file_type', 'file_size', 'page_count', 'creation_date', 

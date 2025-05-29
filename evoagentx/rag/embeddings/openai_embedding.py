@@ -1,7 +1,9 @@
-from typing import Dict, Any
-from llama_index.embeddings.openai import OpenAIEmbedding
-from .base import BaseEmbeddingWrapper
 import logging
+
+from llama_index.embeddings.openai import OpenAIEmbedding
+
+from .base import BaseEmbeddingWrapper
+
 
 class OpenAIEmbeddingWrapper(BaseEmbeddingWrapper):
     """Wrapper for OpenAI embedding models."""

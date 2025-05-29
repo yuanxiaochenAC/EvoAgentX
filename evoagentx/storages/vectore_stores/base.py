@@ -1,9 +1,14 @@
+from enum import Enum
 from typing import List, Dict, Any
 from abc import ABC, abstractmethod
 
 from llama_index.core.vector_stores.types import BasePydanticVectorStore
 
 from evoagentx.rag.schema import Chunk
+
+
+class VectorStoreType(str, Enum):
+    FAISS = "faiss"
 
 
 class VectorStoreBase(ABC):

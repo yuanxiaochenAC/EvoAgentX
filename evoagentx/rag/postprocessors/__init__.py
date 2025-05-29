@@ -1,0 +1,43 @@
+import logging
+from typing import Optional
+
+from ..schema import Query
+from .simple_reranker import SimpleReranker
+from .base import BasePostprocessor, RerankerType
+
+
+class PostprocessorFactory:
+    """Factory for creating post-processors."""
+    
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+    
+    def create(
+        self,
+        postprocessor_type: str,
+        query: Optional[Query] = None
+    ) -> BasePostprocessor:
+        """Create a post-processor based on configuration.
+        
+        Args:
+            postprocessor_type (str): Type of post-processor (e.g., 'simple').
+            query (Query, optional): Query for configuration.
+            
+        Returns:
+            BasePostprocessor: A post-processor instance.
+            
+        Raises:
+            ValueError: If the post-processor type or configuration is invalid.
+        """
+        if postprocessor_type == RerankerType.SIMPLE:
+            if not query:
+                raise ValueError("Query required for reranker")
+            postprocessor = SimpleReranker(
+                similarity_cutoff=query.similarity_cutoff,
+                keyword_filters=query.keyword_filters
+            )
+        else:
+            raise ValueError(f"Unsupported post-processor type: {postprocessor_type}")
+        
+        self.logger.info(f"Created post-processor: {postprocessor_type}")
+        return postprocessor
