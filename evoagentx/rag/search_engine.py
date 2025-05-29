@@ -29,39 +29,118 @@ class SearchEngine:
         self.chunk_factory = ChunkFactory()
         self.retriever_factory = RetrieverFactory()
         self.postprocessor_factory = PostprocessorFactory()
-        self.embed_model = EmbeddingFactory().create(
+        self.logger = logging.getLogger(__name__)
+        
+        # Initialize embedding model
+        self.embed_model = self.embedding_factory.create(
             provider=config.embedding_provider,
             model_config=config.embedding_config
         )
-        self.chunker = ChunkFactory().create(
+        
+        # Initialize chunker
+        self.chunker = self.chunk_factory.create(
             strategy=config.chunking_strategy,
             embed_model=self.embed_model,
             chunker_config=config.node_parser_config
         )
-        self.index = IndexFactory().create(
-            index_type=config.index_type,
-            embed_model=self.embed_model,
-            node_parser=None,   # Handle by Chunker
-            storage_context=self.storage_handler.storage_context,
-            index_config=config.index_config
-        )
-        self.retrievers = []
-        self.query_engine = None
-        self.logger = logging.getLogger(__name__)
+        
+        # Initialize indices and retrievers
+        self.indices = {}
+        self.retrievers = {}
+        self._initialize_indices_and_retrievers()
     
-    def add_documents(self, documents: List[Document]) -> Corpus:
+    def _initialize_indices_and_retrievers(self):
+        """Initialize indices and their corresponding retrievers."""
+        try:
+            vector_index = self.index_factory.create(
+                index_type=IndexType.VECTOR,
+                embed_model=self.embed_model,
+                storage_context=self.storage_handler.storage_context,
+                index_config=self.config.index_config
+            )
+            self.indices[IndexType.VECTOR] = vector_index
+            self.retrievers[IndexType.VECTOR] = self.retriever_factory.create(
+                retriever_type=RetrieverType.VECTOR,
+                index=vector_index.get_index(),
+                query=Query(query_str="", top_k=self.config.retrieval_config.get("top_k", 5))
+            )
+            
+            # Create additional indices based on config
+            if self.config.index_type == IndexType.GRAPH and self.storage_handler.storage_context.graph_store:
+                graph_index = self.index_factory.create(
+                    index_type=IndexType.GRAPH,
+                    embed_model=self.embed_model,
+                    storage_context=self.storage_handler.storage_context,
+                    index_config=self.config.index_config
+                )
+                self.indices[IndexType.GRAPH] = graph_index
+                self.retrievers[IndexType.GRAPH] = self.retriever_factory.create(
+                    retriever_type=RetrieverType.GRAPH,
+                    graph_store=self.storage_handler.storage_context.graph_store,
+                    embed_model=self.embed_model,
+                    query=Query(query_str="", top_k=self.config.retrieval_config.get("top_k", 5))
+                )
+            
+            if self.config.index_type == IndexType.SUMMARY:
+                summary_index = self.index_factory.create(
+                    index_type=IndexType.SUMMARY,
+                    embed_model=self.embed_model,
+                    storage_context=self.storage_handler.storage_context,
+                    index_config=self.config.index_config
+                )
+                self.indices[IndexType.SUMMARY] = summary_index
+                self.retrievers[IndexType.SUMMARY] = self.retriever_factory.create(
+                    retriever_type=RetrieverType.VECTOR,  # Summary uses vector retriever
+                    index=summary_index.get_index(),
+                    query=Query(query_str="", top_k=self.config.retrieval_config.get("top_k", 5))
+                )
+            
+            if self.config.index_type == IndexType.TREE:
+                tree_index = self.index_factory.create(
+                    index_type=IndexType.TREE,
+                    embed_model=self.embed_model,
+                    storage_context=self.storage_handler.storage_context,
+                    index_config=self.config.index_config
+                )
+                self.indices[IndexType.TREE] = tree_index
+                self.retrievers[IndexType.TREE] = self.retriever_factory.create(
+                    retriever_type=RetrieverType.VECTOR,  # Tree uses vector retriever
+                    index=tree_index.get_index(),
+                    query=Query(query_str="", top_k=self.config.retrieval_config.get("top_k", 5))
+                )
+            
+            self.logger.info(f"Initialized {len(self.indices)} indices and retrievers")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize indices: {str(e)}")
+            raise
+    
+    def add_documents(self, documents: List[Document], index_type: Optional[IndexType] = None) -> Corpus:
+        """Insert documents into specified or all indices.
+        
+        Args:
+            documents: List of documents to insert.
+            index_type: Specific index type to insert into (default: all indices).
+            
+        Returns:
+            Corpus: The chunked corpus.
+        """
         try:
             corpus = self.chunker.chunk(documents)
             nodes = corpus.to_llama_nodes()
-            self.index.insert_nodes(nodes)
             
+            # Insert into specified or all indices
+            target_indices = [self.indices[index_type]] if index_type else self.indices.values()
+            for index in target_indices:
+                index.insert_nodes(nodes)
+            
+            # Store metadata in database
             if self.storage_handler.storage_db:
                 for doc in documents:
                     self.storage_handler.storage_db.insert(
                         metadata={
                             "memory_id": doc.doc_id,
                             "doc_id": doc.doc_id,
-                            "metadata": doc.metadata.model_dump()
+                            "metadata": doc.metadata.to_dict()
                         },
                         store_type="memory",
                         table="memory"
@@ -77,22 +156,103 @@ class SearchEngine:
                         table="memory_chunks"
                     )
             
-            if self.config.index_type == IndexType.GRAPH:
+            # Generate and store graph triples if graph index is active
+            if IndexType.GRAPH in self.indices:
                 triples = self._generate_triples(corpus)
                 for triple in triples:
-                    self.storage_handler.storage_graph.upsert_triplet(
+                    self.storage_handler.storage_context.graph_store.upsert_triplet(
                         subject=triple["subject"],
                         relation=triple["relation"],
-                        object=triple["object"]
+                        object_=triple["object"]
                     )
             
             self.logger.info(f"Inserted {len(documents)} documents and {len(corpus.chunks)} chunks")
             return corpus
         except Exception as e:
-            self.logger.error(f"Failed to index documents: {str(e)}")
+            self.logger.error(f"Failed to insert documents: {str(e)}")
+            raise
+    
+    def update_documents(self, documents: List[Document], index_type: Optional[IndexType] = None) -> Corpus:
+        """Update existing documents in specified or all indices.
+        
+        Args:
+            documents: List of documents to update.
+            index_type: Specific index type to update (default: all indices).
+            
+        Returns:
+            Corpus: The updated chunked corpus.
+        """
+        try:
+            # Re-chunk documents
+            corpus = self.chunker.chunk(documents)
+            nodes = corpus.to_llama_nodes()
+            
+            # Delete existing chunks
+            if self.storage_handler.storage_db:
+                for doc in documents:
+                    self.storage_handler.storage_db.delete(
+                        metadata_id=doc.doc_id,
+                        store_type="memory",
+                        table="memory"
+                    )
+                    chunks = self.storage_handler.storage_db.get_by_id(
+                        metadata_id=doc.doc_id,
+                        store_type="memory_chunks",
+                        table="memory_chunks"
+                    )
+                    if chunks:
+                        self.storage_handler.storage_db.delete(
+                            metadata_id=chunks["chunk_id"],
+                            store_type="memory_chunks",
+                            table="memory_chunks"
+                        )
+            
+            # Re-insert nodes
+            target_indices = [self.indices[index_type]] if index_type else self.indices.values()
+            for index in target_indices:
+                index.insert_nodes(nodes)
+            
+            # Update database
+            if self.storage_handler.storage_db:
+                for doc in documents:
+                    self.storage_handler.storage_db.insert(
+                        metadata={
+                            "memory_id": doc.doc_id,
+                            "doc_id": doc.doc_id,
+                            "metadata": doc.metadata.to_dict()
+                        },
+                        store_type="memory",
+                        table="memory"
+                    )
+                for chunk in corpus.chunks:
+                    self.storage_handler.storage_db.insert(
+                        metadata={
+                            "chunk_id": chunk.chunk_id,
+                            "doc_id": chunk.metadata.doc_id,
+                            "metadata": chunk.metadata.to_dict()
+                        },
+                        store_type="memory_chunks",
+                        table="memory_chunks"
+                    )
+            
+            # Update graph triples
+            if IndexType.GRAPH in self.indices:
+                triples = self._generate_triples(corpus)
+                for triple in triples:
+                    self.storage_handler.storage_context.graph_store.upsert_triplet(
+                        subject=triple["subject"],
+                        relation=triple["relation"],
+                        object_=triple["object"]
+                    )
+            
+            self.logger.info(f"Updated {len(documents)} documents and {len(corpus.chunks)} chunks")
+            return corpus
+        except Exception as e:
+            self.logger.error(f"Failed to update documents: {str(e)}")
             raise
     
     def _generate_triples(self, corpus: Corpus) -> List[Dict]:
+        """Generate knowledge graph triples from corpus."""
         triples = []
         for chunk in corpus.chunks:
             if chunk.metadata.custom_fields.get("section_title"):
@@ -108,72 +268,44 @@ class SearchEngine:
                         "relation": "contains_entity",
                         "object": entity
                     })
+            if chunk.metadata.custom_fields.get("tool_id"):
+                triples.append({
+                    "subject": chunk.metadata.doc_id,
+                    "relation": "is_tool",
+                    "object": chunk.metadata.custom_fields["tool_id"]
+                })
         return triples
     
-    def configure_retrieval(self, query: Query):
+    def retrieve(self, query: Query) -> SchemaResult:
+        """Retrieve results from multiple indices.
+        
+        Args:
+            query: Query object specifying retrieval parameters.
+            
+        Returns:
+            SchemaResult: Combined retrieval results.
+        """
         try:
-            self.retrievers = []
-            if self.config.index_type in [IndexType.VECTOR, IndexType.SUMMARY, IndexType.TREE]:
-                vector_retriever = self.retriever_factory.create(
-                    retriever_type=RetrieverType.VECTOR,
-                    index=self.index,
-                    query=query
-                )
-                self.retrievers.append(vector_retriever)
+            results = []
             
-            if query.use_graph and self.config.index_type == IndexType.GRAPH:
-                graph_retriever = self.retriever_factory.create(
-                    retriever_type=RetrieverType.GRAPH,
-                    graph_store=self.storage_handler.storage_graph,
-                    embed_model=self.embed_model,
-                    query=query
-                )
-                self.retrievers.append(graph_retriever)
+            # Retrieve from relevant indices
+            target_indices = self.retrievers.keys() if query.use_graph else [IndexType.VECTOR]
+            for index_type in target_indices:
+                retriever = self.retrievers.get(index_type)
+                if retriever:
+                    result = retriever.retrieve(query)
+                    results.append(result)
             
-            if not self.retrievers:
-                raise RuntimeError("No retrievers configured")
-            
-            router_retriever = RouterRetriever(
-                retrievers=[r.get_retriever() for r in self.retrievers],
-                selector=LLMSingleSelector.from_defaults()
-            )
-            
+            # Post-process results
             postprocessor = self.postprocessor_factory.create(
                 postprocessor_type="reranker",
                 query=query
             )
+            final_result = postprocessor.postprocess(query, results)
             
-            self.query_engine = RetrieverQueryEngine(
-                retriever=router_retriever,
-                node_postprocessors=[postprocessor]
-            )
-            
-            self.logger.info("Configured retrieval with %d retrievers", len(self.retrievers))
-        except Exception as e:
-            self.logger.error(f"Failed to configure retrieval: {str(e)}")
-            raise
-    
-    def retrieve(self, query: Query) -> SchemaResult:
-        if not self.query_engine:
-            self.configure_retrieval(query)
-        
-        try:
-            response = self.query_engine.query(query.query_str)
-            nodes = response.source_nodes
-            corpus = Corpus.from_llama_nodes(nodes)
-            scores = [node.score or 0.0 for node in nodes]
-            
-            for chunk, score in zip(corpus.chunks, scores):
-                chunk.metadata.similarity_score = score
-            
-            result = SchemaResult(
-                corpus=corpus,
-                scores=scores,
-                metadata={"query": query.query_str}
-            )
-            
+            # Store retrieval log
             if self.storage_handler.storage_db:
-                for chunk in result.corpus.chunks:
+                for chunk in final_result.corpus.chunks:
                     self.storage_handler.storage_db.insert(
                         metadata={
                             "chunk_id": chunk.chunk_id,
@@ -188,38 +320,43 @@ class SearchEngine:
                         table="retrieval_log"
                     )
             
-            self.logger.info(f"Retrieved {len(corpus.chunks)} chunks for query")
-            return result
+            self.logger.info(f"Retrieved {len(final_result.corpus.chunks)} chunks for query")
+            return final_result
         except Exception as e:
             self.logger.error(f"Retrieval failed: {str(e)}")
             raise
     
-    def get_index_data(self) -> Dict[str, Any]:
+    def build_index(self, index_type: IndexType, index_config: Optional[Dict[str, Any]] = None):
+        """Build a new index of the specified type.
+        
+        Args:
+            index_type: Type of index to build.
+            index_config: Optional configuration for the index.
+        """
         try:
-            nodes = list(self.index.storage_context.docstore.docs.values())
-            corpus = Corpus.from_llama_nodes(nodes)
+            if index_type in self.indices:
+                self.logger.warning(f"Index {index_type} already exists, overwriting")
             
-            documents = []
-            if self.storage_handler.storage_db:
-                for chunk in corpus.chunks:
-                    doc_id = chunk.metadata.doc_id
-                    doc_metadata = self.storage_handler.storage_db.get_by_id(
-                        metadata_id=doc_id,
-                        store_type="memory",
-                        table="memory"
-                    )
-                    if doc_metadata and not any(doc.doc_id == doc_id for doc in documents):
-                        documents.append(Document(
-                            text="",
-                            metadata=doc_metadata["metadata"],
-                            doc_id=doc_id
-                        ))
+            index = self.index_factory.create(
+                index_type=index_type,
+                embed_model=self.embed_model,
+                storage_context=self.storage_handler.storage_context,
+                index_config=index_config or self.config.index_config
+            )
+            self.indices[index_type] = index
             
-            return {
-                "documents": documents,
-                "corpus": corpus,
-                "embeddings": {chunk.chunk_id: chunk.embedding for chunk in corpus.chunks if chunk.embedding}
-            }
+            # Initialize retriever
+            retriever_type = RetrieverType.GRAPH if index_type == IndexType.GRAPH else RetrieverType.VECTOR
+            retriever = self.retriever_factory.create(
+                retriever_type=retriever_type,
+                index=index.get_index() if retriever_type == RetrieverType.VECTOR else None,
+                graph_store=self.storage_handler.storage_context.graph_store if retriever_type == RetrieverType.GRAPH else None,
+                embed_model=self.embed_model if retriever_type == RetrieverType.GRAPH else None,
+                query=Query(query_str="", top_k=self.config.retrieval_config.get("top_k", 5))
+            )
+            self.retrievers[index_type] = retriever
+            
+            self.logger.info(f"Built new index: {index_type}")
         except Exception as e:
-            self.logger.error(f"Failed to extract index data: {str(e)}")
+            self.logger.error(f"Failed to build index {index_type}: {str(e)}")
             raise
