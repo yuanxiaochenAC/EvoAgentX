@@ -72,7 +72,6 @@ class ToolCalling(Action):
         self.parse_mode = parse_mode
         self.title_format = title_format
         self.custom_output_format = custom_output_format
-        # Allow max_tool_try to be configured through kwargs
         self.max_tool_try = kwargs.pop("max_tool_try", 2)
         self.customize_prompting = kwargs.pop("customize_prompting", False)
     
@@ -267,7 +266,7 @@ class ToolCalling(Action):
                 if return_prompt:
                     return self._extract_output("{content}".format(content = self.execution_history), llm = llm), current_prompt
                 return self._extract_output("{content}".format(content = self.execution_history), llm = llm) 
-            
+            time_out += 1
             if self.customize_prompting:
                 # Use custom prompting with either prompt or template
                 if self.prompt_template is not None:

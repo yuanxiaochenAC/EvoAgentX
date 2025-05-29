@@ -45,6 +45,8 @@ class WorkFlowGenerator(BaseModule):
 
         if self.tools is not None:
             self.get_tool_info()
+        else:
+            self.tool_info = {}
         
         if self.task_planner is None:
             if self.llm is None:
@@ -63,12 +65,12 @@ class WorkFlowGenerator(BaseModule):
         #     self.workflow_reviewer = WorkFlowReviewer(llm=self.llm)
 
     def get_tool_info(self):
+        tool_info = {}
         tools_schemas = [tool.get_tool_schemas() for tool in self.tools]
         tools_schemas = [j for i in tools_schemas for j in i]
         tools_names = [i["function"]["name"] for i in tools_schemas]
         tools_descriptions = [i["function"]["description"] for i in tools_schemas]
         
-        tool_info = {}
         for tool_name, tool_description in zip(tools_names, tools_descriptions):
             tool_info[tool_name] = tool_description
         self.tool_info = tool_info
