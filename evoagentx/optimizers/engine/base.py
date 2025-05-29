@@ -4,21 +4,18 @@ from .decorators import EntryPoint
 from .registry import ParamRegistry
 
 class BaseOptimizer(abc.ABC):
-<<<<<<< HEAD
-    def __init__(
-        self,
-        registry: ParamRegistry,
-        program: Callable, 
-        evaluator: Callable[[Dict[str, Any]], float],
-        **kwargs
-=======
-    
+    # def __init__(
+    #     self,
+    #     registry: ParamRegistry,
+    #     program: Callable, 
+    #     evaluator: Callable[[Dict[str, Any]], float],
+    #     **kwargs
+
     def __init__(
         self,
         registry: ParamRegistry,
         program: Callable[..., Dict[str, Any]] = None,
         evaluator: Optional[Callable[..., Any]] = None,
->>>>>>> 6563399 (update)
     ):
         """
         Abstract base class for optimization routines.
@@ -69,5 +66,5 @@ class BaseOptimizer(abc.ABC):
             program = EntryPoint.get_entry()
         if self.program is None:
             raise RuntimeError("No entry function provided or registered.")
-        print(f"Starting optimization from entry: {program_entry.__name__}")
+        print(f"Starting optimization from entry: {self.program.__name__}")
         raise NotImplementedError

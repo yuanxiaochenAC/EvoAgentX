@@ -1,5 +1,6 @@
 import re
 from typing import Any, Callable, Dict, List
+from ...prompts.template import PromptTemplate
 
 _INDEX_RE = re.compile(r'^(.*?)\[(.*?)\]$')
 
@@ -194,3 +195,39 @@ class ParamRegistry:
                 idx = int(idx)
             return parent, idx
         return cur, leaf
+    
+
+class PromptTemplateRegister(ParamRegistry):
+    """
+    Enhanced parameter registry that supports directly registering PromptTemplate instances
+    or prompt strings as a single optimizable object.
+    """
+
+    def track(self, root_or_obj: Any, path_or_attr: str, *, name: str | None = None):
+        if isinstance(root_or_obj, (list, tuple)):
+            for item in root_or_obj:
+                if len(item) == 2:
+                    self.track(item[0], item[1])
+                elif len(item) == 3:
+                    self.track(item[0], item[1], name=item[2])
+            return self
+
+        key = name or path_or_attr
+
+        try:
+            value = getattr(root_or_obj, path_or_attr)
+        except AttributeError:
+            return super().track(root_or_obj, path_or_attr, name=name)
+
+        if isinstance(value, (str, PromptTemplate)):
+            # Register the entire prompt or PromptTemplate object
+            field = OptimizableField(
+                key,
+                getter=lambda: getattr(root_or_obj, path_or_attr),
+                setter=lambda v: setattr(root_or_obj, path_or_attr, v)
+            )
+            self.register_field(field)
+            return self
+
+        # Fall back to original path-based tracking if not str/template
+        return super().track(root_or_obj, path_or_attr, name=name)
