@@ -15,11 +15,11 @@ from ..models.base_model import LLMOutputParser
 from ..core.module_utils import parse_json_from_llm_output
 from ..prompts.template import StringTemplate
 
-class ToolCalling(Action):
+class CustomizeAction(Action):
     max_tool_try: int = 2
     tools_schema: Optional[dict] = None
     tools_caller: Optional[dict[str, Callable]] = None
-    tool_calling_instruction: Optional[str] = None
+    tool_calling_instructions: Optional[list] = None
     conversation: Optional[Message] = None
     inputs: dict = {}
     outputs: dict = {}
@@ -51,10 +51,10 @@ class ToolCalling(Action):
         
         # Validate that at least one of prompt or prompt_template is provided
         if not prompt and not prompt_template:
-            raise ValueError("`prompt` or `prompt_template` is required when creating ToolCalling action")
+            raise ValueError("`prompt` or `prompt_template` is required when creating CustomizeAction action")
         # Prioritize template and give warning if both are provided
         if prompt and prompt_template:
-            logger.warning("Both `prompt` and `prompt_template` are provided for ToolCalling action." " Prioritizing `prompt_template` and ignoring `prompt`.")
+            logger.warning("Both `prompt` and `prompt_template` are provided for CustomizeAction action." " Prioritizing `prompt_template` and ignoring `prompt`.")
             self.prompt = prompt_template.get_instruction()
             self.prompt_template = prompt_template
             self.execution_history = [prompt_template.get_history()]
@@ -75,6 +75,99 @@ class ToolCalling(Action):
         # Allow max_tool_try to be configured through kwargs
         self.max_tool_try = kwargs.pop("max_tool_try", 2)
         self.customize_prompting = kwargs.pop("customize_prompting", False)
+    
+    
+    def prepare_action_prompt(self, inputs: Optional[dict] = None, system_prompt: Optional[str] = None, 
+                            execution_history: Optional[list] = None) -> Union[str, List[dict]]:
+        """Prepare prompt for action execution.
+        
+        This helper function transforms the input dictionary into a formatted prompt
+        for the language model, handling different prompting modes.
+        
+        Args:
+            inputs: Dictionary of input parameters
+            system_prompt: Optional system prompt to include
+            execution_history: History of tool executions for goal-based tool calling
+            
+        Returns:
+            Union[str, List[dict]]: Formatted prompt ready for LLM (string or chat messages)
+            
+        Raises:
+            TypeError: If an input value type is not supported
+            ValueError: If neither prompt nor prompt_template is available
+        """
+        # Process inputs into prompt parameter values
+        if inputs is None:
+            inputs = {}
+            
+        prompt_params_names = self.inputs_format.get_attrs()
+        prompt_params_values = {}
+        for param in prompt_params_names:
+            value = inputs.get(param, "")
+            if isinstance(value, str):
+                prompt_params_values[param] = value
+            elif isinstance(value, (dict, list)):
+                prompt_params_values[param] = json.dumps(value, indent=4)
+            else:
+                raise TypeError(f"The input type {type(value)} is invalid! Valid types: [str, dict, list].")
+
+        # Handle different prompting modes based on customize_prompting flag
+        if self.customize_prompting:
+            # Use custom prompting with template formatting (no tool calling)
+            if self.prompt_template is not None:
+                return self.prompt_template.format(
+                    system_prompt=system_prompt
+                )
+            else:
+                # Simple string prompt formatting
+                return self.prompt.format(**prompt_params_values) if prompt_params_values else self.prompt
+        else:
+            # Use goal-based tool calling mode
+            
+            if self.prompt_template is not None:
+                # Set history if provided and format with tools for goal-based tool calling
+                if execution_history is not None:
+                    self.prompt_template.set_history(execution_history)
+                return self.prompt_template.format(
+                    system_prompt=system_prompt,
+                    values=prompt_params_values,
+                    inputs_format=self.inputs_format,
+                    outputs_format=self.outputs_format,
+                    parse_mode=self.parse_mode,
+                    title_format=self.title_format,
+                    custom_output_format=self.custom_output_format,
+                    tools=self.tools
+                )
+            else:
+                # Use GOAL_BASED_TOOL_CALLING_PROMPT for simple prompt
+                return GOAL_BASED_TOOL_CALLING_PROMPT.format(
+                    goal_prompt=self.prompt,
+                    inputs=prompt_params_values,
+                    history=execution_history or [],
+                    tools_description=self.tools_schema or {},
+                    additional_context=self.tool_calling_instructions or []
+                )
+        
+        # This should never be reached due to validation in __init__
+        raise ValueError("`prompt` or `prompt_template` is required when creating a CustomizeAction.")
+
+    def prepare_extraction_prompt(self, llm_output_content: str) -> str:
+        """Prepare extraction prompt for fallback extraction when parsing fails.
+        
+        Args:
+            self: The action instance
+            llm_output_content: Raw output content from LLM
+            
+        Returns:
+            str: Formatted extraction prompt
+        """
+        attr_descriptions: dict = self.outputs_format.get_attr_descriptions()
+        output_description_list = [] 
+        for i, (name, desc) in enumerate(attr_descriptions.items()):
+            output_description_list.append(f"{i+1}. {name}\nDescription: {desc}")
+        output_description = "\n\n".join(output_description_list)
+        return OUTPUT_EXTRACTION_PROMPT.format(text=llm_output_content, output_description=output_description)
+    
     
     def _generate_inputs_outputs_info(self, inputs: List[dict], outputs: List[dict], output_parser: ActionOutput = None, name: str = None):
         # create the action input type
@@ -163,21 +256,35 @@ class ToolCalling(Action):
         return None
     
     def _extract_output(self, llm_output: Any, llm: BaseLLM = None, **kwargs):
-        attr_descriptions: dict = self.outputs_format.get_attr_descriptions()
-        output_description_list = [] 
-        for i, (name, desc) in enumerate(attr_descriptions.items()):
-            output_description_list.append(f"{i+1}. {name}\nDescription: {desc}")
-        output_description = "\n\n".join(output_description_list)
-        extraction_prompt = self.prompt + "\n\n" + OUTPUT_EXTRACTION_PROMPT.format(text=llm_output, output_description=output_description)
+        # First try to parse the LLM output directly
+        try:
+            # Try to parse JSON from the LLM output
+            if hasattr(llm_output, 'content'):
+                llm_output_content = llm_output.content
+            else:
+                llm_output_content = str(llm_output)
+                
+            llm_output_data: dict = parse_json_from_llm_output(llm_output_content)
+            output = self.outputs_format.from_dict(llm_output_data)
             
-        llm_extracted_output: LLMOutputParser = llm.generate(prompt=extraction_prompt, history=kwargs.get("history", []) + [llm_output])
-        llm_extracted_data: dict = parse_json_from_llm_output(llm_extracted_output.content)
-        output = self.outputs_format.from_dict(llm_extracted_data)
-        
-        print("Extracted output:")
-        print(output)
-        
-        return output
+            print("Successfully parsed output directly:")
+            print(output)
+            return output
+            
+        except Exception as e:
+            print("Falling back to extraction prompt...")
+            
+            # Fall back to extraction prompt if direct parsing fails
+            extraction_prompt = self.prepare_extraction_prompt(llm_output_content)
+                
+            llm_extracted_output: LLMOutputParser = llm.generate(prompt=extraction_prompt, history=kwargs.get("history", []) + [llm_output_content])
+            llm_extracted_data: dict = parse_json_from_llm_output(llm_extracted_output.content)
+            output = self.outputs_format.from_dict(llm_extracted_data)
+            
+            print("Extracted output using fallback:")
+            print(output)
+            
+            return output
     
     def _calling_tools(self, tool_call_args) -> dict:
         ## ___________ Call the tools ___________
@@ -225,36 +332,17 @@ class ToolCalling(Action):
         results = {"result": results, "error": errors}
         return results
     
-    def _get_goal_prompt(self) -> str:
-        """Get the goal prompt for tool calling, using template if available."""
-        if self.prompt_template is not None:
-            # For goal-based tool calling, we just need the instruction from the template
-            return self.prompt_template.get_instruction()
-        else:
-            return self.prompt
-    
     def _get_current_prompt(self, prompt_params_values: dict = None) -> str:
         """Get the current prompt for return, formatted appropriately."""
-        if self.prompt_template is not None:
-            return self.prompt_template.format(
-                values=prompt_params_values or {},
-                inputs_format=self.inputs_format,
-                outputs_format=self.outputs_format,
-                parse_mode=self.parse_mode,
-                title_format=self.title_format,
-                custom_output_format=self.custom_output_format
-            )
-        else:
-            return self.prompt
+        return self.prepare_action_prompt(inputs=prompt_params_values or {})
     
-    def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, return_prompt: bool = False, time_out = 0, **kwargs):
+    def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, system_prompt = None, return_prompt: bool = False, time_out = 0, **kwargs):
         if not inputs:
-            logger.error("ToolCalling action received invalid `inputs`: None or empty.")
-            raise ValueError('The `inputs` to ToolCalling action is None or empty.')
+            logger.error("CustomizeAction action received invalid `inputs`: None or empty.")
+            raise ValueError('The `inputs` to CustomizeAction action is None or empty.')
 
         self.execution_history = []
         
-        print("_______________________ Start Tool Calling _______________________")
         ## 1. Generate tool call args
         input_attributes: dict = self.inputs_format.get_attr_descriptions()
         prompt_params_values = {k: inputs[k] for k in input_attributes.keys()}
@@ -267,55 +355,25 @@ class ToolCalling(Action):
                 if return_prompt:
                     return self._extract_output("{content}".format(content = self.execution_history), llm = llm), current_prompt
                 return self._extract_output("{content}".format(content = self.execution_history), llm = llm) 
+            time_out += 1
             
-            if self.customize_prompting:
-                # Use custom prompting with either prompt or template
-                if self.prompt_template is not None:
-                    formatted_prompt = self.prompt_template.format(
-                        values=prompt_params_values,
-                        inputs_format=self.inputs_format,
-                        outputs_format=self.outputs_format,
-                        parse_mode=self.parse_mode,
-                        title_format=self.title_format,
-                        custom_output_format=self.custom_output_format
-                    )
-                    print("Formatted prompt:")
-                    print(formatted_prompt)
-                    tool_call_args = llm.generate(prompt=formatted_prompt)
-                else:
-                    tool_call_args = llm.generate(prompt=self.prompt)
-            else:
-                # Use goal-based tool calling prompt
-                # goal_prompt = self._get_goal_prompt()
-                
-                if self.prompt_template is not None:
-                    self.prompt_template.set_history(self.execution_history)
-                    prompt = self.prompt_template.format(
-                        values=prompt_params_values,
-                        inputs_format=self.inputs_format,
-                        outputs_format=self.outputs_format,
-                        parse_mode=self.parse_mode,
-                        title_format=self.title_format,
-                        custom_output_format=self.custom_output_format,
-                        tools = self.tools
-                    )
-                else:
-                    prompt = GOAL_BASED_TOOL_CALLING_PROMPT.format(
-                        goal_prompt = self.prompt, 
-                        inputs = prompt_params_values, 
-                        history = self.execution_history, 
-                        tools_description = self.tools_schema, 
-                        additional_context = self.tool_calling_instructions
-                    ), 
-                
+            # Use goal-based tool calling prompt
+            prompt = self.prepare_action_prompt(
+                inputs=prompt_params_values,
+                execution_history=self.execution_history,
+                system_prompt = system_prompt
+            )
+            
+            # Handle both string prompts and chat message lists
+            if isinstance(prompt, str):
                 tool_call_args = llm.generate(
-                    prompt = prompt,
-                    
-                    parse_mode="json"
+                    prompt=prompt
+                )
+            else:
+                tool_call_args = llm.generate(
+                    messages=prompt
                 )
             
-            print("Tool call args:")
-            print(tool_call_args)
             
             tool_call_args = self._extract_tool_calls(tool_call_args.content)
             if not tool_call_args:
@@ -337,4 +395,3 @@ class ToolCalling(Action):
             return self._extract_output("{content}".format(content = self.execution_history), llm = llm), current_prompt
         return self._extract_output("{content}".format(content = self.execution_history), llm = llm) 
         
-

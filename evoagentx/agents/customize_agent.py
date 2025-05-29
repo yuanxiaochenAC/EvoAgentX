@@ -14,7 +14,7 @@ from ..prompts.utils import DEFAULT_SYSTEM_PROMPT
 from ..prompts.template import PromptTemplate
 from ..actions.action import Action, ActionInput, ActionOutput
 from ..utils.utils import generate_dynamic_class_name, make_parent_folder
-from ..actions.tool_calling import ToolCalling
+from ..actions.customize_action import CustomizeAction
 from ..tools.tool import Tool
 
 class CustomizeAgent(Agent):
@@ -253,7 +253,7 @@ class CustomizeAgent(Agent):
         - Input parameters defined by the inputs specification
         - Output format defined by the outputs specification
         - Custom execution logic using the customize_action_execute function
-        - If tool_names is provided, returns a ToolCalling action instead
+        - If tool_names is provided, returns a CustomizeAction action instead
         
         Args:
             name: Base name for the action
@@ -265,7 +265,7 @@ class CustomizeAgent(Agent):
             parse_mode: Mode to use for parsing LLM output
             parse_func: Optional custom parsing function
             output_parser: Optional custom output parser class
-            tool_names: Optional list of tool names - if provided, creates ToolCalling action
+            tool_names: Optional list of tool names
             customize_prompting: Whether to use customize prompting
             
         Returns:
@@ -317,14 +317,13 @@ class CustomizeAgent(Agent):
             generate_dynamic_class_name(name+" action")
         )
 
-        # Create ToolCalling-based action with parsing properties only
-        # (ToolCalling has its own execute logic, don't override it)
+        # Create CustomizeAction-based action with parsing properties only
         customize_action_cls = create_model(
             action_cls_name,
             parse_mode=(Optional[str], Field(default="title", description="the parse mode of the action, must be one of: ['title', 'str', 'json', 'xml', 'custom']")),
             parse_func=(Optional[Callable], Field(default=None, exclude=True, description="the function to parse the LLM output. It receives the LLM output and returns a dict.")),
             title_format=(Optional[str], Field(default="## {title}", exclude=True, description="the format of the title. It is used when the `parse_mode` is 'title'.")),
-            __base__=ToolCalling
+            __base__=CustomizeAction
         )
 
         customize_action = customize_action_cls(
@@ -338,7 +337,7 @@ class CustomizeAgent(Agent):
             title_format=title_format,
             max_tool_try=2,  # Default value, can be made configurable
             customize_prompting = customize_prompting,
-            prompt=prompt,  # Use prompt for ToolCalling
+            prompt=prompt,
             prompt_template=prompt_template
         )
 
