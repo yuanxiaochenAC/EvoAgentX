@@ -310,7 +310,7 @@ The most flexible way to use MCP tools is to create a customized agent with a to
 ```python
 import os
 from evoagentx.tools.mcp import MCPToolkit
-from evoagentx.actions.tool_calling import ToolCalling
+from evoagentx.actions.tool_calling import CustomizeAction
 from evoagentx.agents.customize_agent import CustomizeAgent
 from evoagentx.models.model_configs import OpenAILLMConfig
 from evoagentx.models.openai_model import OpenAILLM
@@ -324,7 +324,7 @@ llm_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=os.environ.get("OPE
 llm = OpenAILLM(config=llm_config)
 
 # Create a tool calling action with MCP tools
-tool_action = ToolCalling(max_tool_try=3)
+tool_action = CustomizeAction(max_tool_try=3)
 tool_action.add_tools(mcp_tools)
 
 # Create a customized agent with the tool calling action

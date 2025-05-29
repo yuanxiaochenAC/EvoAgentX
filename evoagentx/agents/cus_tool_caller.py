@@ -1,6 +1,6 @@
 from typing import Dict, Optional, Callable
 from .customize_agent import CustomizeAgent
-from ..actions.tool_calling import ToolCalling
+from ..actions.customize_action import CustomizeAction
 from ..prompts.tool_caller import CUSTOM_TOOL_CALLER_PROMPT
 from ..tools.tool import Tool
 
@@ -10,11 +10,11 @@ class CusToolCaller(CustomizeAgent):
     based on analyzing the user query and available tools.
     
     This agent has two main actions:
-    1. ToolCalling - Executes the selected tool if required
+    1. CustomizeAction - Executes the selected tool if required
     """
     tools_schema: Optional[Dict[str, dict]] = None
     tools_caller: Optional[Dict[str, Callable]] = None
-    tool_calling_action: Optional[ToolCalling] = None
+    tool_calling_action: Optional[CustomizeAction] = None
     _initialized: bool = False
     ori_prompt: str = ""
     tool_calling_prompt: str = ""
@@ -26,7 +26,7 @@ class CusToolCaller(CustomizeAgent):
         # Don't add to kwargs - let CustomizeAgent handle action creation
         inputs = kwargs.get("inputs", None)
         outputs = kwargs.get("outputs", None)
-        tool_actions = [ToolCalling(max_tool_try=max_tool_try, inputs = inputs, outputs = outputs, ori_prompt = kwargs.get("prompt", ""))]
+        tool_actions = [CustomizeAction(max_tool_try=max_tool_try, inputs = inputs, outputs = outputs, ori_prompt = kwargs.get("prompt", ""))]
         tools = kwargs.get("tools", None)
         
         # Initialize as CustomizeAgent - all other parameters should be passed by the caller
@@ -51,7 +51,7 @@ class CusToolCaller(CustomizeAgent):
         
     @property
     def tool_calling_action_name(self) -> str:  
-        return self.get_action_name(action_cls=ToolCalling)
+        return self.get_action_name(action_cls=CustomizeAction)
     
     def add_tool(self, tool: Tool) -> None:
         """Add a tool to the tool caller agent"""
