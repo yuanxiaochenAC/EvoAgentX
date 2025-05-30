@@ -300,7 +300,7 @@ class Corpus(BaseModule):
     def __init__(self, chunks: List[Chunk] = None):
         super().__init__(
             chunks=chunks or [],
-            chunk_index={chunk.chunk_id: chunk for chunk in self.chunks}
+            chunk_index={chunk.chunk_id: chunk for chunk in chunks}
         )
 
     def to_llama_nodes(self) -> List[BaseNode]:

@@ -113,7 +113,6 @@ class TestRagEngine(unittest.TestCase):
         for p in self.patches:
             p.start()
         
-        import pdb;pdb.set_trace()
         # Initialize RagEngine
         self.rag_engine = SearchEngine(config=self.config, storage_handler=self.storage_handler_mock)
         
@@ -183,6 +182,7 @@ class TestRagEngine(unittest.TestCase):
     
     def test_add_documents(self):
         """Test adding documents to indices."""
+        import pdb;pdb.set_trace()
         documents = [self.sample_doc_en, self.sample_doc_zh]
         
         # Execute
