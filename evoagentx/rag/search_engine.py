@@ -1,11 +1,12 @@
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Tuple, Dict, Any, Sequence, Optional, Union
 
+# LLM choice or Router
 from llama_index.core.retrievers import RouterRetriever
 from llama_index.core.selectors import LLMSingleSelector
-from llama_index.core.query_engine import RetrieverQueryEngine
 
 from .rag_config import RAGConfig
+from .readers import LLamaIndexReader
 # Factory
 from .indexings import IndexFactory
 from .chunkers import ChunkFactory
@@ -31,6 +32,25 @@ class SearchEngine:
         self.postprocessor_factory = PostprocessorFactory()
         self.logger = logging.getLogger(__name__)
         
+        """
+        recursive: bool = False,
+        exclude_hidden: bool = True,
+        num_workers: Optional[int] = None,
+        num_files_limits: Optional[int] = None,
+        custom_metadata_function: Optional[Callable] = None,
+        extern_file_extractor: Optional[Dict] = None,
+        errors: str = "ignore",
+        encoding: str = "utf-8",
+        """
+        # Initialize readers
+        self.readers = LLamaIndexReader(recursive=self.config.recursive, 
+                                        exclude_hidden=self.config.exclude_hidden, 
+                                        num_workers=self.config.num_workers,
+                                        num_files_limits=self.config.num_files_limits, 
+                                        custom_metadata_function=self.config.custom_metadata_function,
+                                        extern_file_extractor=self.config.extern_file_extractor, 
+                                        errors=self.config.errors, encoding=self.config.encoding)
+
         # Initialize embedding model
         self.embed_model = self.embedding_factory.create(
             provider=config.embedding_provider,
@@ -114,6 +134,15 @@ class SearchEngine:
             self.logger.error(f"Failed to initialize indices: {str(e)}")
             raise
     
+    def read_knowledge(self, file_paths: Union[Sequence[str], str], 
+                        exclude_files: Optional[Union[str, List, Tuple, Sequence]] = None,
+                        filter_file_by_suffix: Optional[Union[str, List, Tuple, Sequence]] = None,
+                        merge_by_file: bool = False,
+                        show_progress: bool = False,) -> List[Document]:
+        """ Reading the knowledge from offline file.
+        """
+        return self.readers.load(file_paths, exclude_files, filter_file_by_suffix, merge_by_file, show_progress)
+
     def add_documents(self, documents: List[Document], index_type: Optional[IndexType] = None) -> Corpus:
         """Insert documents into specified or all indices.
         

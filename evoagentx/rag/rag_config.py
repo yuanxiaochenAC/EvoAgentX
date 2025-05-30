@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional, Callable
 
 from ..core.base_config import BaseConfig
 from .indexings.base import IndexType
@@ -7,6 +7,15 @@ from .embeddings.base import EmbeddingProvider
 
 
 class RAGConfig(BaseConfig):
+    # reading stage
+    recursive: bool = False,
+    exclude_hidden: bool = True,
+    num_workers: Optional[int] = None,
+    num_files_limits: Optional[int] = None,
+    custom_metadata_function: Optional[Callable] = None,
+    extern_file_extractor: Optional[Dict] = None,
+    errors: str = "ignore",
+    encoding: str = "utf-8",
     # chunking stage
     chunking_strategy: ChunkingStrategy = ChunkingStrategy.SIMPLE   # Option: SIMPLE, SEMANTIC, HIERARCHICAL
     node_parser_config: Dict[str, Any] = {"chunk_size": 1024, "chunk_overlap": 20}

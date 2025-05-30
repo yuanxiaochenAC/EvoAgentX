@@ -24,7 +24,7 @@ class RetrieverFactory:
         index: Optional[BaseIndex] = None,
         graph_store: Optional[GraphStore] = None,
         embed_model: Optional[BaseEmbedding] = None,
-        query: Optional[RagQuery] = None
+        query: Optional[RagQuery] = None    # Only for set topk
     ) -> BaseRetrieverWrapper:
         """Create a retriever based on configuration."""
         if retriever_type == RetrieverType.VECTOR.value:
