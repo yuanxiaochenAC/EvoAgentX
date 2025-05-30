@@ -436,4 +436,4 @@ class CustomizeAction(Action):
         
 
     async def async_execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, system_prompt = None, return_prompt: bool = False, time_out = 0, **kwargs) -> ActionOutput:
-        return await self.execute(llm, inputs, system_prompt, return_prompt, time_out, **kwargs)
+        return self.execute(llm, inputs, system_prompt, return_prompt, time_out, **kwargs)

@@ -88,11 +88,13 @@ After using a tool, analyze its output and determine next steps. You may need to
 
 TOOL_CALLING_TEMPLATE = """
 ### Tools Calling Instructions
-You may have access to various tools that can help you accomplish your task.
+You may have access to various tools that might help you accomplish your task.
 If you are provided with tools, you should use them if you need to.
-Once you have completed all preparations, you should not call any tool and just generate the final answer.
-You should also include the very short thinking process in the output to explain why you need to use the tool, before you call the tool and stop generating the output. 
+Once you have completed all preparations, you SHOULD NOT call any tool and just generate the final answer.
+You should also include the VERY SHORT thinking process in the output to explain why you need to use the tool, before you call the tool and stop generating the output. 
 Tool call is only part of the output.
+You should STOP GENERATING responds RIGHT AFTER you give the tool calling instructions.
+By checking the history, IF you get the information, you should IGNORE THIS TOOL CALLING INSTRUCTIONS SECTION.
 
 ** Example Output **
 Base on the goal, I found out that I need to use the following tools:
@@ -127,10 +129,12 @@ After using a tool, analyze its output and determine next steps. You may need to
 {additional_context}
 
 ** Tool Calling Key Points **
-- You should check the history to determine if you have the information
+- You dont have to use the tool.
+- You should ALWAYS check the history to determine if you have the information
 - You should try to use tools to get the information you need
-- You should not avoid using the tool if you have the information
+- You should not avoid using the tool if you have the information by CHECKING the history
 - You should not call any tool if you completed the goal
 - The tool you called must exist in the available tools
+- You should never write comments in the call_tool function
 """
 
