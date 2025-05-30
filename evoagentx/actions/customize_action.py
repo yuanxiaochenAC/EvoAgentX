@@ -13,7 +13,7 @@ from ..utils.utils import generate_dynamic_class_name
 from ..core.registry import MODULE_REGISTRY
 from ..models.base_model import LLMOutputParser
 from ..core.module_utils import parse_json_from_llm_output
-from ..prompts.template import PromptTemplate, StringTemplate
+from ..prompts.template import StringTemplate
 
 class CustomizeAction(Action):
     max_tool_try: int = 2
@@ -25,7 +25,7 @@ class CustomizeAction(Action):
     outputs: dict = {}
     output_parser: Optional[Type[ActionOutput]] = None
     prompt: str = ""
-    prompt_template: Optional[PromptTemplate] = None
+    prompt_template: Optional[StringTemplate] = None
     parse_mode: str = "title"
     title_format: str = "## {title}"
     custom_output_format: Optional[str] = None
@@ -128,7 +128,6 @@ class CustomizeAction(Action):
                 # Set history if provided and format with tools for goal-based tool calling
                 if execution_history is not None:
                     self.prompt_template.set_history(execution_history)
-                
                 return self.prompt_template.format(
                     system_prompt=system_prompt,
                     values=prompt_params_values,
@@ -209,7 +208,7 @@ class CustomizeAction(Action):
             )
         else:
             # self._check_output_parser(outputs, output_parser)
-            self.action_output_type = output_parser
+            action_output_type = output_parser
         
         self.inputs_format = action_input_type
         self.outputs_format = action_output_type
@@ -257,22 +256,39 @@ class CustomizeAction(Action):
         return None
     
     def _extract_output(self, llm_output: Any, llm: BaseLLM = None, **kwargs):
-        # First try to parse the LLM output directly
-        try:
-            # Try to parse JSON from the LLM output
-            if hasattr(llm_output, 'content'):
-                llm_output_content = llm_output.content
-            else:
-                llm_output_content = str(llm_output)
-                
-            llm_output_data: dict = parse_json_from_llm_output(llm_output_content)
-            output = self.outputs_format.from_dict(llm_output_data)
-            
-            print("Successfully parsed output directly:")
+        # Get the raw output content
+        if hasattr(llm_output, 'content'):
+            llm_output_content = llm_output.content
+        else:
+            llm_output_content = str(llm_output)
+        
+        # Check if there are any defined output fields
+        output_attrs = self.outputs_format.get_attrs()
+        
+        # If no output fields are defined, create a simple content-only output
+        if not output_attrs:
+            # Create output with just the content field
+            output = self.outputs_format(content=llm_output_content)
+            print("Created simple content output for agent with no defined outputs:")
             print(output)
             return output
+        
+        # Use the action's parse_mode and parse_func for parsing
+        try:
+            # Use the outputs_format's parse method with the action's parse settings
+            parsed_output = self.outputs_format.parse(
+                content=llm_output_content,
+                parse_mode=self.parse_mode,
+                parse_func=getattr(self, 'parse_func', None),
+                title_format=getattr(self, 'title_format', "## {title}")
+            )
             
-        except Exception:
+            print("Successfully parsed output using action's parse settings:")
+            print(parsed_output)
+            return parsed_output
+            
+        except Exception as e:
+            print(f"Failed to parse with action's parse settings: {e}")
             print("Falling back to extraction prompt...")
             
             # Fall back to extraction prompt if direct parsing fails
@@ -338,24 +354,32 @@ class CustomizeAction(Action):
         return self.prepare_action_prompt(inputs=prompt_params_values or {})
     
     def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, system_prompt = None, return_prompt: bool = False, time_out = 0, **kwargs):
-        if not inputs:
+        # Allow empty inputs if the action has no required input attributes
+        input_attributes: dict = self.inputs_format.get_attr_descriptions()
+        if not inputs and input_attributes:
             logger.error("CustomizeAction action received invalid `inputs`: None or empty.")
             raise ValueError('The `inputs` to CustomizeAction action is None or empty.')
+        
+        # Set inputs to empty dict if None and no inputs are required
+        if inputs is None:
+            inputs = {}
 
         self.execution_history = []
+        final_llm_response = None
         
         ## 1. Generate tool call args
-        input_attributes: dict = self.inputs_format.get_attr_descriptions()
-        prompt_params_values = {k: inputs[k] for k in input_attributes.keys()}
+        prompt_params_values = {k: inputs.get(k, "") for k in input_attributes.keys()}
         
         while True:
             ### Generate response from LLM
             if time_out > self.max_tool_try:
                 # Get the appropriate prompt for return
                 current_prompt = self._get_current_prompt(prompt_params_values)
+                # Use the final LLM response if available, otherwise fall back to execution history
+                content_to_extract = final_llm_response if final_llm_response is not None else "{content}".format(content = self.execution_history)
                 if return_prompt:
-                    return self._extract_output("{content}".format(content = self.execution_history), llm = llm), current_prompt
-                return self._extract_output("{content}".format(content = self.execution_history), llm = llm) 
+                    return self._extract_output(content_to_extract, llm = llm), current_prompt
+                return self._extract_output(content_to_extract, llm = llm) 
             time_out += 1
             
             # Use goal-based tool calling prompt
@@ -367,16 +391,18 @@ class CustomizeAction(Action):
             
             # Handle both string prompts and chat message lists
             if isinstance(prompt, str):
-                tool_call_args = llm.generate(
+                llm_response = llm.generate(
                     prompt=prompt
                 )
             else:
-                tool_call_args = llm.generate(
+                llm_response = llm.generate(
                     messages=prompt
                 )
             
+            # Store the final LLM response
+            final_llm_response = llm_response
             
-            tool_call_args = self._extract_tool_calls(tool_call_args.content)
+            tool_call_args = self._extract_tool_calls(llm_response.content)
             if not tool_call_args:
                 break
             
@@ -392,7 +418,9 @@ class CustomizeAction(Action):
         
         # Get the appropriate prompt for return
         current_prompt = self._get_current_prompt(prompt_params_values)
+        # Use the final LLM response if available, otherwise fall back to execution history
+        content_to_extract = final_llm_response if final_llm_response is not None else "{content}".format(content = self.execution_history)
         if return_prompt:
-            return self._extract_output("{content}".format(content = self.execution_history), llm = llm), current_prompt
-        return self._extract_output("{content}".format(content = self.execution_history), llm = llm) 
+            return self._extract_output(content_to_extract, llm = llm), current_prompt
+        return self._extract_output(content_to_extract, llm = llm)
         

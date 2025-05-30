@@ -132,5 +132,6 @@ After using a tool, analyze its output and determine next steps. You may need to
 - You should not avoid using the tool if you have the information
 - You should not call any tool if you completed the goal
 - The tool you called must exist in the available tools
+- You should never write comments in the tool calling section
 """
 
