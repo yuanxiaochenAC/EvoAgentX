@@ -169,46 +169,56 @@ class CustomizeAction(Action):
         return OUTPUT_EXTRACTION_PROMPT.format(text=llm_output_content, output_description=output_description)
     
     
-    def _generate_inputs_outputs_info(self, inputs: List[dict], outputs: List[dict], output_parser: ActionOutput = None, name: str = None):
-        # create the action input type
-        action_input_fields = {}
-        for field in inputs:
-            required = field.get("required", True)
-            if required:
-                action_input_fields[field["name"]] = (str, Field(description=field["description"]))
-            else:
-                action_input_fields[field["name"]] = (Optional[str], Field(default=None, description=field["description"]))
-        
-        action_input_type = create_model(
-            self._get_unique_class_name(
-                generate_dynamic_class_name(name+" action_input")
-            ),
-            **action_input_fields, 
-            __base__=ActionInput
-        )
-        
-        # create the action output type
-        if output_parser is None:
-            action_output_fields = {}
-            for field in outputs:
+    def _generate_inputs_outputs_info(self, inputs: Union[List[dict], Type], outputs: Union[List[dict], Type], output_parser: ActionOutput = None, name: str = None):
+        # Handle inputs - check if it's already a processed class or raw list
+        if isinstance(inputs, type) and hasattr(inputs, 'get_attrs'):
+            # Already processed input class
+            action_input_type = inputs
+        else:
+            # Raw list of dictionaries - create the action input type
+            action_input_fields = {}
+            for field in inputs:
                 required = field.get("required", True)
                 if required:
-                    action_output_fields[field["name"]] = (Union[str, dict, list], Field(description=field["description"]))
+                    action_input_fields[field["name"]] = (str, Field(description=field["description"]))
                 else:
-                    action_output_fields[field["name"]] = (Optional[Union[str, dict, list]], Field(default=None, description=field["description"]))
+                    action_input_fields[field["name"]] = (Optional[str], Field(default=None, description=field["description"]))
             
-            action_output_type = create_model(
+            action_input_type = create_model(
                 self._get_unique_class_name(
-                    generate_dynamic_class_name(name+" action_output")
+                    generate_dynamic_class_name(name+" action_input")
                 ),
-                **action_output_fields, 
-                __base__=ActionOutput,
-                # get_content_data=customize_get_content_data,
-                # to_str=customize_to_str
+                **action_input_fields, 
+                __base__=ActionInput
             )
+        
+        # Handle outputs - check if it's already a processed class or raw list
+        if isinstance(outputs, type) and hasattr(outputs, 'get_attrs'):
+            # Already processed output class
+            action_output_type = outputs
         else:
-            # self._check_output_parser(outputs, output_parser)
-            action_output_type = output_parser
+            # Raw list of dictionaries or using output_parser
+            if output_parser is None:
+                action_output_fields = {}
+                for field in outputs:
+                    required = field.get("required", True)
+                    if required:
+                        action_output_fields[field["name"]] = (Union[str, dict, list], Field(description=field["description"]))
+                    else:
+                        action_output_fields[field["name"]] = (Optional[Union[str, dict, list]], Field(default=None, description=field["description"]))
+                
+                action_output_type = create_model(
+                    self._get_unique_class_name(
+                        generate_dynamic_class_name(name+" action_output")
+                    ),
+                    **action_output_fields, 
+                    __base__=ActionOutput,
+                    # get_content_data=customize_get_content_data,
+                    # to_str=customize_to_str
+                )
+            else:
+                # self._check_output_parser(outputs, output_parser)
+                action_output_type = output_parser
         
         self.inputs_format = action_input_type
         self.outputs_format = action_output_type
