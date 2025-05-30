@@ -32,16 +32,6 @@ class SearchEngine:
         self.postprocessor_factory = PostprocessorFactory()
         self.logger = logging.getLogger(__name__)
         
-        """
-        recursive: bool = False,
-        exclude_hidden: bool = True,
-        num_workers: Optional[int] = None,
-        num_files_limits: Optional[int] = None,
-        custom_metadata_function: Optional[Callable] = None,
-        extern_file_extractor: Optional[Dict] = None,
-        errors: str = "ignore",
-        encoding: str = "utf-8",
-        """
         # Initialize readers
         self.readers = LLamaIndexReader(recursive=self.config.recursive, 
                                         exclude_hidden=self.config.exclude_hidden, 
