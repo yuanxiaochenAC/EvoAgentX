@@ -6,13 +6,12 @@ from typing import Union, Optional, Callable, Type, List
 from .agent import Agent
 from ..core.logging import logger
 from ..core.registry import MODULE_REGISTRY, PARSE_FUNCTION_REGISTRY
-from ..core.module_utils import parse_json_from_llm_output
 from ..core.message import Message, MessageType
 from ..models.model_configs import LLMConfig 
-from ..models.base_model import BaseLLM, LLMOutputParser, PARSER_VALID_MODE
+from ..models.base_model import PARSER_VALID_MODE
 from ..prompts.utils import DEFAULT_SYSTEM_PROMPT
 from ..prompts.template import PromptTemplate
-from ..actions.action import Action, ActionInput, ActionOutput
+from ..actions.action import Action, ActionOutput
 from ..utils.utils import generate_dynamic_class_name, make_parent_folder
 from ..actions.customize_action import CustomizeAction
 from ..tools.tool import Tool
@@ -282,14 +281,6 @@ class CustomizeAgent(Agent):
                 action_input_fields[field["name"]] = (str, Field(description=field["description"]))
             else:
                 action_input_fields[field["name"]] = (Optional[str], Field(default=None, description=field["description"]))
-        
-        action_input_type = create_model(
-            self._get_unique_class_name(
-                generate_dynamic_class_name(name+" action_input")
-            ),
-            **action_input_fields, 
-            __base__=ActionInput
-        )
 
         # create the action output type
         if output_parser is None:
@@ -301,18 +292,6 @@ class CustomizeAgent(Agent):
                 else:
                     action_output_fields[field["name"]] = (Optional[Union[str, dict, list]], Field(default=None, description=field["description"]))
             
-            action_output_type = create_model(
-                self._get_unique_class_name(
-                    generate_dynamic_class_name(name+" action_output")
-                ),
-                **action_output_fields, 
-                __base__=ActionOutput,
-                # get_content_data=customize_get_content_data,
-                # to_str=customize_to_str
-            )
-        else:
-            # self._check_output_parser(outputs, output_parser)
-            action_output_type = output_parser
 
         action_cls_name = self._get_unique_class_name(
             generate_dynamic_class_name(name+" action")

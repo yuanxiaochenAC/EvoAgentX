@@ -513,7 +513,7 @@ class BrowserTool(Tool):
             if not page_loaded:
                 return {
                     "status": "partial_success",
-                    "message": f"Element clicked, but page load timed out",
+                    "message": "Element clicked, but page load timed out",
                     "selector": selector,
                     "current_url": self.driver.current_url
                 }
@@ -626,7 +626,7 @@ class BrowserTool(Tool):
                     self.browser_snapshot()
                     return {
                         "status": "partial_success",
-                        "message": f"Text entered and submitted, but page load timed out",
+                        "message": "Text entered and submitted, but page load timed out",
                         "element": element_desc,
                         "text": text
                     }
@@ -1021,7 +1021,7 @@ class BrowserTool(Tool):
                 self.browser_snapshot()
                 return {
                     "status": "partial_success",
-                    "message": f"Element clicked, but page load timed out",
+                    "message": "Element clicked, but page load timed out",
                     "element": element_desc
                 }
             

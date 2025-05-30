@@ -59,3 +59,4 @@ wikipedia
 googlesearch-python
 beautifulsoup4
 PyPDF2
+selenium

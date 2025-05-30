@@ -272,7 +272,7 @@ class CustomizeAction(Action):
             print(output)
             return output
             
-        except Exception as e:
+        except Exception:
             print("Falling back to extraction prompt...")
             
             # Fall back to extraction prompt if direct parsing fails
@@ -364,11 +364,6 @@ class CustomizeAction(Action):
                 execution_history=self.execution_history,
                 system_prompt = system_prompt
             )
-            
-            print("Current prompt:")
-            print(prompt)
-            print("\n\n\n\n")
-            
             
             # Handle both string prompts and chat message lists
             if isinstance(prompt, str):
