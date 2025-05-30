@@ -15,6 +15,8 @@ from ..actions.action import Action, ActionOutput
 from ..utils.utils import generate_dynamic_class_name, make_parent_folder
 from ..actions.customize_action import CustomizeAction
 from ..tools.tool import Tool
+from ..actions.action import ActionInput
+
 
 class CustomizeAgent(Agent):
 
@@ -281,6 +283,14 @@ class CustomizeAgent(Agent):
             else:
                 action_input_fields[field["name"]] = (Optional[str], Field(default=None, description=field["description"]))
 
+        action_input_type = create_model(
+            self._get_unique_class_name(
+                generate_dynamic_class_name(name+" action_input")
+            ),
+            **action_input_fields, 
+            __base__=ActionInput
+        )
+        
         # create the action output type
         if output_parser is None:
             action_output_fields = {}
@@ -290,7 +300,19 @@ class CustomizeAgent(Agent):
                     action_output_fields[field["name"]] = (Union[str, dict, list], Field(description=field["description"]))
                 else:
                     action_output_fields[field["name"]] = (Optional[Union[str, dict, list]], Field(default=None, description=field["description"]))
-            
+            action_output_type = create_model(
+                self._get_unique_class_name(
+                    generate_dynamic_class_name(name+" action_output")
+                ),
+                **action_output_fields, 
+                __base__=ActionOutput,
+                # get_content_data=customize_get_content_data,
+                # to_str=customize_to_str
+            )
+        else:
+            # self._check_output_parser(outputs, output_parser)
+            action_output_type = output_parser
+        
         action_cls_name = self._get_unique_class_name(
             generate_dynamic_class_name(name+" action")
         )
@@ -307,8 +329,8 @@ class CustomizeAgent(Agent):
         customize_action = customize_action_cls(
             name=action_cls_name,
             description=desc, 
-            inputs=inputs,
-            outputs=outputs,
+            inputs=action_input_type,
+            outputs=action_output_type,
             output_parser=output_parser,
             parse_mode=parse_mode,
             parse_func=parse_func,
