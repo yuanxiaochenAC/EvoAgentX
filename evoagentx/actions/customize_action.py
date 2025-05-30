@@ -271,7 +271,7 @@ class CustomizeAction(Action):
             print(output)
             return output
             
-        except Exception as e:
+        except Exception:
             print("Falling back to extraction prompt...")
             
             # Fall back to extraction prompt if direct parsing fails

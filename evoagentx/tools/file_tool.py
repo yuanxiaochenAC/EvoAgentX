@@ -2,7 +2,6 @@ from .tool import Tool
 import os
 import PyPDF2
 from typing import Dict, Any, Optional, List, Callable
-from pydantic import Field
 from evoagentx.core.logging import logger
 
 class FileTool(Tool):
