@@ -531,8 +531,8 @@ def run_browser_tool_example():
         try:
             if 'browser_tool' in locals():
                 browser_tool.close_browser()
-        except:
-            pass
+        except Exception as e:
+            print(f"Error closing browser: {str(e)}")
 
 
 def main():
