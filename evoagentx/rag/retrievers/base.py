@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 
 from llama_index.core.retrievers import BaseRetriever
 
-from ..schema import Query, SchemaResult
+from ..schema import RagQuery, RagResult
 
 
 class RetrieverType(str, Enum):
@@ -19,7 +19,7 @@ class BaseRetrieverWrapper(ABC):
         self.logger = logging.getLogger(__name__)
     
     @abstractmethod
-    def retrieve(self, query: Query) -> SchemaResult:
+    def retrieve(self, query: RagQuery) -> RagResult:
         """Retrieve results for a query."""
         pass
     

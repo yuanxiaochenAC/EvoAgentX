@@ -4,8 +4,8 @@ from typing import List
 from concurrent.futures import ThreadPoolExecutor
 
 from llama_index.core.node_parser import SimpleNodeParser
-from .base import BaseChunker
-from evoagentx.rag.schema import Document, Corpus, Chunk, ChunkingStrategy
+from .base import BaseChunker, ChunkingStrategy
+from evoagentx.rag.schema import Document, Corpus, Chunk
 
 
 class SimpleChunker(BaseChunker):

@@ -3,7 +3,7 @@ from llama_index.core.indices.base import BaseIndex
 from llama_index.core.retrievers import VectorIndexRetriever
 
 from .base import BaseRetrieverWrapper
-from ..schema import Query, SchemaResult, Corpus
+from ..schema import RagQuery, RagResult, Corpus
 
 
 class VectorRetriever(BaseRetrieverWrapper):
@@ -19,7 +19,7 @@ class VectorRetriever(BaseRetrieverWrapper):
         )
         self.logger = logging.getLogger(__file__)
     
-    def retrieve(self, query: Query) -> SchemaResult:
+    def retrieve(self, query: RagQuery) -> RagResult:
         try:
             nodes = self.retriever.retrieve(query.query_str)
             corpus = Corpus.from_llama_nodes(nodes)
@@ -28,7 +28,7 @@ class VectorRetriever(BaseRetrieverWrapper):
             for chunk, score in zip(corpus.chunks, scores):
                 chunk.metadata.similarity_score = score
             
-            result = SchemaResult(
+            result = RagResult(
                 corpus=corpus,
                 scores=scores,
                 metadata={"query": query.query_str, "retriever": "vector"}

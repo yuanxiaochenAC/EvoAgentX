@@ -17,7 +17,7 @@ from .indexings.base import IndexType
 from .retrievers.base import RetrieverType
 from .embeddings.base import EmbeddingProvider
 from ..storages.base import StorageHandler
-from .schema import Corpus, Document, Query, SchemaResult
+from .schema import Corpus, Document, RagQuery, RagResult
 
 
 class SearchEngine:
@@ -62,7 +62,7 @@ class SearchEngine:
             self.retrievers[IndexType.VECTOR] = self.retriever_factory.create(
                 retriever_type=RetrieverType.VECTOR,
                 index=vector_index.get_index(),
-                query=Query(query_str="", top_k=self.config.retrieval_config.get("top_k", 5))
+                query=RagQuery(query_str="", top_k=self.config.retrieval_config.get("top_k", 5))
             )
             
             # Create additional indices based on config
@@ -78,7 +78,7 @@ class SearchEngine:
                     retriever_type=RetrieverType.GRAPH,
                     graph_store=self.storage_handler.storage_context.graph_store,
                     embed_model=self.embed_model,
-                    query=Query(query_str="", top_k=self.config.retrieval_config.get("top_k", 5))
+                    query=RagQuery(query_str="", top_k=self.config.retrieval_config.get("top_k", 5))
                 )
             
             if self.config.index_type == IndexType.SUMMARY:
@@ -92,7 +92,7 @@ class SearchEngine:
                 self.retrievers[IndexType.SUMMARY] = self.retriever_factory.create(
                     retriever_type=RetrieverType.VECTOR,  # Summary uses vector retriever
                     index=summary_index.get_index(),
-                    query=Query(query_str="", top_k=self.config.retrieval_config.get("top_k", 5))
+                    query=RagQuery(query_str="", top_k=self.config.retrieval_config.get("top_k", 5))
                 )
             
             if self.config.index_type == IndexType.TREE:
@@ -106,7 +106,7 @@ class SearchEngine:
                 self.retrievers[IndexType.TREE] = self.retriever_factory.create(
                     retriever_type=RetrieverType.VECTOR,  # Tree uses vector retriever
                     index=tree_index.get_index(),
-                    query=Query(query_str="", top_k=self.config.retrieval_config.get("top_k", 5))
+                    query=RagQuery(query_str="", top_k=self.config.retrieval_config.get("top_k", 5))
                 )
             
             self.logger.info(f"Initialized {len(self.indices)} indices and retrievers")
@@ -276,7 +276,7 @@ class SearchEngine:
                 })
         return triples
     
-    def retrieve(self, query: Query) -> SchemaResult:
+    def retrieve(self, query: RagQuery) -> RagResult:
         """Retrieve results from multiple indices.
         
         Args:
@@ -352,7 +352,7 @@ class SearchEngine:
                 index=index.get_index() if retriever_type == RetrieverType.VECTOR else None,
                 graph_store=self.storage_handler.storage_context.graph_store if retriever_type == RetrieverType.GRAPH else None,
                 embed_model=self.embed_model if retriever_type == RetrieverType.GRAPH else None,
-                query=Query(query_str="", top_k=self.config.retrieval_config.get("top_k", 5))
+                query=RagQuery(query_str="", top_k=self.config.retrieval_config.get("top_k", 5))
             )
             self.retrievers[index_type] = retriever
             

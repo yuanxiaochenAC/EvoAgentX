@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from ..schema import Query
+from ..schema import RagQuery
 from .simple_reranker import SimpleReranker
 from .base import BasePostprocessor, RerankerType
 
@@ -15,7 +15,7 @@ class PostprocessorFactory:
     def create(
         self,
         postprocessor_type: str,
-        query: Optional[Query] = None
+        query: Optional[RagQuery] = None
     ) -> BasePostprocessor:
         """Create a post-processor based on configuration.
         

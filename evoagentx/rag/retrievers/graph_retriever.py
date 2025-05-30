@@ -4,7 +4,7 @@ from llama_index.core.graph_stores.types import GraphStore
 from llama_index.core.indices.property_graph import VectorContextRetriever
 
 from .base import BaseRetrieverWrapper
-from ..schema import Query, SchemaResult, Corpus
+from ..schema import RagQuery, RagResult, Corpus
 
 
 class GraphRetriever(BaseRetrieverWrapper):
@@ -22,7 +22,7 @@ class GraphRetriever(BaseRetrieverWrapper):
         )
         self.logger = logging.getLogger(__file__)
     
-    def retrieve(self, query: Query) -> SchemaResult:
+    def retrieve(self, query: RagQuery) -> RagResult:
         try:
             nodes = self.retriever.retrieve(query.query_str)
             corpus = Corpus.from_llama_nodes(nodes)
@@ -31,7 +31,7 @@ class GraphRetriever(BaseRetrieverWrapper):
             for chunk, score in zip(corpus.chunks, scores):
                 chunk.metadata.similarity_score = score
             
-            result = SchemaResult(
+            result = RagResult(
                 corpus=corpus,
                 scores=scores,
                 metadata={"query": query.query_str, "retriever": "graph"}

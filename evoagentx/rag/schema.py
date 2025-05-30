@@ -4,14 +4,15 @@ import hashlib
 from uuid import uuid4
 from typing import List, Dict, Optional, Union, Any
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+from evoagentx.core.base_config import BaseModule
 from llama_index.core import Document as LlamaIndexDocument
-from llama_index.core.schema import BaseNode, TextNode, NodeRelationship
+from llama_index.core.schema import BaseNode, TextNode, RelatedNodeInfo
 
 
 DEAFULT_EXCLUDED = ['file_name', 'file_type', 'file_size', 'page_count', 'creation_date', 
                         'last_modified_date', 'language', 'word_count', 'custom_fields', 'hash_doc']
-class DocumentMetadata(BaseModel):
+class DocumentMetadata(BaseModule):
     """
     This class ensures type safety and validation for metadata associated with a document,
     such as file information, creation date, and custom fields.
@@ -44,7 +45,7 @@ class ChunkMetadata(DocumentMetadata):
     similarity_score: Optional[float] = Field(default=None, description="Similarity score from retrieval.")
 
 
-class Document:
+class Document(BaseModule):
     """A custom document class for managing documents in the RAG pipeline.
 
     Attributes:
@@ -63,24 +64,27 @@ class Document:
         doc_id: Optional[str] = None,
         excluded_embed_metadata_keys: List[str] = DEAFULT_EXCLUDED,
         excluded_llm_metadata_keys: List[str] = DEAFULT_EXCLUDED,
-        relationships: Dict = {}, 
+        relationships: Dict[str, RelatedNodeInfo] = {}, 
         metadata_template: str = '{key}: {value}', 
         metadata_separator: str = '\n',
         text_template: str = '{metadata_str}\n\n{content}'
     ):
-        self.text = text.strip()
-        self.doc_id = doc_id or str(uuid4())
-        self.metadata = (
+        metadata = (
             DocumentMetadata.model_validate(metadata) if isinstance(metadata, dict) else metadata or DocumentMetadata()
         )
-        self.embedding = embedding
-        self.excluded_embed_metadata_keys = list(set(DEAFULT_EXCLUDED + excluded_embed_metadata_keys))
-        self.excluded_llm_metadata_keys = list(set(DEAFULT_EXCLUDED + excluded_llm_metadata_keys))
-        self.relationships = relationships
-        self.metadata_template = metadata_template
-        self.metadata_separator = metadata_separator
-        self.text_template = text_template
-        # metadata init
+        
+        super().__init__(
+            text=text.strip(),
+            doc_id=doc_id or str(uuid4()),
+            metadata=metadata,
+            embedding=embedding,
+            excluded_embed_metadata_keys=list(set(DEAFULT_EXCLUDED + excluded_embed_metadata_keys)),
+            excluded_llm_metadata_keys=list(set(DEAFULT_EXCLUDED + excluded_llm_metadata_keys)),
+            relationships=relationships,
+            metadata_template=metadata_template,
+            metadata_separator=metadata_separator,
+            text_template=text_template,
+        )
         self.metadata.word_count = len(self.text.split())
 
     def to_llama_document(self) -> LlamaIndexDocument:
@@ -159,7 +163,7 @@ class Document:
         )
 
 
-class Chunk:
+class Chunk(BaseModule):
     """A single chunk of a document for RAG processing.
 
     Attributes:
@@ -180,21 +184,23 @@ class Chunk:
         excluded_embed_metadata_keys: List[str] = DEAFULT_EXCLUDED,
         excluded_llm_metadata_keys: List[str] = DEAFULT_EXCLUDED,
         text_template: str = '{metadata_str}\n\n{content}',
-        relationships: Dict[NodeRelationship] = {}, 
+        relationships: Dict = {}, 
         metadata: Optional[Union[Dict, ChunkMetadata]] = None,
     ):
-        self.text = text.strip()
-        self.chunk_id = chunk_id or str(uuid4())
-        self.embedding = embedding
-        self.start_char_idx = start_char_idx
-        self.end_char_idx = end_char_idx
-        self.excluded_embed_metadata_keys = list(set(DEAFULT_EXCLUDED + excluded_embed_metadata_keys))
-        self.excluded_llm_metadata_keys = list(set(DEAFULT_EXCLUDED + excluded_llm_metadata_keys))
-        self.text_template = text_template
-        self.relationships = relationships
-        # init metadata
-        self.metadata = (
-            ChunkMetadata.model_validate(metadata) if isinstance(metadata, dict) else metadata or  ChunkMetadata()
+        metadata = (
+            ChunkMetadata.model_validate(metadata) if isinstance(metadata, dict) else metadata or ChunkMetadata()
+        )
+        super().__init__(
+            text=text.strip(),
+            chunk_id=chunk_id or str(uuid4()),
+            embedding=embedding,
+            start_char_idx=start_char_idx,
+            end_char_idx=end_char_idx,
+            excluded_embed_metadata_keys=list(set(DEAFULT_EXCLUDED + excluded_embed_metadata_keys)),
+            excluded_llm_metadata_keys=list(set(DEAFULT_EXCLUDED + excluded_llm_metadata_keys)),
+            text_template=text_template,
+            relationships=relationships,
+            metadata=metadata,
         )
         self.metadata.word_count = len(self.text.split())
 
@@ -283,7 +289,7 @@ class Chunk:
         )
 
 
-class Corpus:
+class Corpus(BaseModule):
     """A collection of document chunks for RAG processing.
 
     Attributes:
@@ -292,11 +298,15 @@ class Corpus:
     """
 
     def __init__(self, chunks: List[Chunk] = None):
-        self.chunks = chunks or []
-        self.chunk_index = {chunk.chunk_id: chunk for chunk in self.chunks}
+        super().__init__(
+            chunks=chunks or [],
+            chunk_index={chunk.chunk_id: chunk for chunk in self.chunks}
+        )
 
     def to_llama_nodes(self) -> List[BaseNode]:
         """Convert to list of LlamaIndex Nodes."""
+        if not self.chunks:
+            self.chunks = []
         return [chunk.to_llama_node() for chunk in self.chunks]
 
     @classmethod
@@ -380,7 +390,7 @@ class Corpus:
         return len(self.chunks)
     
 
-class RagQuery(BaseModel):
+class RagQuery(BaseModule):
     """Represents a retrieval query."""
     
     query_str: str = Field(description="The query string.")
@@ -390,7 +400,7 @@ class RagQuery(BaseModel):
     use_graph: bool = Field(default=False, description="Whether to use graph-based retrieval.")
     metadata_filters: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata filters.")
 
-class RagResult(BaseModel):
+class RagResult(BaseModule):
     """Represents a retrieval result."""
     
     corpus: Corpus = Field(description="Retrieved chunks.")

@@ -25,11 +25,12 @@ from evoagentx.rag.postprocessors.simple_reranker import SimpleReranker
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 import dotenv
-ENV = dotenv.load_dotenv()
+dotenv.load_dotenv()
+ENV = os.environ
+
 
 class TestRagEngine(unittest.TestCase):
     def setUp(self):
-        import pdb;pdb.set_trace()
         """Set up test environment, mocks, and RagEngine instance."""
         self.temp_dir = tempfile.mkdtemp()
         self.db_path = os.path.join(self.temp_dir, "test_storage.db")
@@ -71,7 +72,7 @@ class TestRagEngine(unittest.TestCase):
         
         # Mock Embedding model
         self.embed_model_mock = MagicMock()
-        self.embedding_patch = patch("evoagentx.rag.embeddings.base.EmbeddingFactory.create", return_value=self.embed_model_mock)
+        self.embedding_patch = patch("evoagentx.rag.embeddings.EmbeddingFactory.create", return_value=self.embed_model_mock)
         self.patches.append(self.embedding_patch)
         
         # Mock IndexFactory
@@ -83,12 +84,12 @@ class TestRagEngine(unittest.TestCase):
         self.index_factory_mock.create.side_effect = lambda index_type, **kwargs: (
             self.vector_index_mock if index_type == IndexType.VECTOR else self.graph_index_mock
         )
-        self.index_patch = patch("evoagentx.rag.indexing.factory.IndexFactory", return_value=self.index_factory_mock)
+        self.index_patch = patch("evoagentx.rag.indexings.IndexFactory.create", return_value=self.index_factory_mock)
         self.patches.append(self.index_patch)
         
         # Mock ChunkFactory
         self.chunker_mock = MagicMock()
-        self.chunk_factory_patch = patch("evoagentx.rag.chunkers.factory.ChunkFactory.create", return_value=self.chunker_mock)
+        self.chunk_factory_patch = patch("evoagentx.rag.chunkers.ChunkFactory.create", return_value=self.chunker_mock)
         self.patches.append(self.chunk_factory_patch)
         
         # Mock RetrieverFactory
@@ -98,20 +99,21 @@ class TestRagEngine(unittest.TestCase):
         self.retriever_factory_mock.create.side_effect = lambda retriever_type, **kwargs: (
             self.vector_retriever_mock if retriever_type == RetrieverType.VECTOR else self.graph_retriever_mock
         )
-        self.retriever_patch = patch("evoagentx.rag.retrievers.factory.RetrieverFactory", return_value=self.retriever_factory_mock)
+        self.retriever_patch = patch("evoagentx.rag.retrievers.RetrieverFactory.create", return_value=self.retriever_factory_mock)
         self.patches.append(self.retriever_patch)
         
         # Mock PostprocessorFactory
         self.reranker_mock = MagicMock(spec=SimpleReranker)
         self.postprocessor_factory_mock = MagicMock()
         self.postprocessor_factory_mock.create.return_value = self.reranker_mock
-        self.postprocessor_patch = patch("evoagentx.rag.postprocessors.factory.PostprocessorFactory", return_value=self.postprocessor_factory_mock)
+        self.postprocessor_patch = patch("evoagentx.rag.postprocessors.PostprocessorFactory.create", return_value=self.postprocessor_factory_mock)
         self.patches.append(self.postprocessor_patch)
         
         # Start patches
         for p in self.patches:
             p.start()
         
+        import pdb;pdb.set_trace()
         # Initialize RagEngine
         self.rag_engine = SearchEngine(config=self.config, storage_handler=self.storage_handler_mock)
         

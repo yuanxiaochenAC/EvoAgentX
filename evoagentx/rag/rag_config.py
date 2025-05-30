@@ -1,8 +1,9 @@
 from typing import Dict, Any
 
 from ..core.base_config import BaseConfig
+from .indexings.base import IndexType
+from .chunkers.base import ChunkingStrategy
 from .embeddings.base import EmbeddingProvider
-from .retrievers.base import IndexType, ChunkingStrategy
 
 
 class RAGConfig(BaseConfig):

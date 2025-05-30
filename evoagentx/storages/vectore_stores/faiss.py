@@ -3,7 +3,7 @@ from typing import List, Any, Union, Literal
 
 import faiss
 import numpy as np
-from llama_index.core.vector_stores import FaissVectorStore
+from llama_index.vector_stores.faiss import FaissVectorStore
 from llama_index.core.vector_stores import VectorStoreQuery, VectorStoreQueryResult
 
 from .base import VectorStoreBase
