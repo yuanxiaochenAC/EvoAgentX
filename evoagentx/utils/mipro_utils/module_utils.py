@@ -1,5 +1,6 @@
+import copy
 import asyncio
-from typing import Callable, Dict, Union, Awaitable, Type
+from typing import Callable, Dict, Union, Awaitable, Type, Optional
 
 import dspy
 from dspy import Signature
@@ -21,23 +22,91 @@ class PromptTuningModule(dspy.Module):
     program : Union[Callable[..., dict], Callable[..., Awaitable[dict]]]
         The main program function to execute. Can be either synchronous or asynchronous.
         Must return a dictionary containing the execution results.
-    predictors : Dict[str, dspy.Predict]
-        A mapping of task names to their corresponding DSPy predictors.
-        Each predictor handles a specific task in the program.
+    signature_dict : Dict[str, dspy.Signature]
+        A mapping of task names to their corresponding DSPy signatures.
+        Each signature defines the input/output structure for a specific task.
     registry : ParamRegistry
         A registry that maintains the tunable parameters shared between
         predictors and the program.
     """
 
+    @classmethod
+    def from_registry(
+        cls,
+        program: Union[Callable[..., dict], Callable[..., Awaitable[dict]]],
+        registry: ParamRegistry,
+        output_field_name: str = "output",
+        output_field_desc: str = "The final output.",
+        output_field_type: Type = str,
+        custom_output: Optional[Dict[str, str]] = None,
+    ) -> "PromptTuningModule":
+        """
+        Factory method to create a PromptTuningModule from a registry and program.
+
+        This method:
+        1. Creates signatures for each field in the registry
+        2. Initializes a PromptTuningModule with the program and signatures
+        3. Sets up predictors for each signature
+
+        Parameters
+        ----------
+        program : Union[Callable[..., dict], Callable[..., Awaitable[dict]]]
+            The main program function to execute
+        registry : ParamRegistry
+            Registry containing the tunable parameters
+        output_field_name : str, default="output"
+            Name for the output field in generated signatures
+        output_field_desc : str, default="The final output."
+            Default description for the output field
+        output_field_type : Type, default=str
+            Type annotation for the output field
+        custom_output : Optional[Dict[str, str]], default=None
+            Optional mapping of field names to custom output field descriptions
+
+        Returns
+        -------
+        PromptTuningModule
+            A configured PromptTuningModule instance
+
+        Examples
+        --------
+        >>> registry = ParamRegistry()
+        >>> registry.register("task1", "What is {topic}?")
+        >>> registry.register("task2", PromptTemplate(system="You are helpful.", user="{query}"))
+        >>> def my_program(**kwargs) -> dict:
+        ...     return {"result": "done"}
+        >>> module = PromptTuningModule.from_registry(my_program, registry)
+        """
+        from .signature_utils import signature_from_registry
+
+        # Create signatures for each field in the registry
+        signature_dict = signature_from_registry(
+            registry=registry,
+            output_field_name=output_field_name,
+            output_field_desc=output_field_desc,
+            output_field_type=output_field_type,
+            custom_output=custom_output,
+        )
+
+        # Create and return the module
+        return cls(program=program, signature_dict=signature_dict, registry=registry)
+
     def __init__(
         self,
         program: Union[Callable[..., dict], Callable[..., Awaitable[dict]]],
-        predictors: Dict[str, dspy.Predict],
+        signature_dict: Dict[str, dspy.Signature],
         registry: ParamRegistry,
     ):
         super().__init__()
         self.program = program
-        self.predictors = predictors  # Mapping of task names to their predictors
+        self.predicts = []
+
+        seen = set()
+        for name, signature in signature_dict.items():
+            if name in seen:
+                raise ValueError(f"Duplicate name {name} in signature_dict")
+            seen.add(name)
+            self.predicts.append(dspy.Predict(signature, name=name))
         self.registry = registry
 
     def sync_predict_inputs_to_program(self):
@@ -55,12 +124,12 @@ class PromptTuningModule(dspy.Module):
         Note: Values in predictor configs take precedence as they may contain
         optimized values from recent tuning iterations.
         """
-        for name, predictor in self.predictors.items():
-            signature = predictor.signature
+        for predict in self.predicts:
+            signature = predict.signature
 
             for field_name in signature.input_fields:
                 # Prioritize values from config (may contain optimized values)
-                value = predictor.config.get(field_name)
+                value = predict.config.get(field_name)
                 if value is not None:
                     self.registry.set(field_name, value)
 
@@ -98,7 +167,22 @@ class PromptTuningModule(dspy.Module):
             result = self.program(**kwargs) if kwargs else self.program()
 
         # 3. Validate return type
-        if not isinstance(result, dict):
-            raise ValueError("program() must return a dict.")
+        # if not isinstance(result, dict):
+        #     raise ValueError("program() must return a dict.")
 
         return result
+
+    def __deepcopy__(self, memo):
+        
+        # Create a new instance of the class
+        new_instance = self.__class__.__new__(self.__class__)
+        # Add to memo to prevent infinite recursion
+        memo[id(self)] = new_instance
+        
+        # Deep copy all attributes except program
+        new_instance.program = self.program  # Keep original program reference
+        new_instance.predicts = copy.deepcopy(self.predicts, memo)
+        new_instance.registry = copy.deepcopy(self.registry, memo)
+        
+        return new_instance
+        

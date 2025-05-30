@@ -11,7 +11,7 @@ import optuna
 from typing import Optional, Callable, Literal, List, Any, Dict, Union, Tuple 
 
 import dspy 
-from dspy import MIPROv2 
+from dspy import MIPROv2, OutputField
 from dspy.clients import LM, Provider
 from dspy.utils.callback import BaseCallback 
 from dspy.utils.parallelizer import ParallelExecutor 
@@ -30,12 +30,13 @@ from ..core.callbacks import suppress_cost_logging, suppress_logger_info
 from ..models.base_model import BaseLLM 
 from ..benchmark.benchmark import Benchmark 
 from .engine.base import BaseOptimizer
-from .engine.registry import ParamRegistry
+from .engine.registry import ParamRegistry, PromptTemplateRegister
 from ..agents.agent_manager import AgentManager 
 from ..workflow.workflow_graph import WorkFlowGraph
 from ..workflow.workflow import WorkFlow 
 from ..evaluators.evaluator import Evaluator 
-
+from ..utils.mipro_utils.signature_utils import signature_from_registry
+from ..utils.mipro_utils.module_utils import PromptTuningModule
 
 # Constants
 BOOTSTRAPPED_FEWSHOT_EXAMPLES_IN_CONTEXT = 3
@@ -322,7 +323,8 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
                 Required to have a `__call__(program, evalset, *kwargs) -> float` method that receives a program and a list of 
                 examples from a benchmark's train/dev/test set and return a float score. Must also have a `metric(example, prediction) -> float` 
                 method that evaluates a single example. If not provided, will construct a default evaluator using the benchmark's evaluate method.
-            metric_threshold (Optional[int]): threshold for the metric score. If provided, only examples with scores above this threshold will be used as demonstrations.
+            metric_threshold (Optional[int]): threshold for the metric score. If provided, only examples with scores above this threshold will be used as demonstrations. 
+                If not provided, examples with scores above 0 will be used as demonstrations. 
             max_bootstrapped_demos (int): maximum number of bootstrapped demonstrations to use. Defaults to 4.
             max_labeled_demos (int): maximum number of labeled demonstrations to use. Defaults to 4.
             auto (Optional[Literal["light", "medium", "heavy"]]): automatic configuration mode. If set, will override num_candidates and max_steps. 
@@ -542,6 +544,25 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
             return program
         
         # todo: convert the program to a dspy module 
+        # signature_dict = signature_from_registry(
+        #     registry=registry,
+        #     custom_output={
+        #         "test_prompt": "the output name of the test prompt",
+        #         "test_prompt_template": "the output name of the test prompt template", 
+        #     }
+        # )
+        program = PromptTuningModule.from_registry(
+            program=program,
+            registry=registry,
+            output_field_name="output",
+            output_field_desc="The final output.",
+            output_field_type=str,
+            custom_output={
+                "test_prompt": "the output name of the test prompt",
+                "test_prompt_template": "the output name of the test prompt template", 
+            }
+        )
+
         return program 
                 
     def optimize(self, dataset: Benchmark, metric_name: Optional[str] = None, **kwargs):
@@ -612,8 +633,10 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         self.metric = evaluator.metric
 
         # Step 1: Bootstrap few-shot examples 
+        from pdb import set_trace; set_trace()
         with suppress_cost_logging():
             demo_candidates = self._bootstrap_fewshot_examples(program, trainset, seed, teacher=None)
+        from pdb import set_trace; set_trace()
 
         # Step 2: Propose instruction candidates 
         with suppress_cost_logging():
@@ -697,7 +720,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
 
     def _bootstrap_fewshot_examples(self, program: Any, trainset: List, seed: int, teacher: Any) -> Optional[List]:
 
-        logger.info("\n==> STEP 1: BOOTSTRAP FEWSHOT EXAMPLES <==")
+        logger.info("==> STEP 1: BOOTSTRAP FEWSHOT EXAMPLES <==")
         if self.max_bootstrapped_demos > 0:
             logger.info(
                 "These will be used as few-shot example candidates for our program and for creating instructions.\n"
@@ -776,7 +799,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
             trial_logs={},
         )
 
-        for i, pred in enumerate(program.predictors()):
+        for i, pred in enumerate(program.predicts):
             logger.info(f"Proposed Instructions for Predictor {i}:\n")
             instruction_candidates[i][0] = get_signature(pred).instructions
             for j, instruction in enumerate(instruction_candidates[i]):
@@ -934,9 +957,9 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         sampler = optuna.samplers.TPESampler(seed=seed, multivariate=True)
         study = optuna.create_study(direction="maximize", sampler=sampler)
 
-        default_params = {f"{i}_predictor_instruction": 0 for i in range(len(program.predictors()))}
+        default_params = {f"{i}_predictor_instruction": 0 for i in range(len(program.predicts))}
         if demo_candidates:
-            default_params.update({f"{i}_predictor_demos": 0 for i in range(len(program.predictors()))})
+            default_params.update({f"{i}_predictor_demos": 0 for i in range(len(program.predicts))})
 
         # Add default run as a baseline in optuna (TODO: figure out how to weight this by # of samples evaluated on)
         trial = optuna.trial.create_trial(
@@ -1249,8 +1272,11 @@ class WorkFlowMiproOptimizer(MiproOptimizer):
             output_postprocess_func=evaluator.output_postprocess_func, 
         )
 
+        # register optimizable parameters 
+        registry = self._register_optimizable_parameters(program=workflow_graph_program)
+
         super().__init__(
-            registry=None, # todo replace this placeholder 
+            registry=registry, 
             program=workflow_graph_program, 
             optimizer_llm=optimizer_llm or evaluator.llm, 
             evaluator=evaluator,
@@ -1262,5 +1288,13 @@ class WorkFlowMiproOptimizer(MiproOptimizer):
             # if evaluator is an Evaluator, convert it to a MiproEvaluatorWrapper
             evaluator = MiproEvaluatorWrapper(evaluator=evaluator, benchmark=benchmark)
         return super()._validate_evaluator(evaluator, benchmark, metric_name)
+    
+    def _register_optimizable_parameters(self, program: WorkFlowGraphProgram):
+
+        registry = PromptTemplateRegister()
+        registry.track(program, "graph.nodes[0].agents[0]['prompt_template']", name="test_prompt")# todo 
+        
+        
+        return registry
     
         

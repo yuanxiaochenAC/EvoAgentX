@@ -4,6 +4,18 @@ from ...prompts.template import PromptTemplate
 
 _INDEX_RE = re.compile(r'^(.*?)\[(.*?)\]$')
 
+# _PATH_RE = re.compile(r"""
+#     ([a-zA-Z_]\w*)       |  # attr name
+#     \[(\d+)\]            |  # list index
+#     \[['"](.+?)['"]\]       # dict key
+# """, re.VERBOSE)
+
+_PATH_RE = re.compile(r"""
+    ([a-zA-Z_]\w*)               |  # attr name
+    \[\s*(-?\d+)\s*\]            |  # list index (allow negative)
+    \[\s*['"]([^'\"]+)['"]\s*\]     # dict key (inside quotes)
+""", re.VERBOSE)
+
 class OptimizableField:
     """
     Represents a parameter that can be optimized.
@@ -148,8 +160,48 @@ class ParamRegistry:
         field = OptimizableField(key, getter, setter)
         self.register_field(field)
         return self
+    
 
     def _walk(self, root, path: str):
+        """
+        Internal helper to resolve a dot-separated path string into its parent container
+        and the leaf attribute/key/index for assignment or retrieval.
+
+        Supports:
+        - Nested attributes: e.g. "a.b.c"
+        - Dict key access: e.g. "config['key']"
+        - List index access: e.g. "layers[0]"
+
+        Parameters:
+        - root (Any): root object to walk from
+        - path (str): path string to resolve
+        - create_missing (bool): unused placeholder for future extensions
+
+        Returns:
+        - (parent, leaf): where parent[leaf] or getattr(parent, leaf) is the target
+        """
+        cur = root
+        parts = []
+        for match in _PATH_RE.finditer(path):
+            attr, idx, key = match.groups()
+            if attr:
+                parts.append(attr)
+            elif idx:
+                parts.append(int(idx))
+            elif key:
+                parts.append(key)
+
+        for part in parts[:-1]:
+            if isinstance(part, int):
+                cur = cur[part]
+            else:
+                cur = getattr(cur, part) if hasattr(cur, part) else cur[part]
+
+        leaf = parts[-1]
+        parent = cur
+        return parent, leaf
+
+    def _walk_old(self, root, path: str):
         """
         Internal helper to resolve a dot-separated path string into its parent container
         and the leaf attribute/key/index for assignment or retrieval.
