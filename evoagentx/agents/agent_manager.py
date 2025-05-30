@@ -1,6 +1,8 @@
 import threading
 from enum import Enum
 from typing import Union, Optional, Dict, List
+from pydantic import Field
+from copy import deepcopy
 
 from .agent import Agent
 # from .agent_generator import AgentGenerator
@@ -24,8 +26,8 @@ class AgentManager(BaseModule):
         agents (List[Agent]): A list to keep track of all managed Agent instances.
         agent_states (Dict[str, AgentState]): A dictionary to track the state of each Agent by name.
     """
-    agents: List[Agent] = []
-    agent_states: Dict[str, AgentState] = {} # agent_name to AgentState mapping
+    agents: List[Agent] = Field(default_factory=list)
+    agent_states: Dict[str, AgentState] = Field(default_factory=dict) # agent_name to AgentState mapping
     storage_handler: Optional[StorageHandler] = None # used to load and save agent from storage.
     # agent_generator: Optional[AgentGenerator] = None # used to generate agents for a specific subtask
     tools: Optional[List[Tool]] = None
@@ -137,7 +139,7 @@ class AgentManager(BaseModule):
         """
         pass 
     
-    def create_customize_agent(self, agent_data: dict, llm_config: Optional[LLMConfig]=None, **kwargs) -> Agent:
+    def create_customize_agent(self, agent_data: dict, llm_config: Optional[Union[LLMConfig, dict]]=None, **kwargs) -> CustomizeAgent:
         """
         create a customized agent from the provided `agent_data`. 
 
@@ -152,13 +154,18 @@ class AgentManager(BaseModule):
         Returns:
             Agent: the instantiated agent instance.
         """
-        if llm_config:
-            if isinstance(llm_config, dict):
-                agent_data["llm_config"] = llm_config
-            elif isinstance(llm_config, LLMConfig):
-                agent_data["llm_config"] = llm_config.to_dict()
-            else:
-                raise ValueError(f"llm_config must be a dictionary or an instance of LLMConfig. Got {type(llm_config)}.")
+        
+        agent_data = deepcopy(agent_data)
+        agent_llm_config = agent_data.get("llm_config", llm_config)
+        if not agent_data.get("is_human", False) and not agent_llm_config:
+            raise ValueError("`agent_data` should contain a `llm_config` key or `llm_config` should be provided.")
+
+        if agent_llm_config:
+            if isinstance(agent_llm_config, dict):
+                agent_data["llm_config"] = agent_llm_config
+            elif isinstance(agent_llm_config, LLMConfig):
+                agent_data["llm_config"] = agent_llm_config.to_dict()
+        
         if agent_data.get("tools", None):
             agent_data["tool_names"] = agent_data["tools"]
             agent_data["tool_dict"] = self.tools_mapping
