@@ -1,8 +1,14 @@
+from enum import Enum
 from typing import List
 from abc import ABC, abstractmethod
 
 from evoagentx.rag.schema import Document, Corpus
 
+
+class ChunkingStrategy(Enum):
+    SIMPLE = "simple"
+    SEMANTIC = "semantic"
+    HIERARCHICAL = "hierarchical"
 
 class BaseChunker(ABC):
     """Abstract base class for chunking documents into smaller segments.

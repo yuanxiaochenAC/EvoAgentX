@@ -1,6 +1,4 @@
-import logging
 from enum import Enum
-from typing import Dict, Any
 from abc import ABC, abstractmethod
 
 from llama_index.core.embeddings import BaseEmbedding

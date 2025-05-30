@@ -3,7 +3,7 @@ from enum import Enum
 from typing import List
 from abc import ABC, abstractmethod
 
-from ..schema import Query, SchemaResult
+from ..schema import RagQuery, RagResult
 
 
 class RerankerType(Enum):
@@ -18,6 +18,6 @@ class BasePostprocessor(ABC):
         self.logger = logging.getLogger(__name__)
     
     @abstractmethod
-    def postprocess(self, query: Query, results: List[SchemaResult]) -> SchemaResult:
+    def postprocess(self, query: RagQuery, results: List[RagResult]) -> RagResult:
         """Post-process retrieval results."""
         pass

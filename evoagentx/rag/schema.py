@@ -378,3 +378,26 @@ class Corpus:
 
     def __len__(self) -> int:
         return len(self.chunks)
+    
+
+class RagQuery(BaseModel):
+    """Represents a retrieval query."""
+    
+    query_str: str = Field(description="The query string.")
+    top_k: int = Field(default=5, description="Number of top results to retrieve.")
+    similarity_cutoff: Optional[float] = Field(default=None, description="Minimum similarity score.")
+    keyword_filters: Optional[List[str]] = Field(default=None, description="Keywords to filter results.")
+    use_graph: bool = Field(default=False, description="Whether to use graph-based retrieval.")
+    metadata_filters: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata filters.")
+
+class RagResult(BaseModel):
+    """Represents a retrieval result."""
+    
+    corpus: Corpus = Field(description="Retrieved chunks.")
+    scores: List[float] = Field(description="Similarity scores for each chunk.")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional result metadata.")
+    
+    def get_top_chunks(self, limit: int = None) -> List[Chunk]:
+        """Get top chunks sorted by similarity score."""
+        chunks = self.corpus.sort_by_similarity(reverse=True)
+        return chunks[:limit] if limit else chunks

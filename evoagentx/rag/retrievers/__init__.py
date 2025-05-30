@@ -8,7 +8,7 @@ from llama_index.core.graph_stores.types import GraphStore
 from .base import BaseRetrieverWrapper, RetrieverType
 from .vector_retriever import VectorRetriever
 from .graph_retriever import GraphRetriever
-from ..schema import Query
+from ..schema import RagQuery
 
 __all__ = ['VectorRetriever', 'GraphRetriever', 'RetrieverFactory']
 
@@ -24,7 +24,7 @@ class RetrieverFactory:
         index: Optional[BaseIndex] = None,
         graph_store: Optional[GraphStore] = None,
         embed_model: Optional[BaseEmbedding] = None,
-        query: Optional[Query] = None
+        query: Optional[RagQuery] = None
     ) -> BaseRetrieverWrapper:
         """Create a retriever based on configuration."""
         if retriever_type == RetrieverType.VECTOR.value:

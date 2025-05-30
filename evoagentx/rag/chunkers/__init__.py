@@ -1,24 +1,17 @@
 import logging
-from typing import List, Dict, Any
-from abc import ABC, abstractmethod
+from typing import Dict, Any
 
 from llama_index.core.embeddings import BaseEmbedding
 
+from .base import BaseChunker, ChunkingStrategy
 from .simple_chunker import SimpleChunker
 from .semantic_chunker import SemanticChunker
 from .hierachical_chunker import HierarchicalChunker
-from ..schema import Document, Corpus, ChunkingStrategy
+from ..schema import Document, Corpus
+
 
 __all__ = ['SimpleChunker', 'SemanticChunker', 'HierarchicalChunker', 'ChunkFactory']
 
-
-class BaseChunker(ABC):
-    """Base interface for chunkers."""
-    
-    @abstractmethod
-    def chunk(self, documents: List[Document]) -> Corpus:
-        """Chunk documents into a corpus."""
-        pass
 
 class ChunkFactory:
     """Factory for creating chunkers based on configuration."""
