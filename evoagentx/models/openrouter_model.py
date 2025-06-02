@@ -8,11 +8,11 @@ from tenacity import (
 from openai import OpenAI, Stream
 from openai.types.chat import ChatCompletion
 from typing import Optional, List
-from litellm import token_counter, cost_per_token
+from litellm import token_counter
 from ..core.registry import register_model
 from .model_configs import OpenRouterConfig
 from .base_model import BaseLLM
-from .model_utils import Cost, cost_manager, get_openai_model_cost 
+from .model_utils import Cost, cost_manager
 
 
 @register_model(config_cls=OpenRouterConfig, alias=["openrouter"])
