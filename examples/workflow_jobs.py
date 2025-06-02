@@ -13,7 +13,6 @@ from evoagentx.tools.browser_tool import BrowserTool
 from examples.goal_maker import making_goal
 load_dotenv() # Loads environment variables from .env file
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY") 
 
 output_file = "examples/output/jobs/output.md"
 mcp_config_path = "examples/output/jobs/mcp_jobs.config"

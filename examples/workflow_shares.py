@@ -1,3 +1,10 @@
+## ATTENTION:
+# This project is powered by the "a-share-mcp-is-just-i-need" project. You would need to set it up first.
+# Here are the steps:
+# 1. Visit https://github.com/24mlight/a-share-mcp-is-just-i-need/ and install the project according to its instructions.
+# 2. Set up the project path in the ./examples/output/a_shares/mcp_shares.config file.
+
+
 import os 
 from dotenv import load_dotenv 
 import sys
@@ -9,7 +16,6 @@ from evoagentx.tools.mcp import MCPToolkit
 from evoagentx.workflow import WorkFlowGenerator
 load_dotenv() # Loads environment variables from .env file
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY") 
 
 output_html_path = "workplace/market_analysis.html"
 
