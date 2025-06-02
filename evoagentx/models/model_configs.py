@@ -131,7 +131,7 @@ class OpenRouterConfig(LLMConfig):
     # LLM keys
     openrouter_key: Optional[str] = Field(default=None, description="the API key used to authenticate OpenRouter requests")
     openrouter_base: Optional[str] = Field(default="https://openrouter.ai/api/v1", description="the base URL used to authenticate OpenRouter requests")
-
+    openrouter_model_base: Optional[str] = Field(default="https://openrouter.ai/api/v1/models", description="the model url to access model details")
     # generation parameters 
     temperature: Optional[float] = Field(default=None, description="the temperature used to scaling logits")
     top_p: Optional[float] = Field(default=None, description="This setting limits the model's choices to a percentage of likely tokens: only the top tokens whose probabilities add up to P. A lower value makes the model's responses more predictable, while the default setting allows for a full range of token choices.")
@@ -151,3 +151,7 @@ class OpenRouterConfig(LLMConfig):
     stop: Optional[List[str]] = Field(default=None, description="Stop generation if model encounters any token in this array.")
     tools: Optional[List] = Field(default=None, description="Tool calling parameter following OpenAI's tool calling request shape.")
     tool_choice: Optional[Union[str, dict]] = Field(default=None, description="Controls which tool is called by model. Can be 'none', 'auto', 'required', or specific tool configuration.")
+
+    stream: Optional[bool] = Field(default=None, description="If set to true, it sends partial message deltas. Tokens will be sent as they become available, with the stream terminated by a [DONE] message.")
+    def __str__(self):
+        return self.model
