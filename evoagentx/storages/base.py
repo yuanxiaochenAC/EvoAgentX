@@ -2,13 +2,13 @@ import json
 from typing import List, Dict, Any, Optional, Union
 
 from pydantic import Field
+from llama_index.core import StorageContext
 
 from ..core.module import BaseModule
-from ..utils.factory import DBStoreFactory, VectorStoreFactory, GraphStoreFactory
 from .storages_config import StoreConfig
-from .db_stores.base import DBStoreBase
-from .graph_stores.base import GraphStoreBase
-from .vectore_stores.base import VectorStoreBase
+from .db_stores import DBStoreBase, DBStoreFactory
+from .graph_stores import GraphStoreBase, GraphStoreFactory
+from .vectore_stores import VectorStoreBase, VectorStoreFactory
 from .schema import TableType, AgentStore, WorkflowStore, MemoryStore, HistoryStore
 
 
@@ -33,6 +33,16 @@ class StorageHandler(BaseModule):
         self._init_vector_store()
         self._init_graph_store()
 
+        # Initialize storage_context for llama_index after stores are set
+        self._storage_context = StorageContext.from_defaults(
+            vector_store=self.storageVector,
+            graph_store=self.storageGraph
+        )
+
+    @property
+    def storage_context(self) -> StorageContext:
+        return self._storage_context
+    
     def _init_db_store(self):
         """
         Initialize the database storage backend using the DBStoreFactory.
@@ -48,7 +58,10 @@ class StorageHandler(BaseModule):
         """
         vector_config = self.storageConfig.vectorConfig
         if vector_config is not None:
-            self.storageVector = VectorStoreFactory.create(vector_config)
+            self.storageVector = VectorStoreFactory.create(
+                store_type=vector_config.vector_name,
+                store_config=vector_config.model_dump()
+            )
     
     def _init_graph_store(self):
         """
@@ -57,7 +70,10 @@ class StorageHandler(BaseModule):
         """
         graph_config = self.storageConfig.graphConfig
         if graph_config is not None:
-            self.storageGraph = GraphStoreFactory.create(graph_config)
+            self.storageGraph = GraphStoreFactory.create(
+                store_type=graph_config.graph_name, 
+                store_config=graph_config.model_dump()
+            )
 
     def load(self, tables: Optional[List[str]] = None, *args, **kwargs) -> Dict[str, Any]:
         """

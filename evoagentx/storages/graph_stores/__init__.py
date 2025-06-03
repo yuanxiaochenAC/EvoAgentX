@@ -3,10 +3,10 @@ from typing import Dict, Any
 
 from llama_index.core.graph_stores.types import GraphStore
 
-from .base import GraphStoreType
+from .base import GraphStoreType, GraphStoreBase
 from .neo4j import Neo4jGraphStoreWrapper
 
-__all__ = ['Neo4jGraphStoreWrapper', 'GraphStoreFactory']
+__all__ = ['GraphStoreBase', 'Neo4jGraphStoreWrapper', 'GraphStoreFactory']
 
 class GraphStoreFactory:
     """Factory for creating graph stores."""
@@ -32,7 +32,6 @@ class GraphStoreFactory:
             ValueError: If the store type or configuration is invalid.
         """
         store_config = store_config or {}
-        
         if store_type == GraphStoreType.NEO4J.value:
             required_fields = ["uri", "username", "password"]
             if not all(field in store_config for field in required_fields):
@@ -40,6 +39,5 @@ class GraphStoreFactory:
             graph_store = Neo4jGraphStoreWrapper(**store_config).get_graph_store()
         else:
             raise ValueError(f"Unsupported graph store type: {store_type}")
-        
         self.logger.info(f"Created graph store: {store_type}")
         return graph_store

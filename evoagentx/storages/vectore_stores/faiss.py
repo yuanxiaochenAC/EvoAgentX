@@ -1,5 +1,5 @@
 import logging
-from typing import List, Any, Union, Literal
+from typing import List, Union, Literal
 
 import faiss
 import numpy as np
