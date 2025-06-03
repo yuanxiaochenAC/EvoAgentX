@@ -125,3 +125,33 @@ class SiliconFlowConfig(LLMConfig):
 # def get_default_device():
 #     return "cuda" if torch.cuda.is_available() else "cpu"
 
+class OpenRouterConfig(LLMConfig):
+    llm_type: str = "OpenRouterLLM"
+    
+    # LLM keys
+    openrouter_key: Optional[str] = Field(default=None, description="the API key used to authenticate OpenRouter requests")
+    openrouter_base: Optional[str] = Field(default="https://openrouter.ai/api/v1", description="the base URL used to authenticate OpenRouter requests")
+    openrouter_model_base: Optional[str] = Field(default="https://openrouter.ai/api/v1/models", description="the model url to access model details")
+    # generation parameters 
+    temperature: Optional[float] = Field(default=None, description="the temperature used to scaling logits")
+    top_p: Optional[float] = Field(default=None, description="This setting limits the model's choices to a percentage of likely tokens: only the top tokens whose probabilities add up to P. A lower value makes the model's responses more predictable, while the default setting allows for a full range of token choices.")
+    top_k: Optional[int] = Field(default=None, description="This limits the model's choice of tokens at each step, making it choose from a smaller set. A value of 1 means the model will always pick the most likely next token, leading to predictable results.")
+    frequency_penalty: Optional[float] = Field(default=None, description="Controls repetition of tokens based on frequency in input. Range: -2.0 to 2.0. Higher values reduce repetition of frequent tokens.")
+    presence_penalty: Optional[float] = Field(default=None, description="Adjusts repetition of specific tokens from input. Range: -2.0 to 2.0. Higher values reduce repetition.")
+    repetition_penalty: Optional[float] = Field(default=None, description="Reduces repetition of tokens from input. Range: 0.0 to 2.0. Higher values make repetition less likely.")
+    min_p: Optional[float] = Field(default=None, description="Minimum probability for a token relative to most likely token. Range: 0.0 to 1.0.")
+    top_a: Optional[float] = Field(default=None, description="Consider only tokens with 'sufficiently high' probabilities based on most likely token. Range: 0.0 to 1.0.")
+    seed: Optional[int] = Field(default=None, description="For deterministic sampling. Repeated requests with same seed and parameters should return same result.")
+    max_tokens: Optional[int] = Field(default=None, description="Upper limit for number of tokens model can generate. Must be 1 or above.")
+    logit_bias: Optional[dict] = Field(default=None, description="Map of token IDs to bias values (-100 to 100) to adjust token selection probabilities.")
+    logprobs: Optional[bool] = Field(default=None, description="Whether to return log probabilities of output tokens.")
+    top_logprobs: Optional[int] = Field(default=None, description="Number of most likely tokens to return at each position (0-20) with log probabilities.")
+    response_format: Optional[Union[BaseModel, dict]] = Field(default=None, description="Forces model to produce specific output format (e.g. JSON mode).")
+    structured_outputs: Optional[bool] = Field(default=None, description="Whether model can return structured outputs using response_format json_schema.")
+    stop: Optional[List[str]] = Field(default=None, description="Stop generation if model encounters any token in this array.")
+    tools: Optional[List] = Field(default=None, description="Tool calling parameter following OpenAI's tool calling request shape.")
+    tool_choice: Optional[Union[str, dict]] = Field(default=None, description="Controls which tool is called by model. Can be 'none', 'auto', 'required', or specific tool configuration.")
+
+    stream: Optional[bool] = Field(default=None, description="If set to true, it sends partial message deltas. Tokens will be sent as they become available, with the stream terminated by a [DONE] message.")
+    def __str__(self):
+        return self.model
