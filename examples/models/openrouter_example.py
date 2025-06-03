@@ -4,16 +4,18 @@ from evoagentx.core import Message
 from evoagentx.models import OpenRouterConfig
 from evoagentx.agents import CustomizeAgent
 from evoagentx.prompts import StringTemplate 
-from evoagentx.models import OpenRouterLLM
+# from evoagentx.models import OpenRouterLLM
 from evoagentx.core.module_utils import extract_code_blocks
 
 load_dotenv()
 OPEN_ROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-openrouter_config = OpenRouterConfig(model="deepseek/deepseek-r1-0528-qwen3-8b:free", 
-                                     openrouter_key="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", 
-                                     output_response=True,
-                                     max_tokens=1,
-                                     temperature=0.5)
+openrouter_config = OpenRouterConfig(
+    model="deepseek/deepseek-r1-0528-qwen3-8b:free", 
+    openrouter_key=OPEN_ROUTER_API_KEY, 
+    output_response=True,
+    max_tokens=1,
+    temperature=0.5
+)
 
 def build_customize_agent():
 
