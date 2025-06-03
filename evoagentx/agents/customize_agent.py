@@ -133,7 +133,8 @@ class CustomizeAgent(Agent):
             custom_output_format=custom_output_format ,
             tool_names=tool_names,
             customize_prompting=customize_prompting,
-            tool_dict=tool_dict
+            tool_dict=tool_dict,
+            max_tool_calls=max_tool_calls
         )
         super().__init__(
             name=name, 
@@ -260,7 +261,8 @@ class CustomizeAgent(Agent):
         custom_output_format: Optional[str] = None,
         tool_names: Optional[list[str]] = None,
         customize_prompting: Optional[bool] = False,
-        tool_dict: Optional[dict] = None
+        tool_dict: Optional[dict] = None,
+        max_tool_calls: Optional[int] = 5
     ) -> Action:
         """Create a custom action based on the provided specifications.
         
@@ -351,8 +353,9 @@ class CustomizeAgent(Agent):
             parse_mode=parse_mode,
             parse_func=parse_func,
             title_format=title_format,
-            max_tool_try=self.max_tool_calls,  # Default value, can be made configurable
-            customize_prompting = customize_prompting
+            custom_output_format=custom_output_format,
+            max_tool_try=max_tool_calls,  # Default value, can be made configurable
+            customize_prompting = customize_prompting,
         )
 
         # Use dict to deduplicate tools by id to avoid adding the same tool multiple times
@@ -428,7 +431,7 @@ class CustomizeAgent(Agent):
             "name": self.name,
             "description": self.description,
             "prompt": customize_action.prompt,
-            "prompt_template": customize_action.prompt_template.to_dict(), 
+            "prompt_template": customize_action.prompt_template.to_dict() if customize_action.prompt_template is not None else None, 
             # "llm_config": self.llm_config.to_dict(exclude_none=True),
             "inputs": [
                 {
