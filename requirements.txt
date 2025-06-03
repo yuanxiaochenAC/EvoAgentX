@@ -59,5 +59,7 @@ wikipedia
 mcp
 requests
 beautifulsoup4
+reportlab
 PyPDF2
 selenium
+webdriver-manager
