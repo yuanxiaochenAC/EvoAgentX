@@ -1073,14 +1073,40 @@ class BrowserTool(Tool):
                         type: node.type || '',
                         value: node.value || '',
                         description: node.description || '',
-                        properties: {}
+                        properties: {},
+                        visible: isElementVisible(node)
                     };
                     
+                    // Helper function to check visibility
+                    function isElementVisible(element) {
+                        if (!element.getBoundingClientRect) return true;
+                        const style = window.getComputedStyle(element);
+                        const rect = element.getBoundingClientRect();
+                        return style.display !== 'none' && 
+                               style.visibility !== 'hidden' && 
+                               style.opacity !== '0' &&
+                               rect.width > 0 && 
+                               rect.height > 0;
+                    }
+
+                    // Add text content
+                    if (node.textContent) {
+                        result.text_content = node.textContent.trim();
+                    }
+
                     // Add identifier properties for references
                     if (node.id) result.properties.id = node.id;
                     if (node.className) result.properties.class = node.className;
                     if (node.tagName) result.properties.tag = node.tagName.toLowerCase();
                     
+                    // Add attributes
+                    if (node.attributes) {
+                        result.attributes = {};
+                        for (let attr of node.attributes) {
+                            result.attributes[attr.name] = attr.value;
+                        }
+                    }
+
                     // Add custom ref property that combines selector types
                     let refs = [];
                     if (node.id) refs.push(`id:${node.id}`);
@@ -1094,24 +1120,58 @@ class BrowserTool(Tool):
                         refs.push(`name:${node.getAttribute('name')}`);
                     }
                     
-                    // Create XPath and CSS selectors where possible
+                    // Create XPath and CSS selectors
                     try {
-                        // Basic CSS selector
-                        let cssPath = '';
-                        if (node.id) {
-                            cssPath = `#${node.id}`;
-                        } else if (node.className && typeof node.className === 'string') {
-                            cssPath = `.${node.className.split(' ')[0]}`;
-                        } else if (node.tagName) {
-                            cssPath = node.tagName.toLowerCase();
-                        }
-                        
+                        // CSS selector
+                        let cssPath = getCssPath(node);
                         if (cssPath) refs.push(`css:${cssPath}`);
+                        
+                        // XPath
+                        let xpath = getXPath(node);
+                        if (xpath) refs.push(`xpath:${xpath}`);
                     } catch (e) {}
                     
                     if (refs.length > 0) {
                         result.ref = refs[0]; // Primary reference
                         result.all_refs = refs; // All possible references
+                    }
+                    
+                    // Helper function to generate CSS path
+                    function getCssPath(element) {
+                        if (!element) return '';
+                        if (element.id) return `#${element.id}`;
+                        
+                        let path = [];
+                        while (element) {
+                            let selector = element.tagName.toLowerCase();
+                            if (element.className && typeof element.className === 'string') {
+                                selector += '.' + element.className.trim().split(/\\s+/).join('.');
+                            }
+                            path.unshift(selector);
+                            element = element.parentElement;
+                        }
+                        return path.join(' > ');
+                    }
+                    
+                    // Helper function to generate XPath
+                    function getXPath(element) {
+                        if (!element) return '';
+                        if (element.id) return `//*[@id="${element.id}"]`;
+                        
+                        let path = [];
+                        while (element && element.nodeType === 1) {
+                            let index = 1;
+                            let sibling = element.previousSibling;
+                            while (sibling) {
+                                if (sibling.nodeType === 1 && sibling.tagName === element.tagName) {
+                                    index++;
+                                }
+                                sibling = sibling.previousSibling;
+                            }
+                            path.unshift(`${element.tagName.toLowerCase()}[${index}]`);
+                            element = element.parentElement;
+                        }
+                        return '//' + path.join('/');
                     }
                     
                     // Interactivity properties
@@ -1123,7 +1183,10 @@ class BrowserTool(Tool):
                         node.tagName === 'SELECT' || 
                         node.tagName === 'TEXTAREA' ||
                         node.role === 'button' ||
-                        node.role === 'link'
+                        node.role === 'link' ||
+                        node.onclick ||
+                        node.getAttribute && node.getAttribute('onclick') ||
+                        node.getAttribute && node.getAttribute('role') === 'button'
                     );
                     
                     result.editable = !!(
@@ -1149,21 +1212,22 @@ class BrowserTool(Tool):
                 return getAccessibilityTree(document.body);
             """)
             
-            # Create a flattened list of interactive elements for easy reference
-            interactive_elements = []
+            # Create a flattened list of all elements
+            all_elements = []
             
             # Clear existing references
             self.element_references = {}
             
-            # Process the accessibility tree and extract interactive elements
-            interactive_elements = self._process_accessibility_tree(accessibility_tree)
+            # Process the accessibility tree and extract all elements
+            all_elements = self._process_accessibility_tree(accessibility_tree)
             
             return {
                 "status": "success",
                 "title": title,
                 "url": current_url,
                 "accessibility_tree": accessibility_tree,
-                "interactive_elements": interactive_elements
+                "all_elements": all_elements,
+                "interactive_elements": [e for e in all_elements if e.get("interactable") or e.get("editable")]
             }
             
         except Exception as e:
@@ -1172,64 +1236,67 @@ class BrowserTool(Tool):
             
     def _process_accessibility_tree(self, accessibility_tree):
         """
-        Process the accessibility tree to extract interactive elements and store their references.
+        Process the accessibility tree to extract all elements and store their references.
         
-        This method identifies clickable and editable elements in the page structure, assigns
-        unique IDs (e0, e1, e2, etc.), and stores their selectors for later interaction.
+        This method processes all elements in the page structure, assigns unique IDs,
+        and stores their selectors for later interaction.
         
         Args:
             accessibility_tree (dict): The accessibility tree from JavaScript
             
         Returns:
-            list: A list of interactive elements with their IDs and properties
+            list: A list of all elements with their IDs and properties
         """
-        interactive_elements = []
+        all_elements = []
         
-        # Function to extract interactive elements and store references
-        def extract_interactive(node, path="", index=0):
+        # Function to extract all elements and store references
+        def extract_elements(node, path="", index=0):
             if not node:
                 return index
                 
             current_path = path + "/" + (node.get("name") or node.get("role") or "element")
             
-            # Add interactive elements to the list
-            if node.get("interactable") or node.get("editable"):
-                # Generate a unique element ID
-                element_id = f"e{index}"
+            # Generate a unique element ID for all elements
+            element_id = f"e{index}"
+            
+            element_info = {
+                "id": element_id,
+                "description": current_path.strip("/"),
+                "role": node.get("role", ""),
+                "name": node.get("name", ""),
+                "value": node.get("value", ""),
+                "type": node.get("type", ""),
+                "text_content": node.get("text_content", ""),
+                "visible": node.get("visible", True),
+                "editable": node.get("editable", False),
+                "interactable": node.get("interactable", False),
+                "properties": node.get("properties", {}),
+                "attributes": node.get("attributes", {})
+            }
+            
+            # Add reference if available
+            if "ref" in node:
+                element_info["ref"] = node["ref"]
+                # Store the reference in our mapping
+                self.element_references[element_id] = node["ref"]
                 
-                element_info = {
-                    "id": element_id,
-                    "description": current_path.strip("/"),
-                    "role": node.get("role", ""),
-                    "name": node.get("name", ""),
-                    "value": node.get("value", ""),
-                    "editable": node.get("editable", False),
-                    "interactable": node.get("interactable", False)
-                }
+            # Add all possible references if available
+            if "all_refs" in node:
+                element_info["all_refs"] = node["all_refs"]
                 
-                # Add reference if available
-                if "ref" in node:
-                    element_info["ref"] = node["ref"]
-                    # Store the reference in our mapping
-                    self.element_references[element_id] = node["ref"]
-                    
-                # Add all possible references if available
-                if "all_refs" in node:
-                    element_info["all_refs"] = node["all_refs"]
-                    
-                interactive_elements.append(element_info)
-                index += 1
+            all_elements.append(element_info)
+            index += 1
             
             # Process children
             for child in node.get("children", []):
-                index = extract_interactive(child, current_path, index)
+                index = extract_elements(child, current_path, index)
             
             return index
         
-        # Extract interactive elements
-        extract_interactive(accessibility_tree)
+        # Extract all elements
+        extract_elements(accessibility_tree)
         
-        return interactive_elements
+        return all_elements
     
     def browser_console_messages(self, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
         """
@@ -1413,7 +1480,7 @@ class BrowserTool(Tool):
                 "type": "function",
                 "function": {
                     "name": "navigate_to_url",
-                    "description": "Navigate to a URL and capture a snapshot of the page. This provides element references used for interaction.",
+                    "description": "Navigate to a URL and capture a snapshot of all page elements. Returns both interactive and non-interactive elements with their properties.",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -1434,7 +1501,7 @@ class BrowserTool(Tool):
                 "type": "function",
                 "function": {
                     "name": "input_text",
-                    "description": "Type text into a form field, search box, or other input element using a reference ID from a snapshot.",
+                    "description": "Type text into a form field, search box, or other input element using a reference ID from a snapshot. The element must be editable.",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -1444,7 +1511,7 @@ class BrowserTool(Tool):
                             },
                             "ref": {
                                 "type": "string",
-                                "description": "Element ID from the page snapshot (e.g., 'e0', 'e1', 'e2') - NOT a CSS selector"
+                                "description": "Element ID from the page snapshot (e.g., 'e0', 'e1', 'e2'). Must refer to an editable element."
                             },
                             "text": {
                                 "type": "string",
@@ -1467,7 +1534,7 @@ class BrowserTool(Tool):
                 "type": "function",
                 "function": {
                     "name": "browser_click",
-                    "description": "Click on a button, link, or other clickable element using a reference ID from a snapshot.",
+                    "description": "Click on a button, link, or other clickable element using a reference ID from a snapshot. The element must be interactive.",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -1477,7 +1544,7 @@ class BrowserTool(Tool):
                             },
                             "ref": {
                                 "type": "string",
-                                "description": "Element ID from the page snapshot (e.g., 'e0', 'e1', 'e2') - NOT a CSS selector"
+                                "description": "Element ID from the page snapshot (e.g., 'e0', 'e1', 'e2'). Must refer to an interactive element."
                             }
                         },
                         "required": ["element", "ref"]
@@ -1488,7 +1555,7 @@ class BrowserTool(Tool):
                 "type": "function",
                 "function": {
                     "name": "browser_snapshot",
-                    "description": "Capture a fresh snapshot of the current page with all interactive elements. Use after page state changes not caused by navigation or clicking.",
+                    "description": "Capture a fresh snapshot of the current page, including all elements (both interactive and non-interactive). Use after page state changes not caused by navigation or clicking.",
                     "parameters": {
                         "type": "object",
                         "properties": {},
@@ -1532,7 +1599,7 @@ class BrowserTool(Tool):
         return """
 # Browser Interaction Tool Guide
 
-This tool lets you control a web browser to perform tasks like filling forms, clicking buttons, and extracting information.
+This tool lets you control a web browser to perform tasks like filling forms, clicking buttons, and extracting information from web pages.
 
 ## Basic Workflow
 
@@ -1543,9 +1610,14 @@ This tool lets you control a web browser to perform tasks like filling forms, cl
 
 ## Important Concepts
 
-- **Element References**: Each interactive element gets an ID like "e0", "e1", "e2"
-- **Snapshots**: After navigation or clicks, a new snapshot is taken and IDs are refreshed
-- **Interactions**: Use element IDs from the latest snapshot for clicking/typing
+- **Element References**: Every element gets an ID like "e0", "e1", "e2" (not just interactive elements)
+- **Element Types**: Elements are classified as:
+  - Interactive (clickable, form inputs)
+  - Non-interactive (text, containers)
+  - Editable (input fields, textareas)
+- **Visibility**: Elements are checked for actual visibility on the page
+- **Snapshots**: After navigation or clicks, a new snapshot captures all page elements
+- **Multiple Selectors**: Each element can be located via CSS, XPath, ID, class, etc.
 
 ## Complete Example: Search on Google
 
@@ -1555,8 +1627,12 @@ initialize_browser()
 
 # Step 2: Navigate to Google
 result = navigate_to_url("https://www.google.com")
-print(f"Available elements: {[e['id'] for e in result['snapshot']['interactive_elements']]}")
-# This might show: ['e0', 'e1', 'e2', 'e3', 'e4']
+
+# View all elements (interactive and non-interactive)
+print(f"All elements: {[e['id'] for e in result['all_elements']]}")
+
+# View just interactive elements
+print(f"Interactive elements: {[e['id'] for e in result['interactive_elements']]}")
 
 # Let's say e2 is the search box and e3 is the search button
 # Step 3: Type in the search box
@@ -1571,11 +1647,15 @@ close_browser()
 ```
 
 KEY POINTS:
-- Element references like "e1", "e2" are generated by the browser_snapshot tool
-- All references are refreshed after page navigation or clicks
-- You must use the element IDs exactly as they appear in the snapshot
-- Each page interaction updates the available elements
-- The snapshots contain the full page structure for you to understand the page
+- All page elements get unique IDs (e0, e1, etc.), not just interactive ones
+- Elements contain rich information:
+  - text_content: Actual text in the element
+  - visible: Whether it's visible on the page
+  - attributes: All HTML attributes
+  - properties: Additional element properties
+  - multiple selectors (CSS, XPath, etc.)
+- Element references are refreshed after page navigation or clicks
+- The snapshots contain the full page structure
 - continue_after_tool_call should always be set to True unless you are closing the browser
 """
         
