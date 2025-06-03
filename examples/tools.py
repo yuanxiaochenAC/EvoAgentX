@@ -387,7 +387,7 @@ def run_file_tool_example():
         # Create sample content for a PDF
         sample_content = """This is a sample PDF document created using the FileTool.
 This tool provides special handling for different file types.
-For PDF files, it uses PyPDF2 library for reading and writing operations."""
+For PDF files, it uses PyPDF2 library for reading operations."""
         
         # Example PDF file path
         pdf_path = os.path.join(os.getcwd(), "examples", "output", "sample_document.pdf")
@@ -428,6 +428,167 @@ For PDF files, it uses PyPDF2 library for reading and writing operations."""
         print("-" * 30)
         print(text_read_result)
         print("-" * 30)
+        
+        # ===== APPEND FILE OPERATIONS =====
+        print("\n===== APPEND FILE OPERATIONS =====\n")
+        
+        # 1. Append to text file
+        print(f"Appending content to text file: {text_path}")
+        append_text_content = "\nThis line was appended to the text file."
+        text_append_result = file_tool.append_file(text_path, append_text_content)
+        print("Text Append Result:")
+        print("-" * 30)
+        print(text_append_result)
+        print("-" * 30)
+        
+        # Read the text file again to show appended content
+        print(f"\nReading text file after append: {text_path}")
+        text_read_after_append = file_tool.read_file(text_path)
+        print("Text File After Append:")
+        print("-" * 30)
+        print(text_read_after_append)
+        print("-" * 30)
+        
+        # 2. Append to PDF file
+        print(f"\nAppending content to PDF file: {pdf_path}")
+        append_pdf_content = "\n\nThis content was appended to the PDF document.\nIt demonstrates PDF append functionality."
+        pdf_append_result = file_tool.append_file(pdf_path, append_pdf_content)
+        print("PDF Append Result:")
+        print("-" * 30)
+        print(pdf_append_result)
+        print("-" * 30)
+        
+        # Read the PDF file again to show appended content
+        print(f"\nReading PDF file after append: {pdf_path}")
+        pdf_read_after_append = file_tool.read_file(pdf_path)
+        print("PDF File After Append:")
+        print("-" * 30)
+        print(pdf_read_after_append)
+        print("-" * 30)
+        
+        # 3. Append to log file
+        log_path = os.path.join(os.getcwd(), "examples", "output", "application.log")
+        print(f"\nCreating and appending to log file: {log_path}")
+        
+        # Initial log entry
+        initial_log = "2024-01-01 10:00:00 INFO Application started"
+        log_write_result = file_tool.write_file(log_path, initial_log)
+        print("Initial Log Write Result:")
+        print("-" * 30)
+        print(log_write_result)
+        print("-" * 30)
+        
+        # Append multiple log entries
+        log_entries = [
+            "\n2024-01-01 10:01:00 INFO User logged in",
+            "\n2024-01-01 10:02:00 WARNING Cache miss for key 'user_data'",
+            "\n2024-01-01 10:03:00 ERROR Database connection failed",
+            "\n2024-01-01 10:04:00 INFO Retrying database connection",
+            "\n2024-01-01 10:05:00 INFO Database connection restored"
+        ]
+        
+        for log_entry in log_entries:
+            append_result = file_tool.append_file(log_path, log_entry)
+            print(f"Appended: {log_entry.strip()}")
+        
+        # Read the complete log file
+        print(f"\nReading complete log file: {log_path}")
+        log_read_result = file_tool.read_file(log_path)
+        print("Complete Log File:")
+        print("-" * 30)
+        print(log_read_result)
+        print("-" * 30)
+        
+        # 4. Append to CSV file
+        csv_path = os.path.join(os.getcwd(), "examples", "output", "data.csv")
+        print(f"\nCreating and appending to CSV file: {csv_path}")
+        
+        # Initial CSV header and data
+        csv_header = "Name,Age,City,Occupation"
+        csv_write_result = file_tool.write_file(csv_path, csv_header)
+        print("CSV Header Write Result:")
+        print("-" * 30)
+        print(csv_write_result)
+        print("-" * 30)
+        
+        # Append CSV rows
+        csv_rows = [
+            "\nJohn Doe,30,New York,Engineer",
+            "\nJane Smith,25,Los Angeles,Designer",
+            "\nBob Johnson,35,Chicago,Manager",
+            "\nAlice Brown,28,San Francisco,Developer"
+        ]
+        
+        for csv_row in csv_rows:
+            append_result = file_tool.append_file(csv_path, csv_row)
+            print(f"Appended CSV row: {csv_row.strip()}")
+        
+        # Read the complete CSV file
+        print(f"\nReading complete CSV file: {csv_path}")
+        csv_read_result = file_tool.read_file(csv_path)
+        print("Complete CSV File:")
+        print("-" * 30)
+        print(csv_read_result)
+        print("-" * 30)
+        
+        # 5. Append to configuration file
+        config_path = os.path.join(os.getcwd(), "examples", "output", "config.ini")
+        print(f"\nCreating and appending to config file: {config_path}")
+        
+        # Initial config content
+        initial_config = """[DATABASE]
+host = localhost
+port = 5432
+name = myapp"""
+        
+        config_write_result = file_tool.write_file(config_path, initial_config)
+        print("Initial Config Write Result:")
+        print("-" * 30)
+        print(config_write_result)
+        print("-" * 30)
+        
+        # Append new config sections
+        additional_configs = [
+            "\n\n[CACHE]",
+            "\nredis_host = localhost",
+            "\nredis_port = 6379",
+            "\nttl = 3600",
+            "\n\n[LOGGING]",
+            "\nlevel = INFO",
+            "\nfile = /var/log/myapp.log",
+            "\nmax_size = 10MB"
+        ]
+        
+        for config_line in additional_configs:
+            append_result = file_tool.append_file(config_path, config_line)
+        
+        print("Appended additional configuration sections")
+        
+        # Read the complete config file
+        print(f"\nReading complete config file: {config_path}")
+        config_read_result = file_tool.read_file(config_path)
+        print("Complete Config File:")
+        print("-" * 30)
+        print(config_read_result)
+        print("-" * 30)
+        
+        # 6. Demonstrate error handling for non-existent file append
+        non_existent_path = os.path.join(os.getcwd(), "examples", "output", "non_existent.txt")
+        print(f"\nTesting append to non-existent file: {non_existent_path}")
+        error_append_result = file_tool.append_file(non_existent_path, "This should create a new file")
+        print("Append to Non-existent File Result:")
+        print("-" * 30)
+        print(error_append_result)
+        print("-" * 30)
+        
+        # Verify the file was created
+        if error_append_result.get("success"):
+            print(f"Reading newly created file: {non_existent_path}")
+            new_file_read = file_tool.read_file(non_existent_path)
+            print("Newly Created File Content:")
+            print("-" * 30)
+            print(new_file_read)
+            print("-" * 30)
         
     except Exception as e:
         print(f"Error running file tool example: {str(e)}")

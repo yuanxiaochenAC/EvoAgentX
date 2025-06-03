@@ -1,7 +1,7 @@
 from .tool import Tool
 import os
 import PyPDF2
-from typing import Dict, Any, Optional, List, Callable
+from typing import Dict, Any, List, Callable
 from evoagentx.core.logging import logger
 
 class FileTool(Tool):
@@ -13,24 +13,10 @@ class FileTool(Tool):
     def __init__(
         self,
         name: str = 'File Tool',
-        schemas: Optional[List[dict]] = None,
-        descriptions: Optional[List[str]] = None,
-        tools: Optional[List[Callable]] = None,
         **kwargs
     ):
-        # Set default schemas, descriptions and tools if not provided
-        schemas = schemas or self.get_tool_schemas()
-        descriptions = descriptions or self.get_tool_descriptions()
-        tools = tools or self.get_tools()
-        
         # Initialize the base Tool class
-        super().__init__(
-            name=name,
-            schemas=schemas,
-            descriptions=descriptions,
-            tools=tools,
-            **kwargs
-        )
+        super().__init__(name=name, **kwargs)
         
         # File type handlers for special file formats
         self.file_handlers = {
@@ -158,7 +144,7 @@ class FileTool(Tool):
     
     def _write_pdf(self, file_path: str, content: str) -> Dict[str, Any]:
         """
-        Write content to a PDF file.
+        Write content to a PDF file using reportlab.
         
         Args:
             file_path (str): Path to the PDF file
@@ -168,31 +154,65 @@ class FileTool(Tool):
             dict: A dictionary with the operation status
         """
         try:
-            # Create a new PDF with the content
+            # Use reportlab to create a proper PDF with text content
+            from reportlab.lib.pagesizes import letter
+            from reportlab.lib.styles import getSampleStyleSheet
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+            
+            # Create PDF document
+            doc = SimpleDocTemplate(file_path, pagesize=letter)
+            styles = getSampleStyleSheet()
+            story = []
+            
+            # Split content into paragraphs
+            paragraphs = content.split('\n')
+            
+            for para_text in paragraphs:
+                if para_text.strip():  # Non-empty paragraph
+                    # Create paragraph with normal style
+                    para = Paragraph(para_text, styles['Normal'])
+                    story.append(para)
+                    story.append(Spacer(1, 12))  # Add space between paragraphs
+                else:
+                    # Empty line - add space
+                    story.append(Spacer(1, 12))
+            
+            # Build the PDF
+            doc.build(story)
+            
+            return {
+                "success": True,
+                "message": f"PDF created at {file_path} with text content using reportlab",
+                "file_path": file_path,
+                "content_length": len(content),
+                "paragraphs": len([p for p in paragraphs if p.strip()]),
+                "library_used": "reportlab"
+            }
+                
+        except ImportError:
+            # Fallback: Create a basic PDF with PyPDF2 but inform user about limitation
             pdf_writer = PyPDF2.PdfWriter()
             pdf_writer.add_blank_page(width=612, height=792)  # Standard letter size
-            
-            # Currently, PyPDF2 doesn't have a simple way to add text directly
-            # We'd typically use reportlab or another library for advanced PDF creation
-            # This is a simplified placeholder implementation
             
             with open(file_path, 'wb') as f:
                 pdf_writer.write(f)
             
             return {
                 "success": True,
-                "message": f"PDF created at {file_path}",
+                "message": f"Basic PDF created at {file_path} (blank page only - reportlab not available)",
                 "file_path": file_path,
-                "note": "For advanced PDF writing with text content, consider using reportlab or another PDF generation library"
+                "warning": "Text content not added - reportlab library not found",
+                "note": "Install reportlab for full PDF text support: pip install reportlab",
+                "library_used": "PyPDF2"
             }
-                
+            
         except Exception as e:
             logger.error(f"Error writing PDF {file_path}: {str(e)}")
             return {"success": False, "error": str(e), "file_path": file_path}
     
     def _append_pdf(self, file_path: str, content: str) -> Dict[str, Any]:
         """
-        Append content to a PDF file.
+        Append content to a PDF file by creating a new page.
         
         Args:
             file_path (str): Path to the PDF file
@@ -205,17 +225,95 @@ class FileTool(Tool):
             if not os.path.exists(file_path):
                 return self._write_pdf(file_path, content)
             
-            # For appending to PDFs, we'd typically:
-            # 1. Read the existing PDF
-            # 2. Create a new page with the content
-            # 3. Append the new page to the existing PDF
-            # This is a simplified placeholder implementation
-            
-            return {
-                "success": False,
-                "error": "PDF appending requires additional libraries like reportlab for proper implementation",
-                "file_path": file_path
-            }
+            try:
+                # Import required libraries
+                from reportlab.lib.pagesizes import letter
+                from reportlab.lib.styles import getSampleStyleSheet
+                from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+                import tempfile
+                
+                # Create a temporary PDF with the new content
+                with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_file:
+                    temp_pdf_path = temp_file.name
+                
+                # Create the new page with content using reportlab
+                doc = SimpleDocTemplate(temp_pdf_path, pagesize=letter)
+                styles = getSampleStyleSheet()
+                story = []
+                
+                # Split content into paragraphs
+                paragraphs = content.split('\n')
+                
+                for para_text in paragraphs:
+                    if para_text.strip():  # Non-empty paragraph
+                        para = Paragraph(para_text, styles['Normal'])
+                        story.append(para)
+                        story.append(Spacer(1, 12))
+                    else:
+                        # Empty line - add space
+                        story.append(Spacer(1, 12))
+                
+                # Build the temporary PDF
+                doc.build(story)
+                
+                # Now merge the existing PDF with the new page
+                pdf_writer = PyPDF2.PdfWriter()
+                
+                # Add all pages from the existing PDF
+                with open(file_path, 'rb') as existing_file:
+                    pdf_reader = PyPDF2.PdfReader(existing_file)
+                    for page_num in range(len(pdf_reader.pages)):
+                        pdf_writer.add_page(pdf_reader.pages[page_num])
+                
+                # Add the new page(s) from the temporary PDF
+                with open(temp_pdf_path, 'rb') as temp_file:
+                    temp_reader = PyPDF2.PdfReader(temp_file)
+                    for page_num in range(len(temp_reader.pages)):
+                        pdf_writer.add_page(temp_reader.pages[page_num])
+                
+                # Write the merged PDF back to the original file
+                with open(file_path, 'wb') as output_file:
+                    pdf_writer.write(output_file)
+                
+                # Clean up temporary file
+                os.unlink(temp_pdf_path)
+                
+                return {
+                    "success": True,
+                    "message": f"Content appended as new page(s) to PDF at {file_path}",
+                    "file_path": file_path,
+                    "operation": "append_new_page",
+                    "appended_content_length": len(content),
+                    "paragraphs_added": len([p for p in paragraphs if p.strip()]),
+                    "library_used": "reportlab + PyPDF2"
+                }
+                
+            except ImportError:
+                # Fallback: Basic PDF page append using only PyPDF2
+                pdf_writer = PyPDF2.PdfWriter()
+                
+                # Add all pages from the existing PDF
+                with open(file_path, 'rb') as existing_file:
+                    pdf_reader = PyPDF2.PdfReader(existing_file)
+                    for page_num in range(len(pdf_reader.pages)):
+                        pdf_writer.add_page(pdf_reader.pages[page_num])
+                
+                # Add a blank page (since we can't add text without reportlab)
+                pdf_writer.add_blank_page(width=612, height=792)
+                
+                # Write back to file
+                with open(file_path, 'wb') as output_file:
+                    pdf_writer.write(output_file)
+                
+                return {
+                    "success": True,
+                    "message": f"Blank page appended to PDF at {file_path} (reportlab not available for text)",
+                    "file_path": file_path,
+                    "operation": "append_blank_page",
+                    "warning": "Text content not added - reportlab library not found",
+                    "note": "Install reportlab for full PDF text support: pip install reportlab",
+                    "library_used": "PyPDF2"
+                }
                 
         except Exception as e:
             logger.error(f"Error appending to PDF {file_path}: {str(e)}")

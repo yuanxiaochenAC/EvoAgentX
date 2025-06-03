@@ -26,6 +26,9 @@ class BrowserTool(Tool):
     """
     
     timeout: int = Field(default=10, description="Default timeout in seconds for browser operations")
+    browser_type: str = Field(default="chrome", description="Type of browser to use ('chrome', 'firefox', 'safari', 'edge')")
+    headless: bool = Field(default=False, description="Whether to run the browser in headless mode")
+    timeout: int = Field(default=10, description="Default timeout in seconds for browser operations")
     
     def __init__(
         self,
@@ -33,9 +36,6 @@ class BrowserTool(Tool):
         browser_type: str = "chrome",
         headless: bool = False,
         timeout: int = 10,
-        schemas: Optional[List[dict]] = None,
-        descriptions: Optional[List[str]] = None,
-        tools: Optional[List[Callable]] = None,
         **kwargs
     ):
         """
@@ -46,27 +46,10 @@ class BrowserTool(Tool):
             browser_type (str): Type of browser to use ('chrome', 'firefox', 'safari', 'edge')
             headless (bool): Whether to run the browser in headless mode
             timeout (int): Default timeout in seconds for browser operations
-            schemas (List[dict], optional): Tool schemas
-            descriptions (List[str], optional): Tool descriptions
-            tools (List[Callable], optional): Tool functions
             **kwargs: Additional keyword arguments for parent class initialization
         """
-        schemas = schemas or self.get_tool_schemas()
-        descriptions = descriptions or self.get_tool_descriptions()
-        tools = tools or self.get_tools()
-        
         # Pass to parent class initialization
-        super().__init__(
-            name=name,
-            schemas=schemas,
-            descriptions=descriptions,
-            tools=tools,
-            **kwargs
-        )
-        
-        self.timeout = timeout
-        self.browser_type = browser_type
-        self.headless = headless
+        super().__init__(name=name, timeout=timeout, browser_type=browser_type, headless=headless, **kwargs)
         self.driver = None
         
         # Storage for element references from snapshots
