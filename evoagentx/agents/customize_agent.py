@@ -59,6 +59,7 @@ class CustomizeAgent(Agent):
             tool_dict must also be provided. Both parameters are required when using tools.
         tool_dict (dict, optional): Dictionary mapping tool names to Tool instances. Required when
             tool_names is provided.
+        max_tool_calls (int, optional): Maximum number of tool calls. Defaults to 5. 
         customize_prompting (bool, optional): Whether to use customize prompting. Defaults to False.
         custom_output_format (str, optional): Specify the output format. Only used when `prompt_template` is used. 
             If not provided, the output format will be constructed from the `outputs` specification and `parse_mode`. 
@@ -79,6 +80,7 @@ class CustomizeAgent(Agent):
         title_format: Optional[str] = None, 
         tool_names: Optional[list[str]] = None,
         tool_dict: Optional[dict] = None,
+        max_tool_calls: Optional[int] = 5,
         customize_prompting: Optional[bool] = False,
         custom_output_format: Optional[str] = None, 
         **kwargs
@@ -112,7 +114,9 @@ class CustomizeAgent(Agent):
             output_parser = output_parser, 
             parse_mode = parse_mode, 
             parse_func = parse_func, 
-            title_format = title_format
+            title_format = title_format,
+            tool_names = tool_names, 
+            tool_dict = tool_dict
         )
 
         customize_action = self.create_customize_action(
@@ -145,6 +149,8 @@ class CustomizeAgent(Agent):
         self.parse_func = parse_func 
         self.title_format = title_format
         self.tool_names = tool_names
+        self.tool_dict = tool_dict 
+        self.max_tool_calls = max_tool_calls
         self.customize_prompting = customize_prompting
         self.custom_output_format = custom_output_format
 
@@ -184,7 +190,7 @@ class CustomizeAgent(Agent):
         """
         return self.action.prompt
     
-    def validate_data(self, prompt: str, prompt_template: PromptTemplate, inputs: List[dict], outputs: List[dict], output_parser: Type[ActionOutput], parse_mode: str, parse_func: Callable, title_format: str):
+    def validate_data(self, prompt: str, prompt_template: PromptTemplate, inputs: List[dict], outputs: List[dict], output_parser: Type[ActionOutput], parse_mode: str, parse_func: Callable, title_format: str, tool_names: List[str], tool_dict: dict):
 
         # check if the prompt is provided
         if prompt is None and prompt_template is None:
@@ -230,6 +236,14 @@ class CustomizeAgent(Agent):
                 logger.warning(f"`title_format` will not be used because `parse_mode` is '{parse_mode}', not 'title'. Set `parse_mode='title'` to use title formatting.")
             if r'{title}' not in title_format:
                 raise ValueError(r"`title_format` must contain the placeholder `{title}`.")
+        
+        # check if the tool_names are provided in the tool_dict
+        if tool_names:
+            if tool_dict is None:
+                raise ValueError("`tool_dict: Dict[str, Callable]` must be provided when `tool_names` is provided.")
+            not_provided_tool_names = [name for name in tool_names if name not in tool_dict]
+            if not_provided_tool_names:
+                logger.warning(f"The following tool names are not provided in `tool_dict`: {not_provided_tool_names}. This can cause unexpected issues when executing the agent.")
     
     def create_customize_action(
         self, 
@@ -320,25 +334,25 @@ class CustomizeAgent(Agent):
         # Create CustomizeAction-based action with parsing properties only
         customize_action_cls = create_model(
             action_cls_name,
-            parse_mode=(Optional[str], Field(default="title", description="the parse mode of the action, must be one of: ['title', 'str', 'json', 'xml', 'custom']")),
-            parse_func=(Optional[Callable], Field(default=None, exclude=True, description="the function to parse the LLM output. It receives the LLM output and returns a dict.")),
-            title_format=(Optional[str], Field(default="## {title}", exclude=True, description="the format of the title. It is used when the `parse_mode` is 'title'.")),
+            # parse_mode=(Optional[str], Field(default="title", description="the parse mode of the action, must be one of: ['title', 'str', 'json', 'xml', 'custom']")),
+            # parse_func=(Optional[Callable], Field(default=None, exclude=True, description="the function to parse the LLM output. It receives the LLM output and returns a dict.")),
+            # title_format=(Optional[str], Field(default="## {title}", exclude=True, description="the format of the title. It is used when the `parse_mode` is 'title'.")),
+            # custom_output_format=(Optional[str], Field(default=None, exclude=True, description="the format of the output. It is used when the `prompt_template` is provided.")),
             __base__=CustomizeAction
         )
 
         customize_action = customize_action_cls(
             name=action_cls_name,
             description=desc, 
-            inputs=action_input_type,
-            outputs=action_output_type,
-            output_parser=output_parser,
+            prompt=prompt,
+            prompt_template=prompt_template, 
+            inputs_format=action_input_type,
+            outputs_format=action_output_type,
             parse_mode=parse_mode,
             parse_func=parse_func,
             title_format=title_format,
-            max_tool_try=2,  # Default value, can be made configurable
-            customize_prompting = customize_prompting,
-            prompt=prompt,
-            prompt_template=prompt_template
+            max_tool_try=self.max_tool_calls,  # Default value, can be made configurable
+            customize_prompting = customize_prompting
         )
 
         # Use dict to deduplicate tools by id to avoid adding the same tool multiple times
@@ -414,6 +428,7 @@ class CustomizeAgent(Agent):
             "name": self.name,
             "description": self.description,
             "prompt": customize_action.prompt,
+            "prompt_template": customize_action.prompt_template.to_dict(), 
             # "llm_config": self.llm_config.to_dict(exclude_none=True),
             "inputs": [
                 {
@@ -439,9 +454,33 @@ class CustomizeAgent(Agent):
             "parse_func": self.parse_func.__name__ if self.parse_func is not None else None,
             "title_format": self.title_format,
             "tool_names": self.tool_names,
-            "customize_prompting": self.customize_prompting
+            "max_tool_calls": self.max_tool_calls,
+            "customize_prompting": self.customize_prompting, 
+            "custom_output_format": self.custom_output_format
         }
         return config
+    
+    @classmethod
+    def load_module(cls, path: str, llm_config: LLMConfig = None, tool_dict: dict = None, **kwargs) -> "CustomizeAgent":
+        """
+        load the agent from local storage. Must provide `llm_config` when loading the agent from local storage. 
+            If tool_names is provided, tool_dict must also be provided. 
+
+        Args:
+            path: The path of the file
+            llm_config: The LLMConfig instance
+            tool_names: List of tool names to be used by the agent. If provided,
+            tool_dict: Dictionary mapping tool names to Tool instances. Required when tool_names is provided.
+
+        Returns:
+            CustomizeAgent: The loaded agent instance
+        """
+        agent = super().load_module(path=path, llm_config=llm_config, **kwargs)
+        if agent["tool_names"]:
+            if tool_dict is None:
+                raise ValueError("must provide `tool_dict` when using `load_module` or `from_file` to load the agent from local storage since `tool_names` is provided.")
+            agent["tool_dict"] = tool_dict 
+        return agent 
     
     def save_module(self, path: str, ignore: List[str] = [], **kwargs)-> str:
         """Save the customize agent's configuration to a JSON file.
@@ -492,5 +531,6 @@ class CustomizeAgent(Agent):
         """
         config = self.get_customize_agent_info()
         config["llm_config"] = self.llm_config.to_dict()
+        config["tool_dict"] = self.tool_dict
         return config 
     

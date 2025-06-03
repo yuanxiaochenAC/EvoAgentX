@@ -1,84 +1,57 @@
-from pydantic import Field, create_model
-from typing import Optional, Any, Callable, Type, List, Union
+from pydantic import Field
+from typing import Optional, Any, Callable, List, Union, Dict
 import re
 import json
 
 from ..core.logging import logger
 from ..models.base_model import BaseLLM
-from .action import Action, ActionInput, ActionOutput
+from .action import Action, ActionOutput
 from ..core.message import Message
 from ..prompts.tool_calling import GOAL_BASED_TOOL_CALLING_PROMPT, OUTPUT_EXTRACTION_PROMPT
 from ..tools.tool import Tool
-from ..utils.utils import generate_dynamic_class_name
 from ..core.registry import MODULE_REGISTRY
 from ..models.base_model import LLMOutputParser
 from ..core.module_utils import parse_json_from_llm_output
-from ..prompts.template import StringTemplate
 
 class CustomizeAction(Action):
-    max_tool_try: int = 2
-    tools_schema: Optional[dict] = None
-    tools_caller: Optional[dict[str, Callable]] = None
-    tool_calling_instructions: Optional[list] = None
-    conversation: Optional[Message] = None
-    inputs: dict = {}
-    outputs: dict = {}
-    output_parser: Optional[Type[ActionOutput]] = None
-    prompt: str = ""
-    prompt_template: Optional[StringTemplate] = None
-    parse_mode: str = "title"
-    title_format: str = "## {title}"
-    custom_output_format: Optional[str] = None
-    execution_history: list[Any] = []
-    customize_prompting: bool = False
-    llm: BaseLLM = None
+
+    parse_mode: Optional[str] = Field(default="title", description="the parse mode of the action, must be one of: ['title', 'str', 'json', 'xml', 'custom']")
+    parse_func: Optional[Callable] = Field(default=None, exclude=True, description="the function to parse the LLM output. It receives the LLM output and returns a dict.")
+    title_format: Optional[str] = Field(default="## {title}", exclude=True, description="the format of the title. It is used when the `parse_mode` is 'title'.")
+    custom_output_format: Optional[str] = Field(default=None, exclude=True, description="the format of the output. It is used when the `prompt_template` is provided.")
+
+    tools_schema: Optional[Dict[str, Any]] = Field(default=None, description="Schema definitions for available tools")
+    tools_caller: Optional[Dict[str, Callable]] = Field(default=None, description="Mapping of tool names to their callable functions")
+    tool_calling_instructions: Optional[List[str]] = Field(default=None, description="Additional instructions for tool calling")
+    conversation: Optional[Message] = Field(default=None, description="Current conversation state")
+
+    execution_history: List[Any] = Field(default_factory=list, description="History of tool executions and their results")
+    max_tool_try: int = Field(default=2, description="Maximum number of tool calling attempts allowed")
+    customize_prompting: bool = Field(default=False, description="Whether to use custom prompting mode instead of goal-based tool calling")
     
     def __init__(self, **kwargs):
-        name = kwargs.pop("name", "tool_calling")
-        description = kwargs.pop("description", "Call a tool function and return the results")
-        inputs_format = kwargs.pop("inputs")
-        outputs_format = kwargs.pop("outputs")
-        output_parser = kwargs.pop("output_parser", None)
-        
-        # Handle template-related parameters
-        prompt = kwargs.pop("prompt", "")
-        prompt_template = kwargs.pop("prompt_template", None)
-        parse_mode = kwargs.pop("parse_mode", "title")
-        title_format = kwargs.pop("title_format", "## {title}")
-        custom_output_format = kwargs.pop("custom_output_format", None)
-        
+
+        name = kwargs.pop("name", "CustomizeAction")
+        description = kwargs.pop("description", "Customized action that can use tools to accomplish its task")
+
         super().__init__(name=name, description=description, **kwargs)
         
         # Validate that at least one of prompt or prompt_template is provided
-        if not prompt and not prompt_template:
+        if not self.prompt and not self.prompt_template:
             raise ValueError("`prompt` or `prompt_template` is required when creating CustomizeAction action")
         # Prioritize template and give warning if both are provided
-        if prompt and prompt_template:
-            logger.warning("Both `prompt` and `prompt_template` are provided for CustomizeAction action." " Prioritizing `prompt_template` and ignoring `prompt`.")
-            self.prompt = prompt_template.get_instruction()
-            self.prompt_template = prompt_template
-            self.execution_history = [prompt_template.get_history()]
-        elif prompt_template:
-            self.prompt_template = prompt_template
-            self.prompt = prompt_template.get_instruction()
-            self.execution_history = [prompt_template.get_history()]
-        else:
-            self.prompt_template = StringTemplate(
-                instruction = prompt
-            )
-            self.prompt = prompt
-        
-        self._generate_inputs_outputs_info(inputs_format, outputs_format, output_parser, name)
-        self.parse_mode = parse_mode
-        self.title_format = title_format
-        self.custom_output_format = custom_output_format
-        # Allow max_tool_try to be configured through kwargs
-        self.max_tool_try = kwargs.pop("max_tool_try", 2)
-        self.customize_prompting = kwargs.pop("customize_prompting", False)
+        if self.prompt and self.prompt_template:
+            logger.warning("Both `prompt` and `prompt_template` are provided for CustomizeAction action. Prioritizing `prompt_template` and ignoring `prompt`.")
+        if self.prompt_template:
+            self.execution_history = [self.prompt_template.get_history()]
     
-    
-    def prepare_action_prompt(self, inputs: Optional[dict] = None, system_prompt: Optional[str] = None, 
-                            execution_history: Optional[list] = None) -> Union[str, List[dict]]:
+    def prepare_action_prompt(
+        self, 
+        inputs: Optional[dict] = None, 
+        system_prompt: Optional[str] = None, 
+        execution_history: Optional[list] = None,
+        **kwargs
+    ) -> Union[str, List[dict]]:
         """Prepare prompt for action execution.
         
         This helper function transforms the input dictionary into a formatted prompt
@@ -167,61 +140,6 @@ class CustomizeAction(Action):
             output_description_list.append(f"{i+1}. {name}\nDescription: {desc}")
         output_description = "\n\n".join(output_description_list)
         return OUTPUT_EXTRACTION_PROMPT.format(text=llm_output_content, output_description=output_description)
-    
-    
-    def _generate_inputs_outputs_info(self, inputs: Union[List[dict], Type], outputs: Union[List[dict], Type], output_parser: ActionOutput = None, name: str = None):
-        # Handle inputs - check if it's already a processed class or raw list
-        if isinstance(inputs, type) and hasattr(inputs, 'get_attrs'):
-            # Already processed input class
-            action_input_type = inputs
-        else:
-            # Raw list of dictionaries - create the action input type
-            action_input_fields = {}
-            for field in inputs:
-                required = field.get("required", True)
-                if required:
-                    action_input_fields[field["name"]] = (str, Field(description=field["description"]))
-                else:
-                    action_input_fields[field["name"]] = (Optional[str], Field(default=None, description=field["description"]))
-            
-            action_input_type = create_model(
-                self._get_unique_class_name(
-                    generate_dynamic_class_name(name+" action_input")
-                ),
-                **action_input_fields, 
-                __base__=ActionInput
-            )
-        
-        # Handle outputs - check if it's already a processed class or raw list
-        if isinstance(outputs, type) and hasattr(outputs, 'get_attrs'):
-            # Already processed output class
-            action_output_type = outputs
-        else:
-            # Raw list of dictionaries or using output_parser
-            if output_parser is None:
-                action_output_fields = {}
-                for field in outputs:
-                    required = field.get("required", True)
-                    if required:
-                        action_output_fields[field["name"]] = (Union[str, dict, list], Field(description=field["description"]))
-                    else:
-                        action_output_fields[field["name"]] = (Optional[Union[str, dict, list]], Field(default=None, description=field["description"]))
-                
-                action_output_type = create_model(
-                    self._get_unique_class_name(
-                        generate_dynamic_class_name(name+" action_output")
-                    ),
-                    **action_output_fields, 
-                    __base__=ActionOutput,
-                    # get_content_data=customize_get_content_data,
-                    # to_str=customize_to_str
-                )
-            else:
-                # self._check_output_parser(outputs, output_parser)
-                action_output_type = output_parser
-        
-        self.inputs_format = action_input_type
-        self.outputs_format = action_output_type
     
     def _get_unique_class_name(self, candidate_name: str) -> str:
         """
@@ -363,7 +281,8 @@ class CustomizeAction(Action):
         """Get the current prompt for return, formatted appropriately."""
         return self.prepare_action_prompt(inputs=prompt_params_values or {})
     
-    def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, system_prompt = None, return_prompt: bool = False, time_out = 0, **kwargs):
+    def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, time_out = 0, **kwargs):
+
         # Allow empty inputs if the action has no required input attributes
         input_attributes: dict = self.inputs_format.get_attr_descriptions()
         if not inputs and input_attributes:
@@ -396,18 +315,14 @@ class CustomizeAction(Action):
             prompt = self.prepare_action_prompt(
                 inputs=prompt_params_values,
                 execution_history=self.execution_history,
-                system_prompt = system_prompt
+                system_prompt=sys_msg
             )
             
             # Handle both string prompts and chat message lists
             if isinstance(prompt, str):
-                llm_response = llm.generate(
-                    prompt=prompt
-                )
+                llm_response = llm.generate(prompt=prompt, system_message=sys_msg)
             else:
-                llm_response = llm.generate(
-                    messages=prompt
-                )
+                llm_response = llm.generate(messages=prompt)
             
             # Store the final LLM response
             final_llm_response = llm_response
