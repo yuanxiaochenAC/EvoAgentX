@@ -164,6 +164,9 @@ def build_customize_agent_with_tools():
             {"name": "requirement", "type": "string", "description": "The coding requirement"},
             {"name": "file_path", "type": "string", "description": "The path to save the code"}
         ],
+        outputs=[
+            {"name": "code", "type": "string", "description": "The generated Python code"}
+        ],
         tool_names=["file_tool"],
         tool_dict={"file_tool": FileTool()}
     )

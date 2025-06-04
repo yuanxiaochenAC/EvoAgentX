@@ -78,6 +78,11 @@ class FileTool(Tool):
         try:
             file_ext = os.path.splitext(file_path)[1].lower()
             
+            # Create directory if it doesn't exist
+            directory = os.path.dirname(file_path)
+            if directory:
+                os.makedirs(directory, exist_ok=True)
+            
             # Use special handler if available for this file type
             if file_ext in self.file_handlers:
                 if mode == 'a' and 'append' in self.file_handlers[file_ext]:
