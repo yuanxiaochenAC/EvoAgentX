@@ -24,10 +24,12 @@ class OptimizableField:
     functions, allowing it to be exposed to the optimizer as a tunable field.
     """
 
-    def __init__(self,
-                 name: str,
-                 getter: Callable[[], Any],
-                 setter: Callable[[Any], None]):
+    def __init__(
+        self,
+        name: str,
+        getter: Callable[[], Any],
+        setter: Callable[[Any], None]
+    ):
         """
         Parameters:
         - name (str): The alias used to register the field in the registry.
@@ -66,6 +68,10 @@ class ParamRegistry:
     def get(self, name: str) -> Any:
         """Retrieve the current value of a registered field by name."""
         return self.fields[name].get()
+    
+    def get_field(self, name: str) -> OptimizableField:
+        """Retrieve the OptimizableField object by name."""
+        return self.fields[name]
 
     def set(self, name: str, value: Any):
         """Set the value of a registered field by name."""
@@ -95,6 +101,8 @@ class ParamRegistry:
             (program.prompt, "prefix", "prompt_prefix")
           ])                                                    # batch registration
         - registry.track(program, "prompt.template").track(program, "prompt.prefix")  # chained calls
+        
+        - registry.track(program, "prompt_template_obj")  # register a prompt_template instance
 
         Returns:
         - self (PromptRegistry): for chaining
@@ -145,7 +153,7 @@ class ParamRegistry:
         Returns:
         - self
         """
-        key = name or path.split(".")[-1]
+        key = name if name is not None else path
         parent, leaf = self._walk(root, path)
 
         def getter():
@@ -263,8 +271,11 @@ class PromptTemplateRegister(ParamRegistry):
                 elif len(item) == 3:
                     self.track(item[0], item[1], name=item[2])
             return self
-
-        key = name or path_or_attr
+        
+        if '.' in path_or_attr or '[' in path_or_attr:
+            return self._track_path(root_or_obj, path_or_attr, name)
+        else:
+            key = name or path_or_attr
 
         try:
             value = getattr(root_or_obj, path_or_attr)

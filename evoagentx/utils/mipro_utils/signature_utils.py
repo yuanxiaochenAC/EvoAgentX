@@ -1,86 +1,78 @@
-from ...optimizers.engine.registry import ParamRegistry
+
+
 
 from dspy import Signature, InputField, OutputField
 from typing import Optional, Dict, Type, Union
 from ...prompts.template import PromptTemplate
+from ...optimizers.engine.registry import ParamRegistry
+from ...utils.mipro_utils.register_utils import MiproRegister
+from dspy.signatures.signature import make_signature
+import keyword
+import re
+import warnings
 
+def is_valid_identifier(key: str) -> bool:
+    return key.isidentifier() and not keyword.iskeyword(key)
 
-def signature_from_registry(
-    registry: ParamRegistry,
-    output_field_name: str = "output",
-    output_field_desc: str = "The final output.",
-    output_field_type: Type = str,
-    custom_output: Optional[Dict[str, str]] = None,
-) -> Dict[str, Type[Signature]]:
-    """
-    Creates Signature classes for each field in the registry.
+def check_input_placeholders(instruction: str, input_names: list[str], key: str):
+    placeholders = set(re.findall(r"\{(\w+)\}", instruction))
+    input_names_set = set(input_names or [])
 
-    This function dynamically generates DSPy Signature classes based on the contents
-    of a parameter registry. It handles two types of registry values:
-    1. String prompts: Creates a signature with a single input field and an output field
-    2. PromptTemplates: Creates a signature with multiple input fields (one for each template field) and an output field
-
-    Parameters
-    ----------
-    registry : ParamRegistry
-        The registry containing fields to convert into signatures
-    output_field_name : str, default="output"
-        Name for the output field in generated signatures
-    output_field_desc : str, default="The final output."
-        Default description for the output field
-    output_field_type : Type, default=str
-        Type annotation for the output field
-    custom_output : Optional[Dict[str, str]], default=None
-        Optional mapping of field names to custom output field descriptions.
-        If provided, these will override the default output field description.
-
-    Returns
-    -------
-    Dict[str, Type[Signature]]
-        A dictionary mapping field names to their corresponding Signature subclasses
-
-    Examples
-    --------
-    >>> registry = ParamRegistry()
-    >>> registry.register("task1", "What is {topic}?")
-    >>> registry.register("task2", PromptTemplate(system="You are helpful.", user="{query}"))
-    >>> signatures = signature_from_registry(registry)
-    >>> # signatures["task1"] will have:
-    >>> #   - input field "task1" with description "The prompt for task `task1`"
-    >>> #   - output field "output" with description "The final output"
-    >>> # signatures["task2"] will have:
-    >>> #   - input fields "system" and "user" with descriptions from the template
-    >>> #   - output field "output" with description "The final output"
-    """
-    signature_dict = {}
-    for name in registry.names():
-        value: Union[str, PromptTemplate] = registry.get(name)
-        sig_dict = {}
-
-        if isinstance(value, str):
-            # For string prompts, create a simple signature with one input field
-            sig_dict[name] = InputField(desc=f"The prompt for task `{name}`.")
-            
-        elif isinstance(value, PromptTemplate):
-            # For PromptTemplates, create input fields for each template field
-            for field_name in value.get_field_names():
-                val = getattr(value, field_name)
-                if val is not None:
-                    sig_dict[field_name] = InputField(desc=f"Field `{field_name}` from PromptTemplate `{name}`.")
-        else:
-            # Skip unsupported value types
-            continue
-
-        # Add output field with custom description if provided
-        output_desc = custom_output[name] if custom_output and name in custom_output else output_field_desc
-        sig_dict[output_field_name] = OutputField(
-            desc=output_desc,
-            annotation=output_field_type
+    missing = placeholders - input_names_set
+    if missing:
+        warnings.warn(
+            f"[{key}] Missing input_names for placeholders in instruction: {missing}"
         )
 
-        # Create the Signature class
-        sig_class = type(f"{name}Signature", (Signature,), sig_dict)
-        signature_dict[name] = sig_class
+def signature_from_registry(
+    registry: MiproRegister,
+) -> Dict[str, Type[Signature]]:
+    
+    signature_dict = {}
+    for key in registry.names():
+        registered_element: Union[str, PromptTemplate] = registry.get(key)
+        input_names = registry.get_input_names(key)
+        output_names = registry.get_output_names(key)
+        sig = {}
+
+        # sig_dict[key] = (str, InputField(desc=f"The Input for prompt `{key}`."))
+
+        if isinstance(registered_element, str):
+            # For string prompts, create a simple signature with one input field
+            instructions = registered_element
+            
+        elif isinstance(registered_element, PromptTemplate):
+            instructions = registered_element.instruction
+            # for field_name in registered_element.get_field_names():
+        
+        check_input_placeholders(instructions, input_names, key)
+
+        for name in input_names:
+            input_desc = registry.get_input_desc(key, name)
+            if input_desc:
+                sig[name] = (str, InputField(desc=input_desc))
+            else:
+                sig[name] = (str, InputField(desc=f"The Input for prompt `{key}`."))
+
+        for name in output_names:
+            output_desc = registry.get_output_desc(key, name)
+            if output_desc:
+                sig[name] = (str, OutputField(desc=output_desc))
+            else:
+                sig[name] = (str, OutputField(desc=f"The Output for prompt `{key}`."))
+
+        if is_valid_identifier(key):
+            signature_name = f"{key}Signature"
+        else:
+            # if the key is not a valid identifier, we need to add an underscore
+            # 打印warning
+            print(f"Warning: The key `{key}` is not a valid identifier, so we will add an underscore to it.")
+            signature_name = f"DefaultSignature_{len(signature_dict)}"
+
+        signature_class = make_signature(signature=sig, instructions=instructions, signature_name=signature_name)
+
+        signature_dict[key] = signature_class
+
 
     return signature_dict
 
