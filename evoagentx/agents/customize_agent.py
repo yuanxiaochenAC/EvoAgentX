@@ -336,10 +336,6 @@ class CustomizeAgent(Agent):
         # Create CustomizeAction-based action with parsing properties only
         customize_action_cls = create_model(
             action_cls_name,
-            # parse_mode=(Optional[str], Field(default="title", description="the parse mode of the action, must be one of: ['title', 'str', 'json', 'xml', 'custom']")),
-            # parse_func=(Optional[Callable], Field(default=None, exclude=True, description="the function to parse the LLM output. It receives the LLM output and returns a dict.")),
-            # title_format=(Optional[str], Field(default="## {title}", exclude=True, description="the format of the title. It is used when the `parse_mode` is 'title'.")),
-            # custom_output_format=(Optional[str], Field(default=None, exclude=True, description="the format of the output. It is used when the `prompt_template` is provided.")),
             __base__=CustomizeAction
         )
 

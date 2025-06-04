@@ -85,26 +85,25 @@ class CustomizeAction(Action):
                 raise TypeError(f"The input type {type(value)} is invalid! Valid types: [str, dict, list].")
 
         if self.prompt:
-            return StringTemplate(instruction=self.prompt).format(
+            template = StringTemplate(instruction=self.prompt)
+            if execution_history is not None:
+                template.set_history(execution_history)
+            if self.tools:
+                template.set_tools(self.tools)
+            return template.format(
                 system_prompt=system_prompt,
                 values=prompt_params_values,
-                parse_mode=self.parse_mode,
                 custom_output_format=self.custom_output_format,
                 tools=self.tools
             )
-            # return GOAL_BASED_TOOL_CALLING_PROMPT.format(
-            #         goal_prompt=self.prompt,
-            #         inputs=prompt_params_values,
-            #         history=execution_history or [],
-            #         tools_description=self.tools_schema or {},
-            #         additional_context=self.tool_calling_instructions or []
-            #     )
             
         else:
             # Use goal-based tool calling mode
             # Set history if provided and format with tools for goal-based tool calling
             if execution_history is not None:
                 self.prompt_template.set_history(execution_history)
+            if self.tools:
+                self.prompt_template.set_tools(self.tools)
             return self.prompt_template.format(
                 system_prompt=system_prompt,
                 values=prompt_params_values,
@@ -167,7 +166,6 @@ class CustomizeAction(Action):
         for tool_schema, tool_caller, tool_name in zip(tools_schemas, tools_callers, tools_names):
             self.tools_schema[tool_name] = tool_schema
             self.tools_caller[tool_name] = tool_caller
-        self.prompt_template.set_tools(self.tools)
     
     def _extract_tool_calls(self, llm_output: str):
         if match := re.search(r"```(?:ToolCalling)?\s*\n(.*?)\n```", llm_output, re.DOTALL):
@@ -317,10 +315,6 @@ class CustomizeAction(Action):
         results = {"result": results, "error": errors}
         return results
     
-    def _get_current_prompt(self, prompt_params_values: dict = None) -> str:
-        """Get the current prompt for return, formatted appropriately."""
-        return self.prepare_action_prompt(inputs=prompt_params_values or {})
-    
     def execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, time_out = 0, **kwargs):
         # Allow empty inputs if the action has no required input attributes
         input_attributes: dict = self.inputs_format.get_attr_descriptions()
@@ -338,7 +332,7 @@ class CustomizeAction(Action):
             ### Generate response from LLM
             if time_out > self.max_tool_try:
                 # Get the appropriate prompt for return
-                current_prompt = self._get_current_prompt(prompt_params_values)
+                current_prompt = self.prepare_action_prompt(inputs=prompt_params_values or {})
                 # Use the final LLM response if available, otherwise fall back to execution history
                 content_to_extract = final_llm_response if final_llm_response is not None else "{content}".format(content = self.execution_history)
                 if return_prompt:
@@ -377,7 +371,7 @@ class CustomizeAction(Action):
             self.execution_history.append({"tool_call_args": tool_call_args, "results": results})
         
         # Get the appropriate prompt for return
-        current_prompt = self._get_current_prompt(prompt_params_values)
+        current_prompt = self.prepare_action_prompt(inputs=prompt_params_values or {})
         # Use the final LLM response if available, otherwise fall back to execution history
         content_to_extract = final_llm_response if final_llm_response is not None else "{content}".format(content = self.execution_history)
         if return_prompt:
@@ -402,7 +396,7 @@ class CustomizeAction(Action):
             ### Generate response from LLM
             if time_out > self.max_tool_try:
                 # Get the appropriate prompt for return
-                current_prompt = self._get_current_prompt(prompt_params_values)
+                current_prompt = self.prepare_action_prompt(inputs=prompt_params_values or {})
                 # Use the final LLM response if available, otherwise fall back to execution history
                 content_to_extract = final_llm_response if final_llm_response is not None else "{content}".format(content = self.execution_history)
                 if return_prompt:
@@ -441,7 +435,7 @@ class CustomizeAction(Action):
             self.execution_history.append({"tool_call_args": tool_call_args, "results": results})
         
         # Get the appropriate prompt for return
-        current_prompt = self._get_current_prompt(prompt_params_values)
+        current_prompt = self.prepare_action_prompt(inputs=prompt_params_values or {})
         # Use the final LLM response if available, otherwise fall back to execution history
         content_to_extract = final_llm_response if final_llm_response is not None else "{content}".format(content = self.execution_history)
         if return_prompt:
