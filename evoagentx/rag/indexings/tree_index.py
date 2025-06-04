@@ -10,7 +10,7 @@ from .base import BaseIndexWrapper
 from ..schema import Chunk
 
 
-class TreeIndex(BaseIndexWrapper):
+class TreeIndexing(BaseIndexWrapper):
     """Wrapper for LlamaIndex TreeIndex."""
     
     def __init__(

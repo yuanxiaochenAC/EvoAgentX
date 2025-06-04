@@ -7,7 +7,7 @@ from .base import EmbeddingProvider
 from .openai_embedding import OpenAIEmbeddingWrapper
 from .huggingface_embedding import HuggingFaceEmbeddingWrapper
 
-__all__ = ['OpenAIEmbeddingWrapper', 'HuggingFaceEmbeddingWrapper', 'EmbeddingFactory']
+__all__ = ['OpenAIEmbeddingWrapper', 'HuggingFaceEmbeddingWrapper', 'EmbeddingFactory', 'BaseEmbedding']
 
 class EmbeddingFactory:
     """Factory for creating embedding models based on configuration."""

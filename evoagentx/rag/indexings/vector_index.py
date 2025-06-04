@@ -11,7 +11,7 @@ from .base import BaseIndexWrapper
 from ..schema import Chunk
 
 
-class VectorIndex(BaseIndexWrapper):
+class VectorIndexing(BaseIndexWrapper):
     """Wrapper for LlamaIndex VectorStoreIndex."""
     
     def __init__(

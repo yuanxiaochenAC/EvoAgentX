@@ -7,10 +7,11 @@ from .embeddings.base import EmbeddingProvider
 
 
 class RAGConfig(BaseConfig):
+    # basic environment for rag
+    num_workers: Optional[int] = None,
     # reading stage
     recursive: bool = False,
     exclude_hidden: bool = True,
-    num_workers: Optional[int] = None,
     num_files_limits: Optional[int] = None,
     custom_metadata_function: Optional[Callable] = None,
     extern_file_extractor: Optional[Dict] = None,

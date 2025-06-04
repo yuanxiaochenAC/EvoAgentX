@@ -10,7 +10,7 @@ from .base import BaseIndexWrapper
 from ..schema import Chunk
 
 
-class GraphIndex(BaseIndexWrapper):
+class GraphIndexing(BaseIndexWrapper):
     """Wrapper for LlamaIndex PropertyGraphIndex."""
     
     def __init__(

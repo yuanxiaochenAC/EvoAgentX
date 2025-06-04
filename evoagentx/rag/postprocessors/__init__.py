@@ -6,6 +6,8 @@ from .simple_reranker import SimpleReranker
 from .base import BasePostprocessor, RerankerType
 
 
+__all__ = ['PostprocessorFactory', 'SimpleReranker', 'BasePostprocessor']
+
 class PostprocessorFactory:
     """Factory for creating post-processors."""
     

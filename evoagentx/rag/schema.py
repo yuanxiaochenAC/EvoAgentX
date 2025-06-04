@@ -293,12 +293,14 @@ class Corpus(BaseModule):
     """A collection of document chunks for RAG processing.
 
     Attributes:
+        corpus_id (str): The unique id for corpus.
         chunks (List[Chunk]): List of chunks in the corpus.
         chunk_index (Dict[str, Chunk]): Index of chunks by chunk_id for fast lookup.
     """
 
-    def __init__(self, chunks: List[Chunk] = None):
+    def __init__(self, chunks: List[Chunk] = None, corpus_id: str = None):
         super().__init__(
+            corpus_id=uuid4(),
             chunks=chunks or [],
             chunk_index={chunk.chunk_id: chunk for chunk in chunks}
         )
@@ -397,7 +399,6 @@ class RagQuery(BaseModule):
     top_k: int = Field(default=5, description="Number of top results to retrieve.")
     similarity_cutoff: Optional[float] = Field(default=None, description="Minimum similarity score.")
     keyword_filters: Optional[List[str]] = Field(default=None, description="Keywords to filter results.")
-    use_graph: bool = Field(default=False, description="Whether to use graph-based retrieval.")
     metadata_filters: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata filters.")
 
 class RagResult(BaseModule):

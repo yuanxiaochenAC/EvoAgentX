@@ -7,10 +7,9 @@ from .base import BaseChunker, ChunkingStrategy
 from .simple_chunker import SimpleChunker
 from .semantic_chunker import SemanticChunker
 from .hierachical_chunker import HierarchicalChunker
-from ..schema import Document, Corpus
 
 
-__all__ = ['SimpleChunker', 'SemanticChunker', 'HierarchicalChunker', 'ChunkFactory']
+__all__ = ['SimpleChunker', 'SemanticChunker', 'HierarchicalChunker', 'ChunkFactory', 'BaseChunker']
 
 
 class ChunkFactory:

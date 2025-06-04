@@ -5,12 +5,12 @@ from llama_index.core.storage import StorageContext
 from llama_index.core.embeddings import BaseEmbedding
 
 from .base import IndexType, BaseIndexWrapper
-from .vector_index import VectorIndex
-from .graph_index import GraphIndex
-from .summary_index import SummaryIndex
-from .tree_index import TreeIndex
+from .vector_index import VectorIndexing
+from .graph_index import GraphIndexing
+from .summary_index import SummaryIndexing
+from .tree_index import TreeIndexing
 
-__all__ = ['VectorIndex', 'GraphIndex', 'SummaryIndex', 'TreeIndex', 'IndexFactory']
+__all__ = ['VectorIndexing', 'GraphIndexing', 'SummaryIndexing', 'TreeIndexing', 'IndexFactory', 'BaseIndexWrapper']
 
 class IndexFactory:
     """Factory for creating LlamaIndex indices."""

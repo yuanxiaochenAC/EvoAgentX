@@ -10,7 +10,7 @@ from .base import BaseIndexWrapper
 from ..schema import Chunk
 
 
-class SummaryIndex(BaseIndexWrapper):
+class SummaryIndexing(BaseIndexWrapper):
     """Wrapper for LlamaIndex SummaryIndex."""
     
     def __init__(

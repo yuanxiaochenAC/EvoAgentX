@@ -10,7 +10,7 @@ from .vector_retriever import VectorRetriever
 from .graph_retriever import GraphRetriever
 from ..schema import RagQuery
 
-__all__ = ['VectorRetriever', 'GraphRetriever', 'RetrieverFactory']
+__all__ = ['VectorRetriever', 'GraphRetriever', 'RetrieverFactory', 'BaseRetrieverWrapper']
 
 class RetrieverFactory:
     """Factory for creating retrievers."""

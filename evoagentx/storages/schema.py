@@ -55,3 +55,11 @@ class HistoryStore(BaseModel):
     event: str = Field(..., description="Description of the event causing the change")
     created_at: Optional[str] = Field("", description="Optional timestamp for creation")
     updated_at: Optional[str] = Field("", description="Optional timestamp for last update")
+
+# Pydantic model for indexing data storage
+class IndexingStore(BaseModel):
+    """
+    Stores indexing metadata with a unique id and basic chunk/node attribute.
+    """
+    index_id: str = Field(..., description="unique indexing idetnifier")
+    
