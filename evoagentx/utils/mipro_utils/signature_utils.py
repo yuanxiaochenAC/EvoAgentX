@@ -71,6 +71,10 @@ def signature_from_registry(
 
         signature_class = make_signature(signature=sig, instructions=instructions, signature_name=signature_name)
 
+        signature_class.__annotations__['register_name'] = str
+
+        setattr(signature_class, 'register_name', key)
+
         signature_dict[key] = signature_class
 
 

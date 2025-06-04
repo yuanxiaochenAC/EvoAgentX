@@ -5,8 +5,8 @@ from typing import Callable, Dict, Union, Awaitable, Type, Optional
 import dspy
 from dspy import Signature
 from ...optimizers.engine.registry import ParamRegistry  # 替换成你自己的路径
-
-
+from typing import List
+import warnings
 class PromptTuningModule(dspy.Module):
     """
     A DSPy module for prompt tuning that manages the interaction between predictors,
@@ -35,10 +35,6 @@ class PromptTuningModule(dspy.Module):
         cls,
         program: Union[Callable[..., dict], Callable[..., Awaitable[dict]]],
         registry: ParamRegistry,
-        output_field_name: str = "output",
-        output_field_desc: str = "The final output.",
-        output_field_type: Type = str,
-        custom_output: Optional[Dict[str, str]] = None,
     ) -> "PromptTuningModule":
         """
         Factory method to create a PromptTuningModule from a registry and program.
@@ -54,14 +50,6 @@ class PromptTuningModule(dspy.Module):
             The main program function to execute
         registry : ParamRegistry
             Registry containing the tunable parameters
-        output_field_name : str, default="output"
-            Name for the output field in generated signatures
-        output_field_desc : str, default="The final output."
-            Default description for the output field
-        output_field_type : Type, default=str
-            Type annotation for the output field
-        custom_output : Optional[Dict[str, str]], default=None
-            Optional mapping of field names to custom output field descriptions
 
         Returns
         -------
@@ -82,10 +70,6 @@ class PromptTuningModule(dspy.Module):
         # Create signatures for each field in the registry
         signature_dict = signature_from_registry(
             registry=registry,
-            output_field_name=output_field_name,
-            output_field_desc=output_field_desc,
-            output_field_type=output_field_type,
-            custom_output=custom_output,
         )
 
         # Create and return the module
@@ -109,6 +93,52 @@ class PromptTuningModule(dspy.Module):
             self.predicts.append(dspy.Predict(signature, name=name))
         self.registry = registry
 
+    def escape_braces(self, text):
+        """
+        This function escapes all the braces in the text.
+        """
+        def helper(s, start=0):
+            result = ''
+            i = start
+            while i < len(s):
+                if s[i] == '{':
+                    inner, new_i = helper(s, i + 1)
+                    result += '{{' + inner + '}}'
+                    i = new_i
+                elif s[i] == '}':
+                    return result, i + 1
+                else:
+                    result += s[i]
+                    i += 1
+            return result, i
+
+        escaped, _ = helper(text)
+        return escaped
+    
+    def _validate_prompt(self, prompt: str, input_names: List[str], verbose: bool = True) -> str:
+        """
+        Check if the generated prompt is valid. Currently only check is the required inputs are wrapped in brackets. 
+        """
+        # prompt = prompt.replace("\"\"\"", "")
+        # required_inputs = [inp["name"] for inp in task_info["inputs"] if inp["required"]]
+        modified_messages = []
+        required_inputs = input_names
+        missing_required_inputs = [name for name in required_inputs if f"{{{name}}}" not in prompt]
+        if missing_required_inputs:
+            input_values = "\n\n".join([f"{name}: {{{name}}}" for name in missing_required_inputs])
+            prompt += f"\n\nThe followings are some required input values: \n{input_values}"
+            modified_messages.append(f"added missing inputs: {', '.join(missing_required_inputs)}")
+
+        
+        prompt = self.escape_braces(prompt)
+        for name in input_names:
+            prompt = prompt.replace(f"{{{{{name}}}}}", f"{{{name}}}")
+        prompt = prompt.replace(r"{{{{", r"{{").replace(r"}}}}", r"}}")
+
+        if verbose and modified_messages:
+            warnings.warn("Prompt modified: " + " | ".join(modified_messages))
+        return prompt
+
     def sync_predict_inputs_to_program(self):
         """
         Synchronizes the current input values from all predictors back to the registry.
@@ -126,12 +156,56 @@ class PromptTuningModule(dspy.Module):
         """
         for predict in self.predicts:
             signature = predict.signature
+            instruction = signature.instructions
+            input_names = [name for name, field in predict.signature.fields.items() if field.__class__.__name__ == 'InputField']
 
-            for field_name in signature.input_fields:
-                # Prioritize values from config (may contain optimized values)
-                value = predict.config.get(field_name)
-                if value is not None:
-                    self.registry.set(field_name, value)
+            register_name = getattr(signature, 'register_name', getattr(type(signature), 'register_name', None))
+
+            instruction = self._validate_prompt(instruction, input_names)
+
+            self.registry.set(register_name, instruction)
+    
+    def constrcut_trace(self, execution_data: dict) -> dict:
+        """
+        Construct the trace of the execution.
+        """
+        trace: List[dict] = []
+        for predict in self.predicts:
+            signature = predict.signature
+            instruction = signature.instructions
+            input_names = [name for name, field in predict.signature.fields.items() if field.__class__.__name__ == 'InputField']
+            output_names = [name for name, field in predict.signature.fields.items() if field.__class__.__name__ == 'OutputField']
+
+            input_dict = {}
+            output_dict = {}
+
+            # 先去检查执行数据中是否存在input_names和output_names
+            for name in input_names:
+                if name not in execution_data:
+                    # raise ValueError(f"Input {name} not found in execution data")
+                    warnings.warn(f"Input {name} not found in execution data")
+            for name in output_names:
+                if name not in execution_data:
+                    # raise ValueError(f"Output {name} not found in execution data")
+                    warnings.warn(f"Output {name} not found in execution data")
+
+            # 如果存在，则将执行数据中的input_names和output_names加入到trace中
+            # 这里name是没有的怎么办？
+            for name in input_names:
+                if name in execution_data:
+                    input_dict[name] = execution_data[name]
+                # else:
+                #     input_dict[name] = None
+            for name in output_names:
+                if name in execution_data:
+                    output_dict[name] = execution_data[name]
+                # else:
+                #     output_dict[name] = None
+            
+            trace_tuple = (predict, input_dict, output_dict)
+            trace.append(trace_tuple)
+        return trace
+
 
     def forward(self, **kwargs) -> dict:
         """
@@ -162,15 +236,15 @@ class PromptTuningModule(dspy.Module):
 
         # 2. Execute the program (handle both sync/async)
         if asyncio.iscoroutinefunction(self.program):
-            result = asyncio.run(self.program(**kwargs)) if kwargs else asyncio.run(self.program())
+            output, execution_data = asyncio.run(self.program(**kwargs)) if kwargs else asyncio.run(self.program())
         else:
-            result = self.program(**kwargs) if kwargs else self.program()
+            output, execution_data = self.program(**kwargs) if kwargs else self.program()
 
-        # 3. Validate return type
-        # if not isinstance(result, dict):
-        #     raise ValueError("program() must return a dict.")
+        trace = self.constrcut_trace(execution_data)
 
-        return result
+        dspy.settings.trace = trace
+
+        return output
 
     def __deepcopy__(self, memo):
         
