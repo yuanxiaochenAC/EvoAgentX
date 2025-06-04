@@ -33,29 +33,37 @@ class SearchEngine:
         self.postprocessor_factory = PostprocessorFactory()
         self.logger = logging.getLogger(__name__)
 
-        # Initialize readers
+# Initialize reader
         self.reader = LLamaIndexReader(
-            recursive=self.config.recursive,
-            exclude_hidden=self.config.exclude_hidden,
+            recursive=self.config.reader.recursive,
+            exclude_hidden=self.config.reader.exclude_hidden,
             num_workers=self.config.num_workers,
-            num_files_limits=self.config.num_files_limits,
-            custom_metadata_function=self.config.custom_metadata_function,
-            extern_file_extractor=self.config.extern_file_extractor,
-            errors=self.config.errors,
-            encoding=self.config.encoding
+            num_files_limits=self.config.reader.num_files_limit,
+            custom_metadata_function=self.config.reader.custom_metadata_function,
+            extern_file_extractor=self.config.reader.extern_file_extractor,
+            errors=self.config.reader.errors,
+            encoding=self.config.reader.encoding
         )
 
         # Initialize embedding model
         self.embed_model = self.embedding_factory.create(
-            provider=self.config.embedding_provider,
-            model_config=self.config.embedding_config
+            provider=self.config.embedding.provider,
+            model_config={
+                "model_name": self.config.embedding.model_name,
+                "api_key": self.config.embedding.api_key,
+                "api_base": self.config.embedding.api_url
+            }
         )
 
         # Initialize chunker
         self.chunker = self.chunk_factory.create(
-            strategy=self.config.chunking_strategy,
+            strategy=self.config.chunker.strategy,
             embed_model=self.embed_model,
-            chunker_config=self.config.node_parser_config
+            chunker_config={
+                "chunk_size": self.config.chunker.chunk_size,
+                "chunk_overlap": self.config.chunker.chunk_overlap,
+                "max_chunks": self.config.chunker.max_chunks
+            }
         )
 
         # Initialize indices and retrievers
@@ -89,10 +97,6 @@ class SearchEngine:
                 show_progress=show_progress
             )
             corpus = self.chunker.chunk(documents)
-            nodes = corpus.to_llama_nodes()
-
-            for index in self.indices.values():
-                index.insert_nodes(nodes)
 
             self.logger.info(f"Read {len(documents)} documents and {len(corpus.chunks)} chunks")
             return corpus
@@ -235,7 +239,7 @@ class SearchEngine:
                     index_type=index_type,
                     embed_model=self.embed_model,
                     storage_context=self.storage_handler.storage_context,
-                    index_config=self.config.index_config
+                    index_config=self.config.index.model_dump()
                 )
                 self.indices[corpus_id][index_type] = index
                 self.retrievers[corpus_id][index_type] = self.retriever_factory.create(
@@ -254,10 +258,10 @@ class SearchEngine:
             raise
 
     def delete(self, corpus_id: str, index_type: Optional[IndexType] = None,
-               node_ids: Optional[List[str]] = None, metadata_filters: Optional[Dict[str, Any]] = None) -> None:
+            node_ids: Optional[List[str]] = None, metadata_filters: Optional[Dict[str, Any]] = None) -> None:
         """
         Delete nodes or entire index from a corpus.
-        
+
         Args:
             corpus_id: Identifier for the corpus.
             index_type: Specific index type to delete (default: all types).
@@ -277,28 +281,55 @@ class SearchEngine:
             for idx_type, index in target_indices:
                 if node_ids or metadata_filters:
                     # Delete specific nodes
-                    nodes = index.get_index().as_retriever().retrieve(QueryBundle(query_str=""))
-                    nodes_to_delete = []
-                    for node in nodes:
-                        if node_ids and node.node_id in node_ids:
-                            nodes_to_delete.append(node.node_id)
-                        elif metadata_filters and all(
-                            node.metadata.get(k) == v for k, v in metadata_filters.items()
-                        ):
-                            nodes_to_delete.append(node.node_id)
-                    for node_id in nodes_to_delete:
-                        index.get_index().delete_node(node_id)
-                    self.logger.info(f"Deleted {len(nodes_to_delete)} nodes from {idx_type} index for corpus {corpus_id}")
+                    if idx_type == IndexType.GRAPH:
+                        # Handle graph index deletion (e.g., via graph store)
+                        if not self.storage_handler.storage_context.graph_store:
+                            self.logger.error(f"No graph store configured for {idx_type} index")
+                            continue
+                        nodes_to_delete = []
+                        # Query graph store directly (example: Neo4j)
+                        all_nodes = self.storage_handler.storage_context.graph_store.get_all_nodes()
+                        for node in all_nodes:
+                            if node_ids and node.node_id in node_ids:
+                                nodes_to_delete.append(node.node_id)
+                            elif metadata_filters and all(
+                                node.metadata.get(k) == v for k, v in metadata_filters.items()
+                            ):
+                                nodes_to_delete.append(node.node_id)
+                        for node_id in nodes_to_delete:
+                            self.storage_handler.storage_context.graph_store.delete_node(node_id)
+                        self.logger.info(f"Deleted {len(nodes_to_delete)} nodes from {idx_type} index for corpus {corpus_id}")
+                    else:
+                        # Handle vector, summary, tree indices
+                        nodes_to_delete = []
+                        # Access all nodes directly via index storage
+                        docstore = index.get_index().storage_context.docstore
+                        all_nodes = docstore.get_all_nodes()
+                        for node in all_nodes:
+                            if node_ids and node.node_id in node_ids:
+                                nodes_to_delete.append(node.node_id)
+                            elif metadata_filters and all(
+                                node.metadata.get(k) == v for k, v in metadata_filters.items()
+                            ):
+                                nodes_to_delete.append(node.node_id)
+                        for node_id in nodes_to_delete:
+                            index.get_index().delete_ref_doc(node_id, delete_from_docstore=True)
+                        self.logger.info(f"Deleted {len(nodes_to_delete)} nodes from {idx_type} index for corpus {corpus_id}")
                 else:
                     # Delete entire index
                     del self.indices[corpus_id][idx_type]
                     del self.retrievers[corpus_id][idx_type]
                     self.logger.info(f"Deleted {idx_type} index for corpus {corpus_id}")
-            
+
             if not self.indices[corpus_id]:
                 del self.indices[corpus_id]
                 del self.retrievers[corpus_id]
                 self.logger.info(f"Removed empty corpus {corpus_id}")
+
+            # Update persistent storage
+            if self.storage_handler.storage_context.persist_dir:
+                self.storage_handler.storage_context.persist()
+            self.logger.info(f"Updated persistent storage for corpus {corpus_id}")
         except Exception as e:
             self.logger.error(f"Failed to delete from corpus {corpus_id}: {str(e)}")
             raise

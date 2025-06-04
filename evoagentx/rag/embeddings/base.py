@@ -7,7 +7,6 @@ from llama_index.core.embeddings import BaseEmbedding
 class EmbeddingProvider(str, Enum):
     OPENAI = "openai"
     HUGGINGFACE = "huggingface"
-    CUSTOM = "custom"
 
 class BaseEmbeddingWrapper(ABC):
     """Base interface for embedding wrappers."""

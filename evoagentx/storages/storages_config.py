@@ -20,7 +20,6 @@ class VectorStoreConfig(BaseConfig):
     Configuration for vector databases, supporting FAISS and Qdrant.
     """
     vector_name: str = Field(default="faiss", description="Name of the vector database provider (e.g., 'faiss', 'qdrant')")
-    path: Optional[str] = Field(default="/index_cache", description="File path for storing the vector index (for FAISS)")
     dimension: Optional[int] = Field(default=1536, description="Dimension of the embedding vectors")
     index_type: Optional[str] = Field(default="flat_l2", description="Index type for FAISS (e.g., 'flat_l2', 'ivf_flat')")
     qdrant_url: Optional[str] = Field(default=None, description="URL for Qdrant server (e.g., 'http://localhost:6333')")
@@ -48,3 +47,5 @@ class StoreConfig(BaseConfig):
     dbConfig: DBConfig = Field(..., description="Configuration for the database store")
     vectorConfig: Optional[VectorStoreConfig] = Field(None, description="Configuration for the vector store")
     graphConfig: Optional[GraphStoreConfig] = Field(None, description="Optional configuration for the graph store")
+    # For file storage
+    path: Optional[str] = Field(default="/index_cache", description="directory path for storing the index")

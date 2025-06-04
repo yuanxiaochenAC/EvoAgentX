@@ -1,30 +1,61 @@
-from typing import Dict, Any, Optional, Callable
+from typing import Optional, Callable, Dict, Any, List
 
-from ..core.base_config import BaseConfig
+from pydantic import Field
+from llama_index.embeddings.openai.utils import DEFAULT_OPENAI_API_BASE
+
+from ..core.base_config import BaseConfig, BaseModule
 from .indexings.base import IndexType
 from .chunkers.base import ChunkingStrategy
 from .embeddings.base import EmbeddingProvider
 
 
+class ReaderConfig(BaseModule):
+    """Configuration for document reading stage."""
+    recursive: bool = Field(default=False, description="Whether to recursively read directories.")
+    exclude_hidden: bool = Field(default=True, description="Exclude hidden files and directories.")
+    num_files_limit: Optional[int] = Field(default=None, description="Maximum number of files to read.")
+    custom_metadata_function: Optional[Callable] = Field(default=None, description="Custom function to extract metadata from files.")
+    extern_file_extractor: Optional[Dict[str, Any]] = Field(default=None, description="External file extractors for specific file types.")
+    errors: str = Field(default="ignore", description="Error handling strategy ('ignore', 'strict').")
+    encoding: str = Field(default="utf-8", description="File encoding for reading.")
+
+
+class ChunkerConfig(BaseModule):
+    """Configuration for document chunking stage."""
+    strategy: ChunkingStrategy = Field(default=ChunkingStrategy.SIMPLE, description="Chunking strategy (SIMPLE, SEMANTIC, HIERARCHICAL).")
+    chunk_size: int = Field(default=1024, description="Maximum size of each chunk in characters.")
+    chunk_overlap: int = Field(default=20, description="Overlap between chunks in characters.")
+    max_chunks: Optional[int] = Field(default=None, description="Maximum number of chunks per document.")
+
+
+class EmbeddingConfig(BaseModule):
+    """Configuration for embedding stage."""
+    provider: EmbeddingProvider = Field(default=EmbeddingProvider.OPENAI, description="Embedding provider (OPENAI, HUGGINGFACE).")
+    model_name: str = Field(default="text-embedding-ada-002", description="Name of the embedding model.")
+    api_key: Optional[str] = Field(default=None, description="API key for the embedding provider (if required).")
+    api_url: str = Field(default=DEFAULT_OPENAI_API_BASE, description="api url for embedding model.")
+
+
+class IndexConfig(BaseModule):
+    """Configuration for indexing stage."""
+    index_type: IndexType = Field(default=IndexType.VECTOR, description="Index type (VECTOR, GRAPH, SUMMARY, TREE).")
+    similarity_metric: str = Field(default="cosine", description="Similarity metric for vector index (cosine, euclidean).")
+    storage_path: Optional[str] = Field(default=None, description="Path for local index storage (if applicable).")
+
+
+class RetrievalConfig(BaseModule):
+    """Configuration for retrieval stage."""
+    top_k: int = Field(default=5, description="Number of top results to retrieve.")
+    similarity_cutoff: Optional[float] = Field(default=0.7, description="Minimum similarity score for retrieved chunks.")
+    keyword_filters: Optional[List[str]] = Field(default=None, description="Keywords to filter retrieved chunks.")
+    metadata_filters: Optional[Dict[str, Any]] = Field(default=None, description="Metadata filters for retrieval.")
+
+
 class RAGConfig(BaseConfig):
-    # basic environment for rag
-    num_workers: Optional[int] = None,
-    # reading stage
-    recursive: bool = False,
-    exclude_hidden: bool = True,
-    num_files_limits: Optional[int] = None,
-    custom_metadata_function: Optional[Callable] = None,
-    extern_file_extractor: Optional[Dict] = None,
-    errors: str = "ignore",
-    encoding: str = "utf-8",
-    # chunking stage
-    chunking_strategy: ChunkingStrategy = ChunkingStrategy.SIMPLE   # Option: SIMPLE, SEMANTIC, HIERARCHICAL
-    node_parser_config: Dict[str, Any] = {"chunk_size": 1024, "chunk_overlap": 20}
-    # Indexing stage
-    index_type: IndexType = IndexType.VECTOR
-    index_config: Dict[str, Any] = {}
-    # Embedding stage
-    embedding_provider: EmbeddingProvider = EmbeddingProvider.OPENAI
-    embedding_config: Dict[str, Any] = {"model_name": "text-embedding-ada-002"}
-    # retreiving stage
-    retrieval_config: Dict[str, Any] = {"top_k": 5, "similarity_cutoff": 0.7}
+    """Configuration for the RAG pipeline."""
+    num_workers: Optional[int] = Field(default=None, description="Number of workers for parallel processing (e.g., reading, retrieval).")
+    reader: ReaderConfig = Field(default_factory=ReaderConfig, description="Configuration for document reading.")
+    chunker: ChunkerConfig = Field(default_factory=ChunkerConfig, description="Configuration for document chunking.")
+    embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig, description="Configuration for embeddings.")
+    index: IndexConfig = Field(default_factory=IndexConfig, description="Configuration for indexing.")
+    retrieval: RetrievalConfig = Field(default_factory=RetrievalConfig, description="Configuration for retrieval.")

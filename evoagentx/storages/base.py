@@ -20,9 +20,10 @@ class StorageHandler(BaseModule):
     It supports multiple storage types, including database, vector, and graph storage, initialized via factories.
     """
     storageConfig: StoreConfig = Field(..., description="Configuration for all storage backends")
-    storageDB: Optional[DBStoreBase] = Field(None, description="Database storage backend")
-    storageVector: Optional[VectorStoreBase] = Field(None, description="Optional vector storage backend")
-    storageGraph: Optional[GraphStoreBase] = Field(None, description="Optional graph storage backend")
+    storageDB: Optional[Union[DBStoreBase, Any]] = Field(None, description="Database storage backend")
+    storageVector: Optional[Union[VectorStoreBase, Any]] = Field(None, description="Optional vector storage backend")
+    storageGraph: Optional[Union[GraphStoreBase, Any]] = Field(None, description="Optional graph storage backend")
+    storage_context: Optional[StorageContext] = Field(None, description="Optional storage context backend for llama_index")
 
     def init_module(self):
         """
@@ -34,14 +35,10 @@ class StorageHandler(BaseModule):
         self._init_graph_store()
 
         # Initialize storage_context for llama_index after stores are set
-        self._storage_context = StorageContext.from_defaults(
+        self.storage_context = StorageContext.from_defaults(
             vector_store=self.storageVector,
             graph_store=self.storageGraph
         )
-
-    @property
-    def storage_context(self) -> StorageContext:
-        return self._storage_context
     
     def _init_db_store(self):
         """
@@ -58,7 +55,7 @@ class StorageHandler(BaseModule):
         """
         vector_config = self.storageConfig.vectorConfig
         if vector_config is not None:
-            self.storageVector = VectorStoreFactory.create(
+            self.storageVector = VectorStoreFactory().create(
                 store_type=vector_config.vector_name,
                 store_config=vector_config.model_dump()
             )
@@ -70,7 +67,7 @@ class StorageHandler(BaseModule):
         """
         graph_config = self.storageConfig.graphConfig
         if graph_config is not None:
-            self.storageGraph = GraphStoreFactory.create(
+            self.storageGraph = GraphStoreFactory().create(
                 store_type=graph_config.graph_name, 
                 store_config=graph_config.model_dump()
             )

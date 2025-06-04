@@ -1,5 +1,6 @@
 import logging
 from evoagentx.storages import StorageHandler
+from evoagentx.storages.storages_config import StoreConfig, VectorStoreConfig, DBConfig
 from evoagentx.rag.schema import RagQuery, Corpus
 from evoagentx.rag.search_engine import SearchEngine, RAGConfig
 
@@ -10,17 +11,33 @@ logging.basicConfig(level=logging.DEBUG)
 config = RAGConfig(
     embedding_provider="openai",
     embedding_config={"model": "text-embedding-ada-002"},
-    supported_index_types=["vector"],
     retrieval_config={"top_k": 5},
     chunking_strategy="semantic",
     num_workers=4
 )
-storage_handler = StorageHandler(...)  # Configure with your SQLite/Neo4j setup
+# Initialize storage
+storage_config = StoreConfig(
+    dbConfig=DBConfig(
+        db_name="sqlite",
+        path="./debug/cache/test.sql"
+    ),
+    vectorConfig=VectorStoreConfig(
+        vector_name="faiss",
+        dimension=1536,
+        index_type="flat_l2",
+    ),
+    # file caching
+    path="/debug/cache/indexing",
+)
+
+storage_handler = StorageHandler(storageConfig=storage_config)  # Configure with your SQLite/Neo4j setup
 search_engine = SearchEngine(config, storage_handler)
 
+import pdb;pdb.set_trace()
 # Test Case 1: Basic Retrieval
-corpus = search_engine.read(file_paths="./data", corpus_id="paul_graham", filter_file_by_suffix=".txt")
+corpus = search_engine.read(file_paths="./debug/data/source_files", filter_file_by_suffix=".txt")
 query = RagQuery(query_str="What does Paul Graham say about the role of persistence in startups?", top_k=5)
+search_engine.add("vector", corpus, corpus_id="paul_graham")
 result = search_engine.query(query, corpus_id="paul_graham")
 print("Test Case 1 Results:", [chunk.text for chunk in result.corpus.chunks])
 

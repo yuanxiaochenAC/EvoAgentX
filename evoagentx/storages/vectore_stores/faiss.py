@@ -17,7 +17,7 @@ class FaissVectorStoreWrapper(VectorStoreBase):
         self.dimension = dimension
         self.index_type = index_type
         self.faiss_index = self._create_index()
-        self.vector_store = FaissVectorStore(faiss_index=self.faiss_index, **kwargs)
+        self.vector_store = FaissVectorStore(faiss_index=self.faiss_index)
         self.logger = logging.getLogger(__name__)
 
     def _create_index(self) -> faiss.Index:

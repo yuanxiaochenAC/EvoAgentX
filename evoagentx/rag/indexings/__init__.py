@@ -44,7 +44,7 @@ class IndexFactory:
         index_config = index_config or {}
         
         if index_type == IndexType.VECTOR:
-            index = VectorIndex(
+            index = VectorIndexing(
                 embed_model=embed_model,
                 storage_context=storage_context,
                 index_config=index_config
@@ -52,19 +52,19 @@ class IndexFactory:
         elif index_type == IndexType.GRAPH:
             if not storage_context.graph_store:
                 raise ValueError("Graph store required for PropertyGraphIndex")
-            index = GraphIndex(
+            index = GraphIndexing(
                 embed_model=embed_model,
                 storage_context=storage_context,
                 index_config=index_config
             )
         elif index_type == IndexType.SUMMARY:
-            index = SummaryIndex(
+            index = SummaryIndexing(
                 embed_model=embed_model,
                 storage_context=storage_context,
                 index_config=index_config
             )
         elif index_type == IndexType.TREE:
-            index = TreeIndex(
+            index = TreeIndexing(
                 embed_model=embed_model,
                 storage_context=storage_context,
                 index_config=index_config
