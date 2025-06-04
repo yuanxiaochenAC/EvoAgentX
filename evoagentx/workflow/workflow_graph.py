@@ -1167,7 +1167,7 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
                     "inputs": [param.to_dict(ignore=["class_name"]) for param in node.inputs],
                     "outputs": [param.to_dict(ignore=["class_name"]) for param in node.outputs],
                     "prompt": node.agents[0].get("prompt", None),
-                    "prompt_template": node.agents[0].get("prompt_template", None),
+                    "prompt_template": node.agents[0].get("prompt_template", None).to_dict() if node.agents[0].get("prompt_template", None) else None,
                     "system_prompt": node.agents[0].get("system_prompt", None),
                     "parse_mode": node.agents[0].get("parse_mode", "str"), 
                     "parse_func": node.agents[0].get("parse_func", None).__name__ if node.agents[0].get("parse_func", None) else None,

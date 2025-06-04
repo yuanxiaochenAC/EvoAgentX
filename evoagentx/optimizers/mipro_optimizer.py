@@ -8,10 +8,10 @@ from functools import wraps
 from collections import defaultdict
 
 import optuna
-from typing import Optional, Callable, Literal, List, Any, Dict, Union, Tuple 
+from typing import Optional, Callable, Literal, List, Any, Dict, Union, Tuple, Set 
 
 import dspy 
-from dspy import MIPROv2, OutputField
+from dspy import MIPROv2
 from dspy.clients import LM, Provider
 from dspy.utils.callback import BaseCallback 
 from dspy.utils.parallelizer import ParallelExecutor 
@@ -58,6 +58,10 @@ ENDC = "\033[0m"  # Resets the color to default
 
 
 class MiproLMWrapper(LM):
+
+    """
+    A wrapper class for the LLM model. It converts the BaseLLM model in EvoAgentX to a dspy.LM object. 
+    """
 
     def __init__(
         self, 
@@ -110,6 +114,13 @@ class MiproLMWrapper(LM):
         new_model = self.model.__class__(config=new_config)
         return MiproLMWrapper(new_model, **new_kwargs)
     
+    def generate(self, *args, **kwargs):
+        # to be compatible with BaseLLM.generate()
+        return self.model.generate(*args, **kwargs)
+    
+    async def async_generate(self, *args, **kwargs):
+        # to be compatible with BaseLLM.async_generate()
+        return await self.model.async_generate(*args, **kwargs)
 
 class MiproEvaluator:
 
@@ -365,7 +376,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         self.task_model = dspy.settings.lm 
         self.prompt_model = dspy.settings.lm 
         self.metric_threshold = metric_threshold
-        self.teacher_settings = {} 
+        self.teacher_settings = {"use_teacher": True} 
 
         # Validate 'auto' parameter
         allowed_modes = {None, "light", "medium", "heavy"}
@@ -1173,12 +1184,62 @@ class WorkFlowGraphProgram:
         new_graph.reset_graph() 
 
         # execute the graph with WorkFlow 
-        workflow = WorkFlow(llm=self.executor_llm, graph=new_graph, agent_manager=self.agent_manager)
+        use_teacher = dspy.settings.get("use_teacher", False)
+        if use_teacher:
+            # use teacher model to execute the graph, used for optimization
+            new_graph, new_agent_manager = self.inject_teacher_settings(new_graph, self.agent_manager)
+            workflow = WorkFlow(llm=self.executor_llm, graph=new_graph, agent_manager=new_agent_manager)
+        else:
+            # use the original executor llm to execute the graph
+            workflow = WorkFlow(llm=self.executor_llm, graph=new_graph, agent_manager=self.agent_manager)
         output: str = workflow.execute(inputs=self.collate_func(input_data))
         output = self.output_postprocess_func(output)
 
-        return output 
+        # extract all the input and output data from the workflow execution
+        all_execution_data = workflow.environment.execution_data
+        all_input_output_keys = self._extract_input_output_keys(new_graph)
+        execution_data = {k: v for k, v in all_execution_data.items() if k in all_input_output_keys}
+
+        return output, execution_data 
     
+    def inject_teacher_settings(self, graph: WorkFlowGraph, agent_manager: AgentManager):
+        """
+        Inject the teacher settings into the graph and agent manager.
+        """
+        # dspy.settings.lm is configured in MiproOptimizer, which is a MiproLMWrapper instance
+        optimizer_llm_config = dspy.settings.lm.model.config.to_dict()
+        for node in graph.nodes:
+            for agent in node.agents:
+                agent["llm_config"] = optimizer_llm_config
+        
+        # create a new agent manager with the teacher settings
+        new_agent_manager = agent_manager.copy()
+        new_agent_manager.clear_agents()
+        new_agent_manager.add_agents_from_workflow(graph, llm_config=optimizer_llm_config)
+        return graph, new_agent_manager
+    
+    def _extract_input_output_keys(self, graph: WorkFlowGraph) -> Set[str]:
+        """
+        Extract all the input and output keys from the graph.
+        """
+        all_input_output_keys = set()
+        for node in graph.nodes:
+            for inp in node.inputs:
+                all_input_output_keys.add(inp.name)
+            for out in node.outputs:
+                all_input_output_keys.add(out.name)
+            for agent in node.agents:
+                for agent_inp in agent.get("inputs", []):
+                    agent_inp_name = agent_inp.get("name", None)
+                    if agent_inp_name:
+                        all_input_output_keys.add(agent_inp_name)
+                for agent_out in agent.get("outputs", []):
+                    agent_out_name = agent_out.get("name", None)
+                    if agent_out_name:
+                        all_input_output_keys.add(agent_out_name)
+
+        return all_input_output_keys
+
     def save(self, path: str):
         self.graph.save_module(path=path)
 

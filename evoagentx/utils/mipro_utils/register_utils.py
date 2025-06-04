@@ -1,7 +1,7 @@
 
-from optimizers.engine.registry import ParamRegistry
+from ...optimizers.engine.registry import ParamRegistry
 from typing import Any, Optional, List, Dict
-from optimizers.engine.registry import OptimizableField
+from ...optimizers.engine.registry import OptimizableField
 
 class MiproRegister(ParamRegistry):
     """
