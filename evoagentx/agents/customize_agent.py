@@ -561,6 +561,7 @@ class CustomizeAgent(Agent):
             "name": self.name,
             "description": self.description,
             "prompt": customize_action.prompt,
+            "prompt_template": customize_action.prompt_template.to_dict() if customize_action.prompt_template is not None else None, 
             # "llm_config": self.llm_config.to_dict(exclude_none=True),
             "inputs": [
                 {
