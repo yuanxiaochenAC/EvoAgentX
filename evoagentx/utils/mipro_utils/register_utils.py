@@ -1,9 +1,9 @@
 
 from ...optimizers.engine.registry import ParamRegistry
 from typing import Any, Optional, List, Dict
-from ...optimizers.engine.registry import OptimizableField
+# from ...optimizers.engine.registry import OptimizableField
 
-class MiproRegister(ParamRegistry):
+class MiproRegistry(ParamRegistry):
     """
     Extended ParamRegistry that supports storing input_names and output_names
     for each optimizable field. Compatible with all original track() usages.

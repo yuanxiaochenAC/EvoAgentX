@@ -1,12 +1,13 @@
 import copy
 import asyncio
-from typing import Callable, Dict, Union, Awaitable, Type, Optional
-
+from typing import Callable, Dict, Union, Awaitable
+from pydantic import Field
 import dspy
-from dspy import Signature
 from ...optimizers.engine.registry import ParamRegistry  # 替换成你自己的路径
 from typing import List
 import warnings
+from ...prompts.template import PromptTemplate
+
 class PromptTuningModule(dspy.Module):
     """
     A DSPy module for prompt tuning that manages the interaction between predictors,
@@ -29,6 +30,8 @@ class PromptTuningModule(dspy.Module):
         A registry that maintains the tunable parameters shared between
         predictors and the program.
     """
+
+    # signature_name2register_name: Dict[str, str] = PrivateAttr()
 
     @classmethod
     def from_registry(
@@ -68,18 +71,19 @@ class PromptTuningModule(dspy.Module):
         from .signature_utils import signature_from_registry
 
         # Create signatures for each field in the registry
-        signature_dict = signature_from_registry(
+        signature_dict, signature_name2register_name = signature_from_registry(
             registry=registry,
         )
-
+        
         # Create and return the module
-        return cls(program=program, signature_dict=signature_dict, registry=registry)
+        return cls(program=program, signature_dict=signature_dict, registry=registry, signature_name2register_name=signature_name2register_name)
 
     def __init__(
         self,
         program: Union[Callable[..., dict], Callable[..., Awaitable[dict]]],
         signature_dict: Dict[str, dspy.Signature],
         registry: ParamRegistry,
+        signature_name2register_name: Dict[str, str],
     ):
         super().__init__()
         self.program = program
@@ -92,6 +96,7 @@ class PromptTuningModule(dspy.Module):
             seen.add(name)
             self.predicts.append(dspy.Predict(signature, name=name))
         self.registry = registry
+        self.signature_name2register_name = signature_name2register_name
 
     def escape_braces(self, text):
         """
@@ -138,6 +143,19 @@ class PromptTuningModule(dspy.Module):
         if verbose and modified_messages:
             warnings.warn("Prompt modified: " + " | ".join(modified_messages))
         return prompt
+    
+    def get_field_type(self, field: Field) -> str:
+        """
+        Get the type of the field.
+        """
+        return field.json_schema_extra.get('__dspy_field_type') if field.json_schema_extra.get('__dspy_field_type') else None
+
+    def is_prompt_template(self, register_name: str) -> bool:
+        """
+        Check if the register_name is a prompt template.
+        """
+        return self.registry.get(register_name) is not None and isinstance(self.registry.get(register_name), PromptTemplate)
+
 
     def sync_predict_inputs_to_program(self):
         """
@@ -157,13 +175,26 @@ class PromptTuningModule(dspy.Module):
         for predict in self.predicts:
             signature = predict.signature
             instruction = signature.instructions
-            input_names = [name for name, field in predict.signature.fields.items() if field.__class__.__name__ == 'InputField']
+            demos = predict.demos
 
-            register_name = getattr(signature, 'register_name', getattr(type(signature), 'register_name', None))
+            input_names = [name for name, field in predict.signature.fields.items() if self.get_field_type(field) == 'input']
 
-            instruction = self._validate_prompt(instruction, input_names)
+            # register_name = signature.__pydantic_extra__["register_name"] if signature.__pydantic_extra__["register_name"] else None
+            # register_name = getattr(signature, 'register_name', None)
 
-            self.registry.set(register_name, instruction)
+            signature_name = signature.__name__
+            register_name = self.signature_name2register_name[signature_name]
+ 
+            # self.registry.set(register_name, instruction)
+            if self.is_prompt_template(register_name):
+                prompt_template: PromptTemplate = self.registry.get(register_name)
+                prompt_template.instruction = instruction
+                prompt_template.demonstrations = demos
+                self.registry.set(register_name, prompt_template)
+            else:
+                instruction = self._validate_prompt(instruction, input_names)
+                self.registry.set(register_name, instruction)
+                # todo: add demos to the instruction
     
     def constrcut_trace(self, execution_data: dict) -> dict:
         """
@@ -171,10 +202,11 @@ class PromptTuningModule(dspy.Module):
         """
         trace: List[dict] = []
         for predict in self.predicts:
-            signature = predict.signature
-            instruction = signature.instructions
-            input_names = [name for name, field in predict.signature.fields.items() if field.__class__.__name__ == 'InputField']
-            output_names = [name for name, field in predict.signature.fields.items() if field.__class__.__name__ == 'OutputField']
+            # signature = predict.signature
+            # instruction = signature.instructions
+
+            input_names = [name for name, field in predict.signature.fields.items() if self.get_field_type(field) == 'input']
+            output_names = [name for name, field in predict.signature.fields.items() if self.get_field_type(field) == 'output']
 
             input_dict = {}
             output_dict = {}
@@ -242,21 +274,43 @@ class PromptTuningModule(dspy.Module):
 
         trace = self.constrcut_trace(execution_data)
 
-        dspy.settings.trace = trace
+        # Use context manager to set trace
+        if dspy.settings.trace is not None:
+            dspy_trace = dspy.settings.trace
+            dspy_trace.extend(trace)
 
         return output
 
-    def __deepcopy__(self, memo):
-        
-        # Create a new instance of the class
+    def deepcopy(self):
+        """Deep copy the module.
+
+        This is a tweak to the default python deepcopy that only deep copies `self.parameters()`, and for other
+        attributes, we just do the shallow copy.
+        """
+        try:
+            # If the instance itself is copyable, we can just deep copy it.
+            # Otherwise we will have to create a new instance and copy over the attributes one by one.
+            return copy.deepcopy(self)
+        except Exception:
+            pass
+
+        # Create an empty instance.
         new_instance = self.__class__.__new__(self.__class__)
-        # Add to memo to prevent infinite recursion
-        memo[id(self)] = new_instance
-        
-        # Deep copy all attributes except program
-        new_instance.program = self.program  # Keep original program reference
-        new_instance.predicts = copy.deepcopy(self.predicts, memo)
-        new_instance.registry = copy.deepcopy(self.registry, memo)
+        # Set attribuetes of the copied instance.
+        for attr, value in self.__dict__.items():
+            if isinstance(value, dspy.Module):
+                setattr(new_instance, attr, value.deepcopy())
+            else:
+                try:
+                    # Try to deep copy the attribute
+                    setattr(new_instance, attr, copy.deepcopy(value))
+                except Exception:
+                    try:
+                        # Fallback to shallow copy if deep copy fails
+                        setattr(new_instance, attr, copy.copy(value))
+                    except Exception:
+                        # If even the shallow copy fails, we just copy over the reference.
+                        setattr(new_instance, attr, value)
         
         return new_instance
         

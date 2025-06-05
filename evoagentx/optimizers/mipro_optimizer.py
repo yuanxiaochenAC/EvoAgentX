@@ -30,7 +30,8 @@ from ..core.callbacks import suppress_cost_logging, suppress_logger_info
 from ..models.base_model import BaseLLM 
 from ..benchmark.benchmark import Benchmark 
 from .engine.base import BaseOptimizer
-from .engine.registry import ParamRegistry, PromptTemplateRegister
+from .engine.registry import ParamRegistry
+from ..utils.mipro_utils.register_utils import MiproRegistry
 from ..agents.agent_manager import AgentManager 
 from ..workflow.workflow_graph import WorkFlowGraph
 from ..workflow.workflow import WorkFlow 
@@ -285,7 +286,7 @@ class MiproEvaluator:
             return round(100 * ncorrect / ntotal, 2), results, [score for *_, score in results]
         if return_all_scores:
             return round(100 * ncorrect / ntotal, 2), [score for *_, score in results]
-        if self.return_outputs:
+        if return_outputs:
             return round(100 * ncorrect / ntotal, 2), results
 
         return round(100 * ncorrect / ntotal, 2)
@@ -554,24 +555,9 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         if isinstance(program, dspy.Module):
             return program
         
-        # todo: convert the program to a dspy module 
-        # signature_dict = signature_from_registry(
-        #     registry=registry,
-        #     custom_output={
-        #         "test_prompt": "the output name of the test prompt",
-        #         "test_prompt_template": "the output name of the test prompt template", 
-        #     }
-        # )
         program = PromptTuningModule.from_registry(
             program=program,
             registry=registry,
-            output_field_name="output",
-            output_field_desc="The final output.",
-            output_field_type=str,
-            custom_output={
-                "test_prompt": "the output name of the test prompt",
-                "test_prompt_template": "the output name of the test prompt template", 
-            }
         )
 
         return program 
@@ -644,10 +630,8 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         self.metric = evaluator.metric
 
         # Step 1: Bootstrap few-shot examples 
-        from pdb import set_trace; set_trace()
         with suppress_cost_logging():
             demo_candidates = self._bootstrap_fewshot_examples(program, trainset, seed, teacher=None)
-        from pdb import set_trace; set_trace()
 
         # Step 2: Propose instruction candidates 
         with suppress_cost_logging():
@@ -661,7 +645,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
                 self.tip_aware_proposer,
                 self.fewshot_aware_proposer,
             )
-        
+
         # Step 3: Find optimal prompt parameters 
         with suppress_cost_logging():
             best_program = self._optimize_prompt_parameters(
@@ -1001,6 +985,40 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
 
         return best_program
     
+    def _select_and_insert_instructions_and_demos(
+        self,
+        candidate_program: Any,
+        instruction_candidates: Dict[int, List[str]],
+        demo_candidates: Optional[List],
+        trial: optuna.trial.Trial,
+        trial_logs: Dict,
+        trial_num: int,
+    ) -> List[str]:
+        chosen_params = []
+        raw_chosen_params = {}
+
+        for i, predictor in enumerate(candidate_program.predictors()):
+            # Select instruction
+            instruction_idx = trial.suggest_categorical(
+                f"{i}_predictor_instruction", range(len(instruction_candidates[i]))
+            )
+            selected_instruction = instruction_candidates[i][instruction_idx]
+            # updated_signature = get_signature(predictor).with_instructions(selected_instruction)
+            # set_signature(predictor, updated_signature)
+            predictor.signature.instructions = selected_instruction 
+            trial_logs[trial_num][f"{i}_predictor_instruction"] = instruction_idx
+            chosen_params.append(f"Predictor {i}: Instruction {instruction_idx}")
+            raw_chosen_params[f"{i}_predictor_instruction"] = instruction_idx
+            # Select demos if available
+            if demo_candidates:
+                demos_idx = trial.suggest_categorical(f"{i}_predictor_demos", range(len(demo_candidates[i])))
+                predictor.demos = demo_candidates[i][demos_idx]
+                trial_logs[trial_num][f"{i}_predictor_demos"] = demos_idx
+                chosen_params.append(f"Predictor {i}: Few-Shot Set {demos_idx}")
+                raw_chosen_params[f"{i}_predictor_demos"] = instruction_idx
+
+        return chosen_params, raw_chosen_params
+    
     def _log_minibatch_eval(
         self,
         score,
@@ -1248,18 +1266,39 @@ class WorkFlowGraphProgram:
 
 class MiproEvaluatorWrapper(MiproEvaluator): 
 
-    def __init__(self, evaluator: Evaluator, benchmark: Benchmark, metric_name: str = None):
+    def __init__(
+        self, 
+        evaluator: Evaluator, 
+        benchmark: Benchmark, 
+        metric_name: str = None,
+        return_all_scores: bool = False, 
+        return_outputs: bool = False, 
+    ):
 
         self.evaluator = evaluator 
         self.benchmark = benchmark 
         self.metric_name = metric_name 
+        self.return_all_scores = return_all_scores
+        self.return_outputs = return_outputs
 
     def metric(self, example: dspy.Example, prediction: Any, *args, **kwargs):
         return super().metric(example, prediction, *args, **kwargs)
 
-    def __call__(self, program: WorkFlowGraphProgram, evalset: List[dspy.Example], **kwargs) -> float: 
+    def __call__(self, program: PromptTuningModule, evalset: List[dspy.Example], **kwargs) -> float: 
+
+        # sync the candidate prompts and instructions to the workflow graph
+        program.sync_predict_inputs_to_program()
+
+        return_all_scores = kwargs.get("return_all_scores", None) or self.return_all_scores
+        return_outputs = kwargs.get("return_outputs", None) or self.return_outputs
         
-        graph = program.graph
+        if isinstance(program, PromptTuningModule):
+            graph = program.program.graph 
+        elif isinstance(program, WorkFlowGraphProgram):
+            graph = program.graph
+        else:
+            raise ValueError(f"Invalid program type: {type(program)}. Must be PromptTuningModule or WorkFlowGraphProgram.")
+        
         self.evaluator._evaluation_records.clear()
 
         # update agents
@@ -1278,7 +1317,28 @@ class MiproEvaluatorWrapper(MiproEvaluator):
             score = self._extract_score_from_dict(metrics)
         else:
             score = metrics 
-        
+
+        # extract all outputs and predictions 
+        all_scores, all_predictions = [], []
+        for example in data:
+            example_id = self.benchmark.get_id(example=example)
+            evaluation_record = self.evaluator._evaluation_records.get(example_id, None)
+            if evaluation_record is None:
+                all_scores.append(0.0)
+                all_predictions.append(None)
+            else:
+                example_metrics = evaluation_record["metrics"]
+                example_score = self._extract_score_from_dict(example_metrics) if isinstance(example_metrics, dict) else example_metrics
+                all_scores.append(example_score)
+                all_predictions.append(evaluation_record["prediction"])
+
+        if return_all_scores and return_outputs:
+            return score, all_predictions, all_scores
+        if return_all_scores:
+            return score, all_scores 
+        if return_outputs:
+            return score, all_predictions
+
         return score 
 
 
@@ -1352,9 +1412,14 @@ class WorkFlowMiproOptimizer(MiproOptimizer):
     
     def _register_optimizable_parameters(self, program: WorkFlowGraphProgram):
 
-        registry = PromptTemplateRegister()
-        registry.track(program, "graph.nodes[0].agents[0]['prompt_template']", name="test_prompt")# todo 
-        
+        registry = MiproRegistry()
+        registry.track(
+            root_or_obj=program,
+            path_or_attr="graph.nodes[0].agents[0]['prompt_template']", 
+            name="test_prompt",
+            input_names=["problem"],
+            output_names=["solution"]
+        ) # todo 
         
         return registry
     

@@ -1,0 +1,55 @@
+{
+  "predicts[0]": {
+    "traces": [],
+    "train": [],
+    "demos": [
+      {
+        "augmented": true,
+        "problem": "A committee is to be made up from a group of 10 candidates. The committee must consist of a chairman and some (not necessarily nonzero) number of members-at-large. How many ways can the committee be chosen? (For example, suppose that Alex is chair while Betty, Carl, and D'Angelo make up the committee. This counts as the same as Alex being chair while Carl, Betty, and D'Angelo make up the committee. It is not the same as Betty being the chair, with Alex, Carl, and D'Angelo making up the committee. It is also not the same as Alex being chair with the committee consisting of Betty and Carl.)",
+        "solution": "To determine the number of ways to form the committee, we can break down the problem into two parts: selecting the chairman and selecting the members-at-large.\n\n1. **Choosing the Chairman**:\n   Since there are 10 candidates, we have 10 choices for the chairman.\n\n2. **Choosing the Members-at-Large**:\n   After selecting the chairman, any of the remaining candidates can either be included in the committee as members-at-large or not. For each of the remaining 9 candidates, there are 2 possibilities: either they are included or they are not included.\n\n   Thus, for the members-at-large, we have:\n   - For each of the 9 remaining candidates, there are 2 choices (included or not).\n   - Therefore, the total number of combinations for the members-at-large is \\(2^9\\).\n\n3. **Calculating the Total Ways**:\n   The total number of ways to form the committee is the product of the choices for the chairman and the choices for the members-at-large:\n\n   \\[\n   \\text{Total Ways} = (\\text{Choices for Chairman}) \\times (\\text{Choices for Members-at-Large}) = 10 \\times 2^9\n   \\]\n\n   Now, we calculate \\(2^9\\):\n\n   \\[\n   2^9 = 512\n   \\]\n\n   Hence, the total number of ways to form the committee is:\n\n   \\[\n   \\text{Total Ways} = 10 \\times 512 = 5120\n   \\]\n\nSo, the total number of ways to choose the committee is 5120.\n\n## Final Answer\n5120"
+      },
+      {
+        "id": "test-1601",
+        "problem": "Compute $817_9 - 145_9 - 266_9$.  Express your answer in base 9.",
+        "level": "Level 4",
+        "type": "Number Theory",
+        "solution": "$817_9 - 145_9 - 266_9 = 817_9 - (145_9 + 266_9) = 817_9 - 422_9 = \\boxed{385_9}$."
+      },
+      {
+        "id": "test-590",
+        "problem": "The function $f(x)$ satisfies\n\\[f(x + y) = f(x) + f(y) + 2xy\\]for all real numbers $x$ and $y.$  If $f(1) = 4,$ then find $f(8).$",
+        "level": "Level 3",
+        "type": "Intermediate Algebra",
+        "solution": "Setting $x = y,$ we get\n\\[f(2x) = 2f(x) + 2x^2.\\]Then\n\\begin{align*}\nf(2) &= 2f(1) + 2 \\cdot 1^2 = 10, \\\\\nf(4) &= 2f(2) + 2 \\cdot 2^2 = 28, \\\\\nf(8) &= 2f(4) + 2 \\cdot 4^2 = \\boxed{88}.\n\\end{align*}"
+      },
+      {
+        "id": "test-1056",
+        "problem": "Let $f : \\mathbb{Q} \\to \\mathbb{Q}$ be a function such that $f(1) = 2$ and\n\\[f(xy) = f(x) f(y) - f(x + y) + 1\\]for all $x,$ $y \\in \\mathbb{Q}.$\n\nLet $n$ be the number of possible values of $f \\left( \\frac{1}{2} \\right),$ and let $s$ be the sum of all possible values of $f \\left( \\frac{1}{2} \\right).$  Find $n \\times s.$",
+        "level": "Level 4",
+        "type": "Intermediate Algebra",
+        "solution": "Setting $y = 1,$ we get\n\\[f(x) = 2f(x) - f(x + 1) + 1,\\]so $f(x + 1) = f(x) + 1$ for all $x \\in \\mathbb{Q}.$  Then\n\\begin{align*}\nf(x + 2) &= f(x + 1) + 1 = f(x) + 2, \\\\\nf(x + 3) &= f(x + 2) + 1 = f(x) + 3,\n\\end{align*}and so on.  In general,\n\\[f(x + n) = f(x) + n\\]for all $x \\in \\mathbb{Q}$ and all integers $n.$\n\nSince $f(1) = 2,$ it follows that\n\\[f(n) = n + 1\\]for all integers $n.$\n\nLet $x = \\frac{a}{b},$ where $a$ and $b$ are integers and $b \\neq 0.$  Setting $x = \\frac{a}{b}$ and $y = b,$ we get\n\\[f(a) = f \\left( \\frac{a}{b} \\right) f(b) - f \\left( \\frac{a}{b} + b \\right) + 1.\\]Since $f(a) = a + 1,$ $f(b) = b + 1,$ and $f \\left( \\frac{a}{b} + b \\right) = f \\left( \\frac{a}{b} \\right) + b,$\n\\[a + 1 = (b + 1) f \\left( \\frac{a}{b} \\right) - f \\left( \\frac{a}{b} \\right) - b + 1.\\]Solving, we find\n\\[f \\left( \\frac{a}{b} \\right) = \\frac{a + b}{b} = \\frac{a}{b} + 1.\\]Therefore, $f(x) = x + 1$ for all $x \\in \\mathbb{Q}.$\n\nWe can check that this function works.  Therefore, $n = 1$ and $s = \\frac{3}{2},$ so $n \\times s = \\boxed{\\frac{3}{2}}.$"
+      }
+    ],
+    "signature": {
+      "instructions": "You are a mathematical problem solver. For the following problem, let's work through it step by step to find the solution. Carefully derive the answer using logical reasoning and appropriate mathematical techniques. Problem: {problem}",
+      "fields": [
+        {
+          "prefix": "Problem:",
+          "description": "The Input for prompt `test_prompt`."
+        },
+        {
+          "prefix": "Solution:",
+          "description": "The Output for prompt `test_prompt`."
+        }
+      ]
+    },
+    "lm": null
+  },
+  "metadata": {
+    "dependency_versions": {
+      "python": "3.10",
+      "dspy": "2.6.24",
+      "cloudpickle": "3.1"
+    }
+  }
+}

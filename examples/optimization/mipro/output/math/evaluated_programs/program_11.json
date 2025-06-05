@@ -1,0 +1,49 @@
+{
+  "predicts[0]": {
+    "traces": [],
+    "train": [],
+    "demos": [
+      {
+        "augmented": true,
+        "problem": "Every student in the senior class is taking history or science. There are $200$ seniors in the class. If there are $126$ seniors taking history and $129$ seniors taking science, how many students are taking both history and science?",
+        "solution": "To find the number of students taking both history and science, we will use the principle of inclusion-exclusion.\n\nLet:\n- \\( H \\) = number of students taking history = 126\n- \\( S \\) = number of students taking science = 129\n- \\( B \\) = number of students taking both history and science\n\nAccording to the principle of inclusion-exclusion, the total number of students taking at least one of the subjects (history or science) can be expressed as:\n\n\\[\nH + S - B\n\\]\n\nGiven that every student is taking either history, science, or both, we know:\n\n\\[\nH + S - B = 200\n\\]\n\nSubstituting the values for \\( H \\) and \\( S \\):\n\n\\[\n126 + 129 - B = 200\n\\]\n\nNow, let's simplify the equation:\n\n\\[\n255 - B = 200\n\\]\n\nNext, we solve for \\( B \\):\n\n\\[\nB = 255 - 200\n\\]\n\\[\nB = 55\n\\]\n\nThus, the number of students taking both history and science is:\n\n\\[\n\\boxed{55}\n\\]"
+      },
+      {
+        "augmented": true,
+        "problem": "The product $ab = 1200$, $a$ is an integer, and $b$ is an odd integer. What is the largest possible value of $b$?",
+        "solution": "To find the largest possible odd integer \\( b \\) such that \\( ab = 1200 \\) where \\( a \\) is also an integer, we first need to express \\( a \\) in terms of \\( b \\):\n\n\\[\na = \\frac{1200}{b}\n\\]\n\nNext, since \\( b \\) is an odd integer, we need to factor \\( 1200 \\) to find its odd divisors.\n\n### Step 1: Factor 1200\nFirst, we find the prime factorization of \\( 1200 \\).\n\n\\[\n1200 = 12 \\times 100 = (3 \\times 2^2) \\times (10^2) = 3 \\times 2^2 \\times (2 \\times 5)^2 = 3 \\times 2^4 \\times 5^2\n\\]\n\nSo, the complete prime factorization is:\n\n\\[\n1200 = 2^4 \\times 3^1 \\times 5^2\n\\]\n\n### Step 2: Identify Odd Factors\nTo find the odd factors of \\( 1200 \\), we ignore the factor \\( 2^4 \\) since we only want combinations of \\( 3^1 \\) and \\( 5^2 \\):\n\nThe factors formed by \\( 3^1 \\times 5^2 \\) can be calculated as follows:\n\n\\[\n3^0, 3^1 \\quad \\text{(which gives } 1 \\text{ or } 3\\text{)}\n\\]\n\\[\n5^0, 5^1, 5^2 \\quad \\text{(which gives } 1, 5, \\text{ or } 25\\text{)}\n\\]\n\nNow, we take all combinations of these factors:\n\n- \\( 1 \\) (from \\( 3^0 \\)) and \\( 1 \\) (from \\( 5^0 \\)) gives \\( 1 \\)\n- \\( 1 \\) (from \\( 3^0 \\)) and \\( 5 \\) (from \\( 5^1 \\)) gives \\( 5 \\)\n- \\( 1 \\) (from \\( 3^0 \\)) and \\( 25 \\) (from \\( 5^2 \\)) gives \\( 25 \\)\n- \\( 3 \\) (from \\( 3^1 \\)) and \\( 1 \\) (from \\( 5^0 \\)) gives \\( 3 \\)\n- \\( 3 \\) (from \\( 3^1 \\)) and \\( 5 \\) (from \\( 5^1 \\)) gives \\( 15 \\)\n- \\( 3 \\) (from \\( 3^1 \\)) and \\( 25 \\) (from \\( 5^2 \\)) gives \\( 75 \\)\n\n### Step 3: List Odd Factors\nThe complete list of odd factors of \\( 1200 \\) is:\n\n\\[\n1, 3, 5, 15, 25, 75\n\\]\n\n### Step 4: Find the Largest Odd Factor\nThe largest odd factor from this list is:\n\n\\[\n75\n\\]\n\n### Conclusion\nTherefore, the largest possible value of \\( b \\) is:\n\n\\[\n\\boxed{75}\n\\]"
+      },
+      {
+        "augmented": true,
+        "problem": "A committee is to be made up from a group of 10 candidates. The committee must consist of a chairman and some (not necessarily nonzero) number of members-at-large. How many ways can the committee be chosen? (For example, suppose that Alex is chair while Betty, Carl, and D'Angelo make up the committee. This counts as the same as Alex being chair while Carl, Betty, and D'Angelo make up the committee. It is not the same as Betty being the chair, with Alex, Carl, and D'Angelo making up the committee. It is also not the same as Alex being chair with the committee consisting of Betty and Carl.)",
+        "solution": "To determine the number of ways to form the committee consisting of a chairman and some members-at-large from a group of 10 candidates, we can follow these steps:\n\n1. **Choose the Chairman**: Since we have 10 candidates, we can choose any one of them to be the chairman. This gives us 10 options for the chairman.\n\n2. **Choose Members-at-Large**: After selecting the chairman, we can select any number (including zero) from the remaining 9 candidates to be members-at-large. The number of ways to choose a subset of these 9 candidates can be represented using the powerset, which includes all possible combinations of these candidates.\n\n   Each candidate can either be included in the subset or not. Therefore, for 9 candidates, the total number of subsets is \\(2^n\\), where \\(n\\) is the number of candidates. In this case, \\(n = 9\\), so the number of subsets is:\n   \\[\n   2^9 = 512\n   \\]\n   This count includes the empty subset (choosing no members-at-large at all).\n\n3. **Total Combinations**: Now we multiply the options for choosing the chairman by the number of ways to choose the members-at-large:\n   \\[\n   \\text{Total ways} = \\text{(ways to choose chairman)} \\times \\text{(ways to choose members-at-large)} = 10 \\times 512 = 5120\n   \\]\n\nThus, the total number of ways to choose the committee is \\( \\boxed{5120} \\)."
+      },
+      {
+        "augmented": true,
+        "problem": "The function $f(x)$ satisfies\n\\[f(x + y) = f(x) + f(y) + 2xy\\]for all real numbers $x$ and $y.$  If $f(1) = 4,$ then find $f(8).$",
+        "solution": "To solve the problem, we start with the functional equation given:\n\n\\[\nf(x + y) = f(x) + f(y) + 2xy.\n\\]\n\nWe need to find a general form for the function \\( f(x) \\). Let's consider substituting \\( y = 0 \\):\n\n\\[\nf(x + 0) = f(x) + f(0) + 2x \\cdot 0,\n\\]\nwhich simplifies to:\n\n\\[\nf(x) = f(x) + f(0).\n\\]\n\nFrom this, we conclude that:\n\n\\[\nf(0) = 0.\n\\]\n\nNext, let's substitute \\( y = 1 \\) into the original equation:\n\n\\[\nf(x + 1) = f(x) + f(1) + 2x \\cdot 1.\n\\]\nThis gives us:\n\n\\[\nf(x + 1) = f(x) + 4 + 2x.\n\\]\n\nNow, we can explore the behavior of \\( f(x) \\) for some small integer values. Let's calculate:\n\n1. For \\( x = 1 \\):\n\n\\[\nf(1 + 1) = f(1) + 4 + 2 \\cdot 1 \\implies f(2) = 4 + 4 + 2 = 10.\n\\]\n\n2. For \\( x = 2 \\):\n\n\\[\nf(2 + 1) = f(2) + 4 + 2 \\cdot 2 \\implies f(3) = 10 + 4 + 4 = 18.\n\\]\n\n3. For \\( x = 3 \\):\n\n\\[\nf(3 + 1) = f(3) + 4 + 2 \\cdot 3 \\implies f(4) = 18 + 4 + 6 = 28.\n\\]\n\n4. For \\( x = 4 \\):\n\n\\[\nf(4 + 1) = f(4) + 4 + 2 \\cdot 4 \\implies f(5) = 28 + 4 + 8 = 40.\n\\]\n\n5. For \\( x = 5 \\):\n\n\\[\nf(5 + 1) = f(5) + 4 + 2 \\cdot 5 \\implies f(6) = 40 + 4 + 10 = 54.\n\\]\n\n6. For \\( x = 6 \\):\n\n\\[\nf(6 + 1) = f(6) + 4 + 2 \\cdot 6 \\implies f(7) = 54 + 4 + 12 = 70.\n\\]\n\n7. For \\( x = 7 \\):\n\n\\[\nf(7 + 1) = f(7) + 4 + 2 \\cdot 7 \\implies f(8) = 70 + 4 + 14 = 88.\n\\]\n\nThus, we find that:\n\n\\[\nf(8) = 88.\n\\]\n\nNow let's make sure we've derived a consistent function that fits our findings. Observing the values we've computed, we can propose that:\n\n\\[\nf(x) = x^2 + 3x,\n\\]\nbased on the recurrence relation and validations against known values. \n\nTo verify:\n\n1. \\( f(1) = 1^2 + 3 \\cdot 1 = 1 + 3 = 4 \\) (correct).\n2. \\( f(2) = 2^2 + 3 \\cdot 2 = 4 + 6 = 10 \\) (correct).\n3. \\( f(3) = 3^2 + 3 \\cdot 3 = 9 + 9 = 18 \\) (correct).\n4. \\( f(4) = 4^2 + 3 \\cdot 4 = 16 + 12 = 28 \\) (correct).\n5. And so on...\n\nSince our function checks out with all computations, the final answer is:\n\n\\[\n\\boxed{88}.\n\\]"
+      }
+    ],
+    "signature": {
+      "instructions": "In the context of a high-stakes academic competition, you are presented with a challenging mathematical problem that requires deep logical reasoning and advanced problem-solving skills. As a contestant, your task is to find the solution to the given problem step by step. Begin by carefully examining the problem statement and identifying any relevant mathematical principles or techniques that can be applied. Utilize systematic reasoning to derive the solution, ensuring that each step is clear and concise. Remember, your solution will be evaluated for accuracy and clarity, so take your time to articulate each part of your reasoning effectively.\n\nNow, given the problem, please provide your solution.",
+      "fields": [
+        {
+          "prefix": "Problem:",
+          "description": "The Input for prompt `test_prompt`."
+        },
+        {
+          "prefix": "Solution:",
+          "description": "The Output for prompt `test_prompt`."
+        }
+      ]
+    },
+    "lm": null
+  },
+  "metadata": {
+    "dependency_versions": {
+      "python": "3.10",
+      "dspy": "2.6.24",
+      "cloudpickle": "3.1"
+    }
+  }
+}

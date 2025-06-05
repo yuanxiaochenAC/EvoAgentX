@@ -1,0 +1,55 @@
+{
+  "predicts[0]": {
+    "traces": [],
+    "train": [],
+    "demos": [
+      {
+        "augmented": true,
+        "problem": "What is $0.8\\overline{4}-0.\\overline{4}$? Express your answer as a common fraction.",
+        "solution": "\nFirst, let's convert the repeating decimals into fractions.\n\n1. **Convert \\(0.8\\overline{4}\\) to a fraction:**\n\n   Let \\(x = 0.8\\overline{4}\\).\n   This means \\(x = 0.844444...\\)\n\n   To eliminate the repeating part:\n   Multiply by \\(10\\) (to move the decimal point one place right) and we have:\n   \\[\n   10x = 8.44444...\n   \\]\n\n   Now, multiply by \\(100\\) (to shift over by two digits):\n   \\[\n   100x = 84.44444...\n   \\]\n\n   Now subtract the first equation from the second:\n   \\[\n   100x - 10x = 84.44444... - 8.44444...\n   \\]\n   \\[\n   90x = 76\n   \\]\n   \\[\n   x = \\frac{76}{90}\n   \\]\n   We can simplify this:\n   \\[\n   x = \\frac{38}{45}\n   \\]\n\n   Thus, \\(0.8\\overline{4} = \\frac{38}{45}\\).\n\n2. **Convert \\(0.\\overline{4}\\) to a fraction:**\n\n   Let \\(y = 0.\\overline{4}\\).\n   This means \\(y = 0.44444...\\)\n\n   Multiply by \\(10\\):\n   \\[\n   10y = 4.44444...\n   \\]\n\n   Now, subtracting the initial equation from this:\n   \\[\n   10y - y = 4.44444... - 0.44444...\n   \\]\n   \\[\n   9y = 4\n   \\]\n   \\[\n   y = \\frac{4}{9}\n   \\]\n\n   Thus, \\(0.\\overline{4} = \\frac{4}{9}\\).\n\n3. **Now we subtract \\(0.8\\overline{4} - 0.\\overline{4}\\):**\n   This translates to:\n   \\[\n   \\frac{38}{45} - \\frac{4}{9}\n   \\]\n\n   To perform this subtraction, we need a common denominator. The least common multiple of \\(45\\) and \\(9\\) is \\(45\\).\n\n   To subtract, convert \\(\\frac{4}{9}\\) to have a denominator of \\(45\\):\n   \\[\n   \\frac{4}{9} = \\frac{4 \\times 5}{9 \\times 5} = \\frac{20}{45}\n   \\]\n\n   Now we can subtract:\n   \\[\n   \\frac{38}{45} - \\frac{20}{45} = \\frac{38 - 20}{45} = \\frac{18}{45}\n   \\]\n\n   Finally, simplify \\(\\frac{18}{45}\\):\n   Both numbers can be divided by \\(9\\):\n   \\[\n   \\frac{18 \\div 9}{45 \\div 9} = \\frac{2}{5}\n   \\]\n\nThus, the final answer is:\n\n\\[\n\\boxed{\\frac{2}{5}}\n\\]"
+      },
+      {
+        "id": "test-1056",
+        "problem": "Let $f : \\mathbb{Q} \\to \\mathbb{Q}$ be a function such that $f(1) = 2$ and\n\\[f(xy) = f(x) f(y) - f(x + y) + 1\\]for all $x,$ $y \\in \\mathbb{Q}.$\n\nLet $n$ be the number of possible values of $f \\left( \\frac{1}{2} \\right),$ and let $s$ be the sum of all possible values of $f \\left( \\frac{1}{2} \\right).$  Find $n \\times s.$",
+        "level": "Level 4",
+        "type": "Intermediate Algebra",
+        "solution": "Setting $y = 1,$ we get\n\\[f(x) = 2f(x) - f(x + 1) + 1,\\]so $f(x + 1) = f(x) + 1$ for all $x \\in \\mathbb{Q}.$  Then\n\\begin{align*}\nf(x + 2) &= f(x + 1) + 1 = f(x) + 2, \\\\\nf(x + 3) &= f(x + 2) + 1 = f(x) + 3,\n\\end{align*}and so on.  In general,\n\\[f(x + n) = f(x) + n\\]for all $x \\in \\mathbb{Q}$ and all integers $n.$\n\nSince $f(1) = 2,$ it follows that\n\\[f(n) = n + 1\\]for all integers $n.$\n\nLet $x = \\frac{a}{b},$ where $a$ and $b$ are integers and $b \\neq 0.$  Setting $x = \\frac{a}{b}$ and $y = b,$ we get\n\\[f(a) = f \\left( \\frac{a}{b} \\right) f(b) - f \\left( \\frac{a}{b} + b \\right) + 1.\\]Since $f(a) = a + 1,$ $f(b) = b + 1,$ and $f \\left( \\frac{a}{b} + b \\right) = f \\left( \\frac{a}{b} \\right) + b,$\n\\[a + 1 = (b + 1) f \\left( \\frac{a}{b} \\right) - f \\left( \\frac{a}{b} \\right) - b + 1.\\]Solving, we find\n\\[f \\left( \\frac{a}{b} \\right) = \\frac{a + b}{b} = \\frac{a}{b} + 1.\\]Therefore, $f(x) = x + 1$ for all $x \\in \\mathbb{Q}.$\n\nWe can check that this function works.  Therefore, $n = 1$ and $s = \\frac{3}{2},$ so $n \\times s = \\boxed{\\frac{3}{2}}.$"
+      },
+      {
+        "id": "test-1601",
+        "problem": "Compute $817_9 - 145_9 - 266_9$.  Express your answer in base 9.",
+        "level": "Level 4",
+        "type": "Number Theory",
+        "solution": "$817_9 - 145_9 - 266_9 = 817_9 - (145_9 + 266_9) = 817_9 - 422_9 = \\boxed{385_9}$."
+      },
+      {
+        "id": "test-2587",
+        "problem": "Every student in the senior class is taking history or science. There are $200$ seniors in the class. If there are $126$ seniors taking history and $129$ seniors taking science, how many students are taking both history and science?",
+        "level": "Level 2",
+        "type": "Prealgebra",
+        "solution": "Let $x$ be the number of seniors taking both history and science. We see $126$ seniors are taking history and $129$ seniors are taking science. If we add those numbers up, we still have to subtract the seniors that are taking both because we counted them twice.\n\nSo there is a total of $126+129-x=200$ students in the senior class. Solving for $x,$ we get there are $\\boxed{55}$ seniors taking both history and science.\n\nWe can also solve this problem with the Venn Diagram below. Let there be $x$ students taking both history and science: [asy]\nlabel(\"History\", (2,67));\nlabel(\"Science\", (80,67));\ndraw(Circle((30,45), 22));\ndraw(Circle((58, 45), 22));\nlabel(\"$x$\", (44, 45));\nlabel(scale(0.8)*\"$126-x$\",(28,58));\nlabel(scale(0.8)*\"$129-x$\",(63,58));\n[\/asy] There are $200$ seniors total, so we have $x+ (126-x) + (129-x) = 200.$ Simplifying gives $255-x = 200,$ so $x=\\boxed{55}.$"
+      }
+    ],
+    "signature": {
+      "instructions": "Let's think step by step to answer the math question.",
+      "fields": [
+        {
+          "prefix": "Problem:",
+          "description": "The Input for prompt `test_prompt`."
+        },
+        {
+          "prefix": "Solution:",
+          "description": "The Output for prompt `test_prompt`."
+        }
+      ]
+    },
+    "lm": null
+  },
+  "metadata": {
+    "dependency_versions": {
+      "python": "3.10",
+      "dspy": "2.6.24",
+      "cloudpickle": "3.1"
+    }
+  }
+}

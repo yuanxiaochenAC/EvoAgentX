@@ -1,0 +1,53 @@
+{
+  "predicts[0]": {
+    "traces": [],
+    "train": [],
+    "demos": [
+      {
+        "augmented": true,
+        "problem": "The function $f(x)$ satisfies\n\\[f(x + y) = f(x) + f(y) + 2xy\\]for all real numbers $x$ and $y.$  If $f(1) = 4,$ then find $f(8).$",
+        "solution": "To solve the functional equation \\(f(x + y) = f(x) + f(y) + 2xy\\) and find \\(f(8)\\), we will first analyze the given equation and find a general form for \\(f(x)\\).\n\n1. **Starting with the equation:**\n   We know that \\(f(x + y) = f(x) + f(y) + 2xy\\). We'll begin by substituting specific values for \\(x\\) and \\(y\\).\n\n2. **Substituting \\(x = 0\\):**\n   Let \\(y = 0\\):\n   \\[\n   f(x + 0) = f(x) + f(0) + 2x \\cdot 0\n   \\]\n   Hence,\n   \\[\n   f(x) = f(x) + f(0)\n   \\]\n   This implies that \\(f(0) = 0\\).\n\n3. **Substituting \\(y = 1\\):**\n   Now, let \\(y = 1\\):\n   \\[\n   f(x + 1) = f(x) + f(1) + 2x \\cdot 1\n   \\]\n   We already know \\(f(1) = 4\\). Therefore,\n   \\[\n   f(x + 1) = f(x) + 4 + 2x\n   \\]\n\n4. **Finding a pattern:**\n   We can compute some values recursively using the equation found above.\n   \n   - For \\(x = 1\\):\n     \\[\n     f(2) = f(1 + 1) = f(1) + 4 + 2 \\cdot 1 = 4 + 4 + 2 = 10.\n     \\]\n\n   - For \\(x = 2\\):\n     \\[\n     f(3) = f(2 + 1) = f(2) + 4 + 2 \\cdot 2 = 10 + 4 + 4 = 18.\n     \\]\n\n   - For \\(x = 3\\):\n     \\[\n     f(4) = f(3 + 1) = f(3) + 4 + 2 \\cdot 3 = 18 + 4 + 6 = 28.\n     \\]\n\n   - For \\(x = 4\\):\n     \\[\n     f(5) = f(4 + 1) = f(4) + 4 + 2 \\cdot 4 = 28 + 4 + 8 = 40.\n     \\]\n\n   - For \\(x = 5\\):\n     \\[\n     f(6) = f(5 + 1) = f(5) + 4 + 2 \\cdot 5 = 40 + 4 + 10 = 54.\n     \\]\n\n   - For \\(x = 6\\):\n     \\[\n     f(7) = f(6 + 1) = f(6) + 4 + 2 \\cdot 6 = 54 + 4 + 12 = 70.\n     \\]\n\n   - For \\(x = 7\\):\n     \\[\n     f(8) = f(7 + 1) = f(7) + 4 + 2 \\cdot 7 = 70 + 4 + 14 = 88.\n     \\]\n\n5. **Final value for \\(f(8)\\):**\n   Thus, we find that\n   \\[\n   f(8) = 88.\n   \\]\n\nThe answer is \\(f(8) = 88\\). \n\nTherefore, the final solution is:\n\\[\n\\boxed{88}\n\\]"
+      },
+      {
+        "augmented": true,
+        "problem": "Every student in the senior class is taking history or science. There are $200$ seniors in the class. If there are $126$ seniors taking history and $129$ seniors taking science, how many students are taking both history and science?",
+        "solution": "Let's denote:\n- \\( H \\): the number of students taking history\n- \\( S \\): the number of students taking science\n- \\( B \\): the number of students taking both history and science\n- \\( U \\): the total number of students\n\nFrom the problem statement, we know:\n- \\( U = 200 \\)\n- \\( H = 126 \\)\n- \\( S = 129 \\)\n\nWe can use the principle of inclusion-exclusion to find the number of students taking both subjects:\n\n\\[\nU = H + S - B\n\\]\n\nPlugging in the numbers we have:\n\n\\[\n200 = 126 + 129 - B\n\\]\n\nNow, simplifying the right-hand side:\n\n\\[\n200 = 255 - B\n\\]\n\nTo isolate \\( B \\), we can rearrange the equation:\n\n\\[\nB = 255 - 200\n\\]\n\\[\nB = 55\n\\]\n\nTherefore, the number of students taking both history and science is \\( \\boxed{55} \\)."
+      },
+      {
+        "id": "test-706",
+        "problem": "Find the constant $k$ so that the graphs of the parabolas $y = x^2 + k$ and $x = y^2 + k$ are tangent to each other.",
+        "level": "Level 4",
+        "type": "Intermediate Algebra",
+        "solution": "Note that the graphs of $y = x^2 + k$ and $x = y^2 + k$ are reflections of each other in the line $y = x,$ so if they are tangent to each other, then the point of tangency must lie on the line $y = x.$  Furthermore, both graphs will be tangent to the line $y = x.$\n\n[asy]\nunitsize(1 cm);\n\nreal func (real x) {\n  return(x^2 + 1\/4);\n}\n\ndraw(graph(func,-2,2));\ndraw(reflect((0,0),(1,1))*graph(func,-2,2));\ndraw((-2,-2)--(4,4),dashed);\n\nlabel(\"$y = x$\", (4,4), NE);\nlabel(\"$y = x^2 + k$\", (2,4 + 1\/4), N);\nlabel(\"$x = y^2 + k$\", (4 + 1\/4,2), E);\n[\/asy]\n\nThis means that the quadratic $x^2 + k = x$ will have a double root.  We can arrange the equation to get\n\\[x^2 - x + k = 0.\\]We want the discriminant of this quadratic to be 0, giving us $1 - 4k = 0,$ or $k = \\boxed{\\frac{1}{4}}.$"
+      },
+      {
+        "id": "test-2414",
+        "problem": "The complex number $z = re^{i \\theta}$ satisfies\n\\[\\left| 2z + \\frac{1}{z} \\right| = 1.\\]Find the minimum value of $\\sin^2 \\theta.$",
+        "level": "Level 5",
+        "type": "Precalculus",
+        "solution": "Setting $z = re^{i \\theta}$ in the given equation, we get\n\\[\\left| 2re^{i \\theta} + \\frac{1}{r} e^{-i \\theta} \\right| = 1.\\]Then\n\\[\\left| 2r \\cos \\theta + 2ri \\sin \\theta + \\frac{1}{r} \\cos \\theta - \\frac{i}{r} \\sin \\theta \\right| = 1.\\]Thus,\n\\[\\left( 2r \\cos \\theta + \\frac{1}{r} \\cos \\theta \\right)^2 + \\left( 2r \\sin \\theta - \\frac{1}{r} \\sin \\theta \\right)^2 = 1.\\]Expanding, we get\n\\[4r^2 \\cos^2 \\theta + 4 \\cos^2 \\theta + \\frac{1}{r^2} \\cos^2 \\theta + 4r^2 \\sin^2 \\theta - 4 \\sin^2 \\theta + \\frac{1}{r^2} \\sin^2 \\theta = 1,\\]which simplifies to\n\\[4r^2 + 4 \\cos^2 \\theta - 4 \\sin^2 \\theta + \\frac{1}{r^2} = 1.\\]Since $\\cos^2 \\theta = 1 - \\sin^2 \\theta,$\n\\[4r^2 + 4 - 4 \\sin^2 \\theta - 4 \\sin^2 \\theta + \\frac{1}{r^2} = 1,\\]so\n\\[8 \\sin^2 \\theta = 4r^2 + \\frac{1}{r^2} + 3.\\]By AM-GM, $4r^2 + \\frac{1}{r^2} \\ge 2 \\sqrt{4r^2 \\cdot \\frac{1}{r^2}} = 4,$ so $8 \\sin^2 \\ge 7,$ or\n\\[\\sin^2 \\theta \\ge \\frac{7}{8}.\\]Equality occurs when $r = \\frac{1}{\\sqrt{2}},$ so the minimum value of $\\sin^2 \\theta$ is $\\boxed{\\frac{7}{8}}.$"
+      }
+    ],
+    "signature": {
+      "instructions": "Let's think step by step to answer the math question.",
+      "fields": [
+        {
+          "prefix": "Problem:",
+          "description": "The Input for prompt `test_prompt`."
+        },
+        {
+          "prefix": "Solution:",
+          "description": "The Output for prompt `test_prompt`."
+        }
+      ]
+    },
+    "lm": null
+  },
+  "metadata": {
+    "dependency_versions": {
+      "python": "3.10",
+      "dspy": "2.6.24",
+      "cloudpickle": "3.1"
+    }
+  }
+}
