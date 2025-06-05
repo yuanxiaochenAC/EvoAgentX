@@ -45,6 +45,18 @@ class ChunkMetadata(DocumentMetadata):
     similarity_score: Optional[float] = Field(default=None, description="Similarity score from retrieval.")
 
 
+class IndexMetadata(BaseModule):
+    corpus_id: str = Field(..., description="Identifier for the corpus")
+    index_type: str = Field(..., description="Type of index (e.g., 'vector', 'graph', 'summary', 'tree')")
+    storage_type: str = Field(..., description="Storage backend type (e.g., 'vector', 'graph')")
+    collection_name: Optional[str] = Field(default="default_collection", description="Vector store collection name or FAISS file path")
+    dimension: Optional[int] = Field(default=1536, description="Vector dimension")
+    vector_db_type: Optional[str] = Field(default=None, description="Vector database type (e.g., 'faiss', 'qdrant', 'chroma')")
+    graph_db_type: Optional[str] = Field(default=None, description="Graph database type (e.g., 'neo4j')")
+    date: Optional[str] = Field(default=None, description="Creation or last update date")
+    key_words: List[str] = Field(default_factory=list, description="Keywords for indexing")
+
+
 class Document(BaseModule):
     """A custom document class for managing documents in the RAG pipeline.
 
@@ -377,6 +389,34 @@ class Corpus(BaseModule):
     def to_json(self, indent: int = 2) -> str:
         """Convert corpus to JSON string."""
         return json.dumps(self.to_dict(), indent=indent, ensure_ascii=False)
+
+    def to_jsonl(self, output_path: str):
+        with open(output_path, 'w', encoding='utf-8') as f:
+            for chunk in self.chunks:
+                f.write(json.dumps(chunk.to_dict(), ensure_ascii=False) + '\n')
+
+    @classmethod
+    def from_jsonl(cls, input_path: str, corpus_id: Optional[str] = None) -> "Corpus":
+        chunks = []
+        with open(input_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                chunk_dict = json.loads(line.strip())
+                metadata = ChunkMetadata.model_validate(chunk_dict["metadata"])
+                chunk = Chunk(
+                    chunk_id=chunk_dict["chunk_id"],
+                    text=chunk_dict["text"],
+                    metadata=metadata,
+                    embedding=chunk_dict["embedding"],
+                    start_char_idx=chunk_dict["start_char_idx"],
+                    end_char_idx=chunk_dict["end_char_idx"],
+                    excluded_embed_metadata_keys=chunk_dict["excluded_embed_metadata_keys"],
+                    excluded_llm_metadata_keys=chunk_dict["excluded_llm_metadata_keys"],
+                    relationships={
+                        k: RelatedNodeInfo(**v) for k, v in chunk_dict["relationships"].items()
+                    }
+                )
+                chunks.append(chunk)
+        return cls(chunks=chunks, corpus_id=corpus_id)
 
     def __str__(self) -> str:
         stats = self.get_stats()

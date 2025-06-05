@@ -7,8 +7,8 @@ from llama_index.core import StorageContext
 from ..core.module import BaseModule
 from .storages_config import StoreConfig
 from .db_stores import DBStoreBase, DBStoreFactory
-from .graph_stores import GraphStoreFactory
-from .vectore_stores import VectorStoreFactory
+from .graph_stores import GraphStoreFactory, GraphStoreBase
+from .vectore_stores import VectorStoreFactory, VectorStoreBase
 from .schema import TableType, AgentStore, WorkflowStore, MemoryStore, HistoryStore, IndexStore
 
 
@@ -21,9 +21,9 @@ class StorageHandler(BaseModule):
     """
     storageConfig: StoreConfig = Field(..., description="Configuration for all storage backends")
     storageDB: Optional[Union[DBStoreBase, Any]] = Field(None, description="Database storage backend")
-    storageVector: Dict[str,Any] = Field(default_factory=dict, description="Optional vector storage backend collection")
-    storageGraph: Dict[str,Any] = Field(default_factory=dict, description="Optional graph storage backend collection")
-    storage_context: Dict[str,Any] = Field(default_factory=dict, description="Optional storage context backend collection for llama_index")
+    vector_store: Optional[Union[VectorStoreBase, Any]] = Field(None, description="Single vector storage backend")
+    graph_store: Optional[Union[GraphStoreBase, Any]] = Field(None, description="Optional graph storage backend")
+    storage_context: Optional[StorageContext] = Field(None, description="Storage context for LlamaIndex")
 
     def init_module(self):
         """
@@ -33,11 +33,10 @@ class StorageHandler(BaseModule):
         self._init_db_store()
         self._init_vector_store()
         self._init_graph_store()
-
-        # Initialize storage_context for llama_index after stores are set
-        self.storage_context["default"] = StorageContext.from_defaults(
-            vector_store=self.storageVector,
-            graph_store=self.storageGraph
+        # Initilize the storage context for llama_index
+        self.storage_context = StorageContext.from_defaults(
+            vector_store=self.vector_store,
+            graph_store=self.graph_store
         )
     
     def _init_db_store(self):
@@ -48,27 +47,28 @@ class StorageHandler(BaseModule):
         db_config = self.storageConfig.dbConfig
         self.storageDB = DBStoreFactory.create(db_config.db_name, db_config)
     
-    def _init_vector_store(self, corpus_id: str):
+    def _init_vector_store(self):
         """
         Initialize the vector storage backend using the VectorStoreFactory.
         Sets the storageVector attribute if the configuration is provided.
         """
         vector_config = self.storageConfig.vectorConfig
         if vector_config is not None:
-            self.storageVector[corpus_id] = VectorStoreFactory().create(
+            vector_config_dict = vector_config.model_dump()
+            self.vector_store = VectorStoreFactory().create(
                 store_type=vector_config.vector_name,
-                store_config=vector_config.model_dump()
+                store_config=vector_config_dict
             )
     
-    def _init_graph_store(self, corpus_id: str):
+    def _init_graph_store(self):
         """
         Initialize the graph storage backend using the GraphStoreFactory.
         Sets the storageGraph attribute if the configuration is provided.
         """
         graph_config = self.storageConfig.graphConfig
         if graph_config is not None:
-            self.storageGraph[corpus_id] = GraphStoreFactory().create(
-                store_type=graph_config.graph_name, 
+            self.graph_store = GraphStoreFactory().create(
+                store_type=graph_config.graph_name,
                 store_config=graph_config.model_dump()
             )
 

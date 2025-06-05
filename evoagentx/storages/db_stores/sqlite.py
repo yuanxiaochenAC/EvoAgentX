@@ -227,6 +227,29 @@ class SQLite(DBStoreBase):
                 )
                 self.connection.commit()
 
+    @check_db_format
+    def insert_index(self, metadata: IndexStore, store_type: Optional[Literal["memory", "agent", "workflow", "history", "index"]], 
+                     table: Optional[str]=None, *args, **kwargs):
+        """
+        Insert index metadata into the specified table.
+
+        Attributes:
+            metadata (IndexStore): The index metadata to insert.
+            store_type (str): The type of store (e.g., 'index').
+            table (Optional[str]): The table name; defaults to 'index' if None.
+        """
+        with self._lock:
+            with self.connection:
+                if table is None:
+                    table = TableType.store_index
+                insert_string = _insert_meta(table, list(IndexStore.model_fields.keys()))
+                self.connection.execute(
+                    insert_string,
+                    tuple([json.dumps(meta) if not isinstance(meta, str) else meta 
+                           for meta in metadata.model_dump().values()])
+                )
+                self.connection.commit()
+
     def insert(self, metadata: Dict, store_type: Optional[Literal["memory", "agent", "workflow", "history"]], 
                table: Optional[str]=None, *args, **kwargs):
         """
@@ -246,6 +269,8 @@ class SQLite(DBStoreBase):
             self.insert_workflow(metadata, store_type=store_type, table=table, *args, **kwargs)
         elif store_type == TableType.store_history:
             self.insert_history(metadata, store_type=store_type, table=table, *args, **kwargs)
+        elif store_type == TableType.store_index:
+            self.insert_index(metadata, store_type=store_type, table=table, *args, **kwargs)
         else:
             raise ValueError("Invalid store_type provided.")
 
@@ -309,6 +334,9 @@ class SQLite(DBStoreBase):
                 elif store_type == TableType.store_history:
                     columns = list(HistoryStore.model_fields.keys())
                     new_metadata = HistoryStore.model_validate(new_metadata)
+                elif store_type == TableType.store_index:
+                    columns = list(IndexStore.model_fields.keys())
+                    new_metadata = IndexStore.model_validate(new_metadata)
                 else:
                     raise ValueError("Invalid store_type provided.")
                 
@@ -352,6 +380,8 @@ class SQLite(DBStoreBase):
                     columns = list(WorkflowStore.model_fields.keys())
                 elif store_type == TableType.store_history:
                     columns = list(HistoryStore.model_fields.keys())
+                elif store_type == TableType.store_index:
+                    columns = list(IndexStore.model_fields.keys())
                 else:
                     raise ValueError("Invalid store_type provided.")
                 try:

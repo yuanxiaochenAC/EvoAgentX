@@ -1,4 +1,5 @@
 import os
+import re
 import asyncio
 import logging
 from uuid import uuid4
@@ -6,9 +7,7 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Union, Optional, Sequence, Dict, Any, Tuple, Literal
 
-from llama_index.core.schema import NodeWithScore, TextNode
-from llama_index.core.storage.docstore import SimpleDocumentStore
-from llama_index.core.storage.index_store import SimpleIndexStore
+from llama_index.core.schema import NodeWithScore, TextNode, RelatedNodeInfo
 # from llama_index.core.indices.query.query_transform import HyDEQueryTransform
 
 from .rag_config import RAGConfig
@@ -22,7 +21,7 @@ from .indexings.base import IndexType
 from .retrievers.base import RetrieverType
 from ..storages.base import StorageHandler
 from ..storages.schema import IndexStore
-from .schema import Corpus, RagQuery, RagResult
+from .schema import Chunk, Corpus, ChunkMetadata, IndexMetadata, RagQuery, RagResult
 
 
 class SearchEngine:
@@ -156,113 +155,112 @@ class SearchEngine:
             raise
 
     def save(self, output_path: Optional[str] = None, corpus_id: Optional[str] = None,
-             index_type: Optional[IndexType] = None) -> None:
+             index_type: Optional[str] = None) -> None:
         """
-        Save indices to database or file system.
-        
-        Args:
-            output_path: Directory to save index files (if None, saves to database).
-            corpus_id: Specific corpus to save (default: all corpora).
-            index_type: Specific index type to save (default: all types).
+        Save indices to database or JSONL files (nodes) and JSON file (metadata).
         """
         try:
+            def sanitize_filename(s: str) -> str:
+                return re.sub(r'[^\w\-]', '_', s)
+
+            saved_corpora = set()
             target_corpora = [corpus_id] if corpus_id else self.indices.keys()
             for cid in target_corpora:
                 if cid not in self.indices:
                     self.logger.warning(f"No indices found for corpus {cid}")
                     continue
-                target_indices = [self.indices[cid][index_type]] if index_type else self.indices[cid].values()
+                target_indices = [self.indices[cid][index_type]] if index_type and index_type in self.indices[cid] else self.indices[cid].values()
+                if not target_indices and index_type:
+                    self.logger.warning(f"Index type {index_type} not found for corpus {cid}")
+                    continue
                 for index in target_indices:
                     index_id = str(uuid4())
                     storage_type = "graph" if index.index_type == IndexType.GRAPH else "vector"
-                    storage_context = self.storage_handler.storage_contexts[cid]
-                    docstore = storage_context.docstore
-                    index_store = storage_context.index_store
-                    metadata = {
-                        "collection_name": f"corpus_{cid}" if storage_type == "vector" else None,
-                        "graph_uri": self.storage_handler.storageConfig.graphConfig.uri if storage_type == "graph" else None,
-                        "persist_path": os.path.join(output_path or "", f"corpus_{cid}/{index.index_type}") if output_path else None
-                    }
+                    vector_config = self.storage_handler.storageConfig.vectorConfig.model_dump() or {}
+                    graph_config = self.storage_handler.storageConfig.graphConfig.model_dump() or {}
+                    metadata = IndexMetadata(
+                        corpus_id=cid,
+                        index_type=index.index_type,
+                        storage_type=storage_type,
+                        collection_name=vector_config.get("qdrant_collection_name", "default"),
+                        dimension=vector_config.get("dimension", 1536),
+                        vector_db_type=vector_config.get("vector_name"),
+                        graph_db_type=graph_config.get("graph_name"),
+                        date=datetime.now().isoformat(),
+                        key_words=[cid, index.index_type]
+                    )
+                    docstore = index.get_index().storage_context.docstore
+                    nodes = docstore.get_all_nodes()
+                    corpus = Corpus.from_llama_nodes(nodes, corpus_id=cid)
                     if output_path:
-                        # Save to file system
-                        persist_dir = os.path.join(output_path, f"corpus_{cid}/{index.index_type}")
-                        os.makedirs(persist_dir, exist_ok=True)
-                        storage_context.persist(persist_dir=persist_dir)
-                        self.logger.info(f"Saved {index.index_type} index for corpus {cid} to {persist_dir}")
+                        os.makedirs(output_path, exist_ok=True)
+                        safe_cid = sanitize_filename(cid)
+                        safe_index_type = sanitize_filename(index.index_type)
+                        nodes_file = os.path.join(output_path, f"{safe_cid}_{safe_index_type}_{index_id}_nodes.jsonl")
+                        metadata_file = os.path.join(output_path, f"{safe_cid}_{safe_index_type}_{index_id}_metadata.json")
+                        corpus.to_jsonl(nodes_file)
+                        with open(metadata_file, 'w', encoding='utf-8') as f:
+                            f.write(metadata.to_json(indent=2))
+                        self.logger.info(f"Saved {index.index_type} index for corpus {cid} to {nodes_file} and {metadata_file}")
                     else:
-                        # Save to database
-                        content = {
-                            "docstore": docstore.to_dict(),
-                            "index_store": index_store.to_dict()
-                        }
-                        self.storage_handler.save_index(
-                            index_data={
-                                "index_id": index_id,
-                                "corpus_id": cid,
-                                "index_type": index.index_type,
-                                "storage_type": storage_type,
-                                "content": content,
-                                "date": datetime.now().isoformat(),
-                                "key_words": [cid, index.index_type],
-                                "metadata": metadata
-                            }
-                        )
+                        self.storage_handler.save_index({
+                            "index_id": index_id,
+                            "corpus_id": cid,
+                            "index_type": index.index_type,
+                            "storage_type": storage_type,
+                            "content": corpus.to_dict(),
+                            "date": datetime.now().isoformat(),
+                            "key_words": [cid, index.index_type],
+                            "metadata": metadata.to_dict()
+                        })
                         self.logger.info(f"Saved {index.index_type} index for corpus {cid} to database")
-            self.logger.info(f"Saved indices for {len(target_corpora)} corpora")
+                    saved_corpora.add(cid)
+            self.logger.info(f"Saved indices for {len(saved_corpora)} corpora")
+        except FileNotFoundError as fne:
+            self.logger.error(f"File error saving indices: {str(fne)}")
+            raise
         except Exception as e:
             self.logger.error(f"Failed to save indices: {str(e)}")
             raise
 
     def load(self, source: Optional[str] = None, corpus_id: Optional[str] = None,
-             index_type: Optional[IndexType] = None) -> None:
+            index_type: Optional[str] = None) -> None:
         """
-        Load indices from database or file system.
-        
-        Args:
-            source: Directory containing index files or None for database.
-            corpus_id: Specific corpus to load (default: all corpora).
-            index_type: Specific index type to load (default: all types).
+        Load indices from a directory (JSONL nodes + JSON metadata) or SQLite database.
         """
         try:
             if source:
-                # Load from file system
-                os.makedirs(source, exist_ok=True)
-                corpora_dirs = [d for d in os.listdir(source) if os.path.isdir(os.path.join(source, d)) and d.startswith("corpus_")]
-                for corpus_dir in corpora_dirs:
-                    cid = corpus_dir.replace("corpus_", "")
-                    if corpus_id and corpus_id != cid:
-                        continue
-                    index_dirs = [d for d in os.listdir(os.path.join(source, corpus_dir)) if os.path.isdir(os.path.join(source, corpus_dir, d))]
-                    for index_type_str in index_dirs:
-                        if index_type and index_type != IndexType(index_type_str):
+                if not os.path.exists(source):
+                    raise FileNotFoundError(f"Source directory {source} does not exist")
+                for file_name in os.listdir(source):
+                    if file_name.endswith('_metadata.json'):
+                        cid, index_type_str, index_id, _ = file_name.split('_', 3)
+                        if (corpus_id and corpus_id != cid) or (index_type and index_type != index_type_str):
                             continue
+                        metadata_file = os.path.join(source, file_name)
+                        nodes_file = os.path.join(source, f"{cid}_{index_type_str}_{index_id}_nodes.jsonl")
+
+                        corpus = Corpus.from_jsonl(nodes_file, corpus_id=cid)
                         if cid not in self.indices:
                             self.indices[cid] = {}
                             self.retrievers[cid] = {}
-                        self.storage_handler._init_vector_store(corpus_id=cid)
-                        persist_dir = os.path.join(source, corpus_dir, index_type_str)
                         index = self.index_factory.create(
                             index_type=IndexType(index_type_str),
                             embed_model=self.embed_model,
-                            storage_context=self.storage_handler.storage_contexts[cid],
-                            index_config=self.config.index_config
+                            storage_context=self.storage_handler.storage_context,
+                            index_config=self.config.index_config.model_dump()
                         )
-                        # Rebuild index from persisted storage
-                        storage_context = self.storage_handler.storage_contexts[cid]
-                        index.get_index().storage_context.docstore = SimpleDocumentStore.from_persist_dir(persist_dir)
-                        index.get_index().storage_context.index_store = SimpleIndexStore.from_persist_dir(persist_dir)
-                        index.get_index().storage_context.vector_store.load_from_persist_dir(persist_dir)
+                        index.insert_nodes(corpus.to_llama_nodes())
                         self.indices[cid][IndexType(index_type_str)] = index
                         self.retrievers[cid][IndexType(index_type_str)] = self.retriever_factory.create(
                             retriever_type=RetrieverType.VECTOR if index_type_str in [IndexType.VECTOR, IndexType.SUMMARY, IndexType.TREE] else RetrieverType.GRAPH,
-                            index=index.get_index() if index_type_str in [IndexType.VECTOR, IndexType.SUMMARY, IndexType.TREE] else None,
-                            graph_store=self.storage_handler.storage_contexts[cid].graph_store if index_type_str == IndexType.GRAPH else None,
+                            index=index.get_index(),
+                            graph_store=self.storage_handler.storage_context.graph_store if index_type_str == IndexType.GRAPH else None,
                             embed_model=self.embed_model,
-                            query=RagQuery(query_str="", top_k=self.config.retrieval_config.get("top_k", 5))
+                            query=RagQuery(query_str="", top_k=self.config.retrieval_config.top_k)
                         )
-                        self.logger.info(f"Loaded {index_type_str} index for corpus {cid} from {persist_dir}")
+                        self.logger.info(f"Loaded {index_type_str} index for corpus {cid} from {metadata_file}")
             else:
-                # Load from database
                 results = self.storage_handler.load(tables=["index"])
                 for record in results.get("index", []):
                     parsed_record = self.storage_handler.parse_result(record, IndexStore)
@@ -270,26 +268,38 @@ class SearchEngine:
                     cid = parsed_record["corpus_id"]
                     if (corpus_id and corpus_id != cid) or (index_type and index_type != index_type_str):
                         continue
+                    corpus_data = parsed_record["content"]
+                    metadata_dict = parsed_record["metadata"]
+                    self.logger.debug(f"Loaded index metadata for corpus {cid}, index_type {index_type_str}: {metadata_dict}")
+                    chunks = [
+                        Chunk(
+                            chunk_id=chunk["chunk_id"],
+                            text=chunk["text"],
+                            metadata=ChunkMetadata(**chunk["metadata"]),
+                            embedding=chunk["embedding"],
+                            start_char_idx=chunk["start_char_idx"],
+                            end_char_idx=chunk["end_char_idx"],
+                            excluded_embed_metadata_keys=chunk["excluded_embed_metadata_keys"],
+                            excluded_llm_metadata_keys=chunk["excluded_llm_metadata_keys"],
+                            relationships={k: RelatedNodeInfo(**v) for k, v in chunk["relationships"].items()}
+                        ) for chunk in corpus_data["chunks"]
+                    ]
+                    corpus = Corpus(chunks=chunks, corpus_id=cid)
                     if cid not in self.indices:
                         self.indices[cid] = {}
                         self.retrievers[cid] = {}
-                    collection_name = parsed_record["metadata"].get("collection_name", f"corpus_{cid}")
-                    self.storage_handler._init_vector_store(corpus_id=cid)
-                    storage_context = self.storage_handler.storage_contexts[cid]
-                    # Restore docstore and index_store
-                    storage_context.docstore = SimpleDocumentStore.from_dict(parsed_record["content"]["docstore"])
-                    storage_context.index_store = SimpleIndexStore.from_dict(parsed_record["content"]["index_store"])
                     index = self.index_factory.create(
                         index_type=IndexType(index_type_str),
                         embed_model=self.embed_model,
-                        storage_context=storage_context,
+                        storage_context=self.storage_handler.storage_context,
                         index_config=self.config.index_config
                     )
+                    index.insert_nodes(corpus.to_llama_nodes())
                     self.indices[cid][IndexType(index_type_str)] = index
                     self.retrievers[cid][IndexType(index_type_str)] = self.retriever_factory.create(
                         retriever_type=RetrieverType.VECTOR if index_type_str in [IndexType.VECTOR, IndexType.SUMMARY, IndexType.TREE] else RetrieverType.GRAPH,
                         index=index.get_index() if index_type_str in [IndexType.VECTOR, IndexType.SUMMARY, IndexType.TREE] else None,
-                        graph_store=storage_context.graph_store if index_type_str == IndexType.GRAPH else None,
+                        graph_store=self.storage_handler.storage_context.graph_store if index_type_str == IndexType.GRAPH else None,
                         embed_model=self.embed_model,
                         query=RagQuery(query_str="", top_k=self.config.retrieval_config.get("top_k", 5))
                     )
@@ -299,40 +309,49 @@ class SearchEngine:
             self.logger.error(f"Failed to load indices: {str(e)}")
             raise
 
-    def add(self, index_type: IndexType, nodes: Union[Corpus, List[NodeWithScore], List[TextNode]], corpus_id: str = str(uuid4())) -> None:
+    def add(self, index_type: str, nodes: Union[Corpus, List[NodeWithScore], List[TextNode]], corpus_id: str = str(uuid4())) -> None:
         """
         Add corpus/nodes to an index for a specific index type.
-        
-        Args:
-            index_type: Type of index to add nodes to.
-            nodes: Corpus or list of nodes to add.
-            corpus_id: Identifier for the corpus.
         """
         try:
             if corpus_id not in self.indices:
                 self.indices[corpus_id] = {}
                 self.retrievers[corpus_id] = {}
-                self.storage_handler._init_vector_store(corpus_id=corpus_id)
 
             if index_type not in self.indices[corpus_id]:
+                index_config = self.config.index.model_dump() if self.config.index else {}
                 index = self.index_factory.create(
                     index_type=index_type,
                     embed_model=self.embed_model,
-                    storage_context=self.storage_handler.storage_contexts[corpus_id],
-                    index_config=self.config.index.model_dump()
+                    storage_context=self.storage_handler.storage_context,
+                    index_config=index_config
                 )
                 self.indices[corpus_id][index_type] = index
+                retriever_type = RetrieverType.VECTOR if index_type in [IndexType.VECTOR, IndexType.SUMMARY, IndexType.TREE] else RetrieverType.GRAPH
+                top_k = self.config.retrieval.top_k if hasattr(self.config, "retrieval") else 5
                 self.retrievers[corpus_id][index_type] = self.retriever_factory.create(
-                    retriever_type=RetrieverType.VECTOR if index_type in [IndexType.VECTOR, IndexType.SUMMARY, IndexType.TREE] else RetrieverType.GRAPH,
-                    index=index.get_index() if index_type in [IndexType.VECTOR, IndexType.SUMMARY, IndexType.TREE] else None,
-                    graph_store=self.storage_handler.storage_contexts[corpus_id].graph_store if index_type == IndexType.GRAPH else None,
+                    retriever_type=retriever_type,
+                    index=index.get_index() if retriever_type == RetrieverType.VECTOR else None,
+                    graph_store=self.storage_handler.storage_context.graph_store if retriever_type == RetrieverType.GRAPH else None,
                     embed_model=self.embed_model,
-                    query=RagQuery(query_str="", top_k=self.config.retrieval.top_k)
+                    query=RagQuery(query_str="", top_k=top_k)
                 )
 
             nodes_to_insert = nodes.to_llama_nodes() if isinstance(nodes, Corpus) else nodes
+            for node in nodes_to_insert:
+                if node.metadata.get("corpus_id") and node.metadata["corpus_id"] != corpus_id:
+                    self.logger.warning(f"Node {node.node_id} has conflicting corpus_id {node.metadata['corpus_id']} (expected {corpus_id})")
+                node.metadata["corpus_id"] = corpus_id
+                if node.metadata.get("index_type") and node.metadata["index_type"] != index_type:
+                    self.logger.warning(f"Node {node.node_id} has conflicting index_type {node.metadata['index_type']} (expected {index_type})")
+                node.metadata["index_type"] = index_type
+                if isinstance(node, NodeWithScore) and node.score is not None:
+                    self.logger.debug(f"Ignoring score {node.score} for node {node.node_id} during insertion")
             self.indices[corpus_id][index_type].insert_nodes(nodes_to_insert)
             self.logger.info(f"Added {len(nodes_to_insert)} nodes to {index_type} index for corpus {corpus_id}")
+        except ValueError as ve:
+            self.logger.error(f"Configuration error adding nodes to {index_type} index for corpus {corpus_id}: {str(ve)}")
+            raise
         except Exception as e:
             self.logger.error(f"Failed to add nodes to {index_type} index for corpus {corpus_id}: {str(e)}")
             raise
@@ -341,75 +360,8 @@ class SearchEngine:
                node_ids: Optional[List[str]] = None, metadata_filters: Optional[Dict[str, Any]] = None) -> None:
         """
         Delete nodes or entire index from a corpus.
-
-        Args:
-            corpus_id: Identifier for the corpus.
-            index_type: Specific index type to delete (default: all types).
-            node_ids: Specific node IDs to delete (optional).
-            metadata_filters: Metadata filters to identify nodes to delete (optional).
         """
-        try:
-            if corpus_id not in self.indices:
-                self.logger.warning(f"No indices found for corpus {corpus_id}")
-                return
-
-            if index_type:
-                target_indices = [(index_type, self.indices[corpus_id][index_type])]
-            else:
-                target_indices = self.indices[corpus_id].items()
-
-            for idx_type, index in target_indices:
-                storage_context = self.storage_handler.storage_contexts[corpus_id]
-                if node_ids or metadata_filters:
-                    if idx_type == IndexType.GRAPH:
-                        if not storage_context.graph_store:
-                            self.logger.error(f"No graph store configured for {idx_type} index")
-                            continue
-                        nodes_to_delete = []
-                        all_nodes = storage_context.graph_store.get_all_nodes()
-                        for node in all_nodes:
-                            if node_ids and node.node_id in node_ids:
-                                nodes_to_delete.append(node.node_id)
-                            elif metadata_filters and all(
-                                node.metadata.get(k) == v for k, v in metadata_filters.items()
-                            ):
-                                nodes_to_delete.append(node.node_id)
-                        for node_id in nodes_to_delete:
-                            storage_context.graph_store.delete(node_id)
-                        self.logger.info(f"Deleted {len(nodes_to_delete)} nodes from {idx_type} index for corpus {corpus_id}")
-                    else:
-                        nodes_to_delete = []
-                        docstore = storage_context.docstore
-                        all_nodes = docstore.get_all_nodes()
-                        for node in all_nodes:
-                            if node_ids and node.node_id in nodes_to_delete:
-                                nodes_to_delete.append(node.node_id)
-                            elif metadata_filters and all(
-                                node.metadata.get(k) == v for k, v in metadata_filters.items()
-                            ):
-                                nodes_to_delete.append(node.node_id)
-                        for node_id in nodes_to_delete:
-                            index.get_index().delete_ref_doc(node_id, delete_from_docstore=True)
-                        self.logger.info(f"Deleted {len(nodes_to_delete)} nodes from {idx_type} index for corpus {corpus_id}")
-                else:
-                    # Delete entire index
-                    del self.indices[corpus_id][idx_type]
-                    del self.retrievers[corpus_id][idx_type]
-                    self.logger.info(f"Deleted {idx_type} index for corpus {corpus_id}")
-
-            if not self.indices[corpus_id]:
-                del self.indices[corpus_id]
-                del self.retrievers[corpus_id]
-                del self.storage_handler.storageVectors[corpus_id]
-                del self.storage_handler.storage_contexts[corpus_id]
-                self.logger.info(f"Removed empty corpus {corpus_id}")
-
-            if self.storage_handler.storage_contexts.get(corpus_id):
-                self.storage_handler.storage_contexts[corpus_id].persist()
-            self.logger.info(f"Updated persistent storage for corpus {corpus_id}")
-        except Exception as e:
-            self.logger.error(f"Failed to delete from corpus {corpus_id}: {str(e)}")
-            raise
+        pass
 
     async def _retrieve_async(self, retriever: BaseRetrieverWrapper, query: RagQuery):
         return await retriever.aretrieve(query)
@@ -447,7 +399,7 @@ class SearchEngine:
                 for cid in target_corpora:
                     for index_type, retriever in self.retrievers[cid].items():
                         if query.metadata_filters and query.metadata_filters.get("index_type") and \
-                           query.metadata_filters["index_type"] != index_type.value:
+                           query.metadata_filters["index_type"] != index_type:
                             continue
                         future = executor.submit(
                             asyncio.run, self._retrieve_async(
