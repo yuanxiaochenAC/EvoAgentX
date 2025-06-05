@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from llama_index.core.embeddings import BaseEmbedding
 from llama_index.core.node_parser import SemanticSplitterNodeParser
 
-from .base import BaseChunker
+from .base import BaseChunker, ChunkingStrategy
 from evoagentx.rag.schema import Document, Corpus, Chunk, ChunkMetadata
 
 
@@ -21,7 +21,7 @@ class SemanticChunker(BaseChunker):
         parser (SemanticChunker): The LlamaIndex parser for semantic chunking.
     """
 
-    def __init__(self, embed_model: BaseEmbedding, similarity_threshold: float = 0.7):
+    def __init__(self, embed_model: BaseEmbedding, similarity_threshold: float = 0.7, max_workers=4, **kwargs):
         """Initialize the SemanticChunker.
 
         Args:
@@ -33,6 +33,7 @@ class SemanticChunker(BaseChunker):
             embed_model=self.embed_model,
             similarity_threshold=similarity_threshold
         )
+        self.max_workers = max_workers
         self.logger = logging.getLogger(__name__)
 
     def _process_document(self, doc: Document) -> List[Chunk]:
@@ -53,19 +54,10 @@ class SemanticChunker(BaseChunker):
             # Convert nodes to Chunks
             chunks = []
             for idx, node in enumerate(nodes):
-                chunks.append(
-                    Chunk(
-                        text=node.text,
-                        doc_id=doc.doc_id,
-                        metadata=ChunkMetadata(
-                            doc_id=doc.doc_id,
-                            chunk_index=len(chunks),
-                            custom_fields={"similarity_threshold": self.parser.similarity_threshold},
-                            chunking_strategy="semantic",
-                        ),
-                        chunk_id=node.id_,
-                    )
-                )
+                chunk = Chunk.from_llama_node(node)
+                
+                chunk.metadata.chunking_strategy = ChunkingStrategy.SIMPLE
+                chunks.extend([chunk])
             self.logger.debug(f"Processed document {doc.doc_id} into {len(chunks)} chunks")
             return chunks
         except Exception as e:

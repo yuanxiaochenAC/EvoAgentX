@@ -7,7 +7,7 @@ from llama_index.core import VectorStoreIndex
 from llama_index.core.storage import StorageContext
 from llama_index.core.embeddings import BaseEmbedding
 
-from .base import BaseIndexWrapper
+from .base import BaseIndexWrapper, IndexType
 from ..schema import Chunk
 
 
@@ -25,6 +25,7 @@ class VectorIndexing(BaseIndexWrapper):
         self.embed_model = embed_model
         self.storage_context = storage_context
         self.index_config = index_config or {}
+        self.index_type = IndexType.VECTOR
         try:
             self.index = VectorStoreIndex(
                 nodes=[],

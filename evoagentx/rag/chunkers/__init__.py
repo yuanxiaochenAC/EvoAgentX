@@ -42,14 +42,16 @@ class ChunkFactory:
         if strategy == ChunkingStrategy.SIMPLE:
             chunker = SimpleChunker(
                 chunk_size=chunker_config.get("chunk_size", 1024),
-                chunk_overlap=chunker_config.get("chunk_overlap", 20)
+                chunk_overlap=chunker_config.get("chunk_overlap", 20),
+                max_workers=chunker_config.get("max_workers", 2)
             )
         elif strategy == ChunkingStrategy.SEMANTIC:
             if not embed_model:
                 raise ValueError("Embed model required for semantic chunking")
             chunker = SemanticChunker(
                 embed_model=embed_model,
-                similarity_threshold=chunker_config.get("similarity_threshold", 0.7)
+                similarity_threshold=chunker_config.get("similarity_threshold", 0.7),
+                max_workers=chunker_config.get("max_workers", 2)
             )
         elif strategy == ChunkingStrategy.HIERARCHICAL:
             chunker = HierarchicalChunker(

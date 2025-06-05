@@ -77,7 +77,7 @@ class SimpleChunker(BaseChunker):
             chunks = []
             for idx, node in enumerate(nodes):
                 chunk = Chunk.from_llama_node(node)
-                
+
                 chunk.metadata.chunking_strategy = ChunkingStrategy.SIMPLE
                 chunks.extend([chunk])
             self.logger.debug(f"Processed document {doc.doc_id} into {len(chunks)} chunks")

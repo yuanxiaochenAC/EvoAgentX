@@ -38,9 +38,8 @@ class EmbeddingConfig(BaseModule):
 
 class IndexConfig(BaseModule):
     """Configuration for indexing stage."""
-    index_type: IndexType = Field(default=IndexType.VECTOR, description="Index type (VECTOR, GRAPH, SUMMARY, TREE).")
+    index_type: str = Field(default=IndexType.VECTOR, description="Index type (VECTOR, GRAPH, SUMMARY, TREE).")
     similarity_metric: str = Field(default="cosine", description="Similarity metric for vector index (cosine, euclidean).")
-    storage_path: Optional[str] = Field(default=None, description="Path for local index storage (if applicable).")
 
 
 class RetrievalConfig(BaseModule):

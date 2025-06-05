@@ -1,19 +1,36 @@
+import os
 import logging
 from evoagentx.storages import StorageHandler
 from evoagentx.storages.storages_config import StoreConfig, VectorStoreConfig, DBConfig
 from evoagentx.rag.schema import RagQuery, Corpus
-from evoagentx.rag.search_engine import SearchEngine, RAGConfig
+from evoagentx.rag.search_engine import SearchEngine
+from evoagentx.rag.rag_config import (
+    RAGConfig, 
+    ReaderConfig, 
+    ChunkerConfig,
+    EmbeddingConfig, 
+    IndexConfig, 
+    RetrievalConfig
+)
+
+import dotenv
+dotenv.load_dotenv()
+
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 
 # Initialize SearchEngine
 config = RAGConfig(
-    embedding_provider="openai",
-    embedding_config={"model": "text-embedding-ada-002"},
-    retrieval_config={"top_k": 5},
-    chunking_strategy="semantic",
-    num_workers=4
+    num_workers=2,
+    reader=ReaderConfig(recursive=False, exclude_hidden=True, num_files_limit=None,
+                        custom_metadata_function=None, extern_file_extractor=None, 
+                        errors="ignore", encoding="utf-8"),
+    chunker=ChunkerConfig(strategy="simple", chunk_size=1024, chunk_overlap=20, max_chunks=None),
+    embedding=EmbeddingConfig(provider="openai", model_name="text-embedding-ada-002",
+                              api_key=os.environ["OPENAI_API_KEY"]),
+    index=IndexConfig(index_type="faiss"),
+    retrieval=RetrievalConfig(top_k=5, similarity_cutoff=None, keyword_filters=None, metadata_filters=None)
 )
 # Initialize storage
 storage_config = StoreConfig(
@@ -27,7 +44,7 @@ storage_config = StoreConfig(
         index_type="flat_l2",
     ),
     # file caching
-    path="/debug/cache/indexing",
+    path="./debug/cache/indexing",
 )
 
 storage_handler = StorageHandler(storageConfig=storage_config)  # Configure with your SQLite/Neo4j setup
@@ -38,6 +55,7 @@ import pdb;pdb.set_trace()
 corpus = search_engine.read(file_paths="./debug/data/source_files", filter_file_by_suffix=".txt")
 query = RagQuery(query_str="What does Paul Graham say about the role of persistence in startups?", top_k=5)
 search_engine.add("vector", corpus, corpus_id="paul_graham")
+search_engine.save(storage_config.path, corpus_id=None, index_type=None)
 result = search_engine.query(query, corpus_id="paul_graham")
 print("Test Case 1 Results:", [chunk.text for chunk in result.corpus.chunks])
 

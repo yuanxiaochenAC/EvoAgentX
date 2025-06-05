@@ -6,7 +6,7 @@ from typing import Dict, Literal, Callable, Optional, List
 import sqlite3
 
 from .base import DBStoreBase
-from ..schema import TableType, MemoryStore, AgentStore, WorkflowStore, HistoryStore
+from ..schema import TableType, MemoryStore, AgentStore, WorkflowStore, HistoryStore, IndexStore
 
 
 # Helper function to generate SQL for creating a table
@@ -91,6 +91,9 @@ def check_db_format(func: Callable) -> Callable:
         elif store_type == TableType.store_history:
             column = list(HistoryStore.model_fields.keys())
             metadata = HistoryStore.model_validate(metadata, strict=False)
+        elif store_type == TableType.store_index:
+            column = list(IndexStore.model_fields.keys())
+            metadata = IndexStore.model_validate(metadata, strict=False)
         else:
             raise ValueError("The value of store type is not valid.")
         

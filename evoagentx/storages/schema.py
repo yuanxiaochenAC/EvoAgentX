@@ -13,6 +13,7 @@ class TableType(str, Enum):
     store_workflow = "workflow" # Table for workflow data
     store_memory = "memory"    # Table for memory data
     store_history = "history"  # Table for history data
+    store_index = "index"   # Table for index data
 
 
 class MemoryStore(BaseModel):
@@ -56,10 +57,16 @@ class HistoryStore(BaseModel):
     created_at: Optional[str] = Field("", description="Optional timestamp for creation")
     updated_at: Optional[str] = Field("", description="Optional timestamp for last update")
 
-# Pydantic model for indexing data storage
-class IndexingStore(BaseModel):
+# Pydantic model for index data storage
+class IndexStore(BaseModel):
     """
     Stores indexing metadata with a unique id and basic chunk/node attribute.
     """
-    index_id: str = Field(..., description="unique indexing idetnifier")
-    
+    index_id: str = Field(..., description="Unique identifier for the index")
+    corpus_id: str = Field(..., description="Identifier for the associated corpus")
+    index_type: str = Field(..., description="Type of index (e.g., 'vector', 'graph', 'summary', 'tree')")
+    storage_type: str = Field(..., description="Storage backend type (e.g., 'vector', 'graph')")
+    content: Dict[str, Any] = Field(..., description="Serialized index content (e.g., LlamaIndex JSON)")
+    date: Optional[str] = Field(default="", description="Creation or last update date")
+    key_words: List[str] = Field(default_factory=list, description="Keywords for indexing, including corpus_id and index_type")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata, e.g., vector store collection name")

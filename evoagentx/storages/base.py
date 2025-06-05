@@ -7,9 +7,9 @@ from llama_index.core import StorageContext
 from ..core.module import BaseModule
 from .storages_config import StoreConfig
 from .db_stores import DBStoreBase, DBStoreFactory
-from .graph_stores import GraphStoreBase, GraphStoreFactory
-from .vectore_stores import VectorStoreBase, VectorStoreFactory
-from .schema import TableType, AgentStore, WorkflowStore, MemoryStore, HistoryStore
+from .graph_stores import GraphStoreFactory
+from .vectore_stores import VectorStoreFactory
+from .schema import TableType, AgentStore, WorkflowStore, MemoryStore, HistoryStore, IndexStore
 
 
 class StorageHandler(BaseModule):
@@ -21,9 +21,9 @@ class StorageHandler(BaseModule):
     """
     storageConfig: StoreConfig = Field(..., description="Configuration for all storage backends")
     storageDB: Optional[Union[DBStoreBase, Any]] = Field(None, description="Database storage backend")
-    storageVector: Optional[Union[VectorStoreBase, Any]] = Field(None, description="Optional vector storage backend")
-    storageGraph: Optional[Union[GraphStoreBase, Any]] = Field(None, description="Optional graph storage backend")
-    storage_context: Optional[StorageContext] = Field(None, description="Optional storage context backend for llama_index")
+    storageVector: Dict[str,Any] = Field(default_factory=dict, description="Optional vector storage backend collection")
+    storageGraph: Dict[str,Any] = Field(default_factory=dict, description="Optional graph storage backend collection")
+    storage_context: Dict[str,Any] = Field(default_factory=dict, description="Optional storage context backend collection for llama_index")
 
     def init_module(self):
         """
@@ -35,7 +35,7 @@ class StorageHandler(BaseModule):
         self._init_graph_store()
 
         # Initialize storage_context for llama_index after stores are set
-        self.storage_context = StorageContext.from_defaults(
+        self.storage_context["default"] = StorageContext.from_defaults(
             vector_store=self.storageVector,
             graph_store=self.storageGraph
         )
@@ -48,26 +48,26 @@ class StorageHandler(BaseModule):
         db_config = self.storageConfig.dbConfig
         self.storageDB = DBStoreFactory.create(db_config.db_name, db_config)
     
-    def _init_vector_store(self):
+    def _init_vector_store(self, corpus_id: str):
         """
         Initialize the vector storage backend using the VectorStoreFactory.
         Sets the storageVector attribute if the configuration is provided.
         """
         vector_config = self.storageConfig.vectorConfig
         if vector_config is not None:
-            self.storageVector = VectorStoreFactory().create(
+            self.storageVector[corpus_id] = VectorStoreFactory().create(
                 store_type=vector_config.vector_name,
                 store_config=vector_config.model_dump()
             )
     
-    def _init_graph_store(self):
+    def _init_graph_store(self, corpus_id: str):
         """
         Initialize the graph storage backend using the GraphStoreFactory.
         Sets the storageGraph attribute if the configuration is provided.
         """
         graph_config = self.storageConfig.graphConfig
         if graph_config is not None:
-            self.storageGraph = GraphStoreFactory().create(
+            self.storageGraph[corpus_id] = GraphStoreFactory().create(
                 store_type=graph_config.graph_name, 
                 store_config=graph_config.model_dump()
             )
@@ -311,3 +311,21 @@ class StorageHandler(BaseModule):
             self.storageDB.update(memory_id, new_metadata=history_data, store_type="history", table=table)
         else:
             self.storageDB.insert(metadata=history_data, store_type="history", table=table)
+
+    def load_index(self, index_id: str, corpus_id: Optional[str] = None, table: str = TableType.store_index.value) -> Optional[Dict[str, Any]]:
+        result = self.storageDB.get_by_id(index_id, store_type="index", table=table)
+        if result is not None:
+            result = self.parse_result(result, IndexStore)
+            if corpus_id and result.get("corpus_id") != corpus_id:
+                return None
+        return result
+
+    def save_index(self, index_data: Dict[str, Any], table: str = TableType.store_index.value):
+        index_id = index_data.get("index_id")
+        if not index_id:
+            raise ValueError("Index data must include an 'index_id' field")
+        existing = self.storageDB.get_by_id(index_id, store_type="index", table=table)
+        if existing:
+            self.storageDB.update(index_id, new_metadata=index_data, store_type="index", table=table)
+        else:
+            self.storageDB.insert(metadata=index_data, store_type="index", table=table)

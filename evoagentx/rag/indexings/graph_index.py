@@ -6,7 +6,7 @@ from llama_index.core.storage import StorageContext
 from llama_index.core.embeddings import BaseEmbedding
 from llama_index.core.indices.property_graph import PropertyGraphIndex
 
-from .base import BaseIndexWrapper
+from .base import BaseIndexWrapper, IndexType
 from ..schema import Chunk
 
 
@@ -24,6 +24,7 @@ class GraphIndexing(BaseIndexWrapper):
         self.embed_model = embed_model
         self.storage_context = storage_context
         self.index_config = index_config or {}
+        self.index_type = IndexType.GRAPH
         try:
             self.index = PropertyGraphIndex(
                 nodes=[],

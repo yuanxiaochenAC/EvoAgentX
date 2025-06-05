@@ -13,21 +13,21 @@ class FaissVectorStoreWrapper(VectorStoreBase):
     """Wrapper for FAISS vector store."""
     
     def __init__(self, dimension: int = 1536, 
-                 index_type: Union[Literal["flat_l2", "ivf_flat"]] = "flat_l2", **kwargs):
+                 metrics: Union[Literal["flat_l2", "ivf_flat"]] = "flat_l2", **kwargs):
         self.dimension = dimension
-        self.index_type = index_type
+        self.metrics = metrics
         self.faiss_index = self._create_index()
         self.vector_store = FaissVectorStore(faiss_index=self.faiss_index)
         self.logger = logging.getLogger(__name__)
 
     def _create_index(self) -> faiss.Index:
-        if self.index_type == "flat_l2":
+        if self.metrics == "flat_l2":
             return faiss.IndexFlatL2(self.dimension)
-        elif self.index_type == "ivf_flat":
+        elif self.metrics == "ivf_flat":
             quantizer = faiss.IndexFlatL2(self.dimension)
             return faiss.IndexIVFFlat(quantizer, self.dimension, 100)
         else:
-            raise ValueError(f"Unsupported FAISS index type: {self.index_type}")
+            raise ValueError(f"Unsupported FAISS index type: {self.metrics}")
         
     def get_vector_store(self) -> FaissVectorStore:
         """Return the FAISS vector store."""
