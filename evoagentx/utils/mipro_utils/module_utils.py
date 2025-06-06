@@ -3,35 +3,33 @@ import asyncio
 from typing import Callable, Dict, Union, Awaitable
 from pydantic import Field
 import dspy
-from ...optimizers.engine.registry import ParamRegistry  # 替换成你自己的路径
+from ...optimizers.engine.registry import ParamRegistry  # Replace with your own path
 from typing import List
 import warnings
 from ...prompts.template import PromptTemplate
 
 class PromptTuningModule(dspy.Module):
     """
-    A DSPy module for prompt tuning that manages the interaction between predictors,
-    a parameter registry, and a program function.
-
-    This module coordinates the optimization of prompts by:
+    A prompt tuning module that manages interactions between predictors,
+    parameter registry, and program functions.
+    
+    This module coordinates prompt optimization through:
     1. Maintaining a set of predictors for different tasks
     2. Synchronizing optimized parameters back to the program
-    3. Executing the program with the updated parameters
-
+    3. Executing the program with updated parameters
+    
     Parameters
     ----------
     program : Union[Callable[..., dict], Callable[..., Awaitable[dict]]]
         The main program function to execute. Can be either synchronous or asynchronous.
-        Must return a dictionary containing the execution results.
+        Must return a dictionary containing execution results.
     signature_dict : Dict[str, dspy.Signature]
         A mapping of task names to their corresponding DSPy signatures.
         Each signature defines the input/output structure for a specific task.
     registry : ParamRegistry
-        A registry that maintains the tunable parameters shared between
+        A registry that maintains tunable parameters shared between
         predictors and the program.
     """
-
-    # signature_name2register_name: Dict[str, str] = PrivateAttr()
 
     @classmethod
     def from_registry(
@@ -41,24 +39,24 @@ class PromptTuningModule(dspy.Module):
     ) -> "PromptTuningModule":
         """
         Factory method to create a PromptTuningModule from a registry and program.
-
+        
         This method:
         1. Creates signatures for each field in the registry
         2. Initializes a PromptTuningModule with the program and signatures
         3. Sets up predictors for each signature
-
+        
         Parameters
         ----------
         program : Union[Callable[..., dict], Callable[..., Awaitable[dict]]]
             The main program function to execute
         registry : ParamRegistry
-            Registry containing the tunable parameters
-
+            Registry containing tunable parameters
+            
         Returns
         -------
         PromptTuningModule
             A configured PromptTuningModule instance
-
+            
         Examples
         --------
         >>> registry = ParamRegistry()
@@ -75,7 +73,7 @@ class PromptTuningModule(dspy.Module):
             registry=registry,
         )
         
-        # Create and return the module
+        # Create and return the module instance
         return cls(program=program, signature_dict=signature_dict, registry=registry, signature_name2register_name=signature_name2register_name)
 
     def __init__(
@@ -85,6 +83,20 @@ class PromptTuningModule(dspy.Module):
         registry: ParamRegistry,
         signature_name2register_name: Dict[str, str],
     ):
+        """
+        Initialize a PromptTuningModule instance.
+        
+        Parameters
+        ----------
+        program : Union[Callable[..., dict], Callable[..., Awaitable[dict]]]
+            The main program function to execute
+        signature_dict : Dict[str, dspy.Signature]
+            Mapping of task names to signatures
+        registry : ParamRegistry
+            Parameter registry
+        signature_name2register_name : Dict[str, str]
+            Mapping of signature names to register names
+        """
         super().__init__()
         self.program = program
         self.predicts = []
@@ -100,7 +112,17 @@ class PromptTuningModule(dspy.Module):
 
     def escape_braces(self, text):
         """
-        This function escapes all the braces in the text.
+        Escape all braces in the text.
+        
+        Parameters
+        ----------
+        text : str
+            Text that needs escaping
+            
+        Returns
+        -------
+        str
+            Escaped text
         """
         def helper(s, start=0):
             result = ''
@@ -122,10 +144,22 @@ class PromptTuningModule(dspy.Module):
     
     def _validate_prompt(self, prompt: str, input_names: List[str], verbose: bool = True) -> str:
         """
-        Check if the generated prompt is valid. Currently only check is the required inputs are wrapped in brackets. 
+        Validate if the generated prompt is valid. Currently only checks if required inputs are wrapped in braces.
+        
+        Parameters
+        ----------
+        prompt : str
+            The prompt to validate
+        input_names : List[str]
+            List of required input names
+        verbose : bool, optional
+            Whether to show detailed information, defaults to True
+            
+        Returns
+        -------
+        str
+            Validated and potentially modified prompt
         """
-        # prompt = prompt.replace("\"\"\"", "")
-        # required_inputs = [inp["name"] for inp in task_info["inputs"] if inp["required"]]
         modified_messages = []
         required_inputs = input_names
         missing_required_inputs = [name for name in required_inputs if f"{{{name}}}" not in prompt]
@@ -134,7 +168,6 @@ class PromptTuningModule(dspy.Module):
             prompt += f"\n\nThe followings are some required input values: \n{input_values}"
             modified_messages.append(f"added missing inputs: {', '.join(missing_required_inputs)}")
 
-        
         prompt = self.escape_braces(prompt)
         for name in input_names:
             prompt = prompt.replace(f"{{{{{name}}}}}", f"{{{name}}}")
@@ -147,27 +180,46 @@ class PromptTuningModule(dspy.Module):
     def get_field_type(self, field: Field) -> str:
         """
         Get the type of the field.
+        
+        Parameters
+        ----------
+        field : Field
+            The field to get type from
+            
+        Returns
+        -------
+        str
+            The field type
         """
         return field.json_schema_extra.get('__dspy_field_type') if field.json_schema_extra.get('__dspy_field_type') else None
 
     def is_prompt_template(self, register_name: str) -> bool:
         """
-        Check if the register_name is a prompt template.
+        Check if the register name is a prompt template.
+        
+        Parameters
+        ----------
+        register_name : str
+            The register name to check
+            
+        Returns
+        -------
+        bool
+            Whether it is a prompt template
         """
         return self.registry.get(register_name) is not None and isinstance(self.registry.get(register_name), PromptTemplate)
 
-
     def sync_predict_inputs_to_program(self):
         """
-        Synchronizes the current input values from all predictors back to the registry.
+        Synchronize current input values from all predictors back to the registry.
         
         This method ensures that any optimized parameters in the predictors' configurations
-        are properly reflected in the registry, which in turn affects the program execution.
+        are properly reflected in the registry, which in turn affects program execution.
         
-        The synchronization process:
-        1. Iterates through all predictors
-        2. For each predictor, checks its signature's input fields
-        3. If a field has a value in the predictor's config, updates the registry
+        Synchronization process:
+        1. Iterate through all predictors
+        2. For each predictor, check its signature's input fields
+        3. If a field has a value in the predictor's config, update the registry
         
         Note: Values in predictor configs take precedence as they may contain
         optimized values from recent tuning iterations.
@@ -179,13 +231,9 @@ class PromptTuningModule(dspy.Module):
 
             input_names = [name for name, field in predict.signature.fields.items() if self.get_field_type(field) == 'input']
 
-            # register_name = signature.__pydantic_extra__["register_name"] if signature.__pydantic_extra__["register_name"] else None
-            # register_name = getattr(signature, 'register_name', None)
-
             signature_name = signature.__name__
             register_name = self.signature_name2register_name[signature_name]
  
-            # self.registry.set(register_name, instruction)
             if self.is_prompt_template(register_name):
                 prompt_template: PromptTemplate = self.registry.get(register_name)
                 prompt_template.instruction = instruction
@@ -194,70 +242,68 @@ class PromptTuningModule(dspy.Module):
             else:
                 instruction = self._validate_prompt(instruction, input_names)
                 self.registry.set(register_name, instruction)
-                # todo: add demos to the instruction
     
     def constrcut_trace(self, execution_data: dict) -> dict:
         """
         Construct the trace of the execution.
+        
+        Parameters
+        ----------
+        execution_data : dict
+            Execution data
+            
+        Returns
+        -------
+        dict
+            Trace information
         """
         trace: List[dict] = []
         for predict in self.predicts:
-            # signature = predict.signature
-            # instruction = signature.instructions
-
             input_names = [name for name, field in predict.signature.fields.items() if self.get_field_type(field) == 'input']
             output_names = [name for name, field in predict.signature.fields.items() if self.get_field_type(field) == 'output']
 
             input_dict = {}
             output_dict = {}
 
-            # 先去检查执行数据中是否存在input_names和output_names
+            # Check if input_names and output_names exist in execution data
             for name in input_names:
                 if name not in execution_data:
-                    # raise ValueError(f"Input {name} not found in execution data")
                     warnings.warn(f"Input {name} not found in execution data")
             for name in output_names:
                 if name not in execution_data:
-                    # raise ValueError(f"Output {name} not found in execution data")
                     warnings.warn(f"Output {name} not found in execution data")
 
-            # 如果存在，则将执行数据中的input_names和output_names加入到trace中
-            # 这里name是没有的怎么办？
+            # Add input_names and output_names from execution data to trace
             for name in input_names:
                 if name in execution_data:
                     input_dict[name] = execution_data[name]
-                # else:
-                #     input_dict[name] = None
             for name in output_names:
                 if name in execution_data:
                     output_dict[name] = execution_data[name]
-                # else:
-                #     output_dict[name] = None
             
             trace_tuple = (predict, input_dict, output_dict)
             trace.append(trace_tuple)
         return trace
 
-
     def forward(self, **kwargs) -> dict:
         """
-        Executes the program with synchronized parameters and optional inputs.
-
+        Execute the program with synchronized parameters and optional inputs.
+        
         This method:
         1. Synchronizes optimized prompts back to the program via registry
         2. Executes the program (handles both sync and async functions)
         3. Validates and returns the program's output
-
+        
         Parameters
         ----------
         **kwargs : dict
             Optional keyword arguments to pass to the program function
-
+            
         Returns
         -------
         dict
             The program's execution results
-
+            
         Raises
         ------
         ValueError
@@ -282,21 +328,26 @@ class PromptTuningModule(dspy.Module):
         return output
 
     def deepcopy(self):
-        """Deep copy the module.
-
-        This is a tweak to the default python deepcopy that only deep copies `self.parameters()`, and for other
-        attributes, we just do the shallow copy.
+        """
+        Deep copy the module.
+        
+        This is a tweak to the default Python deepcopy that only deep copies `self.parameters()`,
+        and for other attributes, we just do a shallow copy.
+        
+        Returns
+        -------
+        PromptTuningModule
+            A deep copy of the module
         """
         try:
-            # If the instance itself is copyable, we can just deep copy it.
-            # Otherwise we will have to create a new instance and copy over the attributes one by one.
+            # If the instance itself is copyable, we can just deep copy it
             return copy.deepcopy(self)
         except Exception:
             pass
 
-        # Create an empty instance.
+        # Create an empty instance
         new_instance = self.__class__.__new__(self.__class__)
-        # Set attribuetes of the copied instance.
+        # Set attributes of the copied instance
         for attr, value in self.__dict__.items():
             if isinstance(value, dspy.Module):
                 setattr(new_instance, attr, value.deepcopy())
@@ -306,10 +357,10 @@ class PromptTuningModule(dspy.Module):
                     setattr(new_instance, attr, copy.deepcopy(value))
                 except Exception:
                     try:
-                        # Fallback to shallow copy if deep copy fails
+                        # Fall back to shallow copy if deep copy fails
                         setattr(new_instance, attr, copy.copy(value))
                     except Exception:
-                        # If even the shallow copy fails, we just copy over the reference.
+                        # If even shallow copy fails, just copy the reference
                         setattr(new_instance, attr, value)
         
         return new_instance
