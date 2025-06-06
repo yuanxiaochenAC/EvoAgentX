@@ -110,6 +110,34 @@ class PromptTuningModule(dspy.Module):
         self.registry = registry
         self.signature_name2register_name = signature_name2register_name
 
+    def reset(self):
+        """
+        Reset the module to its initial state.
+        """
+        self.registry.reset()
+
+        for predict in self.predicts:
+            signature = predict.signature
+
+            signature_name = signature.__name__
+            register_name = self.signature_name2register_name[signature_name]
+
+            register_element = self.registry.get(register_name)
+
+            if isinstance(register_element, PromptTemplate):
+                predict.instruction = register_element.instruction
+                predict.demonstrations = register_element.demonstrations
+            elif isinstance(register_element, str):
+                predict.instruction = register_element
+                predict.demonstrations = []
+            else:
+                warnings.warn(f"Unsupported register element type: {type(register_element)}")
+                # raise ValueError(f"Unsupported register element type: {type(register_element)}")
+        
+        return self
+
+
+
     def escape_braces(self, text):
         """
         Escape all braces in the text.
@@ -334,6 +362,12 @@ class PromptTuningModule(dspy.Module):
             dspy_trace.extend(trace)
 
         return output
+    
+    # def save(self, path, save_program=False):
+    #     return super().save(path, save_program)
+    
+    # def load(self, path):
+    #     return super().load(path)
 
     def deepcopy(self):
         """
