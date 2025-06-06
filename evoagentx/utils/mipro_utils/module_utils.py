@@ -209,6 +209,14 @@ class PromptTuningModule(dspy.Module):
         """
         return self.registry.get(register_name) is not None and isinstance(self.registry.get(register_name), PromptTemplate)
 
+    def get_demos(self, demos: list) -> List[dict]:
+        result = [] 
+        for demo in demos:
+            if isinstance(demo, dspy.Example):
+                demo = demo.toDict()
+            result.append(demo)
+        return result
+    
     def sync_predict_inputs_to_program(self):
         """
         Synchronize current input values from all predictors back to the registry.
@@ -237,7 +245,7 @@ class PromptTuningModule(dspy.Module):
             if self.is_prompt_template(register_name):
                 prompt_template: PromptTemplate = self.registry.get(register_name)
                 prompt_template.instruction = instruction
-                prompt_template.demonstrations = demos
+                prompt_template.demonstrations = self.get_demos(demos)
                 self.registry.set(register_name, prompt_template)
             else:
                 instruction = self._validate_prompt(instruction, input_names)

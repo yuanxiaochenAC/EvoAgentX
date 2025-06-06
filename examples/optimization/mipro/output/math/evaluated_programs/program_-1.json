@@ -1,0 +1,28 @@
+{
+  "predicts[0]": {
+    "traces": [],
+    "train": [],
+    "demos": [],
+    "signature": {
+      "instructions": "Let's think step by step to answer the math question.",
+      "fields": [
+        {
+          "prefix": "Problem:",
+          "description": "The Input for prompt `test_prompt`."
+        },
+        {
+          "prefix": "Solution:",
+          "description": "The Output for prompt `test_prompt`."
+        }
+      ]
+    },
+    "lm": null
+  },
+  "metadata": {
+    "dependency_versions": {
+      "python": "3.10",
+      "dspy": "2.6.24",
+      "cloudpickle": "3.1"
+    }
+  }
+}

@@ -142,7 +142,7 @@ class ParamRegistry:
         """Return a list of all registered field names (aliases)."""
         return list(self.fields.keys())
     
-    def rest(self):
+    def reset(self):
         """Roll back all registered fields to their initial values."""
         for field in self.fields.values():
             field.reset()

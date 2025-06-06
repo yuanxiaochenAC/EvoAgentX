@@ -300,6 +300,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         program: Callable,
         optimizer_llm: BaseLLM,
         evaluator: Optional[Callable] = None,
+        eval_rounds: Optional[int] = 1, 
         metric_threshold: Optional[int] = None,
         max_bootstrapped_demos: int = 4, 
         max_labeled_demos: int = 4, 
@@ -322,6 +323,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         fewshot_aware_proposer: bool = True,
         requires_permission_to_run: bool = False,
         provide_traceback: Optional[bool] = None,
+        verbose: bool = False, 
         **kwargs
     ):
         """
@@ -335,6 +337,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
                 Required to have a `__call__(program, evalset, *kwargs) -> float` method that receives a program and a list of 
                 examples from a benchmark's train/dev/test set and return a float score. Must also have a `metric(example, prediction) -> float` 
                 method that evaluates a single example. If not provided, will construct a default evaluator using the benchmark's evaluate method.
+            eval_rounds (Optional[int]): number of rounds to evaluate the program. Defaults to 1. 
             metric_threshold (Optional[int]): threshold for the metric score. If provided, only examples with scores above this threshold will be used as demonstrations. 
                 If not provided, examples with scores above 0 will be used as demonstrations. 
             max_bootstrapped_demos (int): maximum number of bootstrapped demonstrations to use. Defaults to 4.
@@ -395,6 +398,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         self.max_errors = max_errors
         
         self.track_stats = track_stats
+        self.eval_rounds = eval_rounds 
         self.save_path = save_path
         self.prompt_model_total_calls = 0
         self.total_calls = 0
@@ -411,7 +415,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         self.fewshot_aware_proposer = fewshot_aware_proposer 
         self.requires_permission_to_run = requires_permission_to_run 
         self.provide_traceback = provide_traceback 
-        self.verbose = True
+        self.verbose = verbose
         self.kwargs = kwargs 
 
     def _validate_program(self, program: Callable):
@@ -630,10 +634,12 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         self.metric = evaluator.metric
 
         # Step 1: Bootstrap few-shot examples 
+        """
         with suppress_cost_logging():
             demo_candidates = self._bootstrap_fewshot_examples(program, trainset, seed, teacher=None)
 
         # Step 2: Propose instruction candidates 
+        
         with suppress_cost_logging():
             instruction_candidates = self._propose_instructions(
                 program,
@@ -645,6 +651,11 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
                 self.tip_aware_proposer,
                 self.fewshot_aware_proposer,
             )
+        """ 
+
+        import pickle
+        demo_candidates = pickle.load(open("debug/demo_candidates_debug.pkl", "rb"))
+        instruction_candidates = pickle.load(open("debug/instruction_candidates_debug.pkl", "rb"))
 
         # Step 3: Find optimal prompt parameters 
         with suppress_cost_logging():
@@ -665,6 +676,12 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
             os.makedirs(self.save_path, exist_ok=True)
             self.best_program_path = os.path.join(self.save_path, "best_program.json")
             best_program.save(self.best_program_path)
+        
+
+        # reset the self.model. After optimization, the model will be reset to the original state.
+        # This is necessary to avoid the model being modified by the optimization process. 
+        # Use self.restore_best_program() to restore the best program. 
+        self.registry.reset()
 
     def _get_input_keys(self, dataset: Benchmark) -> Optional[List[str]]:
 
@@ -829,8 +846,8 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         adjusted_num_trials = int((num_trials + num_trials // minibatch_full_eval_steps + 1 + run_additional_full_eval_at_end) if minibatch else num_trials)
         logger.info(f"== Trial {1} / {adjusted_num_trials} - Full Evaluation of Default Program ==")
 
-        default_score, _ = eval_candidate_program(
-            len(valset), valset, program, evaluator, self.rng, return_all_scores=True
+        default_score = eval_candidate_program(
+            len(valset), valset, program, evaluator, self.rng, eval_rounds=self.eval_rounds 
         )
         logger.info(f"Default program score: {default_score}\n")
 
