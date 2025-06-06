@@ -125,10 +125,10 @@ class PromptTuningModule(dspy.Module):
             register_element = self.registry.get(register_name)
 
             if isinstance(register_element, PromptTemplate):
-                predict.instructions = register_element.instruction
+                predict.signature.instructions = register_element.instruction
                 predict.demos = register_element.demonstrations
             elif isinstance(register_element, str):
-                predict.instructions = register_element
+                predict.signature.instructions = register_element
                 predict.demos = []
             else:
                 warnings.warn(f"Unsupported register element type: {type(register_element)}")

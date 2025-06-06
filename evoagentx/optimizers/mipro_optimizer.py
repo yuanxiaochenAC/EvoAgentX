@@ -681,7 +681,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         # reset the self.model. After optimization, the model will be reset to the original state.
         # This is necessary to avoid the model being modified by the optimization process. 
         # Use self.restore_best_program() to restore the best program. 
-        self.registry.reset()
+        self.model.reset()
 
     def _get_input_keys(self, dataset: Benchmark) -> Optional[List[str]]:
 
@@ -718,17 +718,23 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
             logger.warning("`get_input_keys` is not implemented in the benchmark. Will use all keys as input keys. This may cause unexpected behavior if the program does not use all the keys.")
             input_keys = trainset[0].keys()
         
-        dspy_trainset = [
-            example.with_inputs(*input_keys)
-            if isinstance(example, dspy.Example) else dspy.Example(**example).with_inputs(*input_keys)
-            for example in trainset
-        ]
-        dspy_valset = [
-            example.with_inputs(*input_keys)
-            if isinstance(example, dspy.Example) else dspy.Example(**example).with_inputs(*input_keys)
-            for example in valset]
+        dspy_trainset = self._convert_benchmark_data_to_dspy_examples(trainset, input_keys)
+        dspy_valset = self._convert_benchmark_data_to_dspy_examples(valset, input_keys)
         
         return dspy_trainset, dspy_valset
+    
+    def _convert_benchmark_data_to_dspy_examples(self, data: List[dict], input_keys: List[str]) -> List[dspy.Example]:
+
+        """
+        Convert the benchmark data to a list of dspy Example. This is required since the evaluator accepts a list of dspy Example. 
+        """
+        dspy_examples = [
+            example.with_inputs(*input_keys)
+            if isinstance(example, dspy.Example) else dspy.Example(**example).with_inputs(*input_keys)
+            for example in data
+        ]
+
+        return dspy_examples
 
     def _bootstrap_fewshot_examples(self, program: Any, trainset: List, seed: int, teacher: Any) -> Optional[List]:
 
@@ -1163,6 +1169,44 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
 
         return best_score, best_program, total_eval_calls
 
+    def evaluate(
+        self, 
+        evalset: Optional[List[dspy.Example]] = None, 
+        dataset: Optional[Benchmark] = None, 
+        eval_mode: Optional[str] = "dev", 
+        program: Optional[PromptTuningModule] = None, 
+        indices: Optional[List[int]] = None, 
+        sample_k: Optional[int] = None, 
+        batch_size: Optional[int] = None, # if provided, sample `batch_size` examples from the evalset
+        **kwargs
+    ):
+        # if program is not provided, use the model as the program
+        if program is None:
+            program = self.model 
+
+        # if evalset is not provided, use the dataset to get the evalset
+        if evalset is None:
+            assert dataset is not None, "Either `evalset` or `dataset` must be provided."
+            data_map = {"train": dataset.get_train_data, "dev": dataset.get_dev_data, "test": dataset.get_test_data} 
+            evaldata = data_map[eval_mode](indices=indices, sample_k=sample_k)
+            if not evaldata:
+                logger.warning(f"No data found for {eval_mode} set. Return 0.0.")
+                return 0.0 
+            input_keys = self._get_input_keys(dataset=dataset)
+            if not input_keys:
+                input_keys = evaldata[0].keys()
+            evalset = self._convert_benchmark_data_to_dspy_examples(evaldata, input_keys)
+        
+        batch_size = batch_size or len(evalset)
+
+        score_list = [] 
+        for _ in range(self.eval_rounds):
+            score = eval_candidate_program(
+                batch_size=batch_size, 
+                evalset=evalset, 
+                candidate_program=program, 
+                evaluator=None # todo !!! 
+            )
 
 
 
