@@ -7,6 +7,11 @@ from ...optimizers.engine.registry import ParamRegistry  # Replace with your own
 from typing import List
 import warnings
 from ...prompts.template import PromptTemplate
+from dspy.utils.saving import get_dependency_versions
+from pathlib import Path
+import cloudpickle
+import ujson
+
 
 class PromptTuningModule(dspy.Module):
     """
@@ -398,4 +403,100 @@ class PromptTuningModule(dspy.Module):
                         setattr(new_instance, attr, value)
         
         return new_instance
+    
+    def save(self, path, save_program=False):
+        """Save the module.
+
+        Save the module to a directory or a file. There are two modes:
+        - `save_program=False`: Save only the state of the module to a json or pickle file, based on the value of
+            the file extension.
+        - `save_program=True`: Save the whole module to a directory via cloudpickle, which contains both the state and
+            architecture of the model.
+
+        We also save the dependency versions, so that the loaded model can check if there is a version mismatch on
+        critical dependencies or DSPy version.
+
+        Args:
+            path (str): Path to the saved state file, which should be a .json or .pkl file when `save_program=False`,
+                and a directory when `save_program=True`.
+            save_program (bool): If True, save the whole module to a directory via cloudpickle, otherwise only save
+                the state.
+        """
+        metadata = {}
+        metadata["dependency_versions"] = get_dependency_versions()
+        path = Path(path)
+
+        if not path.exists():
+            # Create the directory (and any parent directories)
+            path.mkdir(parents=True)
+
+        if save_program:
+            if path.suffix:
+                raise ValueError(
+                    f"`path` must point to a directory without a suffix when `save_program=True`, but received: {path}"
+                )
+            if path.exists() and not path.is_dir():
+                raise NotADirectoryError(f"The path '{path}' exists but is not a directory.")
+
+            try:
+                with open(path / "program.pkl", "wb") as f:
+                    cloudpickle.dump(self, f)
+            except Exception as e:
+                raise RuntimeError(
+                    f"Saving failed with error: {e}. Please remove the non-picklable attributes from your DSPy program, "
+                    "or consider using state-only saving by setting `save_program=False`."
+                )
+            with open(path / "metadata.json", "w") as f:
+                ujson.dump(metadata, f, indent=2)
+
+            return
+
+        state = self.dump_state()
+        state["metadata"] = metadata
+        if path.suffix == ".json":
+            try:
+                with open(path, "w") as f:
+                    f.write(ujson.dumps(state, indent=2))
+            except Exception as e:
+                raise RuntimeError(
+                    f"Failed to save state to {path} with error: {e}. Your DSPy program may contain non "
+                    "json-serializable objects, please consider saving the state in .pkl by using `path` ending "
+                    "with `.pkl`, or saving the whole program by setting `save_program=True`."
+                )
+        elif path.suffix == ".pkl":
+            with open(path, "wb") as f:
+                cloudpickle.dump(state, f)
+        else:
+            raise ValueError(f"`path` must end with `.json` or `.pkl` when `save_program=False`, but received: {path}")
+
+    def load(self, path):
+        """Load the saved module. You may also want to check out dspy.load, if you want to
+        load an entire program, not just the state for an existing program.
+
+        Args:
+            path (str): Path to the saved state file, which should be a .json or a .pkl file
+        """
+        path = Path(path)
+
+        if path.suffix == ".json":
+            with open(path) as f:
+                state = ujson.loads(f.read())
+        elif path.suffix == ".pkl":
+            with open(path, "rb") as f:
+                state = cloudpickle.load(f)
+        else:
+            raise ValueError(f"`path` must end with `.json` or `.pkl`, but received: {path}")
+
+        dependency_versions = get_dependency_versions()
+        saved_dependency_versions = state["metadata"]["dependency_versions"]
+        for key, saved_version in saved_dependency_versions.items():
+            if dependency_versions[key] != saved_version:
+                warnings.warning(
+                    f"There is a mismatch of {key} version between saved model and current environment. "
+                    f"You saved with `{key}=={saved_version}`, but now you have "
+                    f"`{key}=={dependency_versions[key]}`. This might cause errors or performance downgrade "
+                    "on the loaded model, please consider loading the model in the same environment as the "
+                    "saving environment."
+                )
+        self.load_state(state)
         
