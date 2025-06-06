@@ -1289,6 +1289,8 @@ class MiproEvaluatorWrapper(MiproEvaluator):
         # sync the candidate prompts and instructions to the workflow graph
         program.sync_predict_inputs_to_program()
 
+        program.save()
+
         return_all_scores = kwargs.get("return_all_scores", None) or self.return_all_scores
         return_outputs = kwargs.get("return_outputs", None) or self.return_outputs
         
