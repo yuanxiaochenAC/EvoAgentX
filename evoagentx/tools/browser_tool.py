@@ -7,6 +7,8 @@ from typing import Dict, Any, List, Callable, Optional, Tuple, Union
 from pydantic import Field
 from .tool import Tool
 from evoagentx.core.logging import logger
+import html2text
+import time
 
 # Define selector map as a constant to avoid repetition
 SELECTOR_MAP = {
@@ -591,7 +593,6 @@ class BrowserTool(Tool):
                 for char in text:
                     web_element.send_keys(char)
                     # Small delay between keypresses
-                    import time
                     time.sleep(0.05)
             else:
                 # Type all at once
@@ -939,8 +940,13 @@ class BrowserTool(Tool):
         """
         Click on a button, link, or other clickable element using a reference ID from a snapshot.
         
-        This function only works with element references from a snapshot. Use browser_snapshot
+        This function only works with element references from a snapshot. You MUST call browser_snapshot
         or navigate_to_url first to capture the page elements.
+        
+        Common usage pattern:
+        1. First get a snapshot: browser_snapshot() or navigate_to_url()
+        2. Find the element reference (e.g. 'e0', 'e1') from the snapshot's interactive_elements
+        3. Use that reference to click: browser_click(element='Login button', ref='e0')
         
         This function supports multiple parameter styles:
         1. Standard style: element (description), ref (element ID)
@@ -954,7 +960,7 @@ class BrowserTool(Tool):
             continue_after_tool_call (bool, optional): Whether to continue after the tool call
             
         Returns:
-            Dict[str, Any]: Result of the click operation
+            Dict[str, Any]: Result of the click operation with detailed feedback
         """
         # Check if browser is initialized
         driver_check = self._check_driver_initialized()
@@ -971,13 +977,37 @@ class BrowserTool(Tool):
             element = params.get("element", element)
             ref = params.get("ref", ref)
         
+        # Validate required parameters
         if not ref:
-            return {"status": "error", "message": "Element reference (ref) parameter is required"}
+            return {
+                "status": "error", 
+                "message": "Element reference (ref) parameter is required. You must first call browser_snapshot() or navigate_to_url() to get element references.",
+                "required_steps": [
+                    "1. Call browser_snapshot() or navigate_to_url() to get page elements",
+                    "2. Find the element reference (e.g. 'e0') in the response's interactive_elements",
+                    "3. Use that reference to click: browser_click(element='Button name', ref='e0')"
+                ]
+            }
+            
+        # Check if we have any stored references
+        if not self.element_references:
+            return {
+                "status": "error",
+                "message": "No element references found. You must first capture a page snapshot.",
+                "required_steps": [
+                    "1. Call browser_snapshot() or navigate_to_url() to capture the page state",
+                    "2. Use the element references returned in the snapshot"
+                ]
+            }
             
         # Parse the reference
         selector_type, selector, error = self._parse_element_reference(ref)
         if error:
-            return {"status": "error", "message": error}
+            return {
+                "status": "error", 
+                "message": error,
+                "help": "Make sure you're using a valid element reference from a recent snapshot"
+            }
                 
         # Use a human-readable description or the ref ID if not provided
         element_desc = element or ref
@@ -988,24 +1018,61 @@ class BrowserTool(Tool):
             return by_type
                 
         try:
-            # Find and click the element
+            # First check if element exists at all
+            try:
+                element_exists = self.driver.find_element(by_type, selector)
+            except:
+                return {
+                    "status": "not_found",
+                    "message": f"Element not found: {element_desc}",
+                    "suggestion": "The page may have changed. Try getting a new snapshot with browser_snapshot()"
+                }
+            
+            # Then check if it's clickable
             web_element, error = self._find_element_with_wait(
                 by_type, selector, self.timeout, EC.element_to_be_clickable
             )
             if error:
-                return {"status": "not_found", "message": f"Element not found or not clickable: {element_desc}"}
+                # Element exists but isn't clickable - get more details
+                try:
+                    is_visible = element_exists.is_displayed()
+                    is_enabled = element_exists.is_enabled()
+                    element_tag = element_exists.tag_name
+                    element_classes = element_exists.get_attribute("class")
+                    
+                    return {
+                        "status": "not_clickable",
+                        "message": f"Element found but not clickable: {element_desc}",
+                        "element_state": {
+                            "visible": is_visible,
+                            "enabled": is_enabled,
+                            "tag": element_tag,
+                            "classes": element_classes
+                        },
+                        "suggestion": "The element might be disabled, hidden, or covered by another element"
+                    }
+                except:
+                    return {
+                        "status": "not_clickable",
+                        "message": f"Element found but not clickable: {element_desc}",
+                        "suggestion": "The element might be disabled, hidden, or covered by another element"
+                    }
                 
+            # Try to click the element
             web_element.click()
             
             # Wait for page to load after click
             page_loaded = self._wait_for_page_load(self.timeout)
             if not page_loaded:
                 # Take a snapshot anyway even if page load times out
-                self.browser_snapshot()
+                snapshot_result = self.browser_snapshot()
                 return {
                     "status": "partial_success",
                     "message": "Element clicked, but page load timed out",
-                    "element": element_desc
+                    "element": element_desc,
+                    "current_url": self.driver.current_url,
+                    "snapshot": snapshot_result if snapshot_result["status"] == "success" else None,
+                    "suggestion": "The page might still be loading. You may want to wait and take another snapshot."
                 }
             
             # Take a new snapshot after the click
@@ -1016,6 +1083,8 @@ class BrowserTool(Tool):
                     "status": "success",
                     "message": f"Successfully clicked on {element_desc}",
                     "element": element_desc,
+                    "current_url": self.driver.current_url,
+                    "title": self.driver.title,
                     "snapshot": {
                         "interactive_elements": snapshot_result.get("interactive_elements", [])
                     }
@@ -1026,15 +1095,164 @@ class BrowserTool(Tool):
                     "status": "success",
                     "message": f"Successfully clicked on {element_desc} but snapshot failed",
                     "element": element_desc,
-                    "snapshot_error": snapshot_result.get("message", "Unknown error capturing snapshot")
+                    "current_url": self.driver.current_url,
+                    "title": self.driver.title,
+                    "snapshot_error": snapshot_result.get("message", "Unknown error capturing snapshot"),
+                    "suggestion": "You may want to take another snapshot with browser_snapshot()"
                 }
                 
         except TimeoutException:
-            return {"status": "not_found", "message": f"Element not found or not clickable: {element_desc}"}
+            return {
+                "status": "timeout",
+                "message": f"Timed out waiting for element to be clickable: {element_desc}",
+                "suggestion": "The element might be taking too long to load or become clickable"
+            }
         except Exception as e:
             logger.error(f"Error clicking element: {str(e)}")
-            return {"status": "error", "message": str(e)}
+            return {
+                "status": "error",
+                "message": str(e),
+                "element": element_desc,
+                "suggestion": "Try getting a new snapshot of the page with browser_snapshot()"
+            }
     
+    def _classify_element_interactivity(self, element_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Classify an element's interactivity based on its properties.
+        This method contains all rules for determining if an element is interactive or editable.
+        
+        Args:
+            element_data (Dict[str, Any]): Element data including properties, attributes, etc.
+            
+        Returns:
+            Dict[str, Any]: Element data with interactivity classifications added
+        """
+        # Start with basic properties
+        element_data["interactable"] = False
+        element_data["editable"] = False
+        
+        # Get commonly used properties
+        tag_name = element_data.get("properties", {}).get("tag", "").upper()
+        role = element_data.get("attributes", {}).get("role", "").lower()
+        
+        # Check if element is disabled
+        is_disabled = (
+            element_data.get("attributes", {}).get("disabled") is not None or
+            element_data.get("attributes", {}).get("aria-disabled") == "true" or
+            element_data.get("attributes", {}).get("aria-hidden") == "true"
+        )
+        
+        # Check visibility
+        is_visible = element_data.get("visible", True)
+        
+        if not is_disabled and is_visible:
+            # Interactive Tags Check
+            interactive_tags = {
+                'A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA',
+                'DETAILS', 'AUDIO', 'VIDEO', 'IFRAME', 'EMBED',
+                'OBJECT', 'SUMMARY', 'MENU'
+            }
+            
+            # Interactive Roles Check
+            interactive_roles = {
+                'button', 'link', 'checkbox', 'menuitem',
+                'menuitemcheckbox', 'menuitemradio', 'option',
+                'radio', 'searchbox', 'slider', 'spinbutton',
+                'switch', 'tab', 'textbox', 'combobox',
+                'listbox', 'menu', 'menubar', 'radiogroup',
+                'tablist', 'toolbar', 'tree', 'treegrid'
+            }
+            
+            # Check for interactive attributes
+            has_interactive_attrs = any([
+                element_data.get("attributes", {}).get(attr) is not None
+                for attr in ['onclick', 'onkeydown', 'onkeyup', 'onmousedown', 
+                           'onmouseup', 'tabindex']
+            ])
+            
+            # Determine interactability
+            element_data["interactable"] = (
+                tag_name in interactive_tags or
+                role in interactive_roles or
+                has_interactive_attrs
+            )
+            
+            # Determine editability
+            editable_input_types = {'text', 'search', 'email', 'number', 'tel', 
+                                  'url', 'password'}
+            editable_roles = {'textbox', 'searchbox', 'spinbutton'}
+            
+            element_data["editable"] = (
+                # Standard input fields
+                (tag_name == 'INPUT' and 
+                 element_data.get("attributes", {}).get("type", "text").lower() in editable_input_types) or
+                tag_name == 'TEXTAREA' or
+                # Rich text editing
+                element_data.get("attributes", {}).get("contenteditable") == "true" or
+                # Explicit input roles
+                role in editable_roles
+            )
+        
+        return element_data
+
+    def _process_accessibility_tree(self, accessibility_tree):
+        """
+        Process the accessibility tree to extract all elements and store their references.
+        
+        This method processes all elements in the page structure, assigns unique IDs,
+        and stores their selectors for later interaction.
+        
+        Args:
+            accessibility_tree (dict): The accessibility tree from JavaScript
+            
+        Returns:
+            list: A list of all elements with their IDs and properties
+        """
+        all_elements = []
+        
+        # Function to extract all elements and store references
+        def extract_elements(node, path="", index=0):
+            if not node:
+                return index
+                
+            current_path = path + "/" + (node.get("name") or node.get("role") or "element")
+            
+            # Generate a unique element ID for all elements
+            element_id = f"e{index}"
+            
+            element_info = {
+                "id": element_id,
+                "description": current_path.strip("/"),
+                "purpose": node.get("semantic_info", {}).get("purpose", ""),
+                "label": node.get("semantic_info", {}).get("label", ""),
+                "category": node.get("semantic_info", {}).get("category", ""),
+                "isPrimary": node.get("semantic_info", {}).get("isPrimary", False),
+                "visible": node.get("visible", True),
+                "properties": node.get("properties", {}),
+                "attributes": node.get("attributes", {})
+            }
+            
+            # Store the first selector as the actual reference for this element
+            if "all_refs" in node:
+                self.element_references[element_id] = node["all_refs"][0]
+                
+            # Classify element interactivity
+            element_info = self._classify_element_interactivity(element_info)
+            
+            all_elements.append(element_info)
+            index += 1
+            
+            # Process children
+            for child in node.get("children", []):
+                index = extract_elements(child, current_path, index)
+            
+            return index
+        
+        # Extract all elements
+        extract_elements(accessibility_tree)
+        
+        return all_elements
+
     def browser_snapshot(self, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
         """
         Capture a fresh snapshot of the current page with all interactive elements. 
@@ -1077,18 +1295,28 @@ class BrowserTool(Tool):
                         visible: isElementVisible(node)
                     };
                     
-                    // Helper function to check visibility
+                    // Helper function for element visibility
                     function isElementVisible(element) {
                         if (!element.getBoundingClientRect) return true;
                         const style = window.getComputedStyle(element);
                         const rect = element.getBoundingClientRect();
-                        return style.display !== 'none' && 
-                               style.visibility !== 'hidden' && 
-                               style.opacity !== '0' &&
-                               rect.width > 0 && 
-                               rect.height > 0;
+                        
+                        // Check basic visibility
+                        const isVisible = style.display !== 'none' && 
+                                        style.visibility !== 'hidden' && 
+                                        style.opacity !== '0' &&
+                                        rect.width > 0 && 
+                                        rect.height > 0;
+                                        
+                        // Check if element is in viewport
+                        const isInViewport = rect.top >= 0 &&
+                                           rect.left >= 0 &&
+                                           rect.bottom <= window.innerHeight &&
+                                           rect.right <= window.innerWidth;
+                                           
+                        return isVisible && isInViewport;
                     }
-
+                    
                     // Add text content
                     if (node.textContent) {
                         result.text_content = node.textContent.trim();
@@ -1109,6 +1337,7 @@ class BrowserTool(Tool):
 
                     // Add custom ref property that combines selector types
                     let refs = [];
+                    // Store all possible selectors, but don't use them as primary ref
                     if (node.id) refs.push(`id:${node.id}`);
                     if (node.className && typeof node.className === 'string') 
                         refs.push(`class:${node.className}`);
@@ -1131,69 +1360,66 @@ class BrowserTool(Tool):
                         if (xpath) refs.push(`xpath:${xpath}`);
                     } catch (e) {}
                     
+                    // Store all refs but don't set primary ref here
                     if (refs.length > 0) {
-                        result.ref = refs[0]; // Primary reference
-                        result.all_refs = refs; // All possible references
+                        result.all_refs = refs;
                     }
-                    
-                    // Helper function to generate CSS path
-                    function getCssPath(element) {
-                        if (!element) return '';
-                        if (element.id) return `#${element.id}`;
-                        
-                        let path = [];
-                        while (element) {
-                            let selector = element.tagName.toLowerCase();
-                            if (element.className && typeof element.className === 'string') {
-                                selector += '.' + element.className.trim().split(/\\s+/).join('.');
+
+                    // Add semantic information about the element
+                    result.semantic_info = {
+                        // What the element represents
+                        purpose: (function() {
+                            if (node.tagName === 'INPUT') {
+                                if (node.type === 'submit') return 'submit button';
+                                if (node.type === 'search') return 'search box';
+                                if (node.type === 'text') return 'text input';
+                                return `${node.type || 'text'} input`;
                             }
-                            path.unshift(selector);
-                            element = element.parentElement;
-                        }
-                        return path.join(' > ');
-                    }
-                    
-                    // Helper function to generate XPath
-                    function getXPath(element) {
-                        if (!element) return '';
-                        if (element.id) return `//*[@id="${element.id}"]`;
+                            if (node.tagName === 'BUTTON') return 'button';
+                            if (node.tagName === 'A') return 'link';
+                            if (node.tagName === 'SELECT') return 'dropdown';
+                            if (node.tagName === 'TEXTAREA') return 'text area';
+                            if (node.getAttribute('role')) return node.getAttribute('role');
+                            return 'interactive element';
+                        })(),
                         
-                        let path = [];
-                        while (element && element.nodeType === 1) {
-                            let index = 1;
-                            let sibling = element.previousSibling;
-                            while (sibling) {
-                                if (sibling.nodeType === 1 && sibling.tagName === element.tagName) {
-                                    index++;
-                                }
-                                sibling = sibling.previousSibling;
-                            }
-                            path.unshift(`${element.tagName.toLowerCase()}[${index}]`);
-                            element = element.parentElement;
-                        }
-                        return '//' + path.join('/');
-                    }
-                    
-                    // Interactivity properties
-                    result.interactable = !!(
-                        node.click || 
-                        node.tagName === 'BUTTON' || 
-                        node.tagName === 'A' || 
-                        node.tagName === 'INPUT' || 
-                        node.tagName === 'SELECT' || 
-                        node.tagName === 'TEXTAREA' ||
-                        node.role === 'button' ||
-                        node.role === 'link' ||
-                        node.onclick ||
-                        node.getAttribute && node.getAttribute('onclick') ||
-                        node.getAttribute && node.getAttribute('role') === 'button'
-                    );
-                    
-                    result.editable = !!(
-                        node.tagName === 'INPUT' || 
-                        node.tagName === 'TEXTAREA' || 
-                        node.getAttribute && node.getAttribute('contenteditable') === 'true'
-                    );
+                        // The visible or accessible text
+                        label: (function() {
+                            return node.getAttribute('aria-label') ||
+                                   node.getAttribute('title') ||
+                                   node.getAttribute('placeholder') ||
+                                   node.getAttribute('alt') ||
+                                   (node.tagName === 'INPUT' ? node.value : node.textContent.trim());
+                        })(),
+                        
+                        // Is this a primary action?
+                        isPrimary: !!(
+                            node.classList.contains('primary') ||
+                            node.getAttribute('aria-label')?.toLowerCase().includes('search') ||
+                            node.getAttribute('title')?.toLowerCase().includes('search') ||
+                            node.type === 'search' ||
+                            node.getAttribute('role') === 'main' ||
+                            node.id?.toLowerCase().includes('main') ||
+                            node.classList.contains('main')
+                        ),
+                        
+                        // Basic category
+                        category: (function() {
+                            if (node.type === 'search' || 
+                                node.getAttribute('role') === 'searchbox') return 'search';
+                            if (node.type === 'submit' || 
+                                node.tagName === 'BUTTON' ||
+                                node.getAttribute('role') === 'button') return 'action';
+                            if (node.tagName === 'A' ||
+                                node.getAttribute('role') === 'link') return 'navigation';
+                            if (node.tagName === 'INPUT' || 
+                                node.tagName === 'TEXTAREA' ||
+                                node.getAttribute('role') === 'textbox') return 'input';
+                            if (node.tagName === 'SELECT' ||
+                                ['listbox', 'combobox'].includes(node.getAttribute('role'))) return 'selection';
+                            return 'interactive';
+                        })()
+                    };
                     
                     // Process children
                     result.children = [];
@@ -1212,91 +1438,22 @@ class BrowserTool(Tool):
                 return getAccessibilityTree(document.body);
             """)
             
-            # Create a flattened list of all elements
-            all_elements = []
-            
-            # Clear existing references
-            self.element_references = {}
-            
             # Process the accessibility tree and extract all elements
             all_elements = self._process_accessibility_tree(accessibility_tree)
+            page_content = html2text.html2text(self.driver.page_source)
             
             return {
                 "status": "success",
                 "title": title,
                 "url": current_url,
                 "accessibility_tree": accessibility_tree,
-                "all_elements": all_elements,
+                "page_content": page_content,
                 "interactive_elements": [e for e in all_elements if e.get("interactable") or e.get("editable")]
             }
             
         except Exception as e:
             logger.error(f"Error generating accessibility snapshot: {str(e)}")
             return {"status": "error", "message": str(e)}
-            
-    def _process_accessibility_tree(self, accessibility_tree):
-        """
-        Process the accessibility tree to extract all elements and store their references.
-        
-        This method processes all elements in the page structure, assigns unique IDs,
-        and stores their selectors for later interaction.
-        
-        Args:
-            accessibility_tree (dict): The accessibility tree from JavaScript
-            
-        Returns:
-            list: A list of all elements with their IDs and properties
-        """
-        all_elements = []
-        
-        # Function to extract all elements and store references
-        def extract_elements(node, path="", index=0):
-            if not node:
-                return index
-                
-            current_path = path + "/" + (node.get("name") or node.get("role") or "element")
-            
-            # Generate a unique element ID for all elements
-            element_id = f"e{index}"
-            
-            element_info = {
-                "id": element_id,
-                "description": current_path.strip("/"),
-                "role": node.get("role", ""),
-                "name": node.get("name", ""),
-                "value": node.get("value", ""),
-                "type": node.get("type", ""),
-                "text_content": node.get("text_content", ""),
-                "visible": node.get("visible", True),
-                "editable": node.get("editable", False),
-                "interactable": node.get("interactable", False),
-                "properties": node.get("properties", {}),
-                "attributes": node.get("attributes", {})
-            }
-            
-            # Add reference if available
-            if "ref" in node:
-                element_info["ref"] = node["ref"]
-                # Store the reference in our mapping
-                self.element_references[element_id] = node["ref"]
-                
-            # Add all possible references if available
-            if "all_refs" in node:
-                element_info["all_refs"] = node["all_refs"]
-                
-            all_elements.append(element_info)
-            index += 1
-            
-            # Process children
-            for child in node.get("children", []):
-                index = extract_elements(child, current_path, index)
-            
-            return index
-        
-        # Extract all elements
-        extract_elements(accessibility_tree)
-        
-        return all_elements
     
     def browser_console_messages(self, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
         """
@@ -1344,8 +1501,15 @@ class BrowserTool(Tool):
         try:
             browser_logs = self.driver.get_log('browser')
             for log in browser_logs:
+                # Map browser log levels to standard levels
+                level = log.get("level", "").upper()
+                if level == "SEVERE":
+                    level = "ERROR"
+                elif level == "INFO":
+                    level = "LOG"
+                
                 logs.append({
-                    "level": log.get("level", ""),
+                    "level": level,
                     "message": log.get("message", ""),
                     "timestamp": log.get("timestamp", "")
                 })
@@ -1373,53 +1537,45 @@ class BrowserTool(Tool):
                         debug: console.debug
                     };
                     
-                    // Override console methods to capture logs
-                    console.log = function() {
+                    // Helper function to add message with proper level
+                    function addMessage(level, args) {
                         window._consoleLogs.push({
-                            level: 'log',
-                            message: Array.from(arguments).join(' '),
+                            level: level.toUpperCase(),
+                            message: Array.from(args).join(' '),
                             timestamp: new Date().toISOString()
                         });
+                    }
+                    
+                    // Override console methods to capture logs
+                    console.log = function() {
+                        addMessage('LOG', arguments);
                         originalConsole.log.apply(console, arguments);
                     };
                     
                     console.info = function() {
-                        window._consoleLogs.push({
-                            level: 'info',
-                            message: Array.from(arguments).join(' '),
-                            timestamp: new Date().toISOString()
-                        });
+                        addMessage('INFO', arguments);
                         originalConsole.info.apply(console, arguments);
                     };
                     
                     console.warn = function() {
-                        window._consoleLogs.push({
-                            level: 'warn',
-                            message: Array.from(arguments).join(' '),
-                            timestamp: new Date().toISOString()
-                        });
+                        addMessage('WARN', arguments);
                         originalConsole.warn.apply(console, arguments);
                     };
                     
                     console.error = function() {
-                        window._consoleLogs.push({
-                            level: 'error',
-                            message: Array.from(arguments).join(' '),
-                            timestamp: new Date().toISOString()
-                        });
+                        addMessage('ERROR', arguments);
                         originalConsole.error.apply(console, arguments);
                     };
                     
                     console.debug = function() {
-                        window._consoleLogs.push({
-                            level: 'debug',
-                            message: Array.from(arguments).join(' '),
-                            timestamp: new Date().toISOString()
-                        });
+                        addMessage('DEBUG', arguments);
                         originalConsole.debug.apply(console, arguments);
                     };
                 }
             """)
+            
+            # Wait a bit to ensure delayed messages are captured
+            time.sleep(2)
             
             # Get the captured console logs
             js_logs = self.driver.execute_script("return window._consoleLogs || [];")
@@ -1534,17 +1690,17 @@ class BrowserTool(Tool):
                 "type": "function",
                 "function": {
                     "name": "browser_click",
-                    "description": "Click on a button, link, or other clickable element using a reference ID from a snapshot. The element must be interactive.",
+                    "description": "Click on a button, link, or other clickable element using a reference ID from a snapshot. IMPORTANT: You must first call browser_snapshot() or navigate_to_url() to get element references, then use those references to click.\n\nExample workflow:\n1. Get snapshot: browser_snapshot() or navigate_to_url()\n2. Find element ref (e.g. 'e0') in response's interactive_elements\n3. Click using that ref: browser_click(element='Login', ref='e0')",
                     "parameters": {
                         "type": "object",
                         "properties": {
                             "element": {
                                 "type": "string",
-                                "description": "Human-readable description of what you're clicking (e.g., 'Login button', 'Next page link')"
+                                "description": "Human-readable description of what you're clicking (e.g., 'Login button', 'Next page link', 'Submit button')"
                             },
                             "ref": {
                                 "type": "string",
-                                "description": "Element ID from the page snapshot (e.g., 'e0', 'e1', 'e2'). Must refer to an interactive element."
+                                "description": "Element ID from the page snapshot (e.g., 'e0', 'e1', 'e2'). You MUST get this ID from a previous snapshot's interactive_elements."
                             }
                         },
                         "required": ["element", "ref"]
@@ -1555,7 +1711,7 @@ class BrowserTool(Tool):
                 "type": "function",
                 "function": {
                     "name": "browser_snapshot",
-                    "description": "Capture a fresh snapshot of the current page, including all elements (both interactive and non-interactive). Use after page state changes not caused by navigation or clicking.",
+                    "description": "Capture a fresh snapshot of the current page, including all elements (both interactive and non-interactive). Use this to get up-to-date element references before clicking or typing.",
                     "parameters": {
                         "type": "object",
                         "properties": {},
@@ -1588,74 +1744,4 @@ class BrowserTool(Tool):
                 }
             }
         ]
-    
-    def get_tool_prompt(self) -> str:
-        """
-        Returns a tool using instruction prompt for agent to use the browser tool.
-        
-        Returns:
-            str: Tool description
-        """
-        return """
-# Browser Interaction Tool Guide
-
-This tool lets you control a web browser to perform tasks like filling forms, clicking buttons, and extracting information from web pages.
-
-## Basic Workflow
-
-1. `initialize_browser()` - Start the browser
-2. `navigate_to_url("https://example.com")` - Go to a website and get element references
-3. Use the element references (e.g., "e1", "e5") for interactions
-4. `close_browser()` - Clean up when finished
-
-## Important Concepts
-
-- **Element References**: Every element gets an ID like "e0", "e1", "e2" (not just interactive elements)
-- **Element Types**: Elements are classified as:
-  - Interactive (clickable, form inputs)
-  - Non-interactive (text, containers)
-  - Editable (input fields, textareas)
-- **Visibility**: Elements are checked for actual visibility on the page
-- **Snapshots**: After navigation or clicks, a new snapshot captures all page elements
-- **Multiple Selectors**: Each element can be located via CSS, XPath, ID, class, etc.
-
-## Complete Example: Search on Google
-
-```python
-# Step 1: Start the browser
-initialize_browser()
-
-# Step 2: Navigate to Google
-result = navigate_to_url("https://www.google.com")
-
-# View all elements (interactive and non-interactive)
-print(f"All elements: {[e['id'] for e in result['all_elements']]}")
-
-# View just interactive elements
-print(f"Interactive elements: {[e['id'] for e in result['interactive_elements']]}")
-
-# Let's say e2 is the search box and e3 is the search button
-# Step 3: Type in the search box
-input_text(element="Search box", ref="e2", text="weather forecast", submit=False)
-
-# Step 4: Click the search button
-browser_click(element="Search button", ref="e3")
-# Note: A new snapshot is automatically taken and IDs are refreshed
-
-# Step 5: Close the browser when done
-close_browser()
-```
-
-KEY POINTS:
-- All page elements get unique IDs (e0, e1, etc.), not just interactive ones
-- Elements contain rich information:
-  - text_content: Actual text in the element
-  - visible: Whether it's visible on the page
-  - attributes: All HTML attributes
-  - properties: Additional element properties
-  - multiple selectors (CSS, XPath, etc.)
-- Element references are refreshed after page navigation or clicks
-- The snapshots contain the full page structure
-- continue_after_tool_call should always be set to True unless you are closing the browser
-"""
         
