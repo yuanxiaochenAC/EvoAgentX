@@ -1021,7 +1021,7 @@ class BrowserTool(Tool):
             # First check if element exists at all
             try:
                 element_exists = self.driver.find_element(by_type, selector)
-            except:
+            except Exception:
                 return {
                     "status": "not_found",
                     "message": f"Element not found: {element_desc}",
@@ -1051,7 +1051,7 @@ class BrowserTool(Tool):
                         },
                         "suggestion": "The element might be disabled, hidden, or covered by another element"
                     }
-                except:
+                except Exception:
                     return {
                         "status": "not_clickable",
                         "message": f"Element found but not clickable: {element_desc}",

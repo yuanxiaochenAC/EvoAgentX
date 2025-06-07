@@ -1,19 +1,13 @@
 import os 
-import asyncio
 from dotenv import load_dotenv
-from evoagentx.core import Message 
 from evoagentx.models import OpenAILLMConfig
 from evoagentx.agents import CustomizeAgent
 from evoagentx.prompts import StringTemplate 
-from evoagentx.core.module_utils import extract_code_blocks
-from evoagentx.core.registry import register_parse_function
-from evoagentx.tools import FileTool 
 from evoagentx.tools.browser_tool import BrowserTool
 import tempfile
 import http.server
 import socketserver
 import threading
-import time
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -168,7 +162,7 @@ async def test_browser_console_messages():
         if init_result["status"] == "success":
             # Navigate to the test file
             file_url = f"file://{test_file_path}"
-            print(f"\nStep 2: Navigating to test page...")
+            print("\nStep 2: Navigating to test page...")
             nav_result = browser_tool.navigate_to_url(url=file_url)
             print("Navigation Result:")
             print("-" * 30)
