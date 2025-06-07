@@ -7,6 +7,8 @@ from ..core.base_config import BaseConfig, BaseModule
 from .indexings.base import IndexType
 from .chunkers.base import ChunkingStrategy
 from .embeddings.base import EmbeddingProvider
+from .retrievers.base import RetrieverType
+from .postprocessors.base import RerankerType
 
 
 class ReaderConfig(BaseModule):
@@ -44,6 +46,8 @@ class IndexConfig(BaseModule):
 
 class RetrievalConfig(BaseModule):
     """Configuration for retrieval stage."""
+    retrivel_type: str = Field(default=RetrieverType.VECTOR, description="The type of retriver for retrieve.")
+    postprocessor_type: str = Field(default=RerankerType.SIMPLE, description="The type of postprocessor for retrieve.")
     top_k: int = Field(default=5, description="Number of top results to retrieve.")
     similarity_cutoff: Optional[float] = Field(default=0.7, description="Minimum similarity score for retrieved chunks.")
     keyword_filters: Optional[List[str]] = Field(default=None, description="Keywords to filter retrieved chunks.")

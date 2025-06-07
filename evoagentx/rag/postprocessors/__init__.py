@@ -22,7 +22,7 @@ class PostprocessorFactory:
         """Create a post-processor based on configuration.
         
         Args:
-            postprocessor_type (str): Type of post-processor (e.g., 'simple').
+            postprocessor_type (str): Type of post-processor (e.g., 'simple', 'bge').
             query (Query, optional): Query for configuration.
             
         Returns:

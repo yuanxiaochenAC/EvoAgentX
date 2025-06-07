@@ -1,10 +1,9 @@
 import logging
 from llama_index.core.indices.base import BaseIndex
 from llama_index.core.retrievers import VectorIndexRetriever
-from llama_index.core.vector_stores import MetadataFilters, ExactMatchFilter
 
 from .base import BaseRetrieverWrapper
-from ..schema import RagQuery, RagResult, Corpus
+from ..schema import RagQuery, RagResult, Corpus, Chunk
 
 
 class VectorRetriever(BaseRetrieverWrapper):
@@ -23,11 +22,18 @@ class VectorRetriever(BaseRetrieverWrapper):
     async def aretrieve(self, query: RagQuery) -> RagResult:
         try:
             nodes = await self.retriever.aretrieve(query.query_str)
-            corpus = Corpus.from_llama_nodes(nodes)
-            scores = [node.score or 0.0 for node in nodes]
+
+            corpus = Corpus()
+            scores = []
             
-            for chunk, score in zip(corpus.chunks, scores):
-                chunk.metadata.similarity_score = score
+            if nodes is None:
+                return RagResult(corpus=corpus, scores=scores, metadata={"query": query.query_str, "retriever": "vector"})
+            
+            for score_node in nodes:
+                chunk = Chunk.from_llama_node(score_node.node)
+                chunk.metadata.similarity_score = score_node.score or 0.0
+                corpus.add_chunk(chunk)
+                scores.extend([score_node.score or 0.0])
             
             result = RagResult(
                 corpus=corpus,
@@ -43,12 +49,17 @@ class VectorRetriever(BaseRetrieverWrapper):
     def retrieve(self, query: RagQuery) -> RagResult:
         try:
             nodes = self.retriever.retrieve(query.query_str)
+            corpus = Corpus()
+            scores = []
 
-            corpus = Corpus.from_llama_nodes(nodes)
-            scores = [node.score or 0.0 for node in nodes]
+            if nodes is None:
+                return RagResult(corpus=corpus, scores=scores, metadata={"query": query.query_str, "retriever": "vector"})
             
-            for chunk, score in zip(corpus.chunks, scores):
-                chunk.metadata.similarity_score = score
+            for score_node in nodes:
+                chunk = Chunk.from_llama_node(score_node.node)
+                chunk.metadata.similarity_score = score_node.score or 0.0
+                corpus.add_chunk(chunk)
+                scores.extend([score_node.score or 0.0])
             
             result = RagResult(
                 corpus=corpus,

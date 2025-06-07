@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from evoagentx.rag.schema import Document, Corpus
 
 
-class ChunkingStrategy(Enum):
+class ChunkingStrategy(str, Enum):
     SIMPLE = "simple"
     SEMANTIC = "semantic"
     HIERARCHICAL = "hierarchical"

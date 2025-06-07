@@ -38,6 +38,7 @@ class ChunkMetadata(DocumentMetadata):
     """
 
     doc_id: str = Field(description="The unique identifier of the parent document.")
+    corpus_id: Optional[str] = Field(default=None, description="The unique identifier of the Corpus(Indexing).")
     chunk_size: Optional[int] = Field(default=None, description="The size of the chunk in characters, if applicable.")
     chunk_overlap: Optional[int] = Field(default=None, description="The number of overlapping characters between adjacent chunks.")
     chunk_index: Optional[int] = Field(default=None, description="The index of the chunk within the parent document.")
@@ -48,13 +49,11 @@ class ChunkMetadata(DocumentMetadata):
 class IndexMetadata(BaseModule):
     corpus_id: str = Field(..., description="Identifier for the corpus")
     index_type: str = Field(..., description="Type of index (e.g., 'vector', 'graph', 'summary', 'tree')")
-    storage_type: str = Field(..., description="Storage backend type (e.g., 'vector', 'graph')")
     collection_name: Optional[str] = Field(default="default_collection", description="Vector store collection name or FAISS file path")
     dimension: Optional[int] = Field(default=1536, description="Vector dimension")
     vector_db_type: Optional[str] = Field(default=None, description="Vector database type (e.g., 'faiss', 'qdrant', 'chroma')")
     graph_db_type: Optional[str] = Field(default=None, description="Graph database type (e.g., 'neo4j')")
     date: Optional[str] = Field(default=None, description="Creation or last update date")
-    key_words: List[str] = Field(default_factory=list, description="Keywords for indexing")
 
 
 class Document(BaseModule):
@@ -196,7 +195,7 @@ class Chunk(BaseModule):
         excluded_embed_metadata_keys: List[str] = DEAFULT_EXCLUDED,
         excluded_llm_metadata_keys: List[str] = DEAFULT_EXCLUDED,
         text_template: str = '{metadata_str}\n\n{content}',
-        relationships: Dict = {}, 
+        relationships: Dict[str, RelatedNodeInfo] = {}, 
         metadata: Optional[Union[Dict, ChunkMetadata]] = None,
     ):
         metadata = (
@@ -218,6 +217,9 @@ class Chunk(BaseModule):
 
     def to_llama_node(self) -> TextNode:
         """Convert to LlamaIndex Node."""
+        relatiuonships = dict() 
+        for k, v in self.relationships.items():
+            relatiuonships[k] = v if isinstance(v, RelatedNodeInfo) else RelatedNodeInfo.from_dict(v)
         return TextNode(
             text=self.text,
             metadata=self.metadata.model_dump(),
@@ -228,7 +230,7 @@ class Chunk(BaseModule):
             excluded_llm_metadata_keys=self.excluded_llm_metadata_keys,
             excluded_embed_metadata_keys=self.excluded_embed_metadata_keys,
             text_template=self.text_template,
-            relationships=self.relationships
+            relationships=relatiuonships
         )
 
     @classmethod
@@ -248,16 +250,15 @@ class Chunk(BaseModule):
             relationships=node.relationships
         )
 
-    def set_embedding(self, embedding: List[float]):
-        """Set the embedding vector for the chunk."""
-        self.metadata.embedding = embedding
-
     def get_fragment(self, max_length: int = 100) -> str:
         """Return a fragment of the chunk text."""
         return (self.text[:max_length] + "...") if len(self.text) > max_length else self.text
 
     def to_dict(self) -> Dict:
         """Convert chunk to dictionary for serialization."""
+        relatiuonships = dict() 
+        for k, v in self.relationships.items():
+            relatiuonships[k] = v.to_dict() if isinstance(v, RelatedNodeInfo) else v
         return {
             "chunk_id": self.chunk_id,
             "text": self.text,
@@ -267,7 +268,7 @@ class Chunk(BaseModule):
             "end_char_idx": self.end_char_idx,
             "excluded_embed_metadata_keys": self.excluded_embed_metadata_keys,
             "excluded_llm_metadata_keys": self.excluded_llm_metadata_keys,
-            "relationships": {str(k): v for k, v in self.relationships.items()}
+            "relationships": relatiuonships
         }
 
     def to_json(self, indent: int = 2) -> str:
@@ -308,13 +309,24 @@ class Corpus(BaseModule):
         corpus_id (str): The unique id for corpus.
         chunks (List[Chunk]): List of chunks in the corpus.
         chunk_index (Dict[str, Chunk]): Index of chunks by chunk_id for fast lookup.
+        metadata (Optional[IndexMetadata]): the metadata for this corpus.
     """
 
-    def __init__(self, chunks: List[Chunk] = None, corpus_id: str = None):
+    def __init__(self, chunks: List[Chunk] = None, corpus_id: str = None, 
+                 metadata:Optional[Union[IndexMetadata, Dict]]=None):
+        corpus_id = uuid4() if corpus_id is None else corpus_id
+        chunks = [] if chunks is None else chunks
+        chunk_index = {} if chunks is None else {chunk.chunk_id: chunk for chunk in chunks}
+        
+        if metadata is None:
+            metadata = {}
+        elif isinstance(metadata, IndexMetadata):
+            metadata = metadata.model_dump()
         super().__init__(
-            corpus_id=uuid4(),
-            chunks=chunks or [],
-            chunk_index={chunk.chunk_id: chunk for chunk in chunks}
+            corpus_id=corpus_id,
+            chunks=chunks,
+            chunk_index=chunk_index,
+            metadata=metadata
         )
 
     def to_llama_nodes(self) -> List[BaseNode]:
@@ -370,21 +382,9 @@ class Corpus(BaseModule):
             reverse=reverse
         )
 
-    def get_stats(self) -> Dict:
-        """Return statistics about the corpus."""
-        return {
-            "chunk_count": len(self.chunks),
-            "unique_docs": len(set(chunk.doc_id for chunk in self.chunks)),
-            "avg_word_count": sum(chunk.metadata.word_count or 0 for chunk in self.chunks) / len(self.chunks) if self.chunks else 0,
-            "strategies": list(set(chunk.metadata.chunking_strategy for chunk in self.chunks if chunk.metadata.chunking_strategy))
-        }
-
     def to_dict(self) -> Dict:
         """Convert corpus to dictionary for serialization."""
-        return {
-            "chunks": [chunk.to_dict() for chunk in self.chunks],
-            "stats": self.get_stats(),
-        }
+        return self.model_dump()
 
     def to_json(self, indent: int = 2) -> str:
         """Convert corpus to JSON string."""
@@ -393,7 +393,7 @@ class Corpus(BaseModule):
     def to_jsonl(self, output_path: str):
         with open(output_path, 'w', encoding='utf-8') as f:
             for chunk in self.chunks:
-                f.write(json.dumps(chunk.to_dict(), ensure_ascii=False) + '\n')
+                f.write(chunk.to_json(indent=0) + '\n')
 
     @classmethod
     def from_jsonl(cls, input_path: str, corpus_id: Optional[str] = None) -> "Corpus":

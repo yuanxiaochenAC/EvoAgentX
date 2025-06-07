@@ -23,7 +23,6 @@ class StorageHandler(BaseModule):
     storageDB: Optional[Union[DBStoreBase, Any]] = Field(None, description="Database storage backend")
     vector_store: Optional[Union[VectorStoreBase, Any]] = Field(None, description="Single vector storage backend")
     graph_store: Optional[Union[GraphStoreBase, Any]] = Field(None, description="Optional graph storage backend")
-    storage_context: Optional[StorageContext] = Field(None, description="Storage context for LlamaIndex")
 
     def init_module(self):
         """
@@ -33,11 +32,6 @@ class StorageHandler(BaseModule):
         self._init_db_store()
         self._init_vector_store()
         self._init_graph_store()
-        # Initilize the storage context for llama_index
-        self.storage_context = StorageContext.from_defaults(
-            vector_store=self.vector_store,
-            graph_store=self.graph_store
-        )
     
     def _init_db_store(self):
         """
@@ -312,20 +306,19 @@ class StorageHandler(BaseModule):
         else:
             self.storageDB.insert(metadata=history_data, store_type="history", table=table)
 
-    def load_index(self, index_id: str, corpus_id: Optional[str] = None, table: str = TableType.store_index.value) -> Optional[Dict[str, Any]]:
-        result = self.storageDB.get_by_id(index_id, store_type="index", table=table)
+    def load_index(self, corpus_id: str, table: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        result = self.storageDB.get_by_id(corpus_id, store_type="indexing", table=table)
         if result is not None:
             result = self.parse_result(result, IndexStore)
-            if corpus_id and result.get("corpus_id") != corpus_id:
-                return None
+
         return result
 
-    def save_index(self, index_data: Dict[str, Any], table: str = TableType.store_index.value):
-        index_id = index_data.get("index_id")
-        if not index_id:
-            raise ValueError("Index data must include an 'index_id' field")
-        existing = self.storageDB.get_by_id(index_id, store_type="index", table=table)
+    def save_index(self, index_data: Dict[str, Any], table: Optional[str] = None):
+        corpus_id = index_data.get("corpus_id")
+        if not corpus_id:
+            raise ValueError("Index data must include an 'corpus_id' field")
+        existing = self.storageDB.get_by_id(corpus_id, store_type="indexing", table=table)
         if existing:
-            self.storageDB.update(index_id, new_metadata=index_data, store_type="index", table=table)
+            self.storageDB.update(corpus_id, new_metadata=index_data, store_type="indexing", table=table)
         else:
-            self.storageDB.insert(metadata=index_data, store_type="index", table=table)
+            self.storageDB.insert(metadata=index_data, store_type="indexing", table=table)

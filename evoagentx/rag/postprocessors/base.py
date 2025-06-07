@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from ..schema import RagQuery, RagResult
 
 
-class RerankerType(Enum):
+class RerankerType(str, Enum):
     SIMPLE = "simple"
     BGE = "bge"
 

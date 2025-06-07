@@ -5,7 +5,7 @@ from llama_index.core.schema import NodeWithScore
 from llama_index.core.postprocessor import SimilarityPostprocessor, KeywordNodePostprocessor
 
 from .base import BasePostprocessor
-from ..schema import RagQuery, RagResult, Corpus
+from ..schema import RagQuery, RagResult, Corpus, Chunk
 
 
 class SimpleReranker(BasePostprocessor):
@@ -33,12 +33,14 @@ class SimpleReranker(BasePostprocessor):
             
             for postprocessor in self.postprocessors:
                 nodes = postprocessor.postprocess_nodes(nodes)
-            
-            corpus = Corpus.from_llama_nodes(nodes)
-            scores = [node.score for node in nodes]
-            
-            for chunk, score in zip(corpus.chunks, scores):
-                chunk.metadata.similarity_score = score
+
+            corpus = Corpus()
+            scores = []
+            for score_node in nodes:
+                chunk = Chunk.from_llama_node(score_node.node)
+                chunk.metadata.similarity_score = score_node.score or 0.0
+                corpus.add_chunk(chunk)
+                scores.extend([score_node.score or 0.0])
             
             result = RagResult(
                 corpus=corpus,

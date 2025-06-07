@@ -20,7 +20,7 @@ class VectorStoreFactory:
             dimension = store_config.get("dimension")
             if not dimension or not isinstance(dimension, int):
                 raise ValueError("FAISS requires a valid dimension")
-            vector_store = FaissVectorStoreWrapper(**store_config).get_vector_store()
+            vector_store = FaissVectorStoreWrapper(**store_config)
         # elif store_type == VectorStoreType.QDRANT:
         #     qdrant_url = store_config.get("qdrant_url")
         #     qdrant_api_key = store_config.get("qdrant_api_key")

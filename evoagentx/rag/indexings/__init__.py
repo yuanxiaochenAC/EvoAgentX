@@ -1,9 +1,9 @@
 import logging
 from typing import Dict, Any, Optional
 
-from llama_index.core.storage import StorageContext
 from llama_index.core.embeddings import BaseEmbedding
 
+from evoagentx.storages.base import StorageHandler
 from .base import IndexType, BaseIndexWrapper
 from .vector_index import VectorIndexing
 from .graph_index import GraphIndexing
@@ -22,7 +22,7 @@ class IndexFactory:
         self,
         index_type: IndexType,
         embed_model: BaseEmbedding,
-        storage_context: StorageContext,
+        storage_handler: StorageHandler,
         index_config: Dict[str, Any] = None,
         node_parser: Optional[Any] = None  # Unused, kept for compatibility
     ) -> BaseIndexWrapper:
@@ -46,29 +46,15 @@ class IndexFactory:
         if index_type == IndexType.VECTOR:
             index = VectorIndexing(
                 embed_model=embed_model,
-                storage_context=storage_context,
+                storage_handler=storage_handler,
                 index_config=index_config
             )
         elif index_type == IndexType.GRAPH:
-            if not storage_context.graph_store:
-                raise ValueError("Graph store required for PropertyGraphIndex")
-            index = GraphIndexing(
-                embed_model=embed_model,
-                storage_context=storage_context,
-                index_config=index_config
-            )
+            raise NotImplementedError()
         elif index_type == IndexType.SUMMARY:
-            index = SummaryIndexing(
-                embed_model=embed_model,
-                storage_context=storage_context,
-                index_config=index_config
-            )
+            raise NotImplementedError()
         elif index_type == IndexType.TREE:
-            index = TreeIndexing(
-                embed_model=embed_model,
-                storage_context=storage_context,
-                index_config=index_config
-            )
+            raise NotImplementedError()
         else:
             raise ValueError(f"Unsupported index type: {index_type}")
         
