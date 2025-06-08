@@ -1,8 +1,7 @@
 import os
 import shutil
 from copy import deepcopy
-from textgrad.variable import Variable
-from typing import Any, List, Literal, Optional, Tuple, Iterator, Union
+from typing import Any, Iterator, List, Literal, Optional, Tuple, Union
 
 import numpy as np
 from pydantic import Field, PositiveInt
@@ -638,7 +637,7 @@ class TextGradOptimizer(BaseModule):
                             action for action in agent["actions"] if action["class_name"] != "ContextExtraction"
                         ]
                         if len(non_ContextExtraction_actions) > 1:
-                            raise ValueError(f"TextGrad optimizer only supports workflows where every agent only has a single action.")
+                            raise ValueError(f"TextGrad optimizer only supports workflows where every agent only has a single action. {agent['name']} has {len(non_ContextExtraction_actions)} actions.")
                         if "prompt_template" not in non_ContextExtraction_actions[0]:
                             raise ValueError(f"Please provide a PromptTemplate for {agent['name']}.")
                     else:
