@@ -41,7 +41,7 @@ class VectorIndexing(BaseIndexWrapper):
         except Exception as e:
             self.logger.error(f"Failed to initialize VectorStoreIndex: {str(e)}")
             raise
-    
+
     def _create_storage_context(self, ):
         # Construct a storage_context for llama_index
         assert self.storage_handler.vector_store is not None, "VectorIndexing must init a vector backend in 'storageHandler'"

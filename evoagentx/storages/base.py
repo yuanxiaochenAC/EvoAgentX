@@ -1,8 +1,8 @@
+import os
 import json
 from typing import List, Dict, Any, Optional, Union
 
 from pydantic import Field
-from llama_index.core import StorageContext
 
 from ..core.module import BaseModule
 from .storages_config import StoreConfig
@@ -29,6 +29,11 @@ class StorageHandler(BaseModule):
         Initialize all storage backends based on the provided configuration.
         Calls individual initialization methods for database, vector, and graph stores.
         """
+        # Create the path
+        if (self.storageConfig.path is not None) or (self.storageConfig.path != ":memory:") \
+            or (not self.storageConfig.path):
+            os.makedirs(os.path.dirname(self.storageConfig.path), exist_ok=True)
+        
         self._init_db_store()
         self._init_vector_store()
         self._init_graph_store()

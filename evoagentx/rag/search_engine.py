@@ -14,7 +14,7 @@ from .rag_config import RAGConfig
 from .readers import LLamaIndexReader
 from .indexings import IndexFactory, BaseIndexWrapper
 from .chunkers import ChunkFactory
-from .embeddings import EmbeddingFactory
+from .embeddings import EmbeddingFactory, EmbeddingProvider
 from .retrievers import RetrieverFactory, BaseRetrieverWrapper
 from .postprocessors import PostprocessorFactory
 from .indexings.base import IndexType
@@ -47,20 +47,21 @@ class SearchEngine:
             encoding=self.config.reader.encoding
         )
 
-        # Initialize embedding model
+        # Initialize embedding model. 
+        # Maybe reinit by the load funcion.
         self.embed_model = self.embedding_factory.create(
             provider=self.config.embedding.provider,
             model_config={
                 "model_name": self.config.embedding.model_name,
                 "api_key": self.config.embedding.api_key,
-                "api_base": self.config.embedding.api_url
+                "api_base": self.config.embedding.api_url,
             }
         )
 
         # Initialize chunker
         self.chunker = self.chunk_factory.create(
             strategy=self.config.chunker.strategy,
-            embed_model=self.embed_model,
+            embed_model=self.embed_model.get_embedding_model(),
             chunker_config={
                 "chunk_size": self.config.chunker.chunk_size,
                 "chunk_overlap": self.config.chunker.chunk_overlap,
@@ -135,7 +136,7 @@ class SearchEngine:
             if index_type not in self.indices[corpus_id]:
                 index = self.index_factory.create(
                     index_type=index_type,
-                    embed_model=self.embed_model,
+                    embed_model=self.embed_model.get_embedding_model(),
                     storage_handler=self.storage_handler,
                     index_config=self.config.index.model_dump() if self.config.index else {}
                 )
@@ -144,7 +145,7 @@ class SearchEngine:
                     retriever_type=self.config.retrieval.retrivel_type,
                     index=index.get_index(),
                     graph_store=index.get_index().storage_context.graph_store,
-                    embed_model=self.embed_model,
+                    embed_model=self.embed_model.get_embedding_model(),
                     query=RagQuery(query_str="", top_k=self.config.retrieval.top_k if self.config.retrieval else 5)
                 )
 
@@ -193,14 +194,14 @@ class SearchEngine:
                 else:
                     # Delete entire index
                     index.clear()
-                    self.indices[corpus_id].pop(idx_type)
-                    self.retrievers[corpus_id].pop(idx_type)
+                    del self.indices[corpus_id][idx_type]
+                    del self.retrievers[corpus_id][idx_type]
                     self.logger.info(f"Deleted entire {idx_type} index for corpus {corpus_id}")
 
             # Clean up corpus if no indices remain
             if not self.indices[corpus_id]:
-                self.indices.pop(corpus_id)
-                self.retrievers.pop(corpus_id)
+                del self.indices[corpus_id]
+                del self.retrievers[corpus_id]
                 self.logger.info(f"Removed empty corpus {corpus_id}")
 
         except Exception as e:
@@ -240,21 +241,25 @@ class SearchEngine:
             raise
 
     def save(self, output_path: Optional[str] = None, corpus_id: Optional[str] = None, 
-             index_type: Optional[str] = None) -> None:
+                index_type: Optional[str] = None, table: Optional[str] = None) -> None:
         """Save indices to files or database.
 
-        Serializes corpus chunks and metadata to JSONL/JSON files or SQLite database.
+        Serializes corpus chunks to JSONL files and metadata to JSON files if output_path is provided,
+        or saves to the SQLite database via StorageHandler if output_path is None.
 
         Args:
-            output_path (Optional[str]): Directory to save files. If None, saves to database.
+            output_path (Optional[str]): Directory to save JSONL and JSON files. If None, saves to database.
             corpus_id (Optional[str]): Specific corpus to save. If None, saves all corpora.
             index_type (Optional[str]): Specific index type to save. If None, saves all indices.
+            table (Optional[str]): Database table name for index data. Defaults to 'indexing' if None.
 
         Raises:
-            Exception: If saving fails.
+            Exception: If saving fails or file operations encounter errors.
         """
         try:
-            target_corpora = [corpus_id] if corpus_id else self.indices.keys()
+            target_corpora = [corpus_id] if corpus_id else list(self.indices.keys())
+            table = table or "indexing"
+
             for cid in target_corpora:
                 if cid not in self.indices:
                     self.logger.warning(f"No indices found for corpus {cid}")
@@ -264,53 +269,56 @@ class SearchEngine:
                 for idx_type in target_indices:
                     index = self.indices[cid][idx_type]
 
-                    # Convert docstore/data to Corpus
-                    chunks = []
-                    for node_id, node_data in index.id_to_node.items():
-                        chunk = Chunk.from_llama_node(node_data)
-                        chunks.append(chunk)
-
+                    # Convert index nodes to Corpus
+                    chunks = [
+                        Chunk.from_llama_node(node_data)
+                        for node_id, node_data in index.id_to_node.items()
+                    ]
                     corpus = Corpus(chunks=chunks, corpus_id=cid)
 
-                    # Get config
-                    vector_config = {}
-                    graph_config = {}
-                    if self.storage_handler.storageConfig.vectorConfig is not None:
-                        vector_config = self.storage_handler.storageConfig.vectorConfig.model_dump()
-                    if self.storage_handler.storageConfig.graphConfig is not None:
-                        graph_config = self.storage_handler.storageConfig.graphConfig.model_dump()
-
+                    # Prepare metadata
+                    vector_config = self.storage_handler.storageConfig.vectorConfig.model_dump() if self.storage_handler.storageConfig.vectorConfig else {}
+                    graph_config = self.storage_handler.storageConfig.graphConfig.model_dump() if self.storage_handler.storageConfig.graphConfig else {}
                     metadata = IndexMetadata(
                         corpus_id=cid,
                         index_type=idx_type,
                         collection_name=vector_config.get("qdrant_collection_name", "default_collection"),
-                        dimension=vector_config.get("dimension", 1536),
+                        dimension=vector_config.get("dimensions", 1536),
                         vector_db_type=vector_config.get("vector_name", None),
                         graph_db_type=graph_config.get("graph_name", None),
+                        embedding_model_name=self.config.embedding.model_name,
                         date=str(datetime.now()),
                     )
 
                     if output_path:
+                        # File-based saving
                         os.makedirs(output_path, exist_ok=True)
                         safe_cid = "".join(c if c.isalnum() or c in ["-", "_"] else "_" for c in cid)
                         safe_idx_type = "".join(c if c.isalnum() or c in ["-", "_"] else "_" for c in idx_type)
                         nodes_file = os.path.join(output_path, f"{safe_cid}_{safe_idx_type}_nodes.jsonl")
                         metadata_file = os.path.join(output_path, f"{safe_cid}_{safe_idx_type}_metadata.json")
-                        corpus.to_jsonl(nodes_file)
+
+                        # Save corpus as JSONL
+                        corpus.to_jsonl(nodes_file, indent=0)
+                        self.logger.info(f"Saved {len(corpus.chunks)} chunks to {nodes_file}")
+
+                        # Save metadata as JSON
                         with open(metadata_file, "w", encoding="utf-8") as f:
-                            json.dump(metadata.to_dict(), f, indent=2, ensure_ascii=False)
-                        self.logger.info(f"Saved {idx_type} index for corpus {cid} to {nodes_file}")
+                            json.dump(metadata.model_dump(), f, indent=2, ensure_ascii=False)
+                        self.logger.info(f"Saved metadata to {metadata_file}")
                     else:
-                        self.storage_handler.save_index({
+                        # Database saving
+                        index_data = {
                             "corpus_id": cid,
-                            "index_type": idx_type,
-                            "content": corpus.to_dict(),
+                            "content": corpus.model_dump(),
                             "date": str(datetime.now()),
-                            "metadata": metadata.to_dict()
-                        })
-                        self.logger.info(f"Saved {idx_type} index for corpus {cid} to database")
+                            "metadata": metadata.model_dump()
+                        }
+                        self.storage_handler.save_index(index_data, table=table)
+                        self.logger.info(f"Saved {idx_type} index with {len(corpus.chunks)} chunks for corpus {cid} to database table {table}")
+
         except Exception as e:
-            self.logger.error(f"Failed to save indices: {str(e)}")
+            self.logger.error(f"Failed to save indices for corpus {corpus_id or 'all'}: {str(e)}")
             raise
 
     def load(self, source: Optional[str] = None, corpus_id: Optional[str] = None, 
@@ -318,41 +326,103 @@ class SearchEngine:
         """Load indices from files or database.
 
         Reconstructs indices and retrievers from JSONL/JSON files or SQLite database records.
+        Validates the embedding model name and dimension before reinitializing the embedding model.
 
         Args:
             source (Optional[str]): Directory containing JSONL/JSON files. If None, loads from database.
             corpus_id (Optional[str]): Specific corpus to load. If None, loads all corpora.
             index_type (Optional[str]): Specific index type to load. If None, loads all indices.
+            table (Optional[str]): Database table name for index data. Defaults to 'indexing' if None.
 
         Raises:
-            Exception: If loading fails.
+            Exception: If loading fails due to file or database errors, invalid data, or unsupported embedding model/dimension.
         """
         try:
+            table = table or "indexing"
+            config_dimension = self.storage_handler.storageConfig.vectorConfig.dimensions
+
             if source:
+                # File-based loading
+                if not os.path.exists(source):
+                    self.logger.error(f"Source directory {source} does not exist")
+                    raise FileNotFoundError(f"Source directory {source} does not exist")
+
                 for file_name in os.listdir(source):
                     if not file_name.endswith("_metadata.json"):
                         continue
-                    cid, idx_type, index_id, _ = file_name.split("_", 3)
+                    parts = file_name.split("_")
+                    if len(parts) < 3:
+                        self.logger.warning(f"Skipping invalid metadata file: {file_name}")
+                        continue
+                    cid = "_".join(parts[:-2])
+                    idx_type = parts[-2]
+                    
                     if (corpus_id and corpus_id != cid) or (index_type and index_type != idx_type):
                         continue
 
-                    nodes_file = os.path.join(source, f"{cid}_{idx_type}_{index_id}_nodes.jsonl")
+                    metadata_file = os.path.join(source, file_name)
+                    nodes_file = os.path.join(source, f"{cid}_{idx_type}_nodes.jsonl")
+
+                    # Load metadata
+                    with open(metadata_file, "r", encoding="utf-8") as f:
+                        metadata = IndexMetadata.model_validate(json.load(f))
+
+                    # Validate embedding model
+                    if not self.embed_model.validate_model(self.config.embedding.provider, metadata.embedding_model_name):
+                        raise ValueError(
+                            f"Embedding model '{metadata.embedding_model_name}' is not supported by provider '{self.config.embedding.provider}'. "
+                            f"Supported models: {EmbeddingProvider.SUPPORTED_MODELS.get(self.config.embedding.provider, [])}"
+                        )
+
+                    # Validate dimension
+                    if metadata.dimension != config_dimension:
+                        raise ValueError(
+                            f"Embedding dimension {metadata.dimension} in metadata does not match configured dimension {config_dimension}."
+                        )
+
+                    # Load corpus
+                    if not os.path.exists(nodes_file):
+                        self.logger.warning(f"Nodes file {nodes_file} not found for metadata {metadata_file}")
+                        continue
                     corpus = Corpus.from_jsonl(nodes_file, corpus_id=cid)
+
+                    # Reinitialize embedding model if needed
+                    if metadata.embedding_model_name != self.config.embedding.model_name:
+                        self.logger.info(f"Reinitializing embedding model to {metadata.embedding_model_name}")
+                        self.embed_model = self.embedding_factory.create(
+                            provider=self.config.embedding.provider,
+                            model_config={
+                                "model_name": metadata.embedding_model_name,
+                                "api_key": self.config.embedding.api_key,
+                                "api_base": self.config.embedding.api_url,
+                            }
+                        )
+
+                    # Load index
                     self._load_index(corpus, cid, idx_type)
-                    self.logger.info(f"Loaded {idx_type} index for corpus {cid} from {nodes_file}")
+                    self.logger.info(f"Loaded {idx_type} index with {len(corpus.chunks)} chunks for corpus {cid} from {nodes_file}")
             else:
-                for record in self.storage_handler.load_index("", table=table):
+                # Database loading
+                records = self.storage_handler.load(tables=[table]).get(table, [])
+
+                if not records:
+                    self.logger.warning(f"No records found in table {table}")
+                    return
+
+                for record in records:
                     parsed = self.storage_handler.parse_result(record, IndexStore)
-                    cid, idx_type = parsed["corpus_id"], parsed["index_type"]
+                    cid = parsed["corpus_id"]
+                    idx_type = parsed["metadata"]["index_type"]
                     if (corpus_id and corpus_id != cid) or (index_type and index_type != idx_type):
                         continue
 
+                    # Reconstruct corpus
                     corpus = Corpus(
                         chunks=[
                             Chunk(
                                 chunk_id=chunk["chunk_id"],
                                 text=chunk["text"],
-                                metadata=ChunkMetadata(**chunk["metadata"]),
+                                metadata=ChunkMetadata.model_validate(chunk["metadata"]),
                                 embedding=chunk["embedding"],
                                 start_char_idx=chunk["start_char_idx"],
                                 end_char_idx=chunk["end_char_idx"],
@@ -361,42 +431,78 @@ class SearchEngine:
                                 relationships={k: RelatedNodeInfo(**v) for k, v in chunk["relationships"].items()}
                             ) for chunk in parsed["content"]["chunks"]
                         ],
-                        corpus_id=cid
+                        corpus_id=cid,
+                        metadata=IndexMetadata.model_validate(parsed["metadata"])
                     )
+
+                    # Validate embedding model
+                    metadata = IndexMetadata.model_validate(parsed["metadata"])
+                    if not self.embed_model.validate_model(self.config.embedding.provider, metadata.embedding_model_name):
+                        raise ValueError(
+                            f"Embedding model '{metadata.embedding_model_name}' is not supported by provider '{self.config.embedding.provider}'. "
+                            f"Supported models: {EmbeddingProvider.SUPPORTED_MODELS.get(self.config.embedding.provider, [])}"
+                        )
+
+                    # Validate dimension
+                    if metadata.dimension != config_dimension:
+                        raise ValueError(
+                            f"Embedding dimension {metadata.dimension} in metadata does not match configured dimension {config_dimension}."
+                        )
+
+                    # Reinitialize embedding model if needed
+                    if metadata.embedding_model_name != self.config.embedding.model_name:
+                        self.logger.info(f"Reinitializing embedding model to {metadata.embedding_model_name}")
+                        self.embed_model = self.embedding_factory.create(
+                            provider=self.config.embedding.provider,
+                            model_config={
+                                "model_name": metadata.embedding_model_name,
+                                "api_key": self.config.embedding.api_key,
+                                "api_base": self.config.embedding.api_url,
+                                "dimensions": metadata.dimension
+                            }
+                        )
+
+                    # Load index
                     self._load_index(corpus, cid, idx_type)
-                    self.logger.info(f"Loaded {idx_type} index for corpus {cid} from database")
+                    self.logger.info(f"Loaded {idx_type} index with {len(corpus.chunks)} chunks for corpus {cid} from database table {table}")
+
         except Exception as e:
             self.logger.error(f"Failed to load indices: {str(e)}")
             raise
 
     def _load_index(self, corpus: Corpus, corpus_id: str, index_type: str) -> None:
-        """Helper method to load an index and its retriever.
+        """Helper method to load an index and its retriever."""
+        try:
+            if corpus_id not in self.indices:
+                self.indices[corpus_id] = {}
+                self.retrievers[corpus_id] = {}
 
-        Initializes storage, creates an index, inserts nodes, and sets up the retriever.
+            if index_type not in self.indices[corpus_id]:
+                index = self.index_factory.create(
+                    index_type=index_type,
+                    embed_model=self.embed_model.get_embedding_model(),
+                    storage_handler=self.storage_handler,
+                    index_config=self.config.index.model_dump() if self.config.index else {}
+                )
+                self.indices[corpus_id][index_type] = index
 
-        Args:
-            corpus (Corpus): Corpus containing chunks to load.
-            corpus_id (str): Identifier for the corpus.
-            index_type (str): Type of index to load.
-        """
-        if corpus_id not in self.indices:
-            self.indices[corpus_id] = {}
-            self.retrievers[corpus_id] = {}
-        index = self.index_factory.create(
-            index_type=index_type,
-            embed_model=self.embed_model,
-            storage_handler=self.storage_handler,
-            index_config=self.config.index.model_dump() if self.config.index else {}
-        )
-        index.insert_nodes(corpus.to_llama_nodes())
-        self.indices[corpus_id][index_type] = index
-        self.retrievers[corpus_id][index_type] = self.retriever_factory.create(
-            retriever_type=RetrieverType.GRAPH if index_type == IndexType.GRAPH else RetrieverType.VECTOR,
-            index=index.get_index(),
-            graph_store=self.storage_handler.storage_context.graph_store if index_type == IndexType.GRAPH else None,
-            embed_model=self.embed_model,
-            query=RagQuery(query_str="", top_k=self.config.retrieval.top_k if self.config.retrieval else 5)
-        )
+                retriever_type = RetrieverType.GRAPH if index_type == IndexType.GRAPH else RetrieverType.VECTOR
+                self.retrievers[corpus_id][index_type] = self.retriever_factory.create(
+                    retriever_type=retriever_type,
+                    index=index.get_index(),
+                    graph_store=index.get_index().storage_context.graph_store if index_type == IndexType.GRAPH else None,
+                    embed_model=self.embed_model.get_embedding_model(),
+                    query=RagQuery(query_str="", top_k=self.config.retrieval.top_k if self.config.retrieval else 5)
+                )
+
+            nodes = corpus.to_llama_nodes()
+            for node in nodes:
+                node.metadata.update({"corpus_id": corpus_id, "index_type": index_type})
+            self.indices[corpus_id][index_type].insert_nodes(nodes)
+            self.logger.info(f"Inserted {len(nodes)} nodes into {index_type} index for corpus {corpus_id}")
+        except Exception as e:
+            self.logger.error(f"Failed to load index for corpus {corpus_id}, index_type {index_type}: {str(e)}")
+            raise
 
     async def _retrieve_async(self, retriever: BaseRetrieverWrapper, query: RagQuery):
         """Asynchronously retrieve results using a retriever.
@@ -466,6 +572,10 @@ class SearchEngine:
 
             if not results:
                 return RagResult(corpus=Corpus(chunks=[]), scores=[], metadata={"query": query.query_str})
+
+            # Check the 'similarity_cutoff' and 'keyword_filters' in query. If None, init by the config
+            query.similarity_cutoff = self.config.retrieval.similarity_cutoff if query.similarity_cutoff is None else query.similarity_cutoff
+            query.keyword_filters = self.config.retrieval.keyword_filters if query.keyword_filters is None else query.keyword_filters
 
             postprocessor = self.postprocessor_factory.create(
                 self.config.retrieval.postprocessor_type,

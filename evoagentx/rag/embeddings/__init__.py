@@ -1,13 +1,11 @@
 import logging
 from typing import Dict, Any
 
-from llama_index.core.embeddings import BaseEmbedding
-
-from .base import EmbeddingProvider
+from .base import EmbeddingProvider, BaseEmbeddingWrapper
 from .openai_embedding import OpenAIEmbeddingWrapper
 from .huggingface_embedding import HuggingFaceEmbeddingWrapper
 
-__all__ = ['OpenAIEmbeddingWrapper', 'HuggingFaceEmbeddingWrapper', 'EmbeddingFactory', 'BaseEmbedding']
+__all__ = ['OpenAIEmbeddingWrapper', 'HuggingFaceEmbeddingWrapper', 'EmbeddingFactory', 'BaseEmbedding', 'EmbeddingProvider']
 
 class EmbeddingFactory:
     """Factory for creating embedding models based on configuration."""
@@ -19,7 +17,7 @@ class EmbeddingFactory:
         self,
         provider: EmbeddingProvider,
         model_config: Dict[str, Any] = None
-    ) -> BaseEmbedding:
+    ) -> BaseEmbeddingWrapper:
         """Create an embedding model based on the provider and configuration.
         
         Args:
@@ -35,17 +33,11 @@ class EmbeddingFactory:
         model_config = model_config or {}
         
         if provider == EmbeddingProvider.OPENAI:
-            from .openai_embedding import OpenAIEmbeddingWrapper
             wrapper = OpenAIEmbeddingWrapper(**model_config)
         elif provider == EmbeddingProvider.HUGGINGFACE:
-            from .huggingface_embedding import HuggingFaceEmbeddingWrapper
             wrapper = HuggingFaceEmbeddingWrapper(**model_config)
-        elif provider == EmbeddingProvider.CUSTOM:
-            if "custom_model" not in model_config:
-                raise ValueError("Custom embedding model must be provided in model_config.")
-            wrapper = model_config["custom_model"]
         else:
             raise ValueError(f"Unsupported embedding provider: {provider}")
         
         self.logger.info(f"Created embedding model for provider: {provider}")
-        return wrapper.get_embedding_model()
+        return wrapper

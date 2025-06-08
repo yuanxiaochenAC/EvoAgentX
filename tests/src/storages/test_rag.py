@@ -43,7 +43,7 @@ storage_config = StoreConfig(
     ),
     vectorConfig=VectorStoreConfig(
         vector_name="faiss",
-        dimension=1536,
+        dimensions=1536,
         index_type="flat_l2",
     ),
     # file caching
@@ -57,19 +57,18 @@ search_engine = SearchEngine(config, storage_handler)
 corpus = search_engine.read(file_paths="./debug.bk/data/source_files", filter_file_by_suffix=".txt")
 search_engine.add("vector", corpus, corpus_id="paul_graham")
 query = RagQuery(query_str="What does Paul Graham say about the role of persistence in startups?", top_k=10)
-result = search_engine.query(query, corpus_id="paul_graham")
-print("Test Case 1 Results:", [chunk.text for chunk in result.corpus.chunks])
+result1 = search_engine.query(query, corpus_id="paul_graham")
+# print("Test Case 1 Results:", [chunk.text for chunk in result.corpus.chunks])
 
 # Test Case 3: Node Management
-subset_corpus = Corpus(chunks=corpus.chunks[:10])
-search_engine.add(corpus_id="paul_graham", index_type="vector", nodes=subset_corpus)
+# subset_corpus = Corpus(chunks=corpus.chunks[:10])
+# search_engine.add(corpus_id="paul_graham", index_type="vector", nodes=subset_corpus)
 search_engine.save(corpus_id="paul_graham", index_type="vector")
 search_engine.save(output_path=storage_config.path, corpus_id="paul_graham", index_type="vector")
-import pdb;pdb.set_trace()
-search_engine.delete(corpus_id="paul_graham", index_type="vector", metadata_filters={"file_name": "source.txt"})
-search_engine.add(corpus_id="paul_graham", index_type="vector", nodes=subset_corpus)
-search_engine.delete(corpus_id="paul_graham", index_type="vector")
-search_engine.add(corpus_id="paul_graham", index_type="vector", nodes=subset_corpus)
+# search_engine.delete(corpus_id="paul_graham", index_type="vector", metadata_filters={"file_name": "source.txt"})
+# search_engine.add(corpus_id="paul_graham", index_type="vector", nodes=subset_corpus)
+# search_engine.delete(corpus_id="paul_graham", index_type="vector")
+# search_engine.add(corpus_id="paul_graham", index_type="vector", nodes=subset_corpus)
 search_engine.clear()
 
 # search_engine2 = SearchEngine(config, storage_handler)
@@ -80,6 +79,14 @@ search_engine.clear()
 
 search_engine2 = SearchEngine(config, storage_handler)
 search_engine2.load(source=storage_config.path, corpus_id="paul_graham", index_type="vector")
-query = RagQuery(query_str="What does Paul Graham say about the role of persistence in startups?", top_k=5)
-result = search_engine2.query(query, corpus_id="paul_graham")
-print("Test Case 4 Results:", [chunk.text for chunk in result.corpus.chunks])
+query = RagQuery(query_str="What does Paul Graham say about the role of persistence in startups?", top_k=10)
+result2 = search_engine2.query(query, corpus_id="paul_graham")
+# print("Test Case 4 Results:", [chunk.text for chunk in result.corpus.chunks])
+search_engine2.clear()
+
+search_engine3 = SearchEngine(config, storage_handler)
+search_engine3.load(corpus_id="paul_graham", index_type="vector")
+query = RagQuery(query_str="What does Paul Graham say about the role of persistence in startups?", top_k=10)
+result3 = search_engine3.query(query, corpus_id="paul_graham")
+search_engine3.clear()
+import pdb;pdb.set_trace()

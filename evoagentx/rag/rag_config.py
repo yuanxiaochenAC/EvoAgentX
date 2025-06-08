@@ -24,7 +24,7 @@ class ReaderConfig(BaseModule):
 
 class ChunkerConfig(BaseModule):
     """Configuration for document chunking stage."""
-    strategy: ChunkingStrategy = Field(default=ChunkingStrategy.SIMPLE, description="Chunking strategy (SIMPLE, SEMANTIC, HIERARCHICAL).")
+    strategy: str = Field(default=ChunkingStrategy.SIMPLE, description="Chunking strategy (SIMPLE, SEMANTIC, HIERARCHICAL).")
     chunk_size: int = Field(default=1024, description="Maximum size of each chunk in characters.")
     chunk_overlap: int = Field(default=20, description="Overlap between chunks in characters.")
     max_chunks: Optional[int] = Field(default=None, description="Maximum number of chunks per document.")
@@ -32,16 +32,16 @@ class ChunkerConfig(BaseModule):
 
 class EmbeddingConfig(BaseModule):
     """Configuration for embedding stage."""
-    provider: EmbeddingProvider = Field(default=EmbeddingProvider.OPENAI, description="Embedding provider (OPENAI, HUGGINGFACE).")
+    provider: str = Field(default=EmbeddingProvider.OPENAI, description="Embedding provider (OPENAI, HUGGINGFACE).")
     model_name: str = Field(default="text-embedding-ada-002", description="Name of the embedding model.")
     api_key: Optional[str] = Field(default=None, description="API key for the embedding provider (if required).")
     api_url: str = Field(default=DEFAULT_OPENAI_API_BASE, description="api url for embedding model.")
+    dimensions: int = Field(default=1536, description="The number of dimentsion for the embedding model")
 
 
 class IndexConfig(BaseModule):
     """Configuration for indexing stage."""
     index_type: str = Field(default=IndexType.VECTOR, description="Index type (VECTOR, GRAPH, SUMMARY, TREE).")
-    similarity_metric: str = Field(default="cosine", description="Similarity metric for vector index (cosine, euclidean).")
 
 
 class RetrievalConfig(BaseModule):

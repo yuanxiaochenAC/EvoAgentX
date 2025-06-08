@@ -63,7 +63,6 @@ class IndexStore(BaseModel):
     Stores indexing metadata with a unique id and basic chunk/node attribute.
     """
     corpus_id: str = Field(..., description="Identifier for the associated corpus")
-    index_type: str = Field(..., description="Type of index (e.g., 'vector', 'graph', 'summary', 'tree')")
     content: Dict[str, Any] = Field(..., description="Serialized index content (e.g., LlamaIndex JSON)")
     date: Optional[str] = Field(default="", description="Creation or last update date")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata, e.g., vector store collection name")

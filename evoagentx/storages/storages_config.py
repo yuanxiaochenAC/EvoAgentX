@@ -20,7 +20,7 @@ class VectorStoreConfig(BaseConfig):
     Configuration for vector databases, supporting FAISS and Qdrant.
     """
     vector_name: str = Field(default="faiss", description="Name of the vector database provider (e.g., 'faiss', 'qdrant')")
-    dimension: Optional[int] = Field(default=1536, description="Dimension of the embedding vectors")
+    dimensions: Optional[int] = Field(default=1536, description="Dimension of the embedding vectors")
     index_type: Optional[str] = Field(default="flat_l2", description="Index type for FAISS (e.g., 'flat_l2', 'ivf_flat')")
     qdrant_url: Optional[str] = Field(default=None, description="URL for Qdrant server (e.g., 'http://localhost:6333')")
     qdrant_api_key: Optional[str] = Field(default=None, description="API key for Qdrant authentication")

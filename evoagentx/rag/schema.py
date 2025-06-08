@@ -53,6 +53,7 @@ class IndexMetadata(BaseModule):
     dimension: Optional[int] = Field(default=1536, description="Vector dimension")
     vector_db_type: Optional[str] = Field(default=None, description="Vector database type (e.g., 'faiss', 'qdrant', 'chroma')")
     graph_db_type: Optional[str] = Field(default=None, description="Graph database type (e.g., 'neo4j')")
+    embedding_model_name: Optional[str] = Field(default=None, description="")
     date: Optional[str] = Field(default=None, description="Creation or last update date")
 
 
@@ -256,24 +257,18 @@ class Chunk(BaseModule):
 
     def to_dict(self) -> Dict:
         """Convert chunk to dictionary for serialization."""
-        relatiuonships = dict() 
+        relationships = dict() 
         for k, v in self.relationships.items():
-            relatiuonships[k] = v.to_dict() if isinstance(v, RelatedNodeInfo) else v
-        return {
-            "chunk_id": self.chunk_id,
-            "text": self.text,
-            "metadata": self.metadata.model_dump(),
-            "embedding": self.embedding,
-            "start_char_idx": self.start_char_idx,
-            "end_char_idx": self.end_char_idx,
-            "excluded_embed_metadata_keys": self.excluded_embed_metadata_keys,
-            "excluded_llm_metadata_keys": self.excluded_llm_metadata_keys,
-            "relationships": relatiuonships
-        }
-
+            relationships[k] = v.to_dict() if isinstance(v, RelatedNodeInfo) else v
+        self.relationships = relationships
+        # return {"chunk_id": self.chunk_id,"text": self.text,"metadata": self.metadata.model_dump(),"embedding": self.embedding,"start_char_idx": self.start_char_idx,"end_char_idx": self.end_char_idx,"excluded_embed_metadata_keys": self.excluded_embed_metadata_keys,"excluded_llm_metadata_keys": self.excluded_llm_metadata_keys,"relationships": relatiuonships}
+        return self.model_dump()
+    
     def to_json(self, indent: int = 2) -> str:
         """Convert chunk to JSON string."""
-        return json.dumps(self.to_dict(), indent=indent, ensure_ascii=False)
+        # return json.dumps(self.to_dict(), indent=indent, ensure_ascii=False)
+        # return self.model_dump_json(indent=indent)
+        return self.model_dump_json(indent=indent).strip()
 
     def __str__(self) -> str:
         return (
@@ -282,9 +277,9 @@ class Chunk(BaseModule):
             f"embedding={self.embedding}), "
             f"start_char_idx={self.start_char_idx}, "
             f"end_char_idx={self.end_char_idx}, "
-            f"excluded_embed_metadata_keys={self.excluded_embed_metadata_keys}",
-            f"excluded_llm_metadata_keys={self.excluded_llm_metadata_keys}",
-            f"text_template={self.text_template}",
+            f"excluded_embed_metadata_keys={self.excluded_embed_metadata_keys},"
+            f"excluded_llm_metadata_keys={self.excluded_llm_metadata_keys},"
+            f"text_template={self.text_template},"
             f"metadata={self.metadata.model_dump()}"
         )
 
@@ -295,11 +290,12 @@ class Chunk(BaseModule):
             f"embedding={self.embedding}), "
             f"start_char_idx={self.start_char_idx}, "
             f"end_char_idx={self.end_char_idx}, "
-            f"excluded_embed_metadata_keys={self.excluded_embed_metadata_keys}",
-            f"excluded_llm_metadata_keys={self.excluded_llm_metadata_keys}",
-            f"text_template={self.text_template}",
+            f"excluded_embed_metadata_keys={self.excluded_embed_metadata_keys},"
+            f"excluded_llm_metadata_keys={self.excluded_llm_metadata_keys},"
+            f"text_template={self.text_template},"
             f"metadata={self.metadata.model_dump()}"
         )
+
 
 
 class Corpus(BaseModule):
@@ -382,18 +378,22 @@ class Corpus(BaseModule):
             reverse=reverse
         )
 
-    def to_dict(self) -> Dict:
+    def to_dict(self, round_trip=False) -> Dict:
         """Convert corpus to dictionary for serialization."""
-        return self.model_dump()
+        return [self.model_dump(round_trip=round_trip)]
 
-    def to_json(self, indent: int = 2) -> str:
+    def to_json(self, indent: int = 2, round_trip=True) -> str:
         """Convert corpus to JSON string."""
-        return json.dumps(self.to_dict(), indent=indent, ensure_ascii=False)
+        return json.dumps(self.to_dict(round_trip), indent=indent, ensure_ascii=False)
 
-    def to_jsonl(self, output_path: str):
+    def to_jsonl(self, output_path: str, indent: int = 0):
         with open(output_path, 'w', encoding='utf-8') as f:
             for chunk in self.chunks:
-                f.write(chunk.to_json(indent=0) + '\n')
+                json_str = chunk.to_json(indent=None)
+                if '\n' in json_str:
+                    # Log warning if JSON contains newlines, which breaks JSONL format
+                    print(f"Chunk {chunk.chunk_id} contains newlines in JSON, which may break JSONL format.")
+                f.write(json_str + '\n')
 
     @classmethod
     def from_jsonl(cls, input_path: str, corpus_id: Optional[str] = None) -> "Corpus":

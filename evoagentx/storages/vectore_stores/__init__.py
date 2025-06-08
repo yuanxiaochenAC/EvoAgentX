@@ -17,8 +17,8 @@ class VectorStoreFactory:
     def create(self, store_type: str, store_config: Dict[str, Any] = None) -> VectorStore:
         store_config = store_config or {}
         if store_type == VectorStoreType.FAISS:
-            dimension = store_config.get("dimension")
-            if not dimension or not isinstance(dimension, int):
+            dimensions = store_config.get("dimensions")
+            if not dimensions or not isinstance(dimensions, int):
                 raise ValueError("FAISS requires a valid dimension")
             vector_store = FaissVectorStoreWrapper(**store_config)
         # elif store_type == VectorStoreType.QDRANT:
