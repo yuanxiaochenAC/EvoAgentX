@@ -96,6 +96,7 @@ class WorkFlowGenerator(BaseModule):
         plan_history, plan_suggestion = "", ""
         
         # Generate the initial workflow plan
+        logger.info(f"Generating a workflow for: {goal} ...")
         cur_retries = 0
         plan, added_retries = self._execute_with_retry(
             operation_name="Generating a workflow plan",
