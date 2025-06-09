@@ -45,7 +45,7 @@ class IndexConfig(BaseModule):
 
 
 class RetrievalConfig(BaseModule):
-    """Configuration for retrieval stage."""
+    """Configuration for retrieval stage.(pre-retrieve, retrieve, post-retrieve)"""
     retrivel_type: str = Field(default=RetrieverType.VECTOR, description="The type of retriver for retrieve.")
     postprocessor_type: str = Field(default=RerankerType.SIMPLE, description="The type of postprocessor for retrieve.")
     top_k: int = Field(default=5, description="Number of top results to retrieve.")
