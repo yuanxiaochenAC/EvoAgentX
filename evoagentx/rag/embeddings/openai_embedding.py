@@ -1,8 +1,7 @@
-import logging
-
 from llama_index.embeddings.openai import OpenAIEmbedding
 
 from .base import BaseEmbeddingWrapper
+from evoagentx.core.logging import logger
 
 
 class OpenAIEmbeddingWrapper(BaseEmbeddingWrapper):
@@ -19,7 +18,6 @@ class OpenAIEmbeddingWrapper(BaseEmbeddingWrapper):
         self.api_key = api_key
         self.dimensions = dimensions
         self.kwargs = kwargs
-        self.logger = logging.getLogger(__name__)
     
     def get_embedding_model(self) -> OpenAIEmbedding:
         """Return the OpenAI embedding model."""
@@ -30,8 +28,8 @@ class OpenAIEmbeddingWrapper(BaseEmbeddingWrapper):
                 dimensions=self.dimensions,
                 **self.kwargs
             )
-            self.logger.debug(f"Initialized OpenAI embedding model: {self.model_name}")
+            logger.debug(f"Initialized OpenAI embedding model: {self.model_name}")
             return model
         except Exception as e:
-            self.logger.error(f"Failed to initialize OpenAI embedding: {str(e)}")
+            logger.error(f"Failed to initialize OpenAI embedding: {str(e)}")
             raise

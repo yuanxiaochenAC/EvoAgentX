@@ -1,8 +1,8 @@
-import logging
 from llama_index.core.indices.base import BaseIndex
 from llama_index.core.retrievers import VectorIndexRetriever
 
 from .base import BaseRetrieverWrapper
+from evoagentx.core.logging import logger
 from evoagentx.rag.schema import RagQuery, RagResult, Corpus, Chunk
 
 
@@ -17,7 +17,6 @@ class VectorRetriever(BaseRetrieverWrapper):
             index=self.index,
             similarity_top_k=self.top_k
         )
-        self.logger = logging.getLogger(__file__)
 
     async def aretrieve(self, query: RagQuery) -> RagResult:
         try:
@@ -40,10 +39,10 @@ class VectorRetriever(BaseRetrieverWrapper):
                 scores=scores,
                 metadata={"query": query.query_str, "retriever": "vector"}
             )
-            self.logger.info(f"Vector retrieved {len(corpus.chunks)} chunks")
+            logger.info(f"Vector retrieved {len(corpus.chunks)} chunks")
             return result
         except Exception as e:
-            self.logger.error(f"Vector retrieval failed: {str(e)}")
+            logger.error(f"Vector retrieval failed: {str(e)}")
             raise
 
     def retrieve(self, query: RagQuery) -> RagResult:
@@ -66,12 +65,12 @@ class VectorRetriever(BaseRetrieverWrapper):
                 scores=scores,
                 metadata={"query": query.query_str, "retriever": "vector"}
             )
-            self.logger.info(f"Vector retrieved {len(corpus.chunks)} chunks")
+            logger.info(f"Vector retrieved {len(corpus.chunks)} chunks")
             return result
         except Exception as e:
-            self.logger.error(f"Vector retrieval failed: {str(e)}")
+            logger.error(f"Vector retrieval failed: {str(e)}")
             raise
     
     def get_retriever(self) -> VectorIndexRetriever:
-        self.logger.debug("Returning vector retriever")
+        logger.debug("Returning vector retriever")
         return self.retriever

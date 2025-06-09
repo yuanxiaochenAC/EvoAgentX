@@ -1,19 +1,16 @@
-import logging
 from typing import Dict, Any
 
 from llama_index.core.graph_stores.types import GraphStore
 
 from .base import GraphStoreType, GraphStoreBase
 from .neo4j import Neo4jGraphStoreWrapper
+from evoagentx.core.logging import logger
 
 __all__ = ['GraphStoreBase', 'Neo4jGraphStoreWrapper', 'GraphStoreFactory']
 
 class GraphStoreFactory:
     """Factory for creating graph stores."""
-    
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
-    
+
     def create(
         self,
         store_type: str,
@@ -39,5 +36,5 @@ class GraphStoreFactory:
             graph_store = Neo4jGraphStoreWrapper(**store_config).get_graph_store()
         else:
             raise ValueError(f"Unsupported graph store type: {store_type}")
-        self.logger.info(f"Created graph store: {store_type}")
+        logger.info(f"Created graph store: {store_type}")
         return graph_store

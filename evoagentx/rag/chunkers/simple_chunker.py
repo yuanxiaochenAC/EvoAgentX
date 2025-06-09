@@ -1,12 +1,11 @@
 import asyncio
-import logging
 from typing import List
 from concurrent.futures import ThreadPoolExecutor
 
+from evoagentx.core.logging import logger
 from llama_index.core.node_parser import SimpleNodeParser
 from .base import BaseChunker, ChunkingStrategy
 from evoagentx.rag.schema import Document, Corpus, Chunk
-
 
 class SimpleChunker(BaseChunker):
     """Chunker that splits documents into fixed-size chunks using multi-threading and async parsing.
@@ -55,7 +54,6 @@ class SimpleChunker(BaseChunker):
             include_metadata=include_metadata,
             include_prev_next_rel=include_prev_next_rel,
         )
-        self.logger = logging.getLogger(__name__)
 
     def _process_document(self, doc: Document) -> List[Chunk]:
         """Process a single document into chunks in a thread.
@@ -80,10 +78,10 @@ class SimpleChunker(BaseChunker):
 
                 chunk.metadata.chunking_strategy = ChunkingStrategy.SIMPLE
                 chunks.extend([chunk])
-            self.logger.debug(f"Processed document {doc.doc_id} into {len(chunks)} chunks")
+            logger.debug(f"Processed document {doc.doc_id} into {len(chunks)} chunks")
             return chunks
         except Exception as e:
-            self.logger.error(f"Failed to process document {doc.doc_id}: {str(e)}")
+            logger.error(f"Failed to process document {doc.doc_id}: {str(e)}")
             return []
 
     def chunk(self, documents: List[Document], **kwargs) -> Corpus:
@@ -96,7 +94,7 @@ class SimpleChunker(BaseChunker):
             Corpus: A collection of Chunk objects with metadata.
         """
         if not documents:
-            self.logger.info("No documents provided, returning empty Corpus")
+            logger.info("No documents provided, returning empty Corpus")
             return Corpus([])
 
         chunks = []
@@ -107,7 +105,7 @@ class SimpleChunker(BaseChunker):
                 try:
                     chunks.extend(future.result())
                 except Exception as e:
-                    self.logger.error(f"Error processing document {doc.doc_id}: {str(e)}")
+                    logger.error(f"Error processing document {doc.doc_id}: {str(e)}")
 
-        self.logger.info(f"Chunked {len(documents)} documents into {len(chunks)} chunks")
+        logger.info(f"Chunked {len(documents)} documents into {len(chunks)} chunks")
         return Corpus(chunks=chunks)

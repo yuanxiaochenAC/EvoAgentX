@@ -1,11 +1,11 @@
 import asyncio
-import logging
 from pathlib import Path
 from typing import Union, List, Tuple, Optional, Callable, Dict
 
 from llama_index.core import SimpleDirectoryReader
 
 from evoagentx.rag.schema import Document
+from evoagentx.core.logging import logger
 
 
 # You Could fllow the llama_index tutorial to develop a valid Reader for new file format:
@@ -46,7 +46,6 @@ class LLamaIndexReader:
         self.extern_file_extractor = extern_file_extractor
         self.errors = errors
         self.encoding = encoding
-        self.logger = logging.getLogger(__name__)
 
     def _validate_path(self, path: Union[str, Path]) -> Path:
         """Validate and convert a path to a Path object.
@@ -63,7 +62,7 @@ class LLamaIndexReader:
         """
         path = Path(path)
         if not path.exists():
-            self.logger.error(f"Path does not exist: {path}")
+            logger.error(f"Path does not exist: {path}")
             raise FileNotFoundError(f"Path does not exist: {path}")
         return path
 
@@ -90,7 +89,7 @@ class LLamaIndexReader:
             else:
                 return self._validate_path(input_data[0])
         else:
-            self.logger.error(f"Invalid input type: {type(input_data)}")
+            logger.error(f"Invalid input type: {type(input_data)}")
             raise ValueError(f"Invalid input type: {type(input_data)}")
 
     def load(
@@ -172,9 +171,9 @@ class LLamaIndexReader:
                     documents.append(Document.from_llama_document(combined_metadata))
             else:
                 documents = [Document.from_llama_document(doc) for doc in llama_docs]
-            self.logger.info(f"Loaded {len(documents)} documents")
+            logger.info(f"Loaded {len(documents)} documents")
             return documents
 
         except Exception as e:
-            self.logger.error(f"Failed to load documents: {str(e)}")
+            logger.error(f"Failed to load documents: {str(e)}")
             raise RuntimeError(f"Failed to load documents: {str(e)}")

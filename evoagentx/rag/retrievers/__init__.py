@@ -1,4 +1,3 @@
-import logging
 from typing import Optional
 
 from llama_index.core.indices.base import BaseIndex
@@ -8,16 +7,14 @@ from llama_index.core.graph_stores.types import GraphStore
 from .base import BaseRetrieverWrapper, RetrieverType
 from .vector_retriever import VectorRetriever
 from .graph_retriever import GraphRetriever
-from ..schema import RagQuery
+from evoagentx.rag.schema import RagQuery
+from evoagentx.core.logging import logger
 
 __all__ = ['VectorRetriever', 'GraphRetriever', 'RetrieverFactory', 'BaseRetrieverWrapper']
 
 class RetrieverFactory:
     """Factory for creating retrievers."""
-    
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
-    
+
     def create(
         self,
         retriever_type: str,
@@ -42,5 +39,5 @@ class RetrieverFactory:
         else:
             raise ValueError(f"Unsupported retriever type: {retriever_type}")
         
-        self.logger.info(f"Created retriever: {retriever_type}")
+        logger.info(f"Created retriever: {retriever_type}")
         return retriever

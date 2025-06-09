@@ -6,6 +6,7 @@ from typing import Dict, Literal, Callable, Optional, List
 import sqlite3
 
 from .base import DBStoreBase
+from evoagentx.core.logging import logger
 from evoagentx.storages.schema import TableType, MemoryStore, AgentStore, WorkflowStore, HistoryStore, IndexStore
 
 
@@ -104,7 +105,7 @@ def check_db_format(func: Callable) -> Callable:
             with self.connection:
                 self.connection.execute(table_column)
                 self.connection.commit()
-        
+
         kwargs["metadata"] = metadata
         return func(self, *args, **kwargs)
     

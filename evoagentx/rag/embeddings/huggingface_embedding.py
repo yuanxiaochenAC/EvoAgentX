@@ -1,9 +1,7 @@
-import logging
-
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
 from .base import BaseEmbeddingWrapper
-
+from evoagentx.core.logging import logger
 
 class HuggingFaceEmbeddingWrapper(BaseEmbeddingWrapper):
     """Wrapper for HuggingFace embedding models."""
@@ -15,7 +13,6 @@ class HuggingFaceEmbeddingWrapper(BaseEmbeddingWrapper):
     ):
         self.model_name = model_name
         self.kwargs = kwargs
-        self.logger = logging.getLogger(__name__)
     
     def get_embedding_model(self) -> HuggingFaceEmbedding:
         """Return the HuggingFace embedding model."""
@@ -24,8 +21,8 @@ class HuggingFaceEmbeddingWrapper(BaseEmbeddingWrapper):
                 model_name=self.model_name,
                 **self.kwargs
             )
-            self.logger.debug(f"Initialized HuggingFace embedding model: {self.model_name}")
+            logger.debug(f"Initialized HuggingFace embedding model: {self.model_name}")
             return model
         except Exception as e:
-            self.logger.error(f"Failed to initialize HuggingFace embedding: {str(e)}")
+            logger.error(f"Failed to initialize HuggingFace embedding: {str(e)}")
             raise

@@ -1,19 +1,16 @@
-import logging
 from typing import Dict, Any
 
 from llama_index.core.vector_stores.types import VectorStore
 
 from .base import VectorStoreType, VectorStoreBase
 from .faiss import FaissVectorStoreWrapper
+from evoagentx.core.logging import logger
 
 __all__ = ['VectorStoreBase', 'FaissVectorStoreWrapper', 'VectorStoreFactory']
 
 class VectorStoreFactory:
     """Factory for creating vector stores."""
-    
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
-    
+
     def create(self, store_type: str, store_config: Dict[str, Any] = None) -> VectorStore:
         store_config = store_config or {}
         if store_type == VectorStoreType.FAISS:
@@ -31,5 +28,5 @@ class VectorStoreFactory:
         #     vector_store = QdrantVectorStore(client=client, collection_name=collection_name)
         else:
             raise ValueError(f"Unsupported vector store type: {store_type}")
-        self.logger.info(f"Created vector store: {store_type}")
+        logger.info(f"Created vector store: {store_type}")
         return vector_store

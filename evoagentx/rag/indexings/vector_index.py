@@ -1,4 +1,3 @@
-import logging
 from typing import List, Dict, Any, Union, Optional
 
 from llama_index.core.schema import BaseNode
@@ -8,8 +7,8 @@ from llama_index.core.embeddings import BaseEmbedding
 
 from .base import BaseIndexWrapper, IndexType
 from evoagentx.rag.schema import Chunk
+from evoagentx.core.logging import logger
 from evoagentx.storages.base import StorageHandler
-
 
 class VectorIndexing(BaseIndexWrapper):
     """Wrapper for LlamaIndex VectorStoreIndex."""
@@ -21,7 +20,6 @@ class VectorIndexing(BaseIndexWrapper):
         index_config: Dict[str, Any] = None
     ):
         super().__init__()
-        self.logger = logging.getLogger(__file__)
         self.index_type = IndexType.VECTOR
         self.embed_model = embed_model
         self.storage_handler = storage_handler
@@ -39,7 +37,7 @@ class VectorIndexing(BaseIndexWrapper):
                 show_progress=self.index_config.get("show_progress", False)
             )
         except Exception as e:
-            self.logger.error(f"Failed to initialize VectorStoreIndex: {str(e)}")
+            logger.error(f"Failed to initialize VectorStoreIndex: {str(e)}")
             raise
 
     def _create_storage_context(self, ):
@@ -68,9 +66,9 @@ class VectorIndexing(BaseIndexWrapper):
             for node in nodes_with_embedding:
                 self.id_to_node[node.node_id] = node.model_copy()
             self.index.insert_nodes(nodes_with_embedding)
-            self.logger.info(f"Inserted {len(nodes_with_embedding)} nodes into VectorStoreIndex")
+            logger.info(f"Inserted {len(nodes_with_embedding)} nodes into VectorStoreIndex")
         except Exception as e:
-            self.logger.error(f"Failed to insert nodes: {str(e)}")
+            logger.error(f"Failed to insert nodes: {str(e)}")
             raise
 
     def delete_nodes(self, node_ids: Optional[List[str]] = None, 
@@ -82,7 +80,7 @@ class VectorIndexing(BaseIndexWrapper):
                     if node_id in self.id_to_node:
                         self.index.delete_nodes([node_id], delete_from_docstore=True)
                         self.id_to_node.pop(node_id)
-                        self.logger.info(f"Deleted node {node_id} from VectorStoreIndex")
+                        logger.info(f"Deleted node {node_id} from VectorStoreIndex")
 
             elif metadata_filters:
                 nodes_to_delete = []
@@ -94,11 +92,11 @@ class VectorIndexing(BaseIndexWrapper):
                     
                     for node_id in nodes_to_delete:
                         del self.id_to_node[node_id]
-                    self.logger.info(f"Deleted {len(nodes_to_delete)} nodes matching metadata filters from VectorStoreIndex")
+                    logger.info(f"Deleted {len(nodes_to_delete)} nodes matching metadata filters from VectorStoreIndex")
             else:
-                self.logger.warning("No node_ids or metadata_filters provided for deletion")
+                logger.warning("No node_ids or metadata_filters provided for deletion")
         except Exception as e:
-            self.logger.error(f"Failed to delete nodes: {str(e)}")
+            logger.error(f"Failed to delete nodes: {str(e)}")
             raise
 
     def clear(self) -> None:
@@ -108,7 +106,7 @@ class VectorIndexing(BaseIndexWrapper):
             node_ids = list(self.id_to_node.keys())
             self.index.delete_nodes(node_ids, delete_from_docstore=True)
             self.id_to_node.clear()
-            self.logger.info("Cleared all nodes from VectorStoreIndex")
+            logger.info("Cleared all nodes from VectorStoreIndex")
         except Exception as e:
-            self.logger.error(f"Failed to clear index: {str(e)}")
+            logger.error(f"Failed to clear index: {str(e)}")
             raise

@@ -1,7 +1,7 @@
-import logging
 from typing import Optional
 
 from evoagentx.rag.schema import RagQuery
+from evoagentx.core.logging import logger
 from .simple_reranker import SimpleReranker
 from .base import BasePostprocessor, RerankerType
 
@@ -10,9 +10,6 @@ __all__ = ['PostprocessorFactory', 'SimpleReranker', 'BasePostprocessor']
 
 class PostprocessorFactory:
     """Factory for creating post-processors."""
-    
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
     
     def create(
         self,
@@ -41,5 +38,5 @@ class PostprocessorFactory:
         else:
             raise ValueError(f"Unsupported post-processor type: {postprocessor_type}")
         
-        self.logger.info(f"Created post-processor: {postprocessor_type}")
+        logger.info(f"Created post-processor: {postprocessor_type}")
         return postprocessor

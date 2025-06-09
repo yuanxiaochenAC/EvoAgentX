@@ -1,9 +1,9 @@
-import logging
 from llama_index.core.embeddings import BaseEmbedding
 from llama_index.core.graph_stores.types import GraphStore
 from llama_index.core.indices.property_graph import VectorContextRetriever
 
 from .base import BaseRetrieverWrapper
+from evoagentx.core.logging import logger
 from evoagentx.rag.schema import RagQuery, RagResult, Corpus
 
 
@@ -20,7 +20,6 @@ class GraphRetriever(BaseRetrieverWrapper):
             embed_model=self.embed_model,
             similarity_top_k=self.top_k
         )
-        self.logger = logging.getLogger(__file__)
     
     def retrieve(self, query: RagQuery) -> RagResult:
         try:
@@ -36,12 +35,12 @@ class GraphRetriever(BaseRetrieverWrapper):
                 scores=scores,
                 metadata={"query": query.query_str, "retriever": "graph"}
             )
-            self.logger.info(f"Graph retrieved {len(corpus.chunks)} chunks")
+            logger.info(f"Graph retrieved {len(corpus.chunks)} chunks")
             return result
         except Exception as e:
-            self.logger.error(f"Graph retrieval failed: {str(e)}")
+            logger.error(f"Graph retrieval failed: {str(e)}")
             raise
     
     def get_retriever(self) -> VectorContextRetriever:
-        self.logger.debug("Returning graph retriever")
+        logger.debug("Returning graph retriever")
         return self.retriever

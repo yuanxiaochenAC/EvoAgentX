@@ -1,8 +1,8 @@
-import logging
 from typing import Dict, Any, Optional
 
 from llama_index.core.embeddings import BaseEmbedding
 
+from evoagentx.core.logging import logger
 from evoagentx.storages.base import StorageHandler
 from .base import IndexType, BaseIndexWrapper
 from .vector_index import VectorIndexing
@@ -14,9 +14,6 @@ __all__ = ['VectorIndexing', 'GraphIndexing', 'SummaryIndexing', 'TreeIndexing',
 
 class IndexFactory:
     """Factory for creating LlamaIndex indices."""
-    
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
     
     def create(
         self,
@@ -58,5 +55,5 @@ class IndexFactory:
         else:
             raise ValueError(f"Unsupported index type: {index_type}")
         
-        self.logger.info(f"Created index: {index_type}")
+        logger.info(f"Created index: {index_type}")
         return index

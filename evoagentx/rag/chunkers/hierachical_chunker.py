@@ -1,14 +1,12 @@
-import asyncio
-import logging
 from typing import List, Optional, Dict
 from concurrent.futures import ThreadPoolExecutor
-from uuid import uuid4
 
 from llama_index.core.node_parser import HierarchicalNodeParser, SentenceSplitter
 from llama_index.core.schema import NodeRelationship
 
 from .base import BaseChunker
 from .simple_chunker import SimpleChunker
+from evoagentx.core.logging import logger
 from evoagentx.rag.schema import Document, Corpus, Chunk, ChunkMetadata
 
 
@@ -59,7 +57,6 @@ class HierarchicalChunker(BaseChunker):
         self.include_metadata = include_metadata
         self.include_prev_next_rel = include_prev_next_rel
         self.max_workers = max_workers
-        self.logger = logging.getLogger(__name__)
 
         node_parser_ids = None
         node_parser_map = None
@@ -123,7 +120,7 @@ class HierarchicalChunker(BaseChunker):
                     else len(self.parser_to_level)
                 )
                 if not node_parser_id:
-                    self.logger.warning(f"Node {node.id_} missing node_parser_id, defaulting to level {hierarchy_level}")
+                    logger.warning(f"Node {node.id_} missing node_parser_id, defaulting to level {hierarchy_level}")
 
                 # Extract relationships
                 relationships = node.relationships or {}
@@ -164,13 +161,13 @@ class HierarchicalChunker(BaseChunker):
                         )
                     )
                 except Exception as e:
-                    self.logger.warning(f"Failed to create chunk for node {node.id_}: {e}")
+                    logger.warning(f"Failed to create chunk for node {node.id_}: {e}")
                     continue
 
-            self.logger.debug(f"Processed document {doc.doc_id} into {len(chunks)} chunks")
+            logger.debug(f"Processed document {doc.doc_id} into {len(chunks)} chunks")
             return chunks
         except Exception as e:
-            self.logger.error(f"Failed to process document {doc.doc_id}: {str(e)}")
+            logger.error(f"Failed to process document {doc.doc_id}: {str(e)}")
             return []
 
     def chunk(self, documents: List[Document], **kwargs) -> Corpus:
@@ -184,7 +181,7 @@ class HierarchicalChunker(BaseChunker):
             Corpus: A collection of hierarchically organized chunks.
         """
         if not documents:
-            self.logger.info("No documents provided, returning empty Corpus")
+            logger.info("No documents provided, returning empty Corpus")
             return Corpus(chunks=[])
 
         chunks = []
@@ -199,7 +196,7 @@ class HierarchicalChunker(BaseChunker):
                 try:
                     chunks.extend(future.result())
                 except Exception as e:
-                    self.logger.error(f"Error processing document {doc.doc_id}: {str(e)}")
+                    logger.error(f"Error processing document {doc.doc_id}: {str(e)}")
 
-        self.logger.info(f"Chunked {len(documents)} documents into {len(chunks)} chunks")
+        logger.info(f"Chunked {len(documents)} documents into {len(chunks)} chunks")
         return Corpus(chunks=chunks)

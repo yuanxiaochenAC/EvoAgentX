@@ -1,10 +1,10 @@
-import logging
 from typing import List, Any, Dict
 
 from llama_index.graph_stores.neo4j import Neo4jPropertyGraphStore
 from llama_index.core.graph_stores.types import PropertyGraphStore
 
 from .base import GraphStoreBase
+from evoagentx.core.logging import logger
 
 
 class Neo4jGraphStoreWrapper(GraphStoreBase):
@@ -26,7 +26,6 @@ class Neo4jGraphStoreWrapper(GraphStoreBase):
                 database=database,
                 **kwargs
             )
-            self.logger = logging.getLogger(__name__)
         except Exception as e:
             raise ValueError(f"Failed to connect to Neo4j: {str(e)}")
     
@@ -41,16 +40,16 @@ class Neo4jGraphStoreWrapper(GraphStoreBase):
                     relation=triple["relation"],
                     object_=triple["object"]
                 )
-            self.logger.info(f"Added {len(triples)} triples to Neo4j store")
+            logger.info(f"Added {len(triples)} triples to Neo4j store")
         except Exception as e:
-            self.logger.error(f"Failed to add triples: {str(e)}")
+            logger.error(f"Failed to add triples: {str(e)}")
             raise
     
     def query(self, query: str) -> List[Any]:
         try:
             results = self.graph_store.structured_query(query)
-            self.logger.info(f"Queried Neo4j store, retrieved {len(results)} results")
+            logger.info(f"Queried Neo4j store, retrieved {len(results)} results")
             return results
         except Exception as e:
-            self.logger.error(f"Query failed: {str(e)}")
+            logger.error(f"Query failed: {str(e)}")
             raise

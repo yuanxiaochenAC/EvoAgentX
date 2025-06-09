@@ -1,4 +1,3 @@
-import logging
 from typing import Dict, Any
 
 from llama_index.core.embeddings import BaseEmbedding
@@ -7,16 +6,13 @@ from .base import BaseChunker, ChunkingStrategy
 from .simple_chunker import SimpleChunker
 from .semantic_chunker import SemanticChunker
 from .hierachical_chunker import HierarchicalChunker
-
+from evoagentx.core.logging import logger
 
 __all__ = ['SimpleChunker', 'SemanticChunker', 'HierarchicalChunker', 'ChunkFactory', 'BaseChunker']
 
 
 class ChunkFactory:
     """Factory for creating chunkers based on configuration."""
-    
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
     
     def create(
         self,
@@ -61,5 +57,5 @@ class ChunkFactory:
         else:
             raise ValueError(f"Unsupported chunking strategy: {strategy}")
         
-        self.logger.info(f"Created chunker for strategy: {strategy}")
+        logger.info(f"Created chunker for strategy: {strategy}")
         return chunker

@@ -1,6 +1,6 @@
-import logging
 from typing import Dict, Any
 
+from evoagentx.core.logging import logger
 from .base import EmbeddingProvider, BaseEmbeddingWrapper
 from .openai_embedding import OpenAIEmbeddingWrapper
 from .huggingface_embedding import HuggingFaceEmbeddingWrapper
@@ -9,9 +9,6 @@ __all__ = ['OpenAIEmbeddingWrapper', 'HuggingFaceEmbeddingWrapper', 'EmbeddingFa
 
 class EmbeddingFactory:
     """Factory for creating embedding models based on configuration."""
-    
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
     
     def create(
         self,
@@ -39,5 +36,5 @@ class EmbeddingFactory:
         else:
             raise ValueError(f"Unsupported embedding provider: {provider}")
         
-        self.logger.info(f"Created embedding model for provider: {provider}")
+        logger.info(f"Created embedding model for provider: {provider}")
         return wrapper

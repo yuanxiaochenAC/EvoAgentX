@@ -1,7 +1,6 @@
 import os
 import json
 import asyncio
-import logging
 from uuid import uuid4
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -23,6 +22,7 @@ from .schema import Chunk, Corpus, ChunkMetadata, IndexMetadata, RagQuery, RagRe
 from evoagentx.storages.base import StorageHandler
 from evoagentx.storages.schema import IndexStore
 from evoagentx.models.base_model import BaseLLM
+from evoagentx.core.logging import logger
 
 
 class SearchEngine:
@@ -34,7 +34,6 @@ class SearchEngine:
         self.chunk_factory = ChunkFactory()
         self.retriever_factory = RetrieverFactory()
         self.postprocessor_factory = PostprocessorFactory()
-        self.logger = logging.getLogger(__name__)
 
         # Initialize reader
         self.reader = LLamaIndexReader(
@@ -108,10 +107,10 @@ class SearchEngine:
                 show_progress=show_progress
             )
             corpus = self.chunker.chunk(documents)
-            self.logger.info(f"Read {len(documents)} documents and created {len(corpus.chunks)} chunks for corpus {corpus_id}")
+            logger.info(f"Read {len(documents)} documents and created {len(corpus.chunks)} chunks for corpus {corpus_id}")
             return corpus
         except Exception as e:
-            self.logger.error(f"Failed to read documents for corpus {corpus_id}: {str(e)}")
+            logger.error(f"Failed to read documents for corpus {corpus_id}: {str(e)}")
             raise
 
     def add(self, index_type: str, nodes: Union[Corpus, List[NodeWithScore], List[TextNode]], 
@@ -154,9 +153,9 @@ class SearchEngine:
             for node in nodes_to_insert:
                 node.metadata.update({"corpus_id": corpus_id, "index_type": index_type})
             self.indices[corpus_id][index_type].insert_nodes(nodes_to_insert)
-            self.logger.info(f"Added {len(nodes_to_insert)} nodes to {index_type} index for corpus {corpus_id}")
+            logger.info(f"Added {len(nodes_to_insert)} nodes to {index_type} index for corpus {corpus_id}")
         except Exception as e:
-            self.logger.error(f"Failed to add nodes to {index_type} index for corpus {corpus_id}: {str(e)}")
+            logger.error(f"Failed to add nodes to {index_type} index for corpus {corpus_id}: {str(e)}")
             raise
 
     def delete(self, corpus_id: str, index_type: Optional[str] = None, 
@@ -177,13 +176,13 @@ class SearchEngine:
         """
         try:
             if corpus_id not in self.indices:
-                self.logger.warning(f"No indices found for corpus {corpus_id}")
+                logger.warning(f"No indices found for corpus {corpus_id}")
                 return
 
             target_indices = [index_type] if index_type else self.indices[corpus_id].keys()
             for idx_type in list(target_indices):  # Use list to avoid runtime modification issues
                 if idx_type not in self.indices[corpus_id]:
-                    self.logger.warning(f"Index type {idx_type} not found for corpus {corpus_id}")
+                    logger.warning(f"Index type {idx_type} not found for corpus {corpus_id}")
                     continue
 
                 index = self.indices[corpus_id][idx_type]
@@ -191,22 +190,22 @@ class SearchEngine:
                     # Convert single node_id to list for consistency
                     node_ids_list = [node_ids] if isinstance(node_ids, str) else node_ids
                     index.delete_nodes(node_ids=node_ids_list, metadata_filters=metadata_filters)
-                    self.logger.info(f"Deleted nodes from {idx_type} index for corpus {corpus_id}")
+                    logger.info(f"Deleted nodes from {idx_type} index for corpus {corpus_id}")
                 else:
                     # Delete entire index
                     index.clear()
                     del self.indices[corpus_id][idx_type]
                     del self.retrievers[corpus_id][idx_type]
-                    self.logger.info(f"Deleted entire {idx_type} index for corpus {corpus_id}")
+                    logger.info(f"Deleted entire {idx_type} index for corpus {corpus_id}")
 
             # Clean up corpus if no indices remain
             if not self.indices[corpus_id]:
                 del self.indices[corpus_id]
                 del self.retrievers[corpus_id]
-                self.logger.info(f"Removed empty corpus {corpus_id}")
+                logger.info(f"Removed empty corpus {corpus_id}")
 
         except Exception as e:
-            self.logger.error(f"Failed to delete from corpus {corpus_id}, index {index_type}: {str(e)}")
+            logger.error(f"Failed to delete from corpus {corpus_id}, index {index_type}: {str(e)}")
             raise
 
     def clear(self, corpus_id: Optional[str] = None) -> None:
@@ -222,7 +221,7 @@ class SearchEngine:
             target_corpora = [corpus_id] if corpus_id else list(self.indices.keys())
             for cid in target_corpora:
                 if cid not in self.indices:
-                    self.logger.warning(f"No indices found for corpus {cid}")
+                    logger.warning(f"No indices found for corpus {cid}")
                     continue
 
                 for idx_type in list(self.indices[cid].keys()):
@@ -230,15 +229,15 @@ class SearchEngine:
                     index.clear()
                     del self.indices[cid][idx_type]
                     del self.retrievers[cid][idx_type]
-                    self.logger.info(f"Cleared {idx_type} index for corpus {cid}")
+                    logger.info(f"Cleared {idx_type} index for corpus {cid}")
 
                 # Clean up corpus if no indices remain
                 del self.indices[cid]
                 del self.retrievers[cid]
-                self.logger.info(f"Cleared corpus {cid}")
+                logger.info(f"Cleared corpus {cid}")
 
         except Exception as e:
-            self.logger.error(f"Failed to clear indices for corpus {corpus_id or 'all'}: {str(e)}")
+            logger.error(f"Failed to clear indices for corpus {corpus_id or 'all'}: {str(e)}")
             raise
 
     def save(self, output_path: Optional[str] = None, corpus_id: Optional[str] = None, 
@@ -263,7 +262,7 @@ class SearchEngine:
 
             for cid in target_corpora:
                 if cid not in self.indices:
-                    self.logger.warning(f"No indices found for corpus {cid}")
+                    logger.warning(f"No indices found for corpus {cid}")
                     continue
 
                 target_indices = [index_type] if index_type and index_type in self.indices[cid] else self.indices[cid].keys()
@@ -301,12 +300,12 @@ class SearchEngine:
 
                         # Save corpus as JSONL
                         corpus.to_jsonl(nodes_file, indent=0)
-                        self.logger.info(f"Saved {len(corpus.chunks)} chunks to {nodes_file}")
+                        logger.info(f"Saved {len(corpus.chunks)} chunks to {nodes_file}")
 
                         # Save metadata as JSON
                         with open(metadata_file, "w", encoding="utf-8") as f:
                             json.dump(metadata.model_dump(), f, indent=2, ensure_ascii=False)
-                        self.logger.info(f"Saved metadata to {metadata_file}")
+                        logger.info(f"Saved metadata to {metadata_file}")
                     else:
                         # Database saving
                         index_data = {
@@ -316,10 +315,10 @@ class SearchEngine:
                             "metadata": metadata.model_dump()
                         }
                         self.storage_handler.save_index(index_data, table=table)
-                        self.logger.info(f"Saved {idx_type} index with {len(corpus.chunks)} chunks for corpus {cid} to database table {table}")
+                        logger.info(f"Saved {idx_type} index with {len(corpus.chunks)} chunks for corpus {cid} to database table {table}")
 
         except Exception as e:
-            self.logger.error(f"Failed to save indices for corpus {corpus_id or 'all'}: {str(e)}")
+            logger.error(f"Failed to save indices for corpus {corpus_id or 'all'}: {str(e)}")
             raise
 
     def load(self, source: Optional[str] = None, corpus_id: Optional[str] = None, 
@@ -351,7 +350,7 @@ class SearchEngine:
             if source:
                 # File-based loading
                 if not os.path.exists(source):
-                    self.logger.error(f"Source directory {source} does not exist")
+                    logger.error(f"Source directory {source} does not exist")
                     raise FileNotFoundError(f"Source directory {source} does not exist")
 
                 for file_name in os.listdir(source):
@@ -359,7 +358,7 @@ class SearchEngine:
                         continue
                     parts = file_name.split("_")
                     if len(parts) < 3:
-                        self.logger.warning(f"Skipping invalid metadata file: {file_name}")
+                        logger.warning(f"Skipping invalid metadata file: {file_name}")
                         continue
                     cid = "_".join(parts[:-2])
                     idx_type = parts[-2]
@@ -389,13 +388,13 @@ class SearchEngine:
 
                     # Load corpus
                     if not os.path.exists(nodes_file):
-                        self.logger.warning(f"Nodes file {nodes_file} not found for metadata {metadata_file}")
+                        logger.warning(f"Nodes file {nodes_file} not found for metadata {metadata_file}")
                         continue
                     corpus = Corpus.from_jsonl(nodes_file, corpus_id=cid)
 
                     # Reinitialize embedding model if needed
                     if metadata.embedding_model_name != self.config.embedding.model_name:
-                        self.logger.info(f"Reinitializing embedding model to {metadata.embedding_model_name}")
+                        logger.info(f"Reinitializing embedding model to {metadata.embedding_model_name}")
                         self.embed_model = self.embedding_factory.create(
                             provider=self.config.embedding.provider,
                             model_config={
@@ -407,13 +406,13 @@ class SearchEngine:
 
                     # Load index
                     self._load_index(corpus, cid, idx_type)
-                    self.logger.info(f"Loaded {idx_type} index with {len(corpus.chunks)} chunks for corpus {cid} from {nodes_file}")
+                    logger.info(f"Loaded {idx_type} index with {len(corpus.chunks)} chunks for corpus {cid} from {nodes_file}")
             else:
                 # Database loading
                 records = self.storage_handler.load(tables=[table]).get(table, [])
 
                 if not records:
-                    self.logger.warning(f"No records found in table {table}")
+                    logger.warning(f"No records found in table {table}")
                     return
 
                 for record in records:
@@ -458,7 +457,7 @@ class SearchEngine:
 
                     # Reinitialize embedding model if needed
                     if metadata.embedding_model_name != self.config.embedding.model_name:
-                        self.logger.info(f"Reinitializing embedding model to {metadata.embedding_model_name}")
+                        logger.info(f"Reinitializing embedding model to {metadata.embedding_model_name}")
                         self.embed_model = self.embedding_factory.create(
                             provider=self.config.embedding.provider,
                             model_config={
@@ -471,10 +470,10 @@ class SearchEngine:
 
                     # Load index
                     self._load_index(corpus, cid, idx_type)
-                    self.logger.info(f"Loaded {idx_type} index with {len(corpus.chunks)} chunks for corpus {cid} from database table {table}")
+                    logger.info(f"Loaded {idx_type} index with {len(corpus.chunks)} chunks for corpus {cid} from database table {table}")
 
         except Exception as e:
-            self.logger.error(f"Failed to load indices: {str(e)}")
+            logger.error(f"Failed to load indices: {str(e)}")
             raise
 
     def _load_index(self, corpus: Corpus, corpus_id: str, index_type: str) -> None:
@@ -506,9 +505,9 @@ class SearchEngine:
             for node in nodes:
                 node.metadata.update({"corpus_id": corpus_id, "index_type": index_type})
             self.indices[corpus_id][index_type].insert_nodes(nodes)
-            self.logger.info(f"Inserted {len(nodes)} nodes into {index_type} index for corpus {corpus_id}")
+            logger.info(f"Inserted {len(nodes)} nodes into {index_type} index for corpus {corpus_id}")
         except Exception as e:
-            self.logger.error(f"Failed to load index for corpus {corpus_id}, index_type {index_type}: {str(e)}")
+            logger.error(f"Failed to load index for corpus {corpus_id}, index_type {index_type}: {str(e)}")
             raise
 
     async def _retrieve_async(self, retriever: BaseRetrieverWrapper, query: RagQuery):
@@ -543,7 +542,7 @@ class SearchEngine:
                 query = RagQuery(query_str=query)
             
             if not self.indices or (corpus_id and corpus_id not in self.indices):
-                self.logger.warning(f"No indices found for corpus {corpus_id or 'any'}")
+                logger.warning(f"No indices found for corpus {corpus_id or 'any'}")
                 return RagResult(corpus=Corpus(chunks=[]), scores=[], metadata={"query": query.query_str})
 
             results = []
@@ -573,9 +572,9 @@ class SearchEngine:
                     try:
                         result = future.result()
                         results.append(result)
-                        self.logger.info(f"Retrieved {len(result.corpus.chunks)} chunks from {idx_type} retriever for corpus {cid}")
+                        logger.info(f"Retrieved {len(result.corpus.chunks)} chunks from {idx_type} retriever for corpus {cid}")
                     except Exception as e:
-                        self.logger.error(f"Retrieval failed for {idx_type} in corpus {cid}: {str(e)}")
+                        logger.error(f"Retrieval failed for {idx_type} in corpus {cid}: {str(e)}")
 
             if not results:
                 return RagResult(corpus=Corpus(chunks=[]), scores=[], metadata={"query": query.query_str})
@@ -596,10 +595,10 @@ class SearchEngine:
                     if all(chunk.metadata.model_dump().get(k) == v for k, v in query.metadata_filters.items())
                 ]
                 final_result.scores = [chunk.metadata.similarity_score for chunk in final_result.corpus.chunks]
-                self.logger.info(f"Applied metadata filters, retained {len(final_result.corpus.chunks)} chunks")
+                logger.info(f"Applied metadata filters, retained {len(final_result.corpus.chunks)} chunks")
 
-            self.logger.info(f"Query returned {len(final_result.corpus.chunks)} chunks after post-processing")
+            logger.info(f"Query returned {len(final_result.corpus.chunks)} chunks after post-processing")
             return final_result
         except Exception as e:
-            self.logger.error(f"Query failed: {str(e)}")
+            logger.error(f"Query failed: {str(e)}")
             raise

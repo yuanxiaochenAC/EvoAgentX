@@ -1,14 +1,13 @@
 import asyncio
-import logging
 from typing import List
 from concurrent.futures import ThreadPoolExecutor
 
 from llama_index.core.embeddings import BaseEmbedding
 from llama_index.core.node_parser import SemanticSplitterNodeParser
 
+from evoagentx.core.logging import logger
 from .base import BaseChunker, ChunkingStrategy
 from evoagentx.rag.schema import Document, Corpus, Chunk, ChunkMetadata
-
 
 class SemanticChunker(BaseChunker):
     """Chunker that splits documents based on semantic similarity.
@@ -34,7 +33,6 @@ class SemanticChunker(BaseChunker):
             similarity_threshold=similarity_threshold
         )
         self.max_workers = max_workers
-        self.logger = logging.getLogger(__name__)
 
     def _process_document(self, doc: Document) -> List[Chunk]:
         """Process a single document into chunks.
@@ -58,10 +56,10 @@ class SemanticChunker(BaseChunker):
                 
                 chunk.metadata.chunking_strategy = ChunkingStrategy.SIMPLE
                 chunks.extend([chunk])
-            self.logger.debug(f"Processed document {doc.doc_id} into {len(chunks)} chunks")
+            logger.debug(f"Processed document {doc.doc_id} into {len(chunks)} chunks")
             return chunks
         except Exception as e:
-            self.logger.error(f"Failed to process document {doc.doc_id}: {str(e)}")
+            logger.error(f"Failed to process document {doc.doc_id}: {str(e)}")
             return []
 
     def chunk(self, documents: List[Document], **kwargs) -> Corpus:
@@ -75,7 +73,7 @@ class SemanticChunker(BaseChunker):
             Corpus: A collection of Chunk objects with semantic metadata.
         """
         if not documents:
-            self.logger.info("No documents provided, returning empty Corpus")
+            logger.info("No documents provided, returning empty Corpus")
             return Corpus([])
 
         chunks = []
@@ -87,9 +85,9 @@ class SemanticChunker(BaseChunker):
                 try:
                     chunks.extend(future.result())
                 except Exception as e:
-                    self.logger.error(f"Error processing document {doc.doc_id}: {str(e)}")
+                    logger.error(f"Error processing document {doc.doc_id}: {str(e)}")
 
-        self.logger.info(f"Chunked {len(documents)} documents into {len(chunks)} chunks")
+        logger.info(f"Chunked {len(documents)} documents into {len(chunks)} chunks")
         return Corpus(chunks=chunks)
     
         llama_docs = [doc.to_llama_document() for doc in documents]
