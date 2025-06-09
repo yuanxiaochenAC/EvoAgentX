@@ -93,6 +93,35 @@ response = llm.generate(
 )
 ```
 
+### OpenRouterLLM
+
+OpenRouterLLM 是 [OpenRouter 平台](https://openrouter.ai/) 的适配器，该平台通过统一的 API 提供对各种提供商的语言模型的访问。它支持来自 Anthropic、Google、Meta、Mistral AI 等提供商的模型，所有这些都可以通过单一接口访问。
+
+EvoAgentX 中的 `OpenRouterLLM` 模型类使您能够轻松地在 OpenRouter 上托管的不同模型之间切换，同时保持一致的 API 格式。这使得您可以轻松尝试不同的模型，为您的特定用例找到最佳选择。
+
+**基本用法：**
+
+```python
+from evoagentx.models import OpenRouterConfig, OpenRouterLLM
+
+# Configure the model
+config = OpenRouterConfig(
+    model="openai/gpt-4o-mini",  # 或 OpenRouter 支持的任何其他模型
+    openrouter_key="your-openrouter-api-key",
+    temperature=0.7,
+    max_tokens=1000
+)
+
+# Initialize the model
+llm = OpenRouterLLM(config=config)
+
+# Generate text
+response = llm.generate(
+    prompt="Analyze the impact of artificial intelligence on healthcare.",
+    system_message="You are an AI ethics expert specializing in healthcare applications."
+)
+```
+
 ## 核心功能
 
 EvoAgentX 中的所有 LLM 实现都提供了一组一致的核心功能，用于生成文本和管理生成过程。

@@ -1087,6 +1087,7 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
                 "inputs": [{"name": str, "type": str, "required": bool, "description": str}, ...],
                 "outputs": [{"name": str, "type": str, "required": bool, "description": str}, ...],
                 "prompt": str, 
+                "prompt_template": PromptTemplate, 
                 "system_prompt" (optional): str, default is DEFAULT_SYSTEM_PROMPT,
                 "output_parser" (optional): Type[ActionOutput],
                 "parse_mode" (optional): str, default is "str" 
@@ -1113,8 +1114,9 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
         if not node_description:
             raise ValueError("The `description` for the following task is required: {}".format(task))
         agent_prompt = task.get("prompt", None)
-        if not agent_prompt:
-            raise ValueError("The `prompt` for the following task is required: {}".format(task))
+        agent_prompt_template = task.get("prompt_template", None)
+        if not agent_prompt and not agent_prompt_template:
+            raise ValueError("The `prompt` or `prompt_template` for the following task is required: {}".format(task))
         
         inputs = task.get("inputs", [])
         outputs = task.get("outputs", [])
@@ -1137,6 +1139,7 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
                         "name": agent_name,
                         "description": agent_description,
                         "prompt": agent_prompt,
+                        "prompt_template": agent_prompt_template, 
                         "system_prompt": agent_system_prompt,
                         "inputs": inputs,
                         "outputs": outputs,
@@ -1164,6 +1167,7 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
                     "inputs": [param.to_dict(ignore=["class_name"]) for param in node.inputs],
                     "outputs": [param.to_dict(ignore=["class_name"]) for param in node.outputs],
                     "prompt": node.agents[0].get("prompt", None),
+                    "prompt_template": node.agents[0].get("prompt_template", None).to_dict() if node.agents[0].get("prompt_template", None) else None,
                     "system_prompt": node.agents[0].get("system_prompt", None),
                     "parse_mode": node.agents[0].get("parse_mode", "str"), 
                     "parse_func": node.agents[0].get("parse_func", None).__name__ if node.agents[0].get("parse_func", None) else None,
