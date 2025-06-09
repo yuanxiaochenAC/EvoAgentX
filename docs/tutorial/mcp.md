@@ -305,89 +305,68 @@ MCP tools integrate seamlessly with EvoAgentX agents through tool calling action
 
 ### 4.1 Creating a Customized Agent with Tool Calling Action
 
-The most flexible way to use MCP tools is to create a customized agent with a tool calling action:
+The most flexible way to use MCP tools is to create a customized agent with tool mapping:
 
 ```python
-import os
+import os 
+from dotenv import load_dotenv
+from evoagentx.models import OpenAILLMConfig
+from evoagentx.agents import CustomizeAgent
+from evoagentx.prompts import StringTemplate 
 from evoagentx.tools.mcp import MCPToolkit
-from evoagentx.actions.tool_calling import CustomizeAction
-from evoagentx.agents.customize_agent import CustomizeAgent
-from evoagentx.models.model_configs import OpenAILLMConfig
-from evoagentx.models.openai_model import OpenAILLM
-from evoagentx.core.message import MessageType
 
-# Initialize MCP toolkit and LLM
-mcp_toolkit = MCPToolkit(config_path="mcp_config.json")
-mcp_tools = mcp_toolkit.get_tools()
+# Load environment variables and setup OpenAI config
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=True)
 
-llm_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=os.environ.get("OPENAI_API_KEY"))
-llm = OpenAILLM(config=llm_config)
+# Initialize MCP toolkit and get tools
+mcp_toolkit = MCPToolkit(config_path="examples/mcp.config")
+tools = mcp_toolkit.get_tools()
 
-# Create a tool calling action with MCP tools
-tool_action = CustomizeAction(max_tool_try=3)
-tool_action.add_tools(mcp_tools)
+# Create tool mapping
+tools_mapping = {}
+tools_schemas = [(tool.get_tool_schemas(), tool) for tool in tools]
+tools_schemas = [(j, k) for i, k in tools_schemas for j in i]
+for tool_schema, tool in tools_schemas:
+    tool_name = tool_schema["function"]["name"]
+    tools_mapping[tool_name] = tool
 
-# Create a customized agent with the tool calling action
-agent = CustomizeAgent(
-    name="GitHubToolAgent",
-    description="An agent that can search GitHub repositories",
-    prompt="Please help me find information from GitHub using the available tools.",
-    llm_config=llm_config,
-    actions=[tool_action]
+# Create a customized agent with the tool mapping
+code_writer = CustomizeAgent(
+    name="CodeWriter",
+    description="Writes Python code based on requirements",
+    prompt_template=StringTemplate(
+        instruction="Summarize all your tools."
+    ), 
+    llm_config=openai_config,
+    inputs=[
+        {"name": "instruction", "type": "string", "description": "The goal you need to achieve"}
+    ],
+    outputs=[
+        {"name": "result", "type": "string", "description": "The tools you have"}
+    ],
+    tool_names=[tool_schema["function"]["name"] for tool_schema, tool in tools_schemas],
+    tool_dict=tools_mapping
 )
 
-try:
-    # Execute the agent with a query
-    response = agent.execute(
-        action_name=tool_action.name,
-        action_input_data={"query": "Find repositories about LLMs on GitHub"},
-        return_msg_type=MessageType.RESPONSE
-    )
-    print(response.content)
-finally:
-    mcp_toolkit.disconnect()
-```
-
-### 4.2 Creating a CusToolCaller for Practical Use
-
-For a more direct approach, you can use `CusToolCaller` which is specifically designed for tool usage:
-
-```python
-import os
-from evoagentx.tools.mcp import MCPToolkit
-from evoagentx.agents.cus_tool_caller import CusToolCaller
-from evoagentx.models.model_configs import OpenAILLMConfig
-from evoagentx.models.openai_model import OpenAILLM
-
-# Initialize MCP toolkit and LLM
-mcp_toolkit = MCPToolkit(config_path="mcp_config.json")
-mcp_tools = mcp_toolkit.get_tools()
-
-llm_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=os.environ.get("OPENAI_API_KEY"))
-llm = OpenAILLM(config=llm_config)
-
-# Create the CusToolCaller with GitHub-related tools
-github_tools = [tool for tool in mcp_tools if "GitHub" in tool.name]
-tool_caller = CusToolCaller(
-    name="GitHubAnalyzer",
-    description="An agent that analyzes GitHub repositories",
-    prompt="You are an expert in analyzing GitHub repositories.",
-    llm_config=llm_config,
-    tools=github_tools
+# Execute the agent
+message = code_writer(
+    inputs={"instruction": "Summarize all your tools."}
 )
-
-try:
-    # Execute the tool caller with a query
-    response = tool_caller.execute(
-        action_name=tool_caller.tool_calling_action_name,
-        action_input_data={"query": "Find the top 3 LLM frameworks"}
-    )
-    print(response.content)
-finally:
-    mcp_toolkit.disconnect()
+print(f"Response from {code_writer.name}:")
+print(message.content.result)
 ```
 
-### 4.3 Integration with Workflow and Agent Generation
+This example demonstrates:
+1. Setting up the MCP toolkit and getting available tools
+2. Creating a mapping between tool names and tool objects
+3. Configuring a customized agent with the tool mapping
+4. Executing the agent with specific inputs
+
+The agent can now use any of the MCP tools available through the tool mapping.
+
+### 4.2 Integration with Workflow and Agent Generation
 
 MCP tools can also be integrated into workflow and agent generation systems. Here's a simplified example:
 
