@@ -7,6 +7,7 @@ from evoagentx.prompts import StringTemplate
 from evoagentx.core.module_utils import extract_code_blocks
 from evoagentx.core.registry import register_parse_function
 from evoagentx.tools import FileTool 
+from evoagentx.tools.mcp import MCPToolkit
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -178,6 +179,42 @@ def build_customize_agent_with_tools():
     print(message.content.code)
 
 
+def build_customize_agent_with_MCP(config_path):
+    mcp_toolkit = MCPToolkit(config_path=config_path)
+    tools = mcp_toolkit.get_tools()
+    
+    tools_mapping = {}
+    tools_schemas = [(tool.get_tool_schemas(), tool) for tool in tools]
+    tools_schemas = [(j, k) for i, k in tools_schemas for j in i]
+    for tool_schema, tool in tools_schemas:
+        tool_name = tool_schema["function"]["name"]
+        tools_mapping[tool_name] = tool
+    tool_names=[tool_schema["function"]["name"] for tool_schema, _ in tools_schemas]
+
+    customize_agent = CustomizeAgent(
+        name="MCPToolUser",
+        description="Do some tasks using the tools",
+        prompt_template= StringTemplate(
+            instruction="Do some tasks using the tools"
+        ), 
+        llm_config=openai_config,
+        inputs=[
+            {"name": "instruction", "type": "string", "description": "The instruction to the tool user"}
+        ],
+        outputs=[
+            {"name": "result", "type": "string", "description": "The result of the task"},
+            {"name": "tool_calls", "type": "string", "description": "The tool calls used to get the result (if any)"}
+        ],
+        tool_names=tool_names,
+        tool_dict=tools_mapping
+    )
+
+    message = customize_agent(
+        inputs={"instruction": "Summarize all your tools."}
+    )
+    print(f"Response from {customize_agent.name}:")
+    print(message.content)
+
 if __name__ == "__main__":
     build_customize_agent()
     build_customize_agent_with_inputs()
@@ -186,3 +223,10 @@ if __name__ == "__main__":
     build_customize_agent_with_prompt_template()
     build_customize_agent_with_inputs_and_outputs_and_prompt_template()
     build_customize_agent_with_tools()
+    
+    
+    config_path = "examples/output/tests/shares_mcp.config"
+    if os.path.exists(config_path):
+        build_customize_agent_with_MCP(config_path=config_path)
+    else:
+        print(f"You will need to provide a MCP config file at {config_path} to test.")

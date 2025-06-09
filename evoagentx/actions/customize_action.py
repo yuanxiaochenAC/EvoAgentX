@@ -7,12 +7,11 @@ from ..core.logging import logger
 from ..models.base_model import BaseLLM
 from .action import Action
 from ..core.message import Message
-from ..prompts.tool_calling import OUTPUT_EXTRACTION_PROMPT
+from ..prompts.tool_calling import OUTPUT_EXTRACTION_PROMPT, TOOL_CALLING_TEMPLATE
 from ..tools.tool import Tool
 from ..core.registry import MODULE_REGISTRY
 from ..models.base_model import LLMOutputParser
 from ..core.module_utils import parse_json_from_llm_output, parse_json_from_text
-from ..prompts.template import StringTemplate
 
 class CustomizeAction(Action):
 
@@ -85,18 +84,10 @@ class CustomizeAction(Action):
                 raise TypeError(f"The input type {type(value)} is invalid! Valid types: [str, dict, list].")
 
         if self.prompt:
-            template = StringTemplate(instruction=self.prompt)
-            if execution_history is not None:
-                template.set_history(execution_history)
-            if self.tools:
-                template.set_tools(self.tools)
-            return template.format(
-                system_prompt=system_prompt,
-                values=prompt_params_values,
-                custom_output_format=self.custom_output_format,
-                tools=self.tools
-            )
-            
+            prompt = self.prompt.format(**prompt_params_values) if prompt_params_values else self.prompt
+            prompt += "\n\n" + TOOL_CALLING_TEMPLATE.format(tools_description = self.tools_schema, additional_context = self.tool_calling_instructions)
+            prompt += "\n\n### History\n{execution_history}".format(execution_history = execution_history)
+            return prompt
         else:
             # Use goal-based tool calling mode
             # Set history if provided and format with tools for goal-based tool calling
@@ -349,9 +340,9 @@ class CustomizeAction(Action):
             
             # Handle both string prompts and chat message lists
             if isinstance(prompt, str):
-                llm_response = llm.generate(prompt=prompt, parse_mode=self.parse_mode, parse_func=getattr(self, 'parse_func', None), title_format=getattr(self, 'title_format', "## {title}"), system_message=sys_msg)
+                llm_response = llm.generate(prompt=prompt)
             else:
-                llm_response = llm.generate(messages=prompt, parse_mode=self.parse_mode, parse_func=getattr(self, 'parse_func', None), title_format=getattr(self, 'title_format', "## {title}"))
+                llm_response = llm.generate(messages=prompt)
             
             # Store the final LLM response
             final_llm_response = llm_response
@@ -413,9 +404,9 @@ class CustomizeAction(Action):
             
             # Handle both string prompts and chat message lists
             if isinstance(prompt, str):
-                llm_response = await llm.async_generate(prompt=prompt, parse_mode=self.parse_mode, parse_func=getattr(self, 'parse_func', None), title_format=getattr(self, 'title_format', "## {title}"), system_message=sys_msg)
+                llm_response = await llm.async_generate(prompt=prompt)
             else:
-                llm_response = await llm.async_generate(messages=prompt, parse_mode=self.parse_mode, parse_func=getattr(self, 'parse_func', None), title_format=getattr(self, 'title_format', "## {title}"))
+                llm_response = await llm.async_generate(messages=prompt)
             
             # Store the final LLM response
             final_llm_response = llm_response
