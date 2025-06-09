@@ -317,7 +317,7 @@ class CustomizeAction(Action):
             inputs = {}
         final_llm_response = None
         
-        ## 1. Generate tool call args
+        ## 1. get all the input parameters
         prompt_params_values = {k: inputs.get(k, "") for k in input_attributes.keys()}
         while True:
             ### Generate response from LLM

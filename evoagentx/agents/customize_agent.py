@@ -60,7 +60,6 @@ class CustomizeAgent(Agent):
         tool_dict (dict, optional): Dictionary mapping tool names to Tool instances. Required when
             tool_names is provided.
         max_tool_calls (int, optional): Maximum number of tool calls. Defaults to 5. 
-        customize_prompting (bool, optional): Whether to use customize prompting. Defaults to False.
         custom_output_format (str, optional): Specify the output format. Only used when `prompt_template` is used. 
             If not provided, the output format will be constructed from the `outputs` specification and `parse_mode`. 
     """
@@ -81,7 +80,6 @@ class CustomizeAgent(Agent):
         tool_names: Optional[list[str]] = None,
         tool_dict: Optional[dict] = None,
         max_tool_calls: Optional[int] = 5,
-        customize_prompting: Optional[bool] = False,
         custom_output_format: Optional[str] = None, 
         **kwargs
     ):
@@ -132,7 +130,6 @@ class CustomizeAgent(Agent):
             title_format=title_format,
             custom_output_format=custom_output_format ,
             tool_names=tool_names,
-            customize_prompting=customize_prompting,
             tool_dict=tool_dict,
             max_tool_calls=max_tool_calls
         )
@@ -152,7 +149,6 @@ class CustomizeAgent(Agent):
         self.tool_names = tool_names
         self.tool_dict = tool_dict 
         self.max_tool_calls = max_tool_calls
-        self.customize_prompting = customize_prompting
         self.custom_output_format = custom_output_format
 
     def _add_tools(self, tools: list[Tool]):
@@ -260,7 +256,6 @@ class CustomizeAgent(Agent):
         title_format: Optional[str] = "## {title}",
         custom_output_format: Optional[str] = None,
         tool_names: Optional[list[str]] = None,
-        customize_prompting: Optional[bool] = False,
         tool_dict: Optional[dict] = None,
         max_tool_calls: Optional[int] = 5
     ) -> Action:
@@ -283,7 +278,6 @@ class CustomizeAgent(Agent):
             parse_func: Optional custom parsing function
             output_parser: Optional custom output parser class
             tool_names: Optional list of tool names
-            customize_prompting: Whether to use customize prompting
             
         Returns:
             A newly created Action instance
@@ -350,8 +344,7 @@ class CustomizeAgent(Agent):
             parse_func=parse_func,
             title_format=title_format,
             custom_output_format=custom_output_format,
-            max_tool_try=max_tool_calls,  # Default value, can be made configurable
-            customize_prompting = customize_prompting,
+            max_tool_try=max_tool_calls
         )
 
         # Use dict to deduplicate tools by id to avoid adding the same tool multiple times
@@ -454,7 +447,6 @@ class CustomizeAgent(Agent):
             "title_format": self.title_format,
             "tool_names": self.tool_names,
             "max_tool_calls": self.max_tool_calls,
-            "customize_prompting": self.customize_prompting, 
             "custom_output_format": self.custom_output_format
         }
         return config

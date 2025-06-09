@@ -387,9 +387,6 @@ class StringTemplate(PromptTemplate):
         else:
             prompt_pieces.append(self.render_outputs(outputs_format, parse_mode, title_format))
         
-        if self.tools:
-            prompt_pieces.append(self.render_tools())
-        
         prompt_pieces = [piece for piece in prompt_pieces if piece]
         prompt = "\n".join(prompt_pieces)
         return prompt.strip()
