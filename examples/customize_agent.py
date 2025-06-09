@@ -179,10 +179,10 @@ def build_customize_agent_with_tools():
 
 
 if __name__ == "__main__":
-    build_customize_agent()
-    build_customize_agent_with_inputs()
-    build_customize_agent_with_inputs_and_outputs()
-    build_customize_agent_with_custom_parse_func()
-    build_customize_agent_with_prompt_template()
+    # build_customize_agent()
+    # build_customize_agent_with_inputs()
+    # build_customize_agent_with_inputs_and_outputs()
+    # build_customize_agent_with_custom_parse_func()
+    # build_customize_agent_with_prompt_template()
     build_customize_agent_with_inputs_and_outputs_and_prompt_template()
-    build_customize_agent_with_tools()
+    # build_customize_agent_with_tools()
