@@ -6,7 +6,7 @@ from typing import Dict, Literal, Callable, Optional, List
 import sqlite3
 
 from .base import DBStoreBase
-from ..schema import TableType, MemoryStore, AgentStore, WorkflowStore, HistoryStore, IndexStore
+from evoagentx.storages.schema import TableType, MemoryStore, AgentStore, WorkflowStore, HistoryStore, IndexStore
 
 
 # Helper function to generate SQL for creating a table

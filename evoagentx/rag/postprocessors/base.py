@@ -3,7 +3,7 @@ from enum import Enum
 from typing import List
 from abc import ABC, abstractmethod
 
-from ..schema import RagQuery, RagResult
+from evoagentx.rag.schema import RagQuery, RagResult
 
 
 class RerankerType(str, Enum):

@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from ..schema import RagQuery
+from evoagentx.rag.schema import RagQuery
 from .simple_reranker import SimpleReranker
 from .base import BasePostprocessor, RerankerType
 

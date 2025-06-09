@@ -3,7 +3,7 @@ from typing import Optional, Callable, Dict, Any, List
 from pydantic import Field
 from llama_index.embeddings.openai.utils import DEFAULT_OPENAI_API_BASE
 
-from ..core.base_config import BaseConfig, BaseModule
+from evoagentx.core.base_config import BaseConfig, BaseModule
 from .indexings.base import IndexType
 from .chunkers.base import ChunkingStrategy
 from .embeddings.base import EmbeddingProvider

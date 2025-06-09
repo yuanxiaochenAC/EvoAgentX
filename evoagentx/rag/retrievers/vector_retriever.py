@@ -3,7 +3,7 @@ from llama_index.core.indices.base import BaseIndex
 from llama_index.core.retrievers import VectorIndexRetriever
 
 from .base import BaseRetrieverWrapper
-from ..schema import RagQuery, RagResult, Corpus, Chunk
+from evoagentx.rag.schema import RagQuery, RagResult, Corpus, Chunk
 
 
 class VectorRetriever(BaseRetrieverWrapper):

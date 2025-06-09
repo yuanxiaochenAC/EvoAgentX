@@ -2,7 +2,7 @@ from typing import Optional
 
 from pydantic import Field
 
-from ..core.base_config import BaseConfig
+from evoagentx.core.base_config import BaseConfig
 
 
 class DBConfig(BaseConfig):

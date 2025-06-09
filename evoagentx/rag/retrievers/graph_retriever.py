@@ -4,7 +4,7 @@ from llama_index.core.graph_stores.types import GraphStore
 from llama_index.core.indices.property_graph import VectorContextRetriever
 
 from .base import BaseRetrieverWrapper
-from ..schema import RagQuery, RagResult, Corpus
+from evoagentx.rag.schema import RagQuery, RagResult, Corpus
 
 
 class GraphRetriever(BaseRetrieverWrapper):

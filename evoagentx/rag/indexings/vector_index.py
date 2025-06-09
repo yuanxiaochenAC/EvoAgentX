@@ -6,9 +6,9 @@ from llama_index.core import VectorStoreIndex
 from llama_index.core.storage import StorageContext
 from llama_index.core.embeddings import BaseEmbedding
 
-from evoagentx.storages.base import StorageHandler
 from .base import BaseIndexWrapper, IndexType
-from ..schema import Chunk
+from evoagentx.rag.schema import Chunk
+from evoagentx.storages.base import StorageHandler
 
 
 class VectorIndexing(BaseIndexWrapper):

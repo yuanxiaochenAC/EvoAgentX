@@ -19,13 +19,14 @@ from .retrievers import RetrieverFactory, BaseRetrieverWrapper
 from .postprocessors import PostprocessorFactory
 from .indexings.base import IndexType
 from .retrievers.base import RetrieverType
-from ..storages.base import StorageHandler
-from ..storages.schema import IndexStore
 from .schema import Chunk, Corpus, ChunkMetadata, IndexMetadata, RagQuery, RagResult
+from evoagentx.storages.base import StorageHandler
+from evoagentx.storages.schema import IndexStore
+from evoagentx.models.base_model import BaseLLM
 
 
 class SearchEngine:
-    def __init__(self, config: RAGConfig, storage_handler: StorageHandler):
+    def __init__(self, config: RAGConfig, storage_handler: StorageHandler, llm: Optional[BaseLLM] = None):
         self.config = config
         self.storage_handler = storage_handler
         self.embedding_factory = EmbeddingFactory()
@@ -336,6 +337,12 @@ class SearchEngine:
 
         Raises:
             Exception: If loading fails due to file or database errors, invalid data, or unsupported embedding model/dimension.
+        
+        Warning:
+            Try to call this function may cause some Bugs, when you load the nodes from file or database storage systems at twice. 
+            Because All the indexing share the same storage backend from storageHandler.
+            For example:
+            The vector database (.e.g Faiss) can insert again, even thougt there is a same node.
         """
         try:
             table = table or "indexing"

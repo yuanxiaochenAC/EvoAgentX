@@ -1,11 +1,10 @@
-import logging
 from typing import List, Optional
 
 from llama_index.core.schema import NodeWithScore
 from llama_index.core.postprocessor import SimilarityPostprocessor, KeywordNodePostprocessor
 
 from .base import BasePostprocessor
-from ..schema import RagQuery, RagResult, Corpus, Chunk
+from evoagentx.rag.schema import RagQuery, RagResult, Corpus, Chunk
 
 
 class SimpleReranker(BasePostprocessor):
