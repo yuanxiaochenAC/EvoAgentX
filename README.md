@@ -314,7 +314,7 @@ Explore how to effectively use EvoAgentX with the following resources:
 📢 Stay connected and be part of the **EvoAgentX** journey!  
 🚩 Join our community to get the latest updates, share your ideas, and collaborate with AI enthusiasts worldwide.
 
-- [Discord](https://discord.gg/w3x2YrCa) — Chat, discuss, and collaborate in real-time.
+- [Discord](https://discord.gg/8hdQyKCY) — Chat, discuss, and collaborate in real-time.
 - [X (formerly Twitter)](https://x.com/EvoAgentX) — Follow us for news, updates, and insights.
 - [WeChat](https://github.com/EvoAgentX/EvoAgentX/blob/main/assets/wechat_info.md) — Connect with our Chinese community.
 
