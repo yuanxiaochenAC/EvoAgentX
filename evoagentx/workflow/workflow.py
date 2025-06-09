@@ -34,6 +34,8 @@ class WorkFlow(BaseModule):
             if self.llm is None:
                 raise ValueError("Must provide `llm` when `workflow_manager` is None")
             self.workflow_manager = WorkFlowManager(llm=self.llm)
+        if self.agent_manager is None:
+            logger.warning("agent_manager is NoneType when initializing a WorkFlow instance")
 
     def execute(self, inputs: dict = {}, **kwargs) -> str:
         """
