@@ -94,6 +94,35 @@ response = llm.generate(
 )
 ```
 
+### OpenRouterLLM
+
+OpenRouterLLM is an adapter for the [OpenRouter platform](https://openrouter.ai/), which provides access to a wide range of language models from various providers through a unified API. It supports models from providers like Anthropic, Google, Meta, Mistral AI, and more, all accessible through a single interface.
+
+The `OpenRouterLLM` model class in EvoAgentX enables you to easily switch between different models hosted on OpenRouter while maintaining a consistent API format. This makes it simple to experiment with different models and find the best one for your specific use case.
+
+**Basic Usage:**
+
+```python
+from evoagentx.models import OpenRouterConfig, OpenRouterLLM
+
+# Configure the model
+config = OpenRouterConfig(
+    model="openai/gpt-4o-mini",  # or any other model supported by OpenRouter
+    openrouter_key="your-openrouter-api-key",
+    temperature=0.7,
+    max_tokens=1000
+)
+
+# Initialize the model
+llm = OpenRouterLLM(config=config)
+
+# Generate text
+response = llm.generate(
+    prompt="Analyze the impact of artificial intelligence on healthcare.",
+    system_message="You are an AI ethics expert specializing in healthcare applications."
+)
+```
+
 ## Core Functions
 
 All LLM implementations in EvoAgentX provide a consistent set of core functions for generating text and managing the generation process.
@@ -186,44 +215,6 @@ responses = llm.generate(
     prompt=["What is machine learning?", "Explain neural networks."],
     system_message=["You are a data scientist.", "You are an AI researcher."]
 )
-```
-
-#### Output Parsing
-
-The `generate` function provides flexible options for parsing and structuring the raw text output from language models:
-
-- **parser**: Accepts a class (typically inheriting from `LLMOutputParser/ActionOutput`) that defines the structure for the parsed output. If not provided, the LLM output will not be parsed. In both cases, the raw LLM output can be accessed through the `.content` attribute of the returned object.   
-- **parse_mode**: Determines how the raw LLM output is parsed into the structure defined by the parser, valid options are: `'str'`, `'json'` (default), `'xml'`, `'title'`, `'custom'`.
-- **parse_func**: A custom function to handle parsing in more complex scenarios, only used when `parse_mode` is `'custom'`. 
-
-Example with structured output: 
-```python
-from evoagentx.models import LLMOutputParser 
-from pydantic import Field
-
-class CodeWriterOutput(LLMOutputParser):
-    thought: str = Field(description="Thought process for writing the code") 
-    code: str = Field(description="The generated code")
-
-prompt = """
-Write a Python function to calculate Fibonacci numbers. 
-
-Your output should always be in the following format:
-
-## thought 
-[Your thought process for writing the code]
-
-## code
-[The generated code]
-"""
-response = llm.generate(
-    prompt=prompt,
-    parser=CodeWriterOutput,
-    parse_mode="title"
-)
-
-print("Thought:\n", response.thought)
-print("Code:\n", response.code)
 ```
 
 ##### Parse Modes
