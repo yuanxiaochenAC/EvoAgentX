@@ -26,7 +26,7 @@
 
 ### 前置条件
 - 安装依赖：`llama_index`、`pydantic` 等项目要求的库。
-- 配置环境变量（如 `OPENAI_API_KEY` 用于嵌入模型）。
+- 配置环境变量（如 `OPENAI_API_KEY` 用于嵌入模型），参考[Installation Guide for EvoAgentX](./docs/installation.md)。
 - 确保 `StorageHandler` 实例已配置好适当的存储后端（如 SQLite、FAISS）。
 
 ### 初始化

@@ -436,7 +436,7 @@ class RagQuery(BaseModule):
     """Represents a retrieval query."""
     
     query_str: str = Field(description="The query string.")
-    top_k: int = Field(default=5, description="Number of top results to retrieve.")
+    top_k: Optional[int] = Field(default=None, description="Number of top results to retrieve.")
     similarity_cutoff: Optional[float] = Field(default=None, description="Minimum similarity score.")
     keyword_filters: Optional[List[str]] = Field(default=None, description="Keywords to filter results.")
     metadata_filters: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata filters.")

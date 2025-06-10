@@ -107,6 +107,7 @@ class SearchEngine:
                 show_progress=show_progress
             )
             corpus = self.chunker.chunk(documents)
+            corpus.corpus_id = corpus_id
             logger.info(f"Read {len(documents)} documents and created {len(corpus.chunks)} chunks for corpus {corpus_id}")
             return corpus
         except Exception as e:
@@ -539,7 +540,7 @@ class SearchEngine:
         """
         try:
             if isinstance(query, str):
-                query = RagQuery(query_str=query)
+                query = RagQuery(query_str=query, top_k=self.config.retrieval.top_k)
             
             if not self.indices or (corpus_id and corpus_id not in self.indices):
                 logger.warning(f"No indices found for corpus {corpus_id or 'any'}")
@@ -558,7 +559,7 @@ class SearchEngine:
                             asyncio.run, self._retrieve_async(
                                 retriever, RagQuery(
                                     query_str=query.query_str,
-                                    top_k=query.top_k,
+                                    top_k=query.top_k or self.config.retrieval.top_k,   # dynamic top_k. check if None, init by config
                                     similarity_cutoff=query.similarity_cutoff,
                                     keyword_filters=query.keyword_filters,
                                     metadata_filters=query.metadata_filters

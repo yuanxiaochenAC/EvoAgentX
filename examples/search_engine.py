@@ -5,16 +5,13 @@ from typing import List, Dict
 from collections import defaultdict
 from dotenv import load_dotenv
 
+from evoagentx.core.logging import logger
 from evoagentx.storages.base import StorageHandler
 from evoagentx.rag.search_engine import SearchEngine
 from evoagentx.storages.storages_config import VectorStoreConfig, DBConfig, StoreConfig
 from evoagentx.rag.rag_config import RAGConfig, ReaderConfig, ChunkerConfig, IndexConfig, EmbeddingConfig, RetrievalConfig
 from evoagentx.rag.schema import RagQuery, Corpus, Chunk, ChunkMetadata
 from evoagentx.benchmark.hotpotqa import HotPotQA, download_raw_hotpotqa_data
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 # Load environment
 load_dotenv()
@@ -70,6 +67,7 @@ rag_config = RAGConfig(
 )
 search_engine = SearchEngine(config=rag_config, storage_handler=storage_handler)
 
+# Define Helper function and evaluation function
 def create_corpus_from_context(context: List[List], corpus_id: str) -> Corpus:
     """Convert HotPotQA context into a Corpus for indexing."""
     chunks = []

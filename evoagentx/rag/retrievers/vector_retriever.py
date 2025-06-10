@@ -20,6 +20,8 @@ class VectorRetriever(BaseRetrieverWrapper):
 
     async def aretrieve(self, query: RagQuery) -> RagResult:
         try:
+            # config the top_k
+            self.retriever.similarity_top_k = query.top_k
             nodes = await self.retriever.aretrieve(query.query_str)
 
             corpus = Corpus()
@@ -47,6 +49,8 @@ class VectorRetriever(BaseRetrieverWrapper):
 
     def retrieve(self, query: RagQuery) -> RagResult:
         try:
+            # config the top_k
+            self.retriever.similarity_top_k = query.top_k
             nodes = self.retriever.retrieve(query.query_str)
             corpus = Corpus()
             scores = []
