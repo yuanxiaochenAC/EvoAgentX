@@ -331,6 +331,9 @@ class WorkFlow(BaseModule):
         add complementary information and settings which need dynamically setting up to a single hitl agent
         For example, the `inputs_format` attribute, this needs a dynamical setting up.
         Up to Now, we only consider a HITL agent must be the only agent in its WorkFlowNode instance, this condition may be changed in the future
+        Args:
+            agent (Agent): a single HITL Agent instance 
+            node (WorkFlowNode): a single WorkFlowNode instane which contains exactly the agent of previous param.
         """
         predecessors: List[str] = self.graph.get_node_predecessors(node)
         hitl_action = None

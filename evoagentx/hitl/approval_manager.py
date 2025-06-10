@@ -8,7 +8,10 @@ from .hitl import HITLRequest, HITLResponse, HITLDecision, HITLContext, HITLInte
 from ..agents.agent import Agent
 
 class HITLManager(BaseModule):
-    """Global HITL Manager - Manages Human-in-the-Loop interactions"""
+    """
+    HITL Manager - Manages Human-in-the-Loop interactions
+    It must be instancialized and add as a parameter to the WorkFlow instance like: workflow = WorkFlow(graph=graph, llm=llm, agent_manager=AgentManager(agents=agents), hitl_manager=hitl_manager)
+    """
     
     # Pydantic fields
     active: bool = Field(default=False, description="Whether HITL is currently active")
