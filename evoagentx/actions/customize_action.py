@@ -371,7 +371,6 @@ class CustomizeAction(Action):
                 execution_history=self.execution_history,
                 system_prompt=sys_msg
             )
-            from pdb import set_trace; set_trace()
             
             # Handle both string prompts and chat message lists
             if isinstance(prompt, str):
