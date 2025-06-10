@@ -217,9 +217,125 @@ responses = llm.generate(
 )
 ```
 
-#### Output Parsing
+##### Parse Modes
 
-The `generate` function provides flexible options for parsing and structuring the raw text output from language models:
+EvoAgentX supports several parsing strategies:
 
-- **parser**: Accepts a class (typically inheriting from `LLMOutputParser/ActionOutput`) that defines the structure for the parsed output. If not provided, the LLM output will not be parsed. In both cases, the raw LLM output can be accessed through the `.content` attribute of the returned object.   
-- **parse_mode**: Determines how the raw LLM output is parsed into the structure defined by the parser, valid options are: `'str'`, `'json'`
+1. **"str"**: Uses the raw output as-is for each field defined in the parser.
+2. **"json"** (default): Extracts fields from a JSON string in the output.
+3. **"xml"**: Extracts content from XML tags matching field names.
+4. **"title"**: Extracts content from markdown sections (default format: "## {title}").
+5. **"custom"**: Uses a custom parsing function specified by `parse_func`.
+
+!!! note 
+    For `'json'`, `'xml'` and `'title'`, you should instruct the LLM (through the `prompt`) to output the content in the specified format that can be parsed by the parser. Otherwise, the parsing will fail. 
+
+    1. For `'json'`, you should instruct the LLM to output a valid JSON string containing keys that match the field names in the parser class. If there are multiple JSON string in the raw LLM output, only the first one will be parsed.  
+
+    2. For `xml`, you should instruct the LLM to output content that contains XML tags matching the field names in the parser class, e.g., `<{field_name}>...</{field_name}>`. If there are multiple XML tags with the same field name, only the first one will be used. 
+
+    3. For `title`, you should instruct the LLM to output content that contains markdown sections with the title exactly matching the field names in the parser class. The default title format is "## {title}". You can change it by setting the `title_format` parameter in the `generate` function, e.g., `generate(..., title_format="### {title}")`. The `title_format` must contain `{title}` as a placeholder for the field name.  
+
+##### Custom Parsing Function
+
+For maximum flexibility, you can define a custom parsing function with `parse_func`:
+
+```python
+from evoagentx.models import LLMOutputParser
+from evoagentx.core.module_utils import extract_code_block
+
+class CodeOutput(LLMOutputParser):
+    code: str = Field(description="The generated code")
+
+# Use custom parsing
+response = llm.generate(
+    prompt="Write a Python function to calculate Fibonacci numbers.",
+    parser=CodeOutput,
+    parse_mode="custom",
+    parse_func=lambda content: {"code": extract_code_block(content)[0]}
+)
+```
+
+!!! note 
+    The `parse_func` should have an input parameter `content` that receives the raw LLM output, and return a dictionary with keys matching the field names in the parser class.  
+
+### Async Generate Function
+
+For applications requiring asynchronous operation, the `async_generate` function provides the same functionality as the `generate` function, but in a non-blocking manner:
+
+```python
+async def async_generate(
+        self,
+        prompt: Optional[Union[str, List[str]]] = None,
+        system_message: Optional[Union[str, List[str]]] = None,
+        messages: Optional[Union[List[dict],List[List[dict]]]] = None,
+        parser: Optional[Type[LLMOutputParser]] = None,
+        parse_mode: Optional[str] = "json", 
+        parse_func: Optional[Callable] = None,
+        **kwargs
+    ) -> Union[LLMOutputParser, List[LLMOutputParser]]:
+    """
+    Asynchronously generate text based on the prompt and optional system message.
+
+    Args:
+        prompt: Input prompt(s) to the LLM.
+        system_message: System message(s) for the LLM.
+        messages: Chat message(s) for the LLM, already in the required format (either `prompt` or `messages` must be provided).
+        parser: Parser class to use for processing the output into a structured format.
+        parse_mode: The mode to use for parsing, must be the `parse_mode` supported by the `parser`. 
+        parse_func: A function to apply to the parsed output.
+        **kwargs: Additional generation configuration parameters.
+        
+    Returns:
+        For single generation: An LLMOutputParser instance.
+        For batch generation: A list of LLMOutputParser instances.
+    """
+```
+
+### Streaming Responses
+
+EvoAgentX supports streaming responses from LLMs, which allows you to see the model's output as it's being generated token by token, rather than waiting for the complete response. This is especially useful for long-form content generation or providing a more interactive experience.
+
+There are two ways to enable streaming:
+
+#### Configure Streaming in the LLM Config
+
+You can enable streaming when initializing the LLM by setting appropriate parameters in the config:
+
+```python
+# Enable streaming at initialization time
+config = OpenAILLMConfig(
+    model="gpt-4o-mini",
+    openai_key="your-api-key",
+    stream=True,  # Enable streaming
+    output_response=True  # Print tokens to console in real-time
+)
+
+llm = OpenAILLM(config=config)
+
+# All calls to generate() will now stream by default
+response = llm.generate(
+    prompt="Write a story about space exploration."
+)
+```
+
+#### Enable Streaming in the Generate Method
+
+Alternatively, you can enable streaming for specific generate calls:
+
+```python
+# LLM initialized with default non-streaming behavior
+config = OpenAILLMConfig(
+    model="gpt-4o-mini",
+    openai_key="your-api-key"
+)
+
+llm = OpenAILLM(config=config)
+
+# Override for this specific call
+response = llm.generate(
+    prompt="Write a story about space exploration.",
+    stream=True,  # Enable streaming for this call only
+    output_response=True  # Print tokens to console in real-time
+)
+```
