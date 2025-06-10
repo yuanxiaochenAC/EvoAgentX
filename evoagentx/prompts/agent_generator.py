@@ -350,6 +350,10 @@ Let's begin.
 {existing_agents}
 
 ### Tools
+If tools are provided, you should follow the following rules:
+ - You should only use real tools provided in the "### Tools" section. You should never come up with new tools.
+ - You should include the correct tool name in the "### Tools" section.
+ 
 {tools}
 
 ### User's Goal:

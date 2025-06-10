@@ -46,13 +46,7 @@ class AgentManager(BaseModule):
     
     def init_tools(self):
         if self.tools:
-            if not self.tools_mapping:
-                self.tools_mapping = {}
-            tools_schemas = [(tool.get_tool_schemas(), tool) for tool in self.tools]
-            tools_schemas = [(j, k) for i, k in tools_schemas for j in i]
-            for tool_schema, tool in tools_schemas:
-                tool_name = tool_schema["function"]["name"]
-                self.tools_mapping[tool_name] = tool
+            self.tools_mapping = {tool.name: tool for tool in self.tools}
     
     def check_agents(self):
         """Validate agent list integrity and state consistency.
@@ -169,7 +163,6 @@ class AgentManager(BaseModule):
         if agent_data.get("tools", None):
             agent_data["tool_names"] = agent_data["tools"]
             agent_data["tool_dict"] = self.tools_mapping
-            # return CusToolCaller.from_dict(data=agent_data)
         return CustomizeAgent.from_dict(data=agent_data)
     
     def get_agent_name(self, agent: Union[str, dict, Agent]) -> str:

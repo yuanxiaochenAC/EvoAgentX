@@ -64,15 +64,14 @@ class WorkFlowGenerator(BaseModule):
         #     self.workflow_reviewer = WorkFlowReviewer(llm=self.llm)
 
     def get_tool_info(self):
-        tool_info = {}
-        tools_schemas = [tool.get_tool_schemas() for tool in self.tools]
-        tools_schemas = [j for i in tools_schemas for j in i]
-        tools_names = [i["function"]["name"] for i in tools_schemas]
-        tools_descriptions = [i["function"]["description"] for i in tools_schemas]
-        
-        for tool_name, tool_description in zip(tools_names, tools_descriptions):
-            tool_info[tool_name] = tool_description
-        self.tool_info = tool_info
+        self.tool_info =[
+            {
+                tool.name: [
+                    s["function"]["description"] for s in tool.get_tool_schemas()
+                ],
+            }
+            for tool in self.tools
+        ]
 
     def generate_workflow(self, goal: str, existing_agents: Optional[List[Agent]] = None, **kwargs) -> WorkFlowGraph:
 

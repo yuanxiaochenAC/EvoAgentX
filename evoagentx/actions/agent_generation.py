@@ -172,7 +172,7 @@ class AgentGeneration(Action):
 
         prompt_params_names = inputs_format.get_attrs()
         prompt_params_values = {param: inputs.get(param, "") for param in prompt_params_names}
-        if self.tools:
+        if self.tool_info:
             prompt_params_values["tools"] = self.tool_info
         prompt = self.prompt.format(**prompt_params_values)
         agents = llm.generate(

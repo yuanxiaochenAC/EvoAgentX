@@ -4,7 +4,7 @@ from evoagentx.core import Message
 from evoagentx.models import OpenAILLMConfig
 from evoagentx.agents import CustomizeAgent
 from evoagentx.prompts import StringTemplate 
-from evoagentx.core.module_utils import extract_code_blocks
+from evoagentx.core.module_utils import extract_code_blocks as util_extract_code_blocks
 from evoagentx.core.registry import register_parse_function
 from evoagentx.tools import FileTool 
 from evoagentx.tools.mcp import MCPToolkit
@@ -16,7 +16,7 @@ openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, 
 
 @register_parse_function
 def extract_code_blocks(content: str) -> dict:
-    return {"code": extract_code_blocks(content)[0]}
+    return {"code": util_extract_code_blocks(content)[0]}
 
 def build_customize_agent():
 
@@ -90,7 +90,7 @@ def build_customize_agent_with_custom_parse_func():
             {"name": "code", "type": "string", "description": "The generated Python code"}
         ],
         parse_mode="custom", 
-        parse_func=lambda content: {"code": extract_code_blocks(content)[0]}  # Extract first code block
+        parse_func=lambda content: {"code": util_extract_code_blocks(content)[0]}  # Extract first code block
     )
 
     message = code_writer(
@@ -142,7 +142,7 @@ def build_customize_agent_with_inputs_and_outputs_and_prompt_template():
             {"name": "code", "type": "string", "description": "The generated Python code"},
         ],
         parse_mode="custom", 
-        parse_func=lambda content: {"code": extract_code_blocks(content)[0]}
+        parse_func=lambda content: {"code": util_extract_code_blocks(content)[0]}
     )
 
     message = code_writer(

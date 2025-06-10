@@ -348,14 +348,9 @@ class CustomizeAgent(Agent):
         )
 
         # Use dict to deduplicate tools by id to avoid adding the same tool multiple times
-        tools_by_id = {}
-        if tool_names:
-            for tool_name in tool_names:
-                if tool_name in tool_dict:
-                    tool = tool_dict[tool_name]
-                    tools_by_id[id(tool)] = tool
-        tools = list(tools_by_id.values())
-        customize_action.add_tools(tools)
+        if tool_names and tool_dict:
+            tools = [tool_dict[tool_name] for tool_name in tool_names]
+            customize_action.add_tools(tools)
         
         return customize_action
     
