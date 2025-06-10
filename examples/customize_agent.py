@@ -165,9 +165,9 @@ def build_customize_agent_with_tools():
             {"name": "requirement", "type": "string", "description": "The coding requirement"},
             {"name": "file_path", "type": "string", "description": "The path to save the code"}
         ],
-        outputs=[
-            {"name": "code", "type": "string", "description": "The generated Python code"}
-        ],
+        # outputs=[
+        #     {"name": "code", "type": "string", "description": "The generated Python code"}
+        # ],
         tool_names=["file_tool"],
         tool_dict={"file_tool": FileTool()}
     )
@@ -175,9 +175,8 @@ def build_customize_agent_with_tools():
     message = code_writer(
         inputs={"requirement": "Write a function that returns the sum of two numbers", "file_path": "output/test_code.py"}
     )
-    print(f"Response from {code_writer.name}:")
-    print(message.content.code)
-
+    # print(f"Response from {code_writer.name}:")
+    # print(message.content.code)
 
 def build_customize_agent_with_MCP(config_path):
     mcp_toolkit = MCPToolkit(config_path=config_path)

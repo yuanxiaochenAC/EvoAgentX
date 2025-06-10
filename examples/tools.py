@@ -701,12 +701,10 @@ def main():
     print("===== INTERPRETER TOOL EXAMPLES =====")
     
     # Run file tool example
-    # run_file_tool_example()
+    run_file_tool_example()
     
     # Run browser tool example
     run_browser_tool_example()
-    from pdb import set_trace; set_trace() 
-    
     
     # Run MCP toolkit example
     run_mcp_example()

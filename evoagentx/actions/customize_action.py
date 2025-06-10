@@ -85,8 +85,9 @@ class CustomizeAction(Action):
 
         if self.prompt:
             prompt = self.prompt.format(**prompt_params_values) if prompt_params_values else self.prompt
-            prompt += "\n\n" + TOOL_CALLING_TEMPLATE.format(tools_description = self.tools_schema, additional_context = self.tool_calling_instructions)
-            prompt += "\n\n### History\n{execution_history}".format(execution_history = execution_history)
+            if self.tools:
+                prompt += "\n\n" + TOOL_CALLING_TEMPLATE.format(tools_description = self.tools_schema, additional_context = self.tool_calling_instructions)
+                prompt += "\n\n### History\n{execution_history}".format(execution_history = execution_history)
             return prompt
         else:
             # Use goal-based tool calling mode
@@ -158,18 +159,51 @@ class CustomizeAction(Action):
             self.tools_schema[tool_name] = tool_schema
             self.tools_caller[tool_name] = tool_caller
     
-    def _extract_tool_calls(self, llm_output: str):
-        if match := re.search(r"```(?:ToolCalling)?\s*\n(.*?)\n```", llm_output, re.DOTALL):
-            json_list = parse_json_from_text(match.group(1))
-            return json.loads(json_list[0] if json_list else "{}")
-        return None
+    def _extract_tool_calls(self, llm_output: str) -> List[dict]:
+        # if match := re.search(r"```(?:ToolCalling)?\s*\n(.*?)\n```", llm_output, re.DOTALL):
+        #     json_list = parse_json_from_text(match.group(1))
+        #     return json.loads(json_list[0] if json_list else "{}")
+
+        # Improved regex pattern to match ```ToolCalling blocks more accurately
+        # This pattern handles:
+        # - Optional whitespace after ToolCalling
+        # - Content capture with proper handling of newlines
+        # - Optional whitespace before closing ```
+        pattern = r"```ToolCalling\s*\n(.*?)\n\s*```"
+        
+        # Find all ToolCalling blocks in the output
+        matches = re.findall(pattern, llm_output, re.DOTALL)
+
+        if not matches:
+            return []
+        
+        parsed_tool_calls = []
+        for match_content in matches:
+            try:
+                json_content = match_content.strip()
+                json_list = parse_json_from_text(json_content)
+                if not json_list:
+                    logger.warning("No valid JSON found in ToolCalling block")
+                    continue
+                # Only use the first JSON string from each block
+                parsed_tool_call = json.loads(json_list[0])
+                if isinstance(parsed_tool_call, dict):
+                    parsed_tool_calls.append(parsed_tool_call)
+                elif isinstance(parsed_tool_call, list):
+                    parsed_tool_calls.extend(parsed_tool_call)
+                else:
+                    logger.warning(f"Invalid tool call format: {parsed_tool_call}")
+                    continue
+            except (json.JSONDecodeError, IndexError) as e:
+                logger.warning(f"Failed to parse tool calls from LLM output: {e}")
+                continue
+
+        return parsed_tool_calls
     
     def _extract_output(self, llm_output: Any, llm: BaseLLM = None, **kwargs):
+
         # Get the raw output content
-        if hasattr(llm_output, 'content'):
-            llm_output_content = llm_output.content
-        else:
-            llm_output_content = str(llm_output)
+        llm_output_content = getattr(llm_output, "content", str(llm_output))
         
         # Check if there are any defined output fields
         output_attrs = self.outputs_format.get_attrs()
@@ -337,10 +371,11 @@ class CustomizeAction(Action):
                 execution_history=self.execution_history,
                 system_prompt=sys_msg
             )
+            from pdb import set_trace; set_trace()
             
             # Handle both string prompts and chat message lists
             if isinstance(prompt, str):
-                llm_response = llm.generate(prompt=prompt)
+                llm_response = llm.generate(prompt=prompt, system_message=sys_msg)
             else:
                 llm_response = llm.generate(messages=prompt)
             
