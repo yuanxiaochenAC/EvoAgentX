@@ -89,22 +89,3 @@ class SemanticChunker(BaseChunker):
 
         logger.info(f"Chunked {len(documents)} documents into {len(chunks)} chunks")
         return Corpus(chunks=chunks)
-    
-        llama_docs = [doc.to_llama_document() for doc in documents]
-        nodes = self.parser.get_nodes_from_documents(llama_docs)
-
-        chunks = []
-        for node in nodes:
-            doc_id = node.metadata.get("doc_id", "")
-            chunks.append(Chunk(
-                text=node.text,
-                doc_id=doc_id,
-                metadata=ChunkMetadata(
-                    doc_id=doc_id,
-                    chunk_index=len(chunks),
-                    chunking_strategy="semantic",
-                    custom_fields={"similarity_threshold": self.parser.similarity_threshold}
-                ),
-                chunk_id=node.id_
-            ))
-        return Corpus(chunks=chunks)

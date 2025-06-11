@@ -6,7 +6,6 @@ from typing import Dict, Literal, Callable, Optional, List
 import sqlite3
 
 from .base import DBStoreBase
-from evoagentx.core.logging import logger
 from evoagentx.storages.schema import TableType, MemoryStore, AgentStore, WorkflowStore, HistoryStore, IndexStore
 
 

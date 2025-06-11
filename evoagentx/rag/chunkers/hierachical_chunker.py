@@ -1,13 +1,12 @@
 from typing import List, Optional, Dict
 from concurrent.futures import ThreadPoolExecutor
 
-from llama_index.core.node_parser import HierarchicalNodeParser, SentenceSplitter
-from llama_index.core.schema import NodeRelationship
+from llama_index.core.node_parser import HierarchicalNodeParser
 
-from .base import BaseChunker
+from .base import BaseChunker, ChunkingStrategy
 from .simple_chunker import SimpleChunker
 from evoagentx.core.logging import logger
-from evoagentx.rag.schema import Document, Corpus, Chunk, ChunkMetadata
+from evoagentx.rag.schema import Document, Corpus, Chunk
 
 
 class HierarchicalChunker(BaseChunker):
@@ -102,68 +101,19 @@ class HierarchicalChunker(BaseChunker):
             List[Chunk]: List of Chunk objects with metadata.
         """
         try:
-            import pdb;pdb.set_trace()
             llama_doc = doc.to_llama_document()
             llama_doc.metadata["doc_id"] = doc.doc_id
 
             nodes = self.parser.get_nodes_from_documents([llama_doc])
 
             chunks = []
-            custom_metadata = custom_metadata or {}
 
             for i, node in enumerate(nodes):
-                doc_id = doc.doc_id
-                node_parser_id = node.metadata.get("node_parser_id", None)
-                hierarchy_level = (
-                    self.parser_to_level.get(node_parser_id, len(self.parser_to_level))
-                    if node_parser_id
-                    else len(self.parser_to_level)
-                )
-                if not node_parser_id:
-                    logger.warning(f"Node {node.id_} missing node_parser_id, defaulting to level {hierarchy_level}")
-
-                # Extract relationships
-                relationships = node.relationships or {}
-                source_id = relationships.get(NodeRelationship.SOURCE, None)
-                previous_id = relationships.get(NodeRelationship.PREVIOUS, None)
-                next_id = relationships.get(NodeRelationship.NEXT, None)
-                parent_id = relationships.get(NodeRelationship.PARENT, None)
-                child_ids = relationships.get(NodeRelationship.CHILD, None)
-
-                node_chunk_size = node.metadata.get("chunk_size", self.chunk_sizes[-1] if self.chunk_sizes else 512)
-
-                metadata_fields = {
-                    "section_title": custom_metadata.get(doc_id, {}).get("section_title", ""),
-                    "hierarchy_level": hierarchy_level,
-                    "node_chunk_size": node_chunk_size,
-                    "node_parser_id": node_parser_id,  # Store for debugging
-                }
-
-                try:
-                    chunks.append(
-                        Chunk(
-                            text=node.text,
-                            doc_id=doc_id,
-                            metadata=ChunkMetadata(
-                                doc_id=doc_id,
-                                chunk_size=len(node.text),
-                                chunk_overlap=self.chunk_overlap,
-                                chunk_index=i,
-                                chunking_strategy="hierarchical",
-                                custom_fields=metadata_fields,
-                                source_id=source_id.node_id if source_id else None,
-                                previous_id=previous_id.node_id if previous_id else None,
-                                next_id=next_id.node_id if next_id else None,
-                                parent_id=parent_id.node_id if parent_id else None,
-                                child_ids=[child.node_id for child in child_ids] if child_ids else None,
-                            ),
-                            chunk_id=node.id_,
-                        )
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to create chunk for node {node.id_}: {e}")
-                    continue
-
+                chunk = Chunk.from_llama_node(node)
+                
+                chunk.metadata.chunking_strategy = ChunkingStrategy.HIERARCHICAL
+                chunks.extend([chunk])
+                
             logger.debug(f"Processed document {doc.doc_id} into {len(chunks)} chunks")
             return chunks
         except Exception as e:
