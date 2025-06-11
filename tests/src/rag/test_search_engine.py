@@ -25,6 +25,9 @@ class TestSearchEngine(unittest.TestCase):
         """Set up SearchEngine, StorageHandler, and temporary directory for each test."""
         load_dotenv()
 
+        if "OPENAI_API_KEY" not in os.environ:
+            os.environ['OPENAI_API_KEY'] = "your api key"
+            
         # Create temporary directory
         self.temp_dir = tempfile.mkdtemp()
         logger.info(f"Created temporary directory: {self.temp_dir}")
