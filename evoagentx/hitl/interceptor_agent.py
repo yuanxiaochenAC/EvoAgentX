@@ -1,9 +1,8 @@
 # evoagentx/hitl/interceptor_agent.py
 
-from typing import List, Optional, Dict, Any, Union, Tuple
+from typing import Tuple
 from ..agents.agent import Agent
-from ..core.message import Message, MessageType
-from ..actions.action import Action, ActionInput, ActionOutput
+from ..actions.action import Action
 from .approval_manager import HITLManager
 from .hitl import HITLInteractionType, HITLMode, HITLDecision
 from ..core.registry import MODULE_REGISTRY
@@ -70,10 +69,10 @@ class HITLInterceptorAction(Action):
         
         prompt = f"HITL Interceptor executed for {self.target_agent_name}.{self.target_action_name}"
         if result["hitl_decision"] == HITLDecision.APPROVE:
-            prompt += f"\nHITL approved, the action will be executed"
+            prompt += "\nHITL approved, the action will be executed"
             return result, prompt
         elif result["hitl_decision"] == HITLDecision.REJECT:
-            prompt += f"\nHITL rejected, the action will not be executed"
+            prompt += "\nHITL rejected, the action will not be executed"
             return result, prompt
 
 class HITLPostExecutionAction(Action):

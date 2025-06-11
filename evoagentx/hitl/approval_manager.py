@@ -1,11 +1,10 @@
 import asyncio
 import json
-from typing import Dict, Optional
+from typing import Dict
 from pydantic import Field
 from ..core.logging import logger
 from ..core import BaseModule
 from .hitl import HITLRequest, HITLResponse, HITLDecision, HITLContext, HITLInteractionType, HITLMode
-from ..agents.agent import Agent
 
 class HITLManager(BaseModule):
     """
