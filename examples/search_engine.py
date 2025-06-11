@@ -1,6 +1,5 @@
 import os
 import json
-import logging
 from typing import List, Dict
 from collections import defaultdict
 from dotenv import load_dotenv
