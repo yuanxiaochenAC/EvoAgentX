@@ -387,7 +387,6 @@ class CustomizeAction(Action):
             
             print("Extracted tool call args:")
             print(tool_call_args)
-            from pdb import set_trace; set_trace()
             
             results = self._calling_tools(tool_call_args)
             
