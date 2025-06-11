@@ -332,7 +332,5 @@ if __name__ == "__main__":
 | `query` | Executes a query and returns processed results. | `query`, `corpus_id` | `RagResult` |
 
 ### Notes
-- **Thread Safety**: The `query` method uses a `ThreadPoolExecutor` for multi-threaded retrieval, ensuring scalability for large corpora.
-- **Embedding Validation**: The `load` method validates embedding models and dimensions to prevent mismatches.
 - **Storage Backend**: Ensure the `StorageHandler` is properly configured to handle vector and metadata storage.
 - **Warning**: Loading indices multiple times may cause issues if the same nodes are inserted into the vector store (e.g., FAISS). Clear indices before reloading if necessary.
