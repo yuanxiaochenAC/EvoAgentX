@@ -26,7 +26,7 @@ class TestSearchEngine(unittest.TestCase):
         load_dotenv()
 
         if "OPENAI_API_KEY" not in os.environ:
-            os.environ['OPENAI_API_KEY'] = "your api key"
+            os.environ.setdefault('OPENAI_API_KEY', "your api key")
             
         # Create temporary directory
         self.temp_dir = tempfile.mkdtemp()
