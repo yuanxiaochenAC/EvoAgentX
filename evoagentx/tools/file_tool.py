@@ -407,15 +407,12 @@ class FileTool(Tool):
     
     def get_tool_prompt(self) -> str:
         """Returns a tool instruction prompt for the agent to use the tool"""
-        return """
-        This tool allows you to read, write, and append to files with special handling for different file formats.
-        
-        For regular text files, it works like standard file operations.
-        For PDFs, it provides specialized functionality to extract text and create/modify PDF files.
-        
-        To read a file: Use read_file with the file_path parameter.
-        To write to a file: Use write_file with file_path and content parameters.
-        To append to a file: Use append_file with file_path and content parameters.
+        return """** File Tool Instructions **
+You are provided with a File Tool, which is a tool that allows you to read, write, and append to files with special handling for different file formats.
+It can read and write text files, and PDF files.
+To read a file: Use read_file with the file_path parameter.
+To write to a file: Use write_file with file_path and content parameters.
+To append to a file: Use append_file with file_path and content parameters.
         """
 
 

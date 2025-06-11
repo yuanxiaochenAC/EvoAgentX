@@ -353,13 +353,15 @@ class CustomizeAction(Action):
             
             print("Extracted tool call args:")
             print(tool_call_args)
+            from pdb import set_trace; set_trace()
             
             results = self._calling_tools(tool_call_args)
             
             print("results:")
             print(results)
             
-            self.execution_history.append({"tool_call_args": tool_call_args, "results": results})
+            self.execution_history.append("\n\nIteration " + str(time_out) + ":\nExecuted tool calls:\n" + json.dumps(tool_call_args, indent=4) + f"\nResults:\n{results}\n" )
+            # print("\n\n\n\nexecution_history:\n", self.execution_history)
         
         # Get the appropriate prompt for return
         current_prompt = self.prepare_action_prompt(inputs=prompt_params_values or {})

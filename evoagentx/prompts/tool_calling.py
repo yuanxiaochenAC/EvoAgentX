@@ -81,20 +81,21 @@ After using a tool, analyze its output and determine next steps. You may need to
 ### TOOL CALLING KEY POINTS
 - You should check the history to determine if you have the information
 - You should try to use tools to get the information you need
-- You should not avoid using the tool if you have the information
+- You should NOT use the tool if you already have the information
 - You should not call any tool if you completed the goal
-- The tool you called must exist in the available tools
 """
 
 TOOL_CALLING_TEMPLATE = """
 ### Tools Calling Instructions
 You may have access to various tools that might help you accomplish your task.
-If you are provided with tools, you should use them if you need to.
 Once you have completed all preparations, you SHOULD NOT call any tool and just generate the final answer.
-You should also include the VERY SHORT thinking process in the output to explain why you need to use the tool, before you call the tool and stop generating the output. 
-Tool call is only part of the output.
+If you need to use the tool, you should also include the ** very short ** thinking process before you call the tool and stop generating the output. 
+In your short thinking process, you give short summary on ** everything you got in the history **, what is needed, and why you need to use the tool.
+While you write the history summary, you should state information you got in each iteration.
 You should STOP GENERATING responds RIGHT AFTER you give the tool calling instructions.
-By checking the history, IF you get the information, you should IGNORE THIS TOOL CALLING INSTRUCTIONS SECTION.
+By checking the history, IF you get the information, you should **NOT** call any tool.
+Do not generate any tool calling instructions if you have the information. 
+Distinguish tool calls and tool calling arguments, only include "```ToolCalling" when you are calling the tool, otherwise you should pass arguments with out this catch phrase.
 
 ** Example Output **
 Base on the goal, I found out that I need to use the following tools:
@@ -115,12 +116,15 @@ Base on the goal, I found out that I need to use the following tools:
     }}
 }},...]
 ```
+
+** Example Output When Tool Calling not Needed **
+Based on the information, ... 
+There are the arguments I used for the tool call: [{{'function_name': 'read_file', 'function_args': {{'file_path': 'examples/output/jobs/test_pdf.pdf'}}}}, ...]// Normal output without ToolCalling & ignore the "Tools Calling Instructions" section
+
+
 ** Tool Calling Notes **
 Remember, when you need to make a tool call, use ONLY the exact format specified above, as it will be parsed programmatically. The tool calls should be enclosed in triple backticks with the ToolCalling identifier, followed by JSON that specifies the tool name and parameters.
-After using a tool, analyze its output and determine next steps. You may need to:
-- Use additional tools to complete the task
-- Process and transform the information received
-- Present the final output according to the specified format
+After using a tool, analyze its output and determine next steps. 
 
 **Available Tools**
 {tools_description}
@@ -129,12 +133,13 @@ After using a tool, analyze its output and determine next steps. You may need to
 {additional_context}
 
 ** Tool Calling Key Points **
-- You dont have to use the tool.
-- You should ALWAYS check the history to determine if you have the information
+- You do not have to use the tool.
+- Tools might not be useful for the task, if you find out so, you should not call the tool.
+- You should always check the history to determine if you have the information or the tool is not useful, if you have the information, you should not use the tool.
 - You should try to use tools to get the information you need
-- You should not avoid using the tool if you have the information by CHECKING the history
 - You should not call any tool if you completed the goal
 - The tool you called must exist in the available tools
 - You should never write comments in the call_tool function
+- If your next move cannot be completed by the tool, you should not call the tool
 """
 
