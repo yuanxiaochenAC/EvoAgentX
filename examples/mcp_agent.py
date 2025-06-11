@@ -16,15 +16,6 @@ def test_MCP_server():
     mcp_toolkit = MCPToolkit(config_path="examples/output/tests/shares_mcp.config")
     tools = mcp_toolkit.get_tools()
     
-    tools_mapping = {}
-    tools_schemas = [(tool.get_tool_schemas(), tool) for tool in tools]
-    tools_schemas = [(j, k) for i, k in tools_schemas for j in i]
-    for tool_schema, tool in tools_schemas:
-        tool_name = tool_schema["function"]["name"]
-        tools_mapping[tool_name] = tool
-    
-    print(tools_mapping)
-        
     code_writer = CustomizeAgent(
         name="CodeWriter",
         description="Writes Python code based on requirements",
@@ -38,8 +29,8 @@ def test_MCP_server():
         outputs=[
             {"name": "result", "type": "string", "description": "The tools you have"}
         ],
-        tool_names=[tool_schema["function"]["name"] for tool_schema, tool in tools_schemas],
-        tool_dict=tools_mapping
+        tool_names=[tool.name for tool in tools],
+        tool_dict={tool.name: tool for tool in tools}
     )
 
     message = code_writer(

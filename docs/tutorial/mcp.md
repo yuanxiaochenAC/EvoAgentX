@@ -346,8 +346,8 @@ code_writer = CustomizeAgent(
     outputs=[
         {"name": "result", "type": "string", "description": "The tools you have"}
     ],
-    tool_names=[tool_schema["function"]["name"] for tool_schema, tool in tools_schemas],
-    tool_dict=tools_mapping
+    tool_names=[tool.name for tool in tools],
+    tool_dict={tool.name: tool for tool in tools}
 )
 
 # Execute the agent

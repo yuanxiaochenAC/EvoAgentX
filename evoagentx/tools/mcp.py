@@ -141,47 +141,13 @@ class MCPClient:
 
     def create_tool(
         self,
-        function: Callable[[dict | None], Any],
-        mcp_tool: Any,  # FastMCP tool object
+        session: Client,
+        mcp_tools: List[Any],  # List of FastMCP tool objects for a single server
+        config: Dict[str, Any],
     ) -> MCPTool:
-        input_schema = getattr(mcp_tool, 'inputSchema', {})
-        if not input_schema and hasattr(mcp_tool, 'input_schema'):
-            input_schema = mcp_tool.input_schema
-            
-        properties = input_schema.get("properties", {})
-        required = input_schema.get("required", [])
-
-        parameters = {
-            "type": "object",
-            "properties": properties,
-            "required": required,
-        }
-
-        schema = {
-            "type": "function",
-            "function": {
-                "name": mcp_tool.name,
-                "description": getattr(mcp_tool, 'description', None) or "No description provided.",
-                "parameters": parameters,
-            },
-        }
-        
-        tool = MCPTool(
-            name=mcp_tool.name,
-            descriptions=[getattr(mcp_tool, 'description', None) or ""],
-            schemas=[schema],
-            tools=[function],
-        )
-
-        return tool
-    
-    def get_tools(self) -> List[Tool]:
-        if not self.sessions:
-            raise RuntimeError("Session not initialized")
-
-        def _sync_call_tool(
-            session, name: str, **kwargs
-        ) -> Any:
+        """Create a single MCPTool that encapsulates all tools from a server."""
+        # Define the sync call function once
+        def _sync_call_tool(name: str, **kwargs) -> Any:
             try:
                 if "arguments" in kwargs and len(kwargs) == 1:
                     arguments = kwargs["arguments"]
@@ -202,10 +168,56 @@ class MCPClient:
                 logger.error(f"Unexpected error calling MCP tool {name}: {str(e)}")
                 raise
 
+        # Collect all schemas and descriptions
+        all_schemas = []
+        all_descriptions = []
+        all_functions = []
+
+        for mcp_tool in mcp_tools:
+            input_schema = getattr(mcp_tool, 'inputSchema', {})
+            if not input_schema and hasattr(mcp_tool, 'input_schema'):
+                input_schema = mcp_tool.input_schema
+                
+            properties = input_schema.get("properties", {})
+            required = input_schema.get("required", [])
+
+            parameters = {
+                "type": "object",
+                "properties": properties,
+                "required": required,
+            }
+
+            schema = {
+                "type": "function",
+                "function": {
+                    "name": mcp_tool.name,
+                    "description": getattr(mcp_tool, 'description', None) or "No description provided.",
+                    "parameters": parameters,
+                },
+            }
+            
+            all_schemas.append(schema)
+            all_descriptions.append(getattr(mcp_tool, 'description', None) or "")
+            all_functions.append(partial(_sync_call_tool, mcp_tool.name))
+
+        # Create a single MCPTool for all tools from this server
+        server_name = list(config["mcpServers"].keys())[0]
+        tool = MCPTool(
+            name=server_name,
+            descriptions=all_descriptions,
+            schemas=all_schemas,
+            tools=all_functions,
+        )
+        return tool
+    
+    def get_tools(self) -> List[Tool]:
+        """Return a list of MCPTools, one per server."""
+        if not self.sessions:
+            raise RuntimeError("Session not initialized")
+
         return [
-            self.create_tool(partial(_sync_call_tool, session, tool.name), tool)
-            for session, tools in zip(self.sessions, self.mcp_tools)
-            for tool in tools
+            self.create_tool(session, tools, config)
+            for session, tools, config in zip(self.sessions, self.mcp_tools, self.server_configs)
         ]
     
 class MCPToolkit:
@@ -245,8 +257,21 @@ class MCPToolkit:
             logger.error("Server configuration must be a dictionary")
             return []
             
-        # Pass the config directly to FastMCP
-        return [server_configs]
+        # If there's no mcpServers key, treat it as a single server config
+        if "mcpServers" not in server_configs:
+            raise ValueError("Server configuration must contain 'mcpServers' key")
+            
+        # Separate each server into its own config with the same format
+        server_list = []
+        for server_name, server_config in server_configs["mcpServers"].items():
+            individual_config = {
+                "mcpServers": {
+                    server_name: server_config
+                }
+            }
+            server_list.append(individual_config)
+            
+        return server_list
     
     def disconnect(self):
         for server in self.servers:
