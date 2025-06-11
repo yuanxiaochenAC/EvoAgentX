@@ -123,6 +123,40 @@ response = llm.generate(
 )
 ```
 
+### Local LLM
+
+We now support calling local models for your tasks, built on the LiteLLM framework for a familiar user experience. For example, to use Ollama, follow these steps:
+
+1. Download the desired model, such as `ollama3`.
+2. Run the model locally.
+3. Configure the settings by specifying `api_base` (typically port `11434`) and setting `is_local` to `True`.
+
+You're now ready to leverage your local model seamlessly!
+
+**Basic Usage:**
+
+```python
+
+from evoagentx.models.model_configs import LiteLLMConfig
+from evoagentx.models import LiteLLM
+
+# use local model
+config = LiteLLMConfig(
+    model="ollama/llama3",
+    api_base="http://localhost:11434",
+    is_local=True,
+    temperature=0.7,
+    max_tokens=1000,
+    output_response=True
+)
+
+# Generate 
+llm = LiteLLM(config)
+response = llm.generate(prompt="What is Agentic Workflow?")
+
+```
+
+
 ## Core Functions
 
 All LLM implementations in EvoAgentX provide a consistent set of core functions for generating text and managing the generation process.
