@@ -7,7 +7,7 @@ from llama_index.core.node_parser import SemanticSplitterNodeParser
 
 from evoagentx.core.logging import logger
 from .base import BaseChunker, ChunkingStrategy
-from evoagentx.rag.schema import Document, Corpus, Chunk, ChunkMetadata
+from evoagentx.rag.schema import Document, Corpus, Chunk
 
 class SemanticChunker(BaseChunker):
     """Chunker that splits documents based on semantic similarity.
