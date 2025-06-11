@@ -7,7 +7,7 @@ from ..core.logging import logger
 from ..models.base_model import BaseLLM
 from .action import Action
 from ..core.message import Message
-from ..prompts.tool_calling import OUTPUT_EXTRACTION_PROMPT, TOOL_CALLING_TEMPLATE
+from ..prompts.tool_calling import OUTPUT_EXTRACTION_PROMPT, TOOL_CALLING_TEMPLATE, TOOL_CALLING_HISTORY_PROMPT
 from ..tools.tool import Tool
 from ..core.registry import MODULE_REGISTRY
 from ..models.base_model import LLMOutputParser
@@ -85,8 +85,9 @@ class CustomizeAction(Action):
 
         if self.prompt:
             prompt = self.prompt.format(**prompt_params_values) if prompt_params_values else self.prompt
-            prompt += "\n\n" + TOOL_CALLING_TEMPLATE.format(tools_description = self.tools_schema, additional_context = self.tool_calling_instructions)
-            prompt += "\n\n### History\n{execution_history}".format(execution_history = execution_history)
+            if self.tools:
+                prompt += "\n\n" + TOOL_CALLING_TEMPLATE.format(tools_description = self.tools_schema, additional_context = self.tool_calling_instructions)
+                prompt += "\n\n### History\n{execution_history}".format(execution_history = execution_history)
             return prompt
         else:
             # Use goal-based tool calling mode
@@ -158,18 +159,51 @@ class CustomizeAction(Action):
             self.tools_schema[tool_name] = tool_schema
             self.tools_caller[tool_name] = tool_caller
     
-    def _extract_tool_calls(self, llm_output: str):
-        if match := re.search(r"```(?:ToolCalling)?\s*\n(.*?)\n```", llm_output, re.DOTALL):
-            json_list = parse_json_from_text(match.group(1))
-            return json.loads(json_list[0] if json_list else "{}")
-        return None
+    def _extract_tool_calls(self, llm_output: str) -> List[dict]:
+        # if match := re.search(r"```(?:ToolCalling)?\s*\n(.*?)\n```", llm_output, re.DOTALL):
+        #     json_list = parse_json_from_text(match.group(1))
+        #     return json.loads(json_list[0] if json_list else "{}")
+
+        # Improved regex pattern to match ```ToolCalling blocks more accurately
+        # This pattern handles:
+        # - Optional whitespace after ToolCalling
+        # - Content capture with proper handling of newlines
+        # - Optional whitespace before closing ```
+        pattern = r"```ToolCalling\s*\n(.*?)\n\s*```"
+        
+        # Find all ToolCalling blocks in the output
+        matches = re.findall(pattern, llm_output, re.DOTALL)
+
+        if not matches:
+            return []
+        
+        parsed_tool_calls = []
+        for match_content in matches:
+            try:
+                json_content = match_content.strip()
+                json_list = parse_json_from_text(json_content)
+                if not json_list:
+                    logger.warning("No valid JSON found in ToolCalling block")
+                    continue
+                # Only use the first JSON string from each block
+                parsed_tool_call = json.loads(json_list[0])
+                if isinstance(parsed_tool_call, dict):
+                    parsed_tool_calls.append(parsed_tool_call)
+                elif isinstance(parsed_tool_call, list):
+                    parsed_tool_calls.extend(parsed_tool_call)
+                else:
+                    logger.warning(f"Invalid tool call format: {parsed_tool_call}")
+                    continue
+            except (json.JSONDecodeError, IndexError) as e:
+                logger.warning(f"Failed to parse tool calls from LLM output: {e}")
+                continue
+
+        return parsed_tool_calls
     
     def _extract_output(self, llm_output: Any, llm: BaseLLM = None, **kwargs):
+
         # Get the raw output content
-        if hasattr(llm_output, 'content'):
-            llm_output_content = llm_output.content
-        else:
-            llm_output_content = str(llm_output)
+        llm_output_content = getattr(llm_output, "content", str(llm_output))
         
         # Check if there are any defined output fields
         output_attrs = self.outputs_format.get_attrs()
@@ -340,7 +374,7 @@ class CustomizeAction(Action):
             
             # Handle both string prompts and chat message lists
             if isinstance(prompt, str):
-                llm_response = llm.generate(prompt=prompt)
+                llm_response = llm.generate(prompt=prompt, system_message=sys_msg)
             else:
                 llm_response = llm.generate(messages=prompt)
             
@@ -360,7 +394,11 @@ class CustomizeAction(Action):
             print("results:")
             print(results)
             
-            self.execution_history.append("\n\nIteration " + str(time_out) + ":\nExecuted tool calls:\n" + json.dumps(tool_call_args, indent=4) + f"\nResults:\n{results}\n" )
+            self.execution_history.append(TOOL_CALLING_HISTORY_PROMPT.format(
+                iteration_number=time_out,
+                tool_call_args=json.dumps(tool_call_args, indent=4),
+                results=results
+            ))
             # print("\n\n\n\nexecution_history:\n", self.execution_history)
         
         # Get the appropriate prompt for return
