@@ -25,7 +25,6 @@ class CustomizeAction(Action):
     tool_calling_instructions: Optional[List[str]] = Field(default=None, description="Additional instructions for tool calling")
     conversation: Optional[Message] = Field(default=None, description="Current conversation state")
 
-    execution_history: List[Any] = Field(default_factory=list, description="History of tool executions and their results")
     max_tool_try: int = Field(default=2, description="Maximum number of tool calling attempts allowed")
     
     def __init__(self, **kwargs):
@@ -41,14 +40,11 @@ class CustomizeAction(Action):
         # Prioritize template and give warning if both are provided
         if self.prompt and self.prompt_template:
             logger.warning("Both `prompt` and `prompt_template` are provided for CustomizeAction action. Prioritizing `prompt_template` and ignoring `prompt`.")
-        if self.prompt_template:
-            self.execution_history = [self.prompt_template.get_history()]
     
     def prepare_action_prompt(
         self, 
         inputs: Optional[dict] = None, 
         system_prompt: Optional[str] = None, 
-        execution_history: Optional[list] = None,
         **kwargs
     ) -> Union[str, List[dict]]:
         """Prepare prompt for action execution.
@@ -59,7 +55,6 @@ class CustomizeAction(Action):
         Args:
             inputs: Dictionary of input parameters
             system_prompt: Optional system prompt to include
-            execution_history: History of tool executions for goal-based tool calling
             
         Returns:
             Union[str, List[dict]]: Formatted prompt ready for LLM (string or chat messages)
@@ -87,13 +82,9 @@ class CustomizeAction(Action):
             prompt = self.prompt.format(**prompt_params_values) if prompt_params_values else self.prompt
             if self.tools:
                 prompt += "\n\n" + TOOL_CALLING_TEMPLATE.format(tools_description = self.tools_schema, additional_context = self.tool_calling_instructions)
-                prompt += "\n\n### History\n{execution_history}".format(execution_history = execution_history)
             return prompt
         else:
             # Use goal-based tool calling mode
-            # Set history if provided and format with tools for goal-based tool calling
-            if execution_history is not None:
-                self.prompt_template.set_history(execution_history)
             if self.tools:
                 self.prompt_template.set_tools(self.tools)
             return self.prompt_template.format(
@@ -351,6 +342,12 @@ class CustomizeAction(Action):
             inputs = {}
         final_llm_response = None
         
+        if self.prompt_template:
+            conversation = [{"role": "system", "content": self.prepare_action_prompt(inputs=inputs, system_prompt=sys_msg)}]
+        else:
+            conversation = [{"role": "system", "content": sys_msg}, {"role": "user", "content": self.prompt}]
+        
+        
         ## 1. get all the input parameters
         prompt_params_values = {k: inputs.get(k, "") for k in input_attributes.keys()}
         while True:
@@ -359,24 +356,15 @@ class CustomizeAction(Action):
                 # Get the appropriate prompt for return
                 current_prompt = self.prepare_action_prompt(inputs=prompt_params_values or {})
                 # Use the final LLM response if available, otherwise fall back to execution history
-                content_to_extract = final_llm_response if final_llm_response is not None else "{content}".format(content = self.execution_history)
+                content_to_extract = final_llm_response if final_llm_response is not None else "{content}".format(content = conversation)
                 if return_prompt:
                     return self._extract_output(content_to_extract, llm = llm), current_prompt
                 return self._extract_output(content_to_extract, llm = llm) 
             time_out += 1
             
-            # Use goal-based tool calling prompt
-            prompt = self.prepare_action_prompt(
-                inputs=prompt_params_values,
-                execution_history=self.execution_history,
-                system_prompt=sys_msg
-            )
-            
             # Handle both string prompts and chat message lists
-            if isinstance(prompt, str):
-                llm_response = llm.generate(prompt=prompt, system_message=sys_msg)
-            else:
-                llm_response = llm.generate(messages=prompt)
+            llm_response = llm.generate(messages=conversation)
+            conversation.append({"role": "assistant", "content": llm_response.content})
             
             # Store the final LLM response
             final_llm_response = llm_response
@@ -393,24 +381,23 @@ class CustomizeAction(Action):
             print("results:")
             print(results)
             
-            self.execution_history.append(TOOL_CALLING_HISTORY_PROMPT.format(
+            conversation.append({"role": "assistant", "content": TOOL_CALLING_HISTORY_PROMPT.format(
                 iteration_number=time_out,
-                tool_call_args=json.dumps(tool_call_args, indent=4),
-                results=results
-            ))
-            # print("\n\n\n\nexecution_history:\n", self.execution_history)
+                tool_call_args=f"{tool_call_args}",
+                results=f"{results}"
+            )})
         
         # Get the appropriate prompt for return
         current_prompt = self.prepare_action_prompt(inputs=prompt_params_values or {})
         # Use the final LLM response if available, otherwise fall back to execution history
-        content_to_extract = final_llm_response if final_llm_response is not None else "{content}".format(content = self.execution_history)
+        content_to_extract = final_llm_response if final_llm_response is not None else "{content}".format(content = conversation)
         if return_prompt:
             return self._extract_output(content_to_extract, llm = llm), current_prompt
         return self._extract_output(content_to_extract, llm = llm)
         
 
     async def async_execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, time_out = 0, **kwargs):
-        # Allow empty inputs if the action has no required input attributes
+            # Allow empty inputs if the action has no required input attributes
         input_attributes: dict = self.inputs_format.get_attr_descriptions()
         if not inputs and input_attributes:
             logger.error("CustomizeAction action received invalid `inputs`: None or empty.")
@@ -420,7 +407,13 @@ class CustomizeAction(Action):
             inputs = {}
         final_llm_response = None
         
-        ## 1. Generate tool call args
+        if self.prompt_template:
+            conversation = [{"role": "system", "content": self.prepare_action_prompt(inputs=inputs, system_prompt=sys_msg)}]
+        else:
+            conversation = [{"role": "system", "content": sys_msg}, {"role": "user", "content": self.prompt}]
+        
+        
+        ## 1. get all the input parameters
         prompt_params_values = {k: inputs.get(k, "") for k in input_attributes.keys()}
         while True:
             ### Generate response from LLM
@@ -428,24 +421,15 @@ class CustomizeAction(Action):
                 # Get the appropriate prompt for return
                 current_prompt = self.prepare_action_prompt(inputs=prompt_params_values or {})
                 # Use the final LLM response if available, otherwise fall back to execution history
-                content_to_extract = final_llm_response if final_llm_response is not None else "{content}".format(content = self.execution_history)
+                content_to_extract = final_llm_response if final_llm_response is not None else "{content}".format(content = conversation)
                 if return_prompt:
-                    return await self._async_extract_output(content_to_extract, llm = llm), current_prompt
-                return await self._async_extract_output(content_to_extract, llm = llm) 
+                    return self._async_extract_output(content_to_extract, llm = llm), current_prompt
+                return self._async_extract_output(content_to_extract, llm = llm) 
             time_out += 1
             
-            # Use goal-based tool calling prompt
-            prompt = self.prepare_action_prompt(
-                inputs=prompt_params_values,
-                execution_history=self.execution_history,
-                system_prompt=sys_msg
-            )
-            
             # Handle both string prompts and chat message lists
-            if isinstance(prompt, str):
-                llm_response = await llm.async_generate(prompt=prompt)
-            else:
-                llm_response = await llm.async_generate(messages=prompt)
+            llm_response = await llm.async_generate(messages=conversation)
+            conversation.append({"role": "assistant", "content": llm_response.content})
             
             # Store the final LLM response
             final_llm_response = llm_response
@@ -459,16 +443,20 @@ class CustomizeAction(Action):
             
             results = self._calling_tools(tool_call_args)
             
+            
             print("results:")
             print(results)
             
-            self.execution_history.append({"tool_call_args": tool_call_args, "results": results})
+            conversation.append({"role": "assistant", "content": TOOL_CALLING_HISTORY_PROMPT.format(
+                iteration_number=time_out,
+                tool_call_args=f"{tool_call_args}",
+                results=f"{results}"
+            )})
         
         # Get the appropriate prompt for return
         current_prompt = self.prepare_action_prompt(inputs=prompt_params_values or {})
         # Use the final LLM response if available, otherwise fall back to execution history
-        content_to_extract = final_llm_response if final_llm_response is not None else "{content}".format(content = self.execution_history)
+        content_to_extract = final_llm_response if final_llm_response is not None else "{content}".format(content = conversation)
         if return_prompt:
-            return await self._async_extract_output(content_to_extract, llm = llm), current_prompt
-        return await self._async_extract_output(content_to_extract, llm = llm)
-    
+            return self._async_extract_output(content_to_extract, llm = llm), current_prompt
+        return self._async_extract_output(content_to_extract, llm = llm)
