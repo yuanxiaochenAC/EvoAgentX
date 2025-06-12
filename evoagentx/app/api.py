@@ -3,7 +3,7 @@ API routes for EvoAgentX application.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
-from typing import List, Dict, Any # , Optional
+from typing import List, Dict, Any
 from fastapi import Response
 
 from datetime import timedelta
@@ -14,9 +14,11 @@ from evoagentx.app.schemas import (
     WorkflowCreate, WorkflowUpdate, WorkflowResponse,
     ExecutionCreate, ExecutionResponse,
     PaginationParams, SearchParams,
-    Token, UserCreate, UserResponse, # UserLogin, 
+    Token, UserCreate, UserResponse, AgentQueryRequest,
+    WorkflowGenerateRequest
 )
-from evoagentx.app.services import AgentService, WorkflowService, WorkflowExecutionService
+from ..core.logging import logger
+from evoagentx.app.services import AgentService, WorkflowService, WorkflowExecutionService, AgentBackupService, WorkflowGeneratorService
 from evoagentx.app.security import (
     create_access_token, 
     authenticate_user, 
@@ -24,7 +26,7 @@ from evoagentx.app.security import (
     get_current_active_user,
     get_current_admin_user
 )
-from evoagentx.app.db import Database, ExecutionStatus 
+from evoagentx.app.db import Database, ExecutionStatus
 
 # Create routers for different route groups
 auth_router = APIRouter(prefix=settings.API_PREFIX)
@@ -32,6 +34,7 @@ agents_router = APIRouter(prefix=settings.API_PREFIX)
 workflows_router = APIRouter(prefix=settings.API_PREFIX)
 executions_router = APIRouter(prefix=settings.API_PREFIX)
 system_router = APIRouter(prefix=settings.API_PREFIX)
+workflow_generator_router = APIRouter(prefix=settings.API_PREFIX)
 
 # Authentication Routes
 @auth_router.post("/auth/register", response_model=UserResponse, tags=["Authentication"])
@@ -134,7 +137,151 @@ async def delete_agent(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@agents_router.post("/agents/{agent_id}/query", response_model=Dict[str, Any], tags=["Agents"])
+async def query_agent(
+    agent_id: str,
+    query: AgentQueryRequest,
+    current_user: Dict[str, Any] = Depends(get_current_active_user)
+):
+    """Query an agent with a prompt and get a response."""
+    try:
+        response_text = await AgentService.query_agent(
+            agent_id=agent_id,
+            query=query,
+            user_id=str(current_user["_id"])
+        )
+        return {"response": response_text}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Error in query_agent: {str(e)}")
+        # Return a proper error response
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while processing your request: {str(e)}"
+        )
 
+@agents_router.post("/agents/{agent_id}/backup", response_model=Dict[str, Any], tags=["Agents"])
+async def create_agent_backup(
+    agent_id: str,
+    backup_path: str,
+    current_user: Dict[str, Any] = Depends(get_current_active_user)
+):
+    """Create a backup of an agent's current state."""
+    try:
+        result = await AgentBackupService.save_agent_backup(agent_id, backup_path)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@agents_router.post("/agents/restore", response_model=Dict[str, Any], tags=["Agents"])
+async def restore_agent_backup(
+    backup_path: str,
+    current_user: Dict[str, Any] = Depends(get_current_active_user)
+):
+    """Restore an agent from a backup file."""
+    try:
+        result = await AgentBackupService.restore_agent_backup(backup_path)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@agents_router.get("/agents/{agent_id}/backups", response_model=List[Dict[str, Any]], tags=["Agents"])
+async def list_agent_backups(
+    agent_id: str,
+    backup_dir: str,
+    current_user: Dict[str, Any] = Depends(get_current_active_user)
+):
+    """List all backup files for an agent."""
+    try:
+        backups = await AgentBackupService.list_agent_backups(agent_id, backup_dir)
+        return backups
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@agents_router.post("/agents/backup-all", response_model=Dict[str, Any], tags=["Agents"])
+async def backup_all_agents(
+    backup_dir: str,
+    current_user: Dict[str, Any] = Depends(get_current_active_user)
+):
+    """Backup all agents in the system to the specified directory."""
+    try:
+        result = await AgentBackupService.backup_all_agents(backup_dir)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@agents_router.post("/agents/backup-batch", response_model=Dict[str, Any], tags=["Agents"])
+async def backup_multiple_agents(
+    agent_ids: List[str],
+    backup_dir: str,
+    current_user: Dict[str, Any] = Depends(get_current_active_user)
+):
+    """Backup multiple agents to the specified directory."""
+    try:
+        result = await AgentBackupService.backup_agents(agent_ids, backup_dir)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@agents_router.post("/agents/restore-batch", response_model=Dict[str, Any], tags=["Agents"])
+async def restore_multiple_agents(
+    backup_files: List[str],
+    current_user: Dict[str, Any] = Depends(get_current_active_user)
+):
+    """Restore multiple agents from backup files."""
+    try:
+        result = await AgentBackupService.restore_agents_from_files(backup_files)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@agents_router.post("/agents/restore-all", response_model=Dict[str, Any], tags=["Agents"])
+async def restore_all_agents(
+    backup_dir: str,
+    current_user: Dict[str, Any] = Depends(get_current_active_user)
+):
+    """Restore all agents from backup files in a directory."""
+    try:
+        result = await AgentBackupService.restore_all_agents_from_directory(backup_dir)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# @agents_router.post("/agents/{agent_id}/execute", response_model=Dict[str, Any], tags=["Agents"])
+# async def execute_agent_action(
+#     agent_id: str,
+#     action_name: str,
+#     action_params: Dict[str, Any],
+#     current_user: Dict[str, Any] = Depends(get_current_active_user)
+# ):
+#     """Execute an action using a specific agent."""
+#     result = await AgentService.execute_agent_action(
+#         agent_id=agent_id,
+#         action_name=action_name,
+#         action_params=action_params,
+#         user_id=str(current_user["_id"])
+#     )
+
+#     if not result["success"]:
+#         raise HTTPException(status_code=400, detail=result["error"])
+
+#     return result
 
 # Workflow Routes
 @workflows_router.post("/workflows", response_model=WorkflowResponse,status_code=201, tags=["Workflows"])
@@ -319,11 +466,41 @@ async def health_check():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database connection error: {str(e)}")
 
+# Workflow Generator Routes
+@workflow_generator_router.post("/workflows/generate", response_model=Dict[str, Any], tags=["Workflow Generator"])
+async def generate_workflow(
+    request: WorkflowGenerateRequest,
+    current_user: Dict[str, Any] = Depends(get_current_active_user)
+):
+    """
+    Generate a workflow based on a goal description and LLM configuration.
+    
+    This endpoint will:
+    1. Take the provided goal and LLM configuration
+    2. Generate a workflow graph with appropriate tasks and relationships
+    3. Return the serialized workflow that can be stored in a database
+    """
+    try:
+        result = await WorkflowGeneratorService.generate_workflow(
+            goal=request.goal,
+            llm_config=request.llm_config
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error generating workflow: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while generating the workflow: {str(e)}"
+        )
+
 # Export the routers
 __all__ = [
     'auth_router',
     'agents_router',
     'workflows_router',
     'executions_router',
-    'system_router'
+    'system_router',
+    'workflow_generator_router'
 ]

@@ -2,8 +2,8 @@
 Pydantic models for request/response validation in the EvoAgentX API.
 """
 from datetime import datetime
-from typing import Optional, List, Dict, Any # , Union
-from pydantic import BaseModel, Field # , validator
+from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, Field
 from bson import ObjectId
 from evoagentx.app.db import AgentStatus, WorkflowStatus, ExecutionStatus
 
@@ -166,3 +166,11 @@ class SearchParams(BaseSchema):
     status: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+
+class AgentQueryRequest(BaseModel):
+    prompt: str
+    history: Optional[List[Dict[str, str]]] = None
+
+class WorkflowGenerateRequest(BaseSchema):
+    goal: str
+    llm_config: Dict[str, Any]

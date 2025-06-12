@@ -1,7 +1,6 @@
 """
 Configuration settings for the EvoAgentX application.
 """
-# import os
 from pydantic import BaseModel, Field, validator
 from pydantic_settings import BaseSettings
 from typing import Optional, Dict, Any, List
@@ -31,7 +30,7 @@ class Settings(BaseSettings):
     CORS_ALLOW_CREDENTIALS: bool = True
     
     class Config:
-        env_file = ".env"
+        env_file = "evoagentx/app/app.env"
         case_sensitive = True
         env_delimiter = ","
 
