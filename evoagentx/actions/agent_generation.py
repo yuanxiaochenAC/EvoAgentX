@@ -8,6 +8,7 @@ from ..core.base_config import Parameter
 from ..models.base_model import BaseLLM
 from .action import Action, ActionInput, ActionOutput
 from ..prompts.agent_generator import AGENT_GENERATION_ACTION
+from ..prompts.tool_calling import AGENT_GENERATION_TOOLS_PROMPT
 from ..utils.utils import normalize_text
 
 class AgentGenerationInput(ActionInput):
@@ -173,7 +174,7 @@ class AgentGeneration(Action):
         prompt_params_names = inputs_format.get_attrs()
         prompt_params_values = {param: inputs.get(param, "") for param in prompt_params_names}
         if self.tool_info:
-            prompt_params_values["tools"] = self.tool_info
+            prompt_params_values["tools"] = AGENT_GENERATION_TOOLS_PROMPT.format(tools_description=self.tool_info)
         prompt = self.prompt.format(**prompt_params_values)
         agents = llm.generate(
             prompt = prompt, 
