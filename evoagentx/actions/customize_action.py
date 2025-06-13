@@ -345,7 +345,7 @@ class CustomizeAction(Action):
         if self.prompt_template:
             conversation = [{"role": "system", "content": self.prepare_action_prompt(inputs=inputs, system_prompt=sys_msg)}]
         else:
-            conversation = [{"role": "system", "content": sys_msg}, {"role": "user", "content": self.prompt}]
+            conversation = [{"role": "system", "content": sys_msg}, {"role": "user", "content": self.prepare_action_prompt(inputs=inputs, system_prompt=sys_msg)}]
         
         
         ## 1. get all the input parameters
@@ -397,7 +397,7 @@ class CustomizeAction(Action):
         
 
     async def async_execute(self, llm: Optional[BaseLLM] = None, inputs: Optional[dict] = None, sys_msg: Optional[str]=None, return_prompt: bool = False, time_out = 0, **kwargs):
-            # Allow empty inputs if the action has no required input attributes
+        # Allow empty inputs if the action has no required input attributes
         input_attributes: dict = self.inputs_format.get_attr_descriptions()
         if not inputs and input_attributes:
             logger.error("CustomizeAction action received invalid `inputs`: None or empty.")
@@ -410,7 +410,7 @@ class CustomizeAction(Action):
         if self.prompt_template:
             conversation = [{"role": "system", "content": self.prepare_action_prompt(inputs=inputs, system_prompt=sys_msg)}]
         else:
-            conversation = [{"role": "system", "content": sys_msg}, {"role": "user", "content": self.prompt}]
+            conversation = [{"role": "system", "content": sys_msg}, {"role": "user", "content": self.prepare_action_prompt(inputs=inputs, system_prompt=sys_msg)}]
         
         
         ## 1. get all the input parameters
@@ -423,8 +423,8 @@ class CustomizeAction(Action):
                 # Use the final LLM response if available, otherwise fall back to execution history
                 content_to_extract = final_llm_response if final_llm_response is not None else "{content}".format(content = conversation)
                 if return_prompt:
-                    return self._async_extract_output(content_to_extract, llm = llm), current_prompt
-                return self._async_extract_output(content_to_extract, llm = llm) 
+                    return await self._async_extract_output(content_to_extract, llm = llm), current_prompt
+                return await self._async_extract_output(content_to_extract, llm = llm) 
             time_out += 1
             
             # Handle both string prompts and chat message lists
@@ -458,5 +458,5 @@ class CustomizeAction(Action):
         # Use the final LLM response if available, otherwise fall back to execution history
         content_to_extract = final_llm_response if final_llm_response is not None else "{content}".format(content = conversation)
         if return_prompt:
-            return self._async_extract_output(content_to_extract, llm = llm), current_prompt
-        return self._async_extract_output(content_to_extract, llm = llm)
+            return await self._async_extract_output(content_to_extract, llm = llm), current_prompt
+        return await self._async_extract_output(content_to_extract, llm = llm)
