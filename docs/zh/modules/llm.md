@@ -122,6 +122,39 @@ response = llm.generate(
 )
 ```
 
+### 本地 LLM
+
+我们现已支持在任务重中调用本地模型，这种方法基于 LiteLLM 框架打造，提供熟悉的用户体验。以 Ollama 为例，请您可以以下步骤操作：
+
+1. 下载您需要的模型，例如 `ollama3`。
+2. 在本地运行该模型。
+3. 配置设置，指定 `api_base`（通常为端口 `11434`）并将 `is_local` 设置为 `True`。
+
+现在，您可以无缝使用本地模型了！
+
+**基本用法：**
+
+```python
+
+from evoagentx.models.model_configs import LiteLLMConfig
+from evoagentx.models import LiteLLM
+
+# use local model
+config = LiteLLMConfig(
+    model="ollama/llama3",
+    api_base="http://localhost:11434",
+    is_local=True,
+    temperature=0.7,
+    max_tokens=1000,
+    output_response=True
+)
+
+# Generate 
+llm = LiteLLM(config)
+response = llm.generate(prompt="What is Agentic Workflow?")
+
+```
+
 ## 核心功能
 
 EvoAgentX 中的所有 LLM 实现都提供了一组一致的核心功能，用于生成文本和管理生成过程。
