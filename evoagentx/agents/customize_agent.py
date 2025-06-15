@@ -421,7 +421,7 @@ class CustomizeAgent(Agent):
             "parse_mode": self.parse_mode,
             "parse_func": self.parse_func.__name__ if self.parse_func is not None else None,
             "title_format": self.title_format,
-            "tool_names": [tool.name for tool in customize_action.tools],
+            "tool_names": [tool.name for tool in customize_action.tools] if customize_action.tools else [],
             "max_tool_calls": self.max_tool_calls,
             "custom_output_format": self.custom_output_format
         }
@@ -443,7 +443,7 @@ class CustomizeAgent(Agent):
             CustomizeAgent: The loaded agent instance
         """
         agent = super().load_module(path=path, llm_config=llm_config, **kwargs)
-        agent.tools = [tool_dict[tool_name] for tool_name in agent["tool_names"]]
+        agent["tools"] = [tool_dict[tool_name] for tool_name in agent["tool_names"]]
         return agent 
     
     def save_module(self, path: str, ignore: List[str] = [], **kwargs)-> str:
