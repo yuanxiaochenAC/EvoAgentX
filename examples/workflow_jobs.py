@@ -9,7 +9,6 @@ from evoagentx.workflow import WorkFlowGenerator
 from examples.pdf_test_prompt import PDF_AGENT_SUGGESTION, formulate_goal
 from evoagentx.tools.mcp import MCPToolkit
 from evoagentx.tools.file_tool import FileTool
-from evoagentx.tools.browser_tool import BrowserTool
 load_dotenv() # Loads environment variables from .env file
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -28,8 +27,7 @@ def main(goal=None):
     # goal = "Search and summarize the github repo of camel-ai/camel based on its readme.md file."
     if not goal:
             goal = """
-                Read and analyze the pdf resume at examples/output/jobs/test_pdf.pdf, then find 5 real job opportunities to this client by search the website.
-                You should visit the first website in browser and fill out the application information but not submit it.
+                Read and analyze the pdf resume at examples/output/jobs/test_pdf.pdf, then find 5 real job opportunities based on the content of the resume by search the website.
                 """
     goal = formulate_goal(goal)
     # goal = making_goal(openai_config, goal)
@@ -38,7 +36,6 @@ def main(goal=None):
     mcp_toolkit = MCPToolkit(config_path=mcp_config_path)
     tools = mcp_toolkit.get_tools()
     tools.append(FileTool())
-    tools.append(BrowserTool())
     
     
     ## _______________ Workflow Creation _______________
