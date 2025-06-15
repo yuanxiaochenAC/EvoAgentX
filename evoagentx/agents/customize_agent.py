@@ -55,10 +55,7 @@ class CustomizeAgent(Agent):
             Must accept a "content" parameter and return a dictionary.
         title_format (str, optional): Format string for title parsing mode with {title} placeholder.
             Default is "## {title}".
-        tool_names (list[str], optional): List of tool names to be used by the agent. If provided,
-            tool_dict must also be provided. Both parameters are required when using tools.
-        tool_dict (dict, optional): Dictionary mapping tool names to Tool instances. Required when
-            tool_names is provided.
+        tools (list[Tool], optional): List of tools to be used by the agent.
         max_tool_calls (int, optional): Maximum number of tool calls. Defaults to 5. 
         custom_output_format (str, optional): Specify the output format. Only used when `prompt_template` is used. 
             If not provided, the output format will be constructed from the `outputs` specification and `parse_mode`. 
@@ -77,8 +74,7 @@ class CustomizeAgent(Agent):
         parse_mode: Optional[str] = "title", 
         parse_func: Optional[Callable] = None, 
         title_format: Optional[str] = None, 
-        tool_names: Optional[list[str]] = None,
-        tool_dict: Optional[dict] = None,
+        tools: Optional[List[Tool]] = None,
         max_tool_calls: Optional[int] = 5,
         custom_output_format: Optional[str] = None, 
         **kwargs
@@ -112,9 +108,7 @@ class CustomizeAgent(Agent):
             output_parser = output_parser, 
             parse_mode = parse_mode, 
             parse_func = parse_func, 
-            title_format = title_format,
-            tool_names = tool_names, 
-            tool_dict = tool_dict
+            title_format = title_format
         )
 
         customize_action = self.create_customize_action(
@@ -129,8 +123,7 @@ class CustomizeAgent(Agent):
             output_parser=output_parser,
             title_format=title_format,
             custom_output_format=custom_output_format ,
-            tool_names=tool_names,
-            tool_dict=tool_dict,
+            tools=tools,
             max_tool_calls=max_tool_calls
         )
         super().__init__(
@@ -146,8 +139,7 @@ class CustomizeAgent(Agent):
         self.parse_mode = parse_mode 
         self.parse_func = parse_func 
         self.title_format = title_format
-        self.tool_names = tool_names
-        self.tool_dict = tool_dict 
+        self.tools = tools
         self.max_tool_calls = max_tool_calls
         self.custom_output_format = custom_output_format
 
@@ -187,7 +179,7 @@ class CustomizeAgent(Agent):
         """
         return self.action.prompt
     
-    def validate_data(self, prompt: str, prompt_template: PromptTemplate, inputs: List[dict], outputs: List[dict], output_parser: Type[ActionOutput], parse_mode: str, parse_func: Callable, title_format: str, tool_names: List[str], tool_dict: dict):
+    def validate_data(self, prompt: str, prompt_template: PromptTemplate, inputs: List[dict], outputs: List[dict], output_parser: Type[ActionOutput], parse_mode: str, parse_func: Callable, title_format: str):
 
         # check if the prompt is provided
         if prompt is None and prompt_template is None:
@@ -233,15 +225,7 @@ class CustomizeAgent(Agent):
                 logger.warning(f"`title_format` will not be used because `parse_mode` is '{parse_mode}', not 'title'. Set `parse_mode='title'` to use title formatting.")
             if r'{title}' not in title_format:
                 raise ValueError(r"`title_format` must contain the placeholder `{title}`.")
-        
-        # check if the tool_names are provided in the tool_dict
-        if tool_names:
-            if tool_dict is None:
-                raise ValueError("`tool_dict: Dict[str, Callable]` must be provided when `tool_names` is provided.")
-            not_provided_tool_names = [name for name in tool_names if name not in tool_dict]
-            if not_provided_tool_names:
-                logger.warning(f"The following tool names are not provided in `tool_dict`: {not_provided_tool_names}. This can cause unexpected issues when executing the agent.")
-    
+            
     def create_customize_action(
         self, 
         name: str, 
@@ -255,8 +239,7 @@ class CustomizeAgent(Agent):
         output_parser: Optional[ActionOutput] = None,
         title_format: Optional[str] = "## {title}",
         custom_output_format: Optional[str] = None,
-        tool_names: Optional[list[str]] = None,
-        tool_dict: Optional[dict] = None,
+        tools: Optional[List[Tool]] = None,
         max_tool_calls: Optional[int] = 5
     ) -> Action:
         """Create a custom action based on the provided specifications.
@@ -265,7 +248,7 @@ class CustomizeAgent(Agent):
         - Input parameters defined by the inputs specification
         - Output format defined by the outputs specification
         - Custom execution logic using the customize_action_execute function
-        - If tool_names is provided, returns a CustomizeAction action instead
+        - If tools is provided, returns a CustomizeAction action instead
         
         Args:
             name: Base name for the action
@@ -277,7 +260,7 @@ class CustomizeAgent(Agent):
             parse_mode: Mode to use for parsing LLM output
             parse_func: Optional custom parsing function
             output_parser: Optional custom output parser class
-            tool_names: Optional list of tool names
+            tools: Optional list of tools
             
         Returns:
             A newly created Action instance
@@ -347,9 +330,7 @@ class CustomizeAgent(Agent):
             max_tool_try=max_tool_calls
         )
 
-        # Use dict to deduplicate tools by id to avoid adding the same tool multiple times
-        if tool_names and tool_dict:
-            tools = [tool_dict[tool_name] for tool_name in tool_names]
+        if tools:
             customize_action.add_tools(tools)
         
         return customize_action
@@ -440,7 +421,7 @@ class CustomizeAgent(Agent):
             "parse_mode": self.parse_mode,
             "parse_func": self.parse_func.__name__ if self.parse_func is not None else None,
             "title_format": self.title_format,
-            "tool_names": self.tool_names,
+            "tool_names": [tool.name for tool in customize_action.tools],
             "max_tool_calls": self.max_tool_calls,
             "custom_output_format": self.custom_output_format
         }
@@ -462,10 +443,7 @@ class CustomizeAgent(Agent):
             CustomizeAgent: The loaded agent instance
         """
         agent = super().load_module(path=path, llm_config=llm_config, **kwargs)
-        if agent["tool_names"]:
-            if tool_dict is None:
-                raise ValueError("must provide `tool_dict` when using `load_module` or `from_file` to load the agent from local storage since `tool_names` is provided.")
-            agent["tool_dict"] = tool_dict 
+        agent.tools = [tool_dict[tool_name] for tool_name in agent["tool_names"]]
         return agent 
     
     def save_module(self, path: str, ignore: List[str] = [], **kwargs)-> str:
@@ -517,6 +495,6 @@ class CustomizeAgent(Agent):
         """
         config = self.get_customize_agent_info()
         config["llm_config"] = self.llm_config.to_dict()
-        config["tool_dict"] = self.tool_dict
+        config["tool_dict"] = {tool.name: tool for tool in self.tools}
         return config 
     

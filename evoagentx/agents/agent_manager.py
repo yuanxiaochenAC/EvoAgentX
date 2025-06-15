@@ -160,9 +160,8 @@ class AgentManager(BaseModule):
             elif isinstance(agent_llm_config, LLMConfig):
                 agent_data["llm_config"] = agent_llm_config.to_dict()
         
-        if agent_data.get("tools", None):
-            agent_data["tool_names"] = agent_data["tools"]
-            agent_data["tool_dict"] = self.tools_mapping
+        if agent_data.get("tool_names", None):
+            agent_data["tools"] = [self.tools_mapping[tool_name] for tool_name in agent_data["tool_names"]]
         return CustomizeAgent.from_dict(data=agent_data)
     
     def get_agent_name(self, agent: Union[str, dict, Agent]) -> str:
@@ -223,9 +222,9 @@ class AgentManager(BaseModule):
             **kwargs (Any): Additional parameters for agent creation
         """
         # Check for 'tool' key and convert it to 'tools' if needed
-        if isinstance(agent, dict) and "tool" in agent and "tools" not in agent:
-            agent["tools"] = agent.pop("tool")
-            
+        if isinstance(agent, dict) and "tool_names" in agent:
+            agent["tools"] = [self.tools_mapping[tool_name] for tool_name in agent["tool_names"]]
+        
         agent_name = self.get_agent_name(agent=agent)
         if self.has_agent(agent_name=agent_name):
             return

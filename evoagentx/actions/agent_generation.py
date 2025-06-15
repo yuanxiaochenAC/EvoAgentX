@@ -36,7 +36,7 @@ class GeneratedAgent(BaseModule):
     inputs: List[Parameter]
     outputs: List[Parameter]
     prompt: str
-    tools: Optional[List[str]] = None
+    tool_names: Optional[List[str]] = None
 
     @classmethod
     def find_output_name(cls, text: str, outputs: List[str]):

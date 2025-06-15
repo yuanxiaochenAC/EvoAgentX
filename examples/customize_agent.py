@@ -12,8 +12,8 @@ from evoagentx.tools.mcp import MCPToolkit
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-# model_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=True)
-model_config = LiteLLMConfig(model="anthropic/claude-3-7-sonnet-20250219", anthropic_key=ANTHROPIC_API_KEY, stream=True, output_response=True, max_tokens=20000)
+model_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=True)
+# model_config = LiteLLMConfig(model="anthropic/claude-3-7-sonnet-20250219", anthropic_key=ANTHROPIC_API_KEY, stream=True, output_response=True, max_tokens=20000)
 
 
 @register_parse_function
@@ -170,8 +170,7 @@ def build_customize_agent_with_tools():
         # outputs=[
         #     {"name": "code", "type": "string", "description": "The generated Python code"}
         # ],
-        tool_names=["file_tool"],
-        tool_dict={"file_tool": FileTool()}
+        tools=[FileTool()]
     )
 
     message = code_writer(
@@ -198,8 +197,7 @@ def build_customize_agent_with_MCP(config_path):
             {"name": "result", "type": "string", "description": "The result of the task"},
             {"name": "tool_calls", "type": "string", "description": "The tool calls used to get the result (if any)"}
         ],
-        tool_names=[tool.name for tool in tools],
-        tool_dict={tool.name: tool for tool in tools}
+        tools=tools
     )
 
     message = customize_agent(
@@ -499,9 +497,9 @@ if __name__ == "__main__":
     test_title_parse_mode_with_template()
     test_xml_parse_mode_with_template()
     
-    ## Test MCP prompt
-    # config_path = "examples/output/tests/shares_mcp.config"
-    # if os.path.exists(config_path):
-    #     build_customize_agent_with_MCP(config_path=config_path)
-    # else:
-    #     print(f"You will need to provide a MCP config file at {config_path} to test.")
+    # Test MCP prompt
+    config_path = "examples/output/tests/shares_mcp.config"
+    if os.path.exists(config_path):
+        build_customize_agent_with_MCP(config_path=config_path)
+    else:
+        print(f"You will need to provide a MCP config file at {config_path} to test.")

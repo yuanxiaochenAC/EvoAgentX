@@ -1601,7 +1601,6 @@ class BrowserTool(Tool):
         Returns:
             List[Callable]: A list of callable functions
         """
-        # IMPORTANT: This order MUST match the exact order of schemas in get_tool_schemas()
         return [
             self.initialize_browser,
             self.navigate_to_url,
