@@ -13,6 +13,13 @@ class WorkflowGenerationConfig(BaseModel):
     mcp_config: Optional[Dict[str, Any]] = None  # MCP config is optional
     timeout: Optional[int] = 60  # longer timeout for workflow generation
 
+class WorkflowExecutionConfig(BaseModel):
+    """Configuration model for workflow execution requests"""
+    workflow: Dict[str, Any]  # The workflow to execute
+    llm_config: Dict[str, Any]
+    mcp_config: Optional[Dict[str, Any]] = None  # MCP config is optional
+    timeout: Optional[int] = 300  # longer timeout for workflow execution (5 minutes)
+
 class ProcessResponse(BaseModel):
     """Response model for processing requests"""
     task_id: str

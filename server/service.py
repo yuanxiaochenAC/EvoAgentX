@@ -6,6 +6,8 @@ from evoagentx.workflow import WorkFlowGenerator, WorkFlowGraph, WorkFlow
 from evoagentx.models import LLMConfig
 from evoagentx.models.model_configs import OpenAILLMConfig
 from evoagentx.models.model_utils import create_llm_instance
+
+from evoagentx.agents.agent_manager import AgentManager
 from evoagentx.tools.mcp import MCPToolkit
 
 import uuid
@@ -301,3 +303,51 @@ async def generate_workflow_from_goal(goal: str, llm_config_dict: Dict[str, Any]
     # Generate the workflow
     workflow_graph: WorkFlowGraph = workflow_generator.generate_workflow(goal=goal)
     return workflow_graph
+
+async def execute_workflow_from_config(workflow: Dict[str, Any], llm_config_dict: Dict[str, Any], mcp_config: dict = None) -> Dict[str, Any]:
+    """
+    Execute a workflow with the given configuration.
+    
+    Args:
+        workflow: The workflow definition/configuration to execute
+        llm_config_dict: LLM configuration dictionary
+        mcp_config: Optional MCP configuration dictionary
+        
+    Returns:
+        Dict containing execution results and status
+        
+    """
+    try:
+        llm_config = create_llm_config(llm_config_dict)
+        llm = create_llm_instance(llm_config)
+        workflow_graph: WorkFlowGraph = WorkFlowGraph.from_dict(workflow)
+        if mcp_config:
+            mcp_toolkit = MCPToolkit(config=mcp_config)
+            tools = mcp_toolkit.get_tools()
+        else:
+            tools = []
+        
+        agent_manager = AgentManager(tools=tools)
+        agent_manager.add_agents_from_workflow(workflow_graph, llm_config=llm_config)
+        # from pdb import set_trace; set_trace()
+
+        workflow = WorkFlow(graph=workflow_graph, agent_manager=agent_manager, llm=llm)
+        workflow.init_module()
+        output = workflow.execute()
+        
+        return {
+            "status": "completed",
+            "message": output,
+            "workflow_received": bool(workflow),
+            "llm_config_received": bool(llm_config_dict),
+            "mcp_config_received": bool(mcp_config)
+        }
+        
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"In the execution process, got error:\n{e}",
+            "workflow_received": bool(workflow),
+            "llm_config_received": bool(llm_config_dict),
+            "mcp_config_received": bool(mcp_config)
+        }

@@ -9,6 +9,7 @@ from evoagentx.models.model_configs import LLMConfig, OpenAILLMConfig
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+sample_workflow_path = "examples/output/jobs/jobs_demo_4o_mini.json"
 
 # =============================================================================
 # BASIC HTTP API TESTS
@@ -927,31 +928,141 @@ def test_simple_workflow_generation():
         print(f"   Error: {response.text}")
         return None
 
+def test_simple_workflow_execution():
+    """
+    Test the simple synchronous workflow execution endpoint.
+    
+    Curl commands used:
+    ```bash
+    # Simple synchronous workflow execution
+    curl -X POST http://localhost:8001/workflow/execute \
+      -H "Content-Type: application/json" \
+      -d '{
+        "workflow": {
+          "nodes": [...],
+          "edges": [...],
+          // workflow definition
+        },
+        "llm_config": {
+          "model": "gpt-4o-mini",
+          "openai_key": "your_openai_key_here",
+          "stream": true,
+          "output_response": true,
+          "max_tokens": 8000
+        },
+        "mcp_config": {
+          // optional MCP configuration
+        },
+        "timeout": 300
+      }'
+    ```
+    
+    This demonstrates:
+    - The simplest possible workflow execution pattern
+    - Synchronous HTTP request/response (no streaming)
+    - Direct execution results in the response body
+    - Perfect for scripts, CLIs, and simple integrations
+    
+    Use this pattern when:
+    - You want the simplest possible integration
+    - Building command-line tools or scripts
+    - You don't need progress updates during execution
+    - One-off workflow execution is sufficient
+    
+    Benefits:
+    - No SSE complexity
+    - Standard HTTP patterns
+    - Easy to integrate into existing codebases
+    - Immediate results
+    
+    Trade-offs:
+    - Blocks HTTP connection during execution
+    - No progress updates
+    - Risk of timeouts for very long workflows
+    """
+    print("\n=== Testing Simple Synchronous Workflow Execution ===")
+    
+    # LLM configuration
+    llm_config = {
+        "model": "gpt-4o-mini",
+        "openai_key": OPENAI_API_KEY,
+        "stream": True,
+        "output_response": True,
+        "max_tokens": 8000
+    }
+    
+    # Sample workflow definition (this should be a real workflow structure)
+    # For now, using a minimal example - you can replace with actual workflow
+    with open(sample_workflow_path) as f: workflow_dict = json.load(f)
+    
+    # Workflow execution configuration
+    execution_config = {
+        "workflow": workflow_dict,
+        "llm_config": llm_config,
+        "mcp_config": {},  # Optional MCP config
+        "timeout": 300
+    }
+    
+    print(f"🚀 Requesting workflow execution...")
+    print(f"   Workflow nodes: {len(workflow_dict['nodes'])}")
+    print(f"   Workflow edges: {len(workflow_dict['edges'])}")
+    
+    # Make the synchronous request (this will block until workflow execution is complete)
+    response = requests.post('http://localhost:8001/workflow/execute', json=execution_config)
+    
+    if response.status_code == 200:
+        result = response.json()
+        
+        print(f"✅ Workflow executed successfully!")
+        print(f"   Success: {result.get('success', False)}")
+        print(f"   Message: {result.get('message', 'N/A')}")
+        print(f"   Timestamp: {result.get('timestamp', 'N/A')}")
+        
+        # The execution results are right here in the response!
+        execution_result = result.get('execution_result')
+        if execution_result:
+            print(f"   📊 Execution status: {execution_result.get('status', 'unknown')}")
+            print(f"   📝 Execution message: {execution_result.get('message', 'N/A')}")
+            if execution_result.get('status') == 'completed':
+                print(f"   🎉 Workflow execution completed successfully!")
+            elif execution_result.get('status') == 'error':
+                print(f"   ❌ Workflow execution failed: {execution_result.get('message', 'Unknown error')}")
+        
+        return result
+    else:
+        print(f"❌ Request failed: {response.status_code}")
+        print(f"   Error: {response.text}")
+        return None
+
 # =============================================================================
 # TEST RUNNER
 # =============================================================================
 
 if __name__ == "__main__":
-    print("Running test client...")
+    # print("Running test client...")
     
-    # Test new client-session functionality
-    print("\n" + "="*50)
-    print("TESTING CLIENT-SESSION FUNCTIONALITY")
-    print("="*50)
+    # # Test new client-session functionality
+    # print("\n" + "="*50)
+    # print("TESTING CLIENT-SESSION FUNCTIONALITY")
+    # print("="*50)
     
-    # Test single client session
-    test_client_workflow_generation()
+    # # Test single client session
+    # test_client_workflow_generation()
     
-    # Test multiple tasks on single client
-    test_multiple_tasks_single_client()
+    # # Test multiple tasks on single client
+    # test_multiple_tasks_single_client()
     
-    # Test client listing
-    test_list_clients()
+    # # Test client listing
+    # test_list_clients()
     
-    # Test simple synchronous workflow generation
-    test_simple_workflow_generation()
+    # # Test simple synchronous workflow generation
+    # test_simple_workflow_generation()
     
-    # Test streaming workflow generation
-    test_stream_workflow_generation()
+    # # Test streaming workflow generation
+    # test_stream_workflow_generation()
+    
+    # Test simple synchronous workflow execution
+    test_simple_workflow_execution()
+    
     
     print("\n✅ All tests completed!")

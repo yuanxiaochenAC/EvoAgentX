@@ -5,8 +5,8 @@ import asyncio
 import uuid
 from datetime import datetime
 
-from .models import Config, ProcessResponse, WorkflowGenerationConfig, ClientConnectResponse, ClientTaskResponse
-from .service import handle_process_request, start_streaming_task, process_workflow_generation_for_client, generate_workflow_from_goal
+from .models import Config, ProcessResponse, WorkflowGenerationConfig, WorkflowExecutionConfig, ClientConnectResponse, ClientTaskResponse
+from .service import handle_process_request, start_streaming_task, process_workflow_generation_for_client, generate_workflow_from_goal, execute_workflow_from_config
 from .task_manager import (
     get_stream_task, get_stream_task_updates, is_stream_task_completed,
     create_client_session, get_client_session, get_client_updates, 
@@ -77,6 +77,43 @@ async def generate_workflow_sync(config: WorkflowGenerationConfig):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating workflow: {str(e)}")
+
+@app.post("/workflow/execute")
+async def execute_workflow_sync(config: WorkflowExecutionConfig):
+    """
+    Execute a workflow synchronously and return the results directly.
+    This is a simple blocking API that returns the execution results in the response.
+    """
+    try:
+        workflow = config.workflow
+        llm_config_dict = config.llm_config
+        mcp_config = config.mcp_config or {}
+        
+        if not workflow or not llm_config_dict:
+            raise HTTPException(
+                status_code=400, 
+                detail="Missing required parameters: workflow and llm_config are required"
+            )
+        
+        # Execute the workflow directly (this will block until complete)
+        execution_result = await execute_workflow_from_config(workflow, llm_config_dict, mcp_config)
+        
+        if execution_result is None:
+            raise HTTPException(status_code=500, detail="Failed to execute workflow")
+        
+        # Return the execution results directly
+        return {
+            "success": True,
+            "workflow": workflow,
+            "execution_result": execution_result,
+            "message": "Workflow execution completed",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error executing workflow: {str(e)}")
 
 @app.post("/stream/process")
 async def start_stream_process(config: Config):
