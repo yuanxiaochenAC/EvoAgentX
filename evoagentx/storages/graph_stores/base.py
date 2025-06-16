@@ -2,7 +2,7 @@ from enum import Enum
 from typing import List, Any, Dict
 from abc import ABC, abstractmethod
 
-from llama_index.core.graph_stores.simple import GraphStore
+from llama_index.core.graph_stores.types import PropertyGraphStore
 
 
 class GraphStoreType(str, Enum):
@@ -11,10 +11,10 @@ class GraphStoreType(str, Enum):
 class GraphStoreBase(ABC):
     """Base interface for graph stores."""
     
-    @abstractmethod
-    def get_graph_store(self) -> GraphStore:
+    @property
+    def get_graph_store(self) -> PropertyGraphStore:
         """Return the LlamaIndex-compatible graph store."""
-        pass
+        NotImplementedError()
     
     @abstractmethod
     def add_triples(self, triples: List[Dict[str, Any]]):

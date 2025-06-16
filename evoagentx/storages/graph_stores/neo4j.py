@@ -29,6 +29,7 @@ class Neo4jGraphStoreWrapper(GraphStoreBase):
         except Exception as e:
             raise ValueError(f"Failed to connect to Neo4j: {str(e)}")
     
+    @property
     def get_graph_store(self) -> PropertyGraphStore:
         return self.graph_store
     

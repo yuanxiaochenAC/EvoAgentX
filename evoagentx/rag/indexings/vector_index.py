@@ -51,14 +51,13 @@ class VectorIndexing(BaseIndexWrapper):
         return self.index
     
     def insert_nodes(self, nodes: List[Union[Chunk, BaseNode]]):
+        """Insert oo Update nodes into the index.
+        
+        Args:
+            nodes (List[Union[Chunk, BaseNode]]): The nodes to insert.
+        """
         try:
-            filted_node = []
-            # only add the unique node
-            for node in nodes:
-                converted = node.to_llama_node() if isinstance(node, Chunk) else node
-                if converted.id_ in self.id_to_node:
-                    continue
-                filted_node.extend([converted])
+            filted_node = [node.to_llama_node() if isinstance(node, Chunk) else node for node in nodes]
 
             # TODO: find a better way to manage the node
             # Caching the node 
