@@ -125,6 +125,9 @@ async def start_streaming_task(config: Dict[str, Any]) -> Dict[str, Any]:
     if task_type == "workflow_generation":
         # Start workflow generation in the background
         asyncio.create_task(process_workflow_generation_task(task_id, config["parameters"]))
+    elif task_type == "workflow_execution":
+        # Start workflow execution in the background
+        asyncio.create_task(process_workflow_execution_task(task_id, config["parameters"]))
     else:
         # Default processing task
         asyncio.create_task(process_stream_task(task_id, config["parameters"]))
@@ -333,7 +336,7 @@ async def execute_workflow_from_config(workflow: Dict[str, Any], llm_config_dict
 
         workflow = WorkFlow(graph=workflow_graph, agent_manager=agent_manager, llm=llm)
         workflow.init_module()
-        output = workflow.execute()
+        output = await workflow.async_execute()
         
         return {
             "status": "completed",
@@ -351,3 +354,68 @@ async def execute_workflow_from_config(workflow: Dict[str, Any], llm_config_dict
             "llm_config_received": bool(llm_config_dict),
             "mcp_config_received": bool(mcp_config)
         }
+
+async def process_workflow_execution_task(task_id: str, config: Dict[str, Any]):
+    """
+    Process workflow execution as a streaming task.
+    Simple and reusable following the same pattern as workflow generation.
+    """
+    try:
+        workflow_dict = config.get("workflow")
+        llm_config_dict = config.get("llm_config")
+        mcp_config = config.get("mcp_config", {})
+        
+        if not workflow_dict or not llm_config_dict:
+            error_update = {
+                "status": "error",
+                "timestamp": datetime.now().isoformat(),
+                "error": "Missing required parameters: workflow or llm_config"
+            }
+            update_stream_task(task_id, error_update)
+            complete_stream_task(task_id)
+            return
+        
+        # Send progress update before execution (as requested)
+        pre_execution_update = {
+            "status": "executing",
+            "timestamp": datetime.now().isoformat(),
+            "message": "Starting workflow execution...",
+            "progress": 50
+        }
+        update_stream_task(task_id, pre_execution_update)
+        
+        # Execute the workflow (black box execution)
+        execution_result = await execute_workflow_from_config(workflow_dict, llm_config_dict, mcp_config)
+        
+        if execution_result is None:
+            error_update = {
+                "status": "error",
+                "timestamp": datetime.now().isoformat(),
+                "error": "Failed to execute workflow"
+            }
+            update_stream_task(task_id, error_update)
+            complete_stream_task(task_id)
+            return
+        
+        # Send final result
+        final_result = {
+            "status": "completed",
+            "timestamp": datetime.now().isoformat(),
+            "progress": 100,
+            "result": {
+                "execution_result": execution_result,
+                "message": "Workflow execution completed"
+            }
+        }
+        
+        update_stream_task(task_id, final_result)
+        complete_stream_task(task_id)
+        
+    except Exception as e:
+        error_update = {
+            "status": "error",
+            "timestamp": datetime.now().isoformat(),
+            "error": f"Unexpected error during workflow execution: {str(e)}"
+        }
+        update_stream_task(task_id, error_update)
+        complete_stream_task(task_id)

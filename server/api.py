@@ -138,6 +138,22 @@ async def start_workflow_generation(config: WorkflowGenerationConfig):
     }
     return await start_streaming_task(workflow_config)
 
+@app.post("/stream/workflow/execute")
+async def start_workflow_execution(config: WorkflowExecutionConfig):
+    """
+    Start a streaming workflow execution process and return a task ID.
+    """
+    execution_config = {
+        "task_type": "workflow_execution",
+        "parameters": {
+            "workflow": config.workflow,
+            "llm_config": config.llm_config,
+            "mcp_config": config.mcp_config
+        },
+        "timeout": config.timeout
+    }
+    return await start_streaming_task(execution_config)
+
 # New client-session endpoints
 @app.post("/connect", response_model=ClientConnectResponse)
 async def connect_client() -> ClientConnectResponse:

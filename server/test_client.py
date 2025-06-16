@@ -1034,6 +1034,189 @@ def test_simple_workflow_execution():
         print(f"   Error: {response.text}")
         return None
 
+def test_stream_workflow_execution():
+    """
+    Test streaming workflow execution (task-based pattern).
+    
+    Curl commands used:
+    ```bash
+    # Start streaming workflow execution
+    curl -X POST http://localhost:8001/stream/workflow/execute \
+      -H "Content-Type: application/json" \
+      -d '{
+        "workflow": {
+          "nodes": [...],
+          "edges": [...],
+          // workflow definition
+        },
+        "llm_config": {
+          "model": "gpt-4o-mini",
+          "openai_key": "your_openai_key_here",
+          "stream": true,
+          "output_response": true,
+          "max_tokens": 16000
+        },
+        "timeout": 300
+      }'
+    
+    # Connect to the SSE stream (use task_id from above response)
+    curl -N http://localhost:8001/stream/{task_id} \
+      -H "Accept: text/event-stream"
+    ```
+    
+    This demonstrates:
+    - Real-time workflow execution with progress updates
+    - Log capture and keyword-based progress reporting
+    - Stdout/stderr capture during execution
+    - How to handle streaming events during workflow execution
+    - Comparison with synchronous execution approach
+    
+    Use this when:
+    - You need progress updates during long-running workflows
+    - Building user-facing apps that need real-time feedback
+    - You want to monitor execution logs and outputs
+    - Building workflow monitoring dashboards
+    """
+    print("\n=== Testing Streaming Workflow Execution ===")
+    
+    llm_config = {
+        "model": "gpt-4o-mini",
+        "openai_key": OPENAI_API_KEY,
+        "stream": True,
+        "output_response": True,
+        "max_tokens": 16000
+    }
+    
+    # Load the sample workflow for execution
+    with open(sample_workflow_path) as f: 
+        workflow_dict = json.load(f)
+    
+    execution_config = {
+        "workflow": workflow_dict,
+        "llm_config": llm_config,
+        "mcp_config": {},
+        "timeout": 300
+    }
+    
+    print(f"🚀 Starting streaming workflow execution...")
+    print(f"   Workflow nodes: {len(workflow_dict['nodes'])}")
+    print(f"   Workflow edges: {len(workflow_dict['edges'])}")
+    
+    # Start the streaming execution process
+    stream_response = requests.post('http://localhost:8001/stream/workflow/execute', json=execution_config)
+    
+    if stream_response.status_code != 200:
+        print(f"❌ Failed to start streaming execution: {stream_response.status_code}")
+        print(f"   Error: {stream_response.text}")
+        return None
+    
+    stream_data = stream_response.json()
+    print(f"✅ Streaming execution started!")
+    print(f"   Task ID: {stream_data['task_id']}")
+    print(f"   Stream URL: {stream_data['stream_url']}")
+    
+    # Give the server a moment to initialize the task before connecting to stream
+    import time
+    print(f"   Waiting for task initialization...")
+    time.sleep(1)
+    
+    # Connect to the SSE stream
+    stream_url = stream_data["stream_url"]
+    
+    print(f"\n📊 Connecting to streaming updates...")
+    print("-" * 50)
+    
+    try:
+        response = requests.get(f'http://localhost:8001{stream_url}', stream=True, timeout=60)
+        messages = SSEClient(response)
+        
+        execution_completed = False
+        final_result = None
+        update_count = 0
+        
+        # Add timeout handling
+        import signal
+        
+        def timeout_handler(signum, frame):
+            raise TimeoutError("Stream timeout - no updates received")
+        
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(120)  # 30 second timeout
+        
+        try:
+            for msg in messages.events():
+                update_count += 1
+                signal.alarm(120)  # Reset timeout on each message
+                
+                if msg.event == "update":
+                    try:
+                        data = json.loads(msg.data)
+                        status = data.get('status', 'unknown')
+                        progress = data.get('progress', 0)
+                        message = data.get('message', 'No message')
+                        
+                        # Display progress updates
+                        print(f"⚙️  [{progress:3d}%] {status.upper()}: {message}")
+                            
+                    except json.JSONDecodeError:
+                        print(f"⚠️  Raw message: {msg.data}")
+                        
+                elif msg.event == "complete":
+                    try:
+                        data = json.loads(msg.data)
+                        final_result = data
+                        execution_completed = True
+                        
+                        print(f"\n🎉 Workflow execution completed!")
+                        print(f"   Status: {data.get('status', 'unknown')}")
+                        print(f"   Progress: {data.get('progress', 0)}%")
+                        
+                        result = data.get('result', {})
+                        if result:
+                            execution_result = result.get('execution_result')
+                            if execution_result:
+                                print(f"   Execution status: {execution_result.get('status', 'unknown')}")
+                                print(f"   Execution message: {execution_result.get('message', 'N/A')}")
+                        
+                        break
+                        
+                    except json.JSONDecodeError:
+                        print(f"⚠️  Raw completion message: {msg.data}")
+                        execution_completed = True
+                        break
+                        
+                elif msg.event == "error":
+                    try:
+                        data = json.loads(msg.data)
+                        print(f"\n❌ Execution error: {data.get('error', 'Unknown error')}")
+                        execution_completed = True
+                        break
+                    except json.JSONDecodeError:
+                        print(f"\n❌ Raw error message: {msg.data}")
+                        execution_completed = True
+                        break
+                        
+        except TimeoutError:
+            print(f"\n⏰ Stream timeout after 120 seconds")
+            print(f"   Received {update_count} updates before timeout")
+            execution_completed = True
+            
+        finally:
+            signal.alarm(0)  # Disable timeout
+            
+    except requests.exceptions.RequestException as e:
+        print(f"\n❌ Connection error: {e}")
+        return None
+    
+    print("-" * 50)
+    
+    if execution_completed:
+        print("✅ Streaming workflow execution test completed!")
+        return final_result
+    else:
+        print("⚠️  Streaming execution ended unexpectedly")
+        return None
+
 # =============================================================================
 # TEST RUNNER
 # =============================================================================
@@ -1064,5 +1247,7 @@ if __name__ == "__main__":
     # Test simple synchronous workflow execution
     test_simple_workflow_execution()
     
+    # # Test streaming workflow execution
+    # test_stream_workflow_execution()
     
     print("\n✅ All tests completed!")
