@@ -123,6 +123,46 @@ response = llm.generate(
 )
 ```
 
+### Aliyun LLM
+
+AliyunLLM is an implementation of the EvoAgentX framework for accessing the Aliyun Tongyi Qianqian family of models. It provides seamless integration with Aliyun DashScope API and supports various models of Tongyiqianqian, including qwen-turbo, qwen-plus, qwen-max and so on. We have included reference costs for your consideration; however, please note that actual expenses should be regarded as the definitive amount.
+
+To utilize the DashScope API with AliyunLLM, an API key is required. The following steps outline the process:
+
+**Basic Usage:**
+
+Execute the following command in your bash terminal to set the API key:
+
+```bash
+export DASHSCOPE_API_KEY="your-api-key-here"
+
+```python
+from evoagentx.models import AliyunLLM, AliyunLLMConfig
+
+# Configure the model
+config = AliyunLLMConfig(
+    model="qwen-turbo",  # you can use qwen-turbo, qwen-plus, qwen-max and so on.
+    aliyun_api_key="Your DASHSCOPE_API_KEY",
+    temperature=0.7,
+    max_tokens=2000,
+    stream=False,
+    output_response=True
+)
+
+# Initialize the model
+llm = AliyunLLM(config)
+
+# Generate text
+messages = llm.formulate_messages(
+    prompts=["Explain quantum computing in simple terms"],
+    system_messages=["You are a helpful assistant that explains complex topics simply"]
+)[0]
+
+response = llm.single_generate(messages=messages)
+print(f"Model response: {response}")
+```
+
+
 ### Local LLM
 
 We now support calling local models for your tasks, built on the LiteLLM framework for a familiar user experience. For example, to use Ollama, follow these steps:
