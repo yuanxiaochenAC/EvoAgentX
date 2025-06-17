@@ -1,23 +1,18 @@
-from .tool import Tool
+from .tool import Tool, ToolKit
 import os
 import PyPDF2
-from typing import Dict, Any, List, Callable
-from evoagentx.core.logging import logger
+from typing import Dict, Any, List, Callable, Optional
+from ..core.logging import logger
+from ..core.module import BaseModule
 
-class FileTool(Tool):
+
+class FileToolBase(BaseModule):
     """
-    Tool for handling file operations with special handling for different file types.
-    Default behavior uses standard file operations, with customized handlers for specific formats like PDFs.
+    Base class containing shared file handling logic for different file types.
     """
     
-    def __init__(
-        self,
-        name: str = 'File Tool',
-        **kwargs
-    ):
-        # Initialize the base Tool class
-        super().__init__(name=name, **kwargs)
-        
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         # File type handlers for special file formats
         self.file_handlers = {
             '.pdf': {
@@ -28,94 +23,9 @@ class FileTool(Tool):
             # Add more special file handlers here as needed
         }
     
-    def read_file(self, file_path: str) -> Dict[str, Any]:
-        """
-        Read content from a file with special handling for different file types.
-        
-        Args:
-            file_path (str): Path to the file to read
-            
-        Returns:
-            dict: A dictionary with the file content and metadata
-        """
-        try:
-            if not os.path.exists(file_path):
-                return {"success": False, "error": f"File not found: {file_path}"}
-            
-            file_ext = os.path.splitext(file_path)[1].lower()
-            
-            # Use special handler if available for this file type
-            if file_ext in self.file_handlers and 'read' in self.file_handlers[file_ext]:
-                return self.file_handlers[file_ext]['read'](file_path)
-            
-            # Default file reading behavior
-            with open(file_path, 'r') as f:
-                content = f.read()
-            
-            return {
-                "success": True,
-                "content": content,
-                "file_path": file_path,
-                "file_type": file_ext or "text"
-            }
-            
-        except Exception as e:
-            logger.error(f"Error reading file {file_path}: {str(e)}")
-            return {"success": False, "error": str(e), "file_path": file_path}
-    
-    def write_file(self, file_path: str, content: str, mode: str = 'w') -> Dict[str, Any]:
-        """
-        Write content to a file with special handling for different file types.
-        
-        Args:
-            file_path (str): Path to the file to write
-            content (str): Content to write to the file
-            mode (str): Write mode ('w' for write, 'a' for append)
-            
-        Returns:
-            dict: A dictionary with the operation status
-        """
-        try:
-            file_ext = os.path.splitext(file_path)[1].lower()
-            
-            # Create directory if it doesn't exist
-            directory = os.path.dirname(file_path)
-            if directory:
-                os.makedirs(directory, exist_ok=True)
-            
-            # Use special handler if available for this file type
-            if file_ext in self.file_handlers:
-                if mode == 'a' and 'append' in self.file_handlers[file_ext]:
-                    return self.file_handlers[file_ext]['append'](file_path, content)
-                elif 'write' in self.file_handlers[file_ext]:
-                    return self.file_handlers[file_ext]['write'](file_path, content)
-            
-            # Default file writing behavior
-            with open(file_path, mode) as f:
-                f.write(content)
-            
-            return {
-                "success": True,
-                "message": f"Content {'appended to' if mode == 'a' else 'written to'} {file_path}",
-                "file_path": file_path
-            }
-            
-        except Exception as e:
-            logger.error(f"Error writing to file {file_path}: {str(e)}")
-            return {"success": False, "error": str(e), "file_path": file_path}
-    
-    def append_file(self, file_path: str, content: str) -> Dict[str, Any]:
-        """
-        Append content to a file with special handling for different file types.
-        
-        Args:
-            file_path (str): Path to the file to append to
-            content (str): Content to append to the file
-            
-        Returns:
-            dict: A dictionary with the operation status
-        """
-        return self.write_file(file_path, content, mode='a')
+    def get_file_handlers(self):
+        """Returns file type handlers for special file formats"""
+        return self.file_handlers
     
     def _read_pdf(self, file_path: str) -> Dict[str, Any]:
         """
@@ -324,95 +234,206 @@ class FileTool(Tool):
             logger.error(f"Error appending to PDF {file_path}: {str(e)}")
             return {"success": False, "error": str(e), "file_path": file_path}
     
-    def get_tools(self) -> List[Callable]:
-        """Returns a list of callable functions for all tools"""
-        return [self.read_file, self.write_file, self.append_file]
+
+class ReadFileTool(Tool):
+    name: str = "read_file"
+    description: str = "Read content from a file with special handling for different file types like PDFs"
+    inputs: Dict[str, Dict[str, str]] = {
+                            "file_path": {
+                                "type": "string",
+            "description": "Path to the file to read"
+                            }
+    }
+    required: Optional[List[str]] = ["file_path"]
     
-    def get_tool_schemas(self) -> List[Dict[str, Any]]:
-        """Returns the OpenAI-compatible function schemas for the file tools"""
-        return [
-            {
-                "type": "function",
-                "function": {
-                    "name": "read_file",
-                    "description": "Read content from a file with special handling for different file types.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "file_path": {
-                                "type": "string",
-                                "description": "The path to the file to read."
-                            }
-                        },
-                        "required": ["file_path"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "write_file",
-                    "description": "Write content to a file with special handling for different file types.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "file_path": {
-                                "type": "string",
-                                "description": "The path to the file to write."
-                            },
-                            "content": {
-                                "type": "string",
-                                "description": "The content to write to the file."
-                            },
-                            "mode": {
-                                "type": "string",
-                                "description": "The write mode ('w' for write, 'a' for append). Default is 'w'.",
-                                "enum": ["w", "a"]
-                            }
-                        },
-                        "required": ["file_path", "content"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "append_file",
-                    "description": "Append content to a file with special handling for different file types.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "file_path": {
-                                "type": "string",
-                                "description": "The path to the file to append to."
-                            },
-                            "content": {
-                                "type": "string",
-                                "description": "The content to append to the file."
-                            }
-                        },
-                        "required": ["file_path", "content"]
-                    }
-                }
+    def __init__(self, file_base: FileToolBase = None):
+        super().__init__()
+        self.file_base = file_base
+    
+    def __call__(self, file_path: str) -> Dict[str, Any]:
+        """
+        Read content from a file with special handling for different file types.
+        
+        Args:
+            file_path (str): Path to the file to read
+            
+        Returns:
+            dict: A dictionary with the file content and metadata
+        """
+        try:
+            if not os.path.exists(file_path):
+                return {"success": False, "error": f"File not found: {file_path}"}
+            
+            file_ext = os.path.splitext(file_path)[1].lower()
+            
+            # Use special handler if available for this file type
+            if self.file_base and file_ext in self.file_base.get_file_handlers():
+                file_handlers = self.file_base.get_file_handlers()
+                if 'read' in file_handlers[file_ext]:
+                    return file_handlers[file_ext]['read'](file_path)
+            
+            # Default file reading behavior
+            with open(file_path, 'r') as f:
+                content = f.read()
+            
+            return {
+                "success": True,
+                "content": content,
+                "file_path": file_path,
+                "file_type": file_ext or "text"
             }
-        ]
+            
+        except Exception as e:
+            logger.error(f"Error reading file {file_path}: {str(e)}")
+            return {"success": False, "error": str(e), "file_path": file_path}
+
+
+class WriteFileTool(Tool):
+    name: str = "write_file"
+    description: str = "Write content to a file with special handling for different file types like PDFs"
+    inputs: Dict[str, Dict[str, str]] = {
+                            "file_path": {
+                                "type": "string",
+            "description": "Path to the file to write"
+                            },
+                            "content": {
+                                "type": "string",
+            "description": "Content to write to the file"
+        }
+    }
+    required: Optional[List[str]] = ["file_path", "content"]
     
-    def get_tool_descriptions(self) -> List[str]:
-        """Returns descriptions for all tools"""
-        return [
-            "Read content from a file with special handling for different file types.",
-            "Write content to a file with special handling for different file types.",
-            "Append content to a file with special handling for different file types."
+    def __init__(self, file_base: FileToolBase = None):
+        super().__init__()
+        self.file_base = file_base
+    
+    def __call__(self, file_path: str, content: str) -> Dict[str, Any]:
+        """
+        Write content to a file with special handling for different file types.
+        
+        Args:
+            file_path (str): Path to the file to write
+            content (str): Content to write to the file
+            
+        Returns:
+            dict: A dictionary with the operation status
+        """
+        try:
+            file_ext = os.path.splitext(file_path)[1].lower()
+            
+            # Create directory if it doesn't exist
+            directory = os.path.dirname(file_path)
+            if directory:
+                os.makedirs(directory, exist_ok=True)
+            
+            # Use special handler if available for this file type
+            if self.file_base and file_ext in self.file_base.get_file_handlers():
+                file_handlers = self.file_base.get_file_handlers()
+                if 'write' in file_handlers[file_ext]:
+                    return file_handlers[file_ext]['write'](file_path, content)
+            
+            # Default file writing behavior
+            with open(file_path, 'w') as f:
+                f.write(content)
+            
+            return {
+                "success": True,
+                "message": f"Content written to {file_path}",
+                "file_path": file_path
+            }
+            
+        except Exception as e:
+            logger.error(f"Error writing to file {file_path}: {str(e)}")
+            return {"success": False, "error": str(e), "file_path": file_path}
+
+
+class AppendFileTool(Tool):
+    name: str = "append_file"
+    description: str = "Append content to a file with special handling for different file types like PDFs"
+    inputs: Dict[str, Dict[str, str]] = {
+                            "file_path": {
+                                "type": "string",
+            "description": "Path to the file to append to"
+                            },
+                            "content": {
+                                "type": "string",
+            "description": "Content to append to the file"
+                            }
+    }
+    required: Optional[List[str]] = ["file_path", "content"]
+    
+    def __init__(self, file_base: FileToolBase = None):
+        super().__init__()
+        self.file_base = file_base
+    
+    def __call__(self, file_path: str, content: str) -> Dict[str, Any]:
+        """
+        Append content to a file with special handling for different file types.
+        
+        Args:
+            file_path (str): Path to the file to append to
+            content (str): Content to append to the file
+            
+        Returns:
+            dict: A dictionary with the operation status
+        """
+        file_ext = os.path.splitext(file_path)[1].lower()
+        
+        # Create directory if it doesn't exist
+        directory = os.path.dirname(file_path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        
+        # Use special handler if available for this file type
+        if self.file_base and file_ext in self.file_base.get_file_handlers():
+            file_handlers = self.file_base.get_file_handlers()
+            if 'append' in file_handlers[file_ext]:
+                return file_handlers[file_ext]['append'](file_path, content)
+        
+        # Default file appending behavior
+        try:
+            with open(file_path, 'a') as f:
+                f.write(content)
+            
+            return {
+                "success": True,
+                "message": f"Content appended to {file_path}",
+                "file_path": file_path
+            }
+            
+        except Exception as e:
+            logger.error(f"Error appending to file {file_path}: {str(e)}")
+            return {"success": False, "error": str(e), "file_path": file_path}
+
+
+class FileToolKit(ToolKit):
+    def __init__(self):
+        # Create the shared file base instance
+        file_base = FileToolBase()
+        
+        # Create tools with the shared file base
+        tools = [
+            ReadFileTool(file_base=file_base),
+            WriteFileTool(file_base=file_base),
+            AppendFileTool(file_base=file_base)
         ]
+        
+        # Initialize parent with tools
+        super().__init__(tools=tools)
+        
+        # Store file_base as instance variable
+        self.file_base = file_base
     
     def get_tool_prompt(self) -> str:
-        """Returns a tool instruction prompt for the agent to use the tool"""
+        """Returns a tool instruction prompt for the agent to use the file tools"""
         return """** File Tool Instructions **
-You are provided with a File Tool, which is a tool that allows you to read, write, and append to files with special handling for different file formats.
-It can read and write text files, and PDF files.
-To read a file: Use read_file with the file_path parameter.
-To write to a file: Use write_file with file_path and content parameters.
-To append to a file: Use append_file with file_path and content parameters.
+You are provided with File Tools, which allow you to read, write, and append to files with special handling for different file formats.
+Available tools:
+- read_file: Read content from files (supports text files and PDFs)
+- write_file: Write content to files (supports text files and PDFs)
+- append_file: Append content to files (supports text files and PDFs)
+
+The tools can handle regular text files as well as PDF files with special processing.
         """
 
 

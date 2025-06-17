@@ -74,7 +74,7 @@ class CustomizeAgent(Agent):
         parse_mode: Optional[str] = "title", 
         parse_func: Optional[Callable] = None, 
         title_format: Optional[str] = None, 
-        tools: Optional[List[Tool]] = None,
+        tools: Optional[List[Tool,]] = None,
         max_tool_calls: Optional[int] = 5,
         custom_output_format: Optional[str] = None, 
         **kwargs

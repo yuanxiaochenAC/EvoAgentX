@@ -5,7 +5,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from typing import Dict, Any, List, Callable, Optional, Tuple, Union
 from pydantic import Field
-from .tool import Tool
+from .tool import Tool, ToolKit
+from ..core.module import BaseModule
 from evoagentx.core.logging import logger
 import html2text
 import time
@@ -20,7 +21,7 @@ SELECTOR_MAP = {
     "tag": By.TAG_NAME,
 }
 
-class BrowserTool(Tool):
+class BrowserTool(BaseModule):
     """
     A tool for interacting with web browsers using Selenium.
     Allows agents to navigate to URLs, interact with elements, extract information,
@@ -848,16 +849,7 @@ class BrowserTool(Tool):
             logger.error(f"Error switching to window {window_reference}: {str(e)}")
             return {"status": "error", "message": str(e)}
     
-    def get_tool_descriptions(self) -> List[str]:
-        """
-        Returns a brief description of the browser tool.
-        
-        Returns:
-            List[str]: Tool descriptions
-        """
-        return [
-            "Interact with web browsers to navigate, click, input text, and extract information from web pages."
-        ]
+
 
     def select_dropdown_option(self, select_selector: str, 
                               option_value: str,
@@ -1594,153 +1586,245 @@ class BrowserTool(Tool):
             
         return logs
 
-    def get_tools(self) -> List[Callable]:
-        """
-        Returns a list of callable functions for all tools
-        
-        Returns:
-            List[Callable]: A list of callable functions
-        """
-        return [
-            self.initialize_browser,
-            self.navigate_to_url,
-            self.input_text,
-            self.browser_click,
-            self.browser_snapshot,
-            self.browser_console_messages,
-            self.close_browser
-        ]
 
-    def get_tool_schemas(self) -> List[Dict[str, Any]]:
-        """
-        Returns the OpenAI-compatible function schema for browser tools.
+
+class InitializeBrowserTool(Tool):
+    name: str = "initialize_browser"
+    description: str = "Start or restart a browser session. Must be called before any other browser operations"
+    inputs: Dict[str, Dict[str, str]] = {}
+    required: Optional[List[str]] = []
+    
+    def __init__(self, browser_tool: BrowserTool = None):
+        super().__init__()
+        self.browser_tool = browser_tool
+    
+    def __call__(self, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
+        """Initialize browser using the BrowserTool instance."""
+        if not self.browser_tool:
+            raise RuntimeError("Browser tool instance not initialized")
         
-        Returns:
-            List[Dict[str, Any]]: Function schemas in OpenAI format
-        """
-        return [
-            {
-                "type": "function",
-                "function": {
-                    "name": "initialize_browser",
-                    "description": "Start or restart a browser session. Must be called before any other browser operations.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {},
-                        "required": []
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "navigate_to_url",
-                    "description": "Navigate to a URL and capture a snapshot of all page elements. Returns both interactive and non-interactive elements with their properties.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "url": {
-                                "type": "string",
-                                "description": "The complete URL (with https://) to navigate to"
-                            },
-                            "timeout": {
-                                "type": "integer",
-                                "description": "Custom timeout in seconds (default: 10)"
-                            }
-                        },
-                        "required": ["url"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "input_text",
-                    "description": "Type text into a form field, search box, or other input element using a reference ID from a snapshot. The element must be editable.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "element": {
-                                "type": "string",
-                                "description": "Human-readable description of the element (e.g., 'Search field', 'Username input')"
-                            },
-                            "ref": {
-                                "type": "string",
-                                "description": "Element ID from the page snapshot (e.g., 'e0', 'e1', 'e2'). Must refer to an editable element."
-                            },
-                            "text": {
-                                "type": "string",
-                                "description": "Text to input into the element"
-                            },
-                            "submit": {
-                                "type": "boolean",
-                                "description": "Press Enter after typing to submit forms (default: false)"
-                            },
-                            "slowly": {
-                                "type": "boolean",
-                                "description": "Type one character at a time to trigger JS events (default: true)"
-                            }
-                        },
-                        "required": ["element", "ref", "text"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "browser_click",
-                    "description": "Click on a button, link, or other clickable element using a reference ID from a snapshot. IMPORTANT: You must first call browser_snapshot() or navigate_to_url() to get element references, then use those references to click.\n\nExample workflow:\n1. Get snapshot: browser_snapshot() or navigate_to_url()\n2. Find element ref (e.g. 'e0') in response's interactive_elements\n3. Click using that ref: browser_click(element='Login', ref='e0')",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "element": {
-                                "type": "string",
-                                "description": "Human-readable description of what you're clicking (e.g., 'Login button', 'Next page link', 'Submit button')"
-                            },
-                            "ref": {
-                                "type": "string",
-                                "description": "Element ID from the page snapshot (e.g., 'e0', 'e1', 'e2'). You MUST get this ID from a previous snapshot's interactive_elements."
-                            }
-                        },
-                        "required": ["element", "ref"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "browser_snapshot",
-                    "description": "Capture a fresh snapshot of the current page, including all elements (both interactive and non-interactive). Use this to get up-to-date element references before clicking or typing.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {},
-                        "required": []
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "browser_console_messages",
-                    "description": "Retrieve JavaScript console messages (logs, warnings, errors) from the browser for debugging.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {},
-                        "required": []
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "close_browser",
-                    "description": "Close the browser and end the session. Call this when you're done to free resources.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {},
-                        "required": []
-                    }
-                }
-            }
+        try:
+            return self.browser_tool.initialize_browser(function_params, continue_after_tool_call)
+        except Exception as e:
+            return {"status": "error", "message": f"Error initializing browser: {str(e)}"}
+
+
+class NavigateToUrlTool(Tool):
+    name: str = "navigate_to_url"
+    description: str = "Navigate to a URL and capture a snapshot of all page elements"
+    inputs: Dict[str, Dict[str, str]] = {
+        "url": {
+            "type": "string",
+            "description": "The complete URL (with https://) to navigate to"
+        },
+        "timeout": {
+            "type": "integer",
+            "description": "Custom timeout in seconds (default: 10)"
+        }
+    }
+    required: Optional[List[str]] = ["url"]
+    
+    def __init__(self, browser_tool: BrowserTool = None):
+        super().__init__()
+        self.browser_tool = browser_tool
+    
+    def __call__(self, url: str, timeout: int = None, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
+        """Navigate to URL using the BrowserTool instance."""
+        if not self.browser_tool:
+            raise RuntimeError("Browser tool instance not initialized")
+        
+        try:
+            return self.browser_tool.navigate_to_url(url, timeout, function_params, continue_after_tool_call)
+        except Exception as e:
+            return {"status": "error", "message": f"Error navigating to URL: {str(e)}"}
+
+
+class InputTextTool(Tool):
+    name: str = "input_text"
+    description: str = "Type text into a form field, search box, or other input element using a reference ID from a snapshot"
+    inputs: Dict[str, Dict[str, str]] = {
+        "element": {
+            "type": "string",
+            "description": "Human-readable description of the element (e.g., 'Search field', 'Username input')"
+        },
+        "ref": {
+            "type": "string",
+            "description": "Element ID from the page snapshot (e.g., 'e0', 'e1', 'e2'). Must refer to an editable element."
+        },
+        "text": {
+            "type": "string",
+            "description": "Text to input into the element"
+        },
+        "submit": {
+            "type": "boolean",
+            "description": "Press Enter after typing to submit forms (default: false)"
+        },
+        "slowly": {
+            "type": "boolean",
+            "description": "Type one character at a time to trigger JS events (default: true)"
+        }
+    }
+    required: Optional[List[str]] = ["element", "ref", "text"]
+    
+    def __init__(self, browser_tool: BrowserTool = None):
+        super().__init__()
+        self.browser_tool = browser_tool
+    
+    def __call__(self, element: str, ref: str, text: str, submit: bool = False, slowly: bool = True, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
+        """Input text using the BrowserTool instance."""
+        if not self.browser_tool:
+            raise RuntimeError("Browser tool instance not initialized")
+        
+        try:
+            return self.browser_tool.input_text(element, ref, text, submit, slowly, function_params, continue_after_tool_call)
+        except Exception as e:
+            return {"status": "error", "message": f"Error inputting text: {str(e)}"}
+
+
+class BrowserClickTool(Tool):
+    name: str = "browser_click"
+    description: str = "Click on a button, link, or other clickable element using a reference ID from a snapshot"
+    inputs: Dict[str, Dict[str, str]] = {
+        "element": {
+            "type": "string",
+            "description": "Human-readable description of what you're clicking (e.g., 'Login button', 'Next page link', 'Submit button')"
+        },
+        "ref": {
+            "type": "string",
+            "description": "Element ID from the page snapshot (e.g., 'e0', 'e1', 'e2'). You MUST get this ID from a previous snapshot's interactive_elements."
+        }
+    }
+    required: Optional[List[str]] = []
+    
+    def __init__(self, browser_tool: BrowserTool = None):
+        super().__init__()
+        self.browser_tool = browser_tool
+    
+    def __call__(self, element: str, ref: str, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
+        """Click element using the BrowserTool instance."""
+        if not self.browser_tool:
+            raise RuntimeError("Browser tool instance not initialized")
+        
+        try:
+            return self.browser_tool.browser_click(element, ref, function_params, continue_after_tool_call)
+        except Exception as e:
+            return {"status": "error", "message": f"Error clicking element: {str(e)}"}
+
+
+class BrowserSnapshotTool(Tool):
+    name: str = "browser_snapshot"
+    description: str = "Capture a fresh snapshot of the current page, including all elements"
+    inputs: Dict[str, Dict[str, str]] = {}
+    required: Optional[List[str]] = []
+    
+    def __init__(self, browser_tool: BrowserTool = None):
+        super().__init__()
+        self.browser_tool = browser_tool
+    
+    def __call__(self, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
+        """Take browser snapshot using the BrowserTool instance."""
+        if not self.browser_tool:
+            raise RuntimeError("Browser tool instance not initialized")
+        
+        try:
+            return self.browser_tool.browser_snapshot(function_params, continue_after_tool_call)
+        except Exception as e:
+            return {"status": "error", "message": f"Error taking snapshot: {str(e)}"}
+
+
+class BrowserConsoleMessagesTool(Tool):
+    name: str = "browser_console_messages"
+    description: str = "Retrieve JavaScript console messages (logs, warnings, errors) from the browser for debugging"
+    inputs: Dict[str, Dict[str, str]] = {}
+    required: Optional[List[str]] = []
+    
+    def __init__(self, browser_tool: BrowserTool = None):
+        super().__init__()
+        self.browser_tool = browser_tool
+    
+    def __call__(self, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
+        """Get console messages using the BrowserTool instance."""
+        if not self.browser_tool:
+            raise RuntimeError("Browser tool instance not initialized")
+        
+        try:
+            return self.browser_tool.browser_console_messages(function_params, continue_after_tool_call)
+        except Exception as e:
+            return {"status": "error", "message": f"Error getting console messages: {str(e)}"}
+
+
+class CloseBrowserTool(Tool):
+    name: str = "close_browser"
+    description: str = "Close the browser and end the session. Call this when you're done to free resources"
+    inputs: Dict[str, Dict[str, str]] = {}
+    required: Optional[List[str]] = []
+    
+    def __init__(self, browser_tool: BrowserTool = None):
+        super().__init__()
+        self.browser_tool = browser_tool
+    
+    def __call__(self) -> Dict[str, Any]:
+        """Close browser using the BrowserTool instance."""
+        if not self.browser_tool:
+            raise RuntimeError("Browser tool instance not initialized")
+        
+        try:
+            return self.browser_tool.close_browser()
+        except Exception as e:
+            return {"status": "error", "message": f"Error closing browser: {str(e)}"}
+
+
+class BrowserToolKit(ToolKit):
+    def __init__(
+        self,
+        browser_type: str = "chrome",
+        headless: bool = False,
+        timeout: int = 10,
+        **kwargs
+
+    ):
+        # Create the shared browser tool instance
+        browser_tool = BrowserTool(
+            name="BrowserTool",
+            browser_type=browser_type,
+            headless=headless,
+            timeout=timeout,
+            **kwargs
+        )
+        
+        # Create tools with the shared browser tool instance
+        tools = [
+            InitializeBrowserTool(browser_tool=browser_tool),
+            NavigateToUrlTool(browser_tool=browser_tool),
+            InputTextTool(browser_tool=browser_tool),
+            BrowserClickTool(browser_tool=browser_tool),
+            BrowserSnapshotTool(browser_tool=browser_tool),
+            BrowserConsoleMessagesTool(browser_tool=browser_tool),
+            CloseBrowserTool(browser_tool=browser_tool)
         ]
+        
+        # Initialize parent with tools
+        super().__init__(tools=tools)
+        
+        # Store browser_tool as instance variable
+        self.browser_tool = browser_tool
+    
+    def get_tool_prompt(self) -> str:
+        """Returns a tool instruction prompt for the agent to use the browser tools"""
+        return """** Browser Tools **
+You are provided with Browser Tools, which allow you to interact with web browsers using Selenium.
+Available tools:
+- initialize_browser: Start or restart a browser session (must be called first)
+- navigate_to_url: Navigate to a URL and capture a snapshot of all page elements
+- input_text: Type text into form fields using element references from snapshots
+- browser_click: Click on buttons, links, or other clickable elements using element references
+- browser_snapshot: Capture a fresh snapshot of the current page with element references
+- browser_console_messages: Retrieve JavaScript console messages for debugging
+- close_browser: Close the browser and free resources
+
+All interaction tools require element references from snapshots. Always call navigate_to_url or browser_snapshot first to get element references.
+        """
+
+
+
         

@@ -17,9 +17,10 @@ import asyncio
 from pydantic import Field
 from functools import partial
 from typing import Optional, Any, List, Dict, Callable, Union
-from evoagentx.tools.tool import Tool
+from evoagentx.tools.tool import Tool, ToolKit
 from evoagentx.core.logging import logger
 from contextlib import AsyncExitStack, asynccontextmanager
+from evoagentx.core.module import BaseModule
 
 # FastMCP 2.0 imports - replacing official MCP SDK
 from fastmcp import Client
@@ -27,32 +28,18 @@ from fastmcp.exceptions import ClientError, McpError
 import json
 
 class MCPTool(Tool):
-    descriptions: List[str] = Field(default_factory=list, description="A list of descriptions for the tool")
-    schemas: List[dict[str, Any]] = Field(default_factory=list, description="A list of schemas for the tool")
-    tools: List[Callable] = Field(default_factory=list, description="A list of tools for the tool")
-
-    def __init__(
-        self,
-        name: str = "MCPTool",
-        descriptions: List[str] = ["Default MCP Tool description"],
-        schemas: List[dict[str, Any]] = [],
-        tools: List[Callable] = [],
-    ):
-        super().__init__(
-            name=name,
-            descriptions=descriptions,
-            schemas=schemas,
-            tools=tools
-        )
-
-    def get_tool_schemas(self) -> List[Dict[str, Any]]:
-        return self.schemas
+    name: str = "mcp_tool"
+    description: str = "MCP tool wrapper"
+    inputs: Dict[str, Dict[str, str]] = {}
+    required: Optional[List[str]] = None
+    function: Callable = None
     
-    def get_tool_descriptions(self) -> List[str]:
-        return self.descriptions
-    
-    def get_tools(self) -> List[Callable]:
-        return self.tools
+    def __call__(self, **kwargs):
+        if not self.function:
+            raise ValueError("Function not set for MCPTool")
+        return self.function(**kwargs)
+
+
 
 class MCPClient:
     def __init__(
@@ -169,46 +156,41 @@ class MCPClient:
                 raise
 
         # Collect all schemas and descriptions
-        all_schemas = []
-        all_descriptions = []
-        all_functions = []
+        all_tools = []
 
         for mcp_tool in mcp_tools:
             input_schema = getattr(mcp_tool, 'inputSchema', {})
             if not input_schema and hasattr(mcp_tool, 'input_schema'):
                 input_schema = mcp_tool.input_schema
-                
+            
             properties = input_schema.get("properties", {})
             required = input_schema.get("required", [])
-
-            parameters = {
-                "type": "object",
-                "properties": properties,
-                "required": required,
-            }
-
-            schema = {
-                "type": "function",
-                "function": {
-                    "name": mcp_tool.name,
-                    "description": getattr(mcp_tool, 'description', None) or "No description provided.",
-                    "parameters": parameters,
-                },
-            }
             
-            all_schemas.append(schema)
-            all_descriptions.append(getattr(mcp_tool, 'description', None) or "")
-            all_functions.append(partial(_sync_call_tool, mcp_tool.name))
+            # Convert MCP properties to Tool.inputs format
+            # Tool.inputs expects Dict[str, Dict[str, str]] format
+            converted_inputs = {}
+            for prop_name, prop_details in properties.items():
+                converted_inputs[prop_name] = {
+                    "type": prop_details.get("type", "string"),
+                    "description": prop_details.get("title", prop_details.get("description", f"Parameter {prop_name}"))
+                }
+            
+            # Create the partial function and add __name__ attribute
+            partial_func = partial(_sync_call_tool, mcp_tool.name)
+            partial_func.__name__ = mcp_tool.name
+            
+            tool = MCPTool(
+                name=mcp_tool.name,
+                description=getattr(mcp_tool, 'description', None) or "",
+                inputs=converted_inputs,
+                required=required,
+                function=partial_func
+            )
+            all_tools.append(tool)
+        
+        tool_collection = ToolKit(tools=all_tools)
+        return tool_collection
 
-        # Create a single MCPTool for all tools from this server
-        server_name = list(config["mcpServers"].keys())[0]
-        tool = MCPTool(
-            name=server_name,
-            descriptions=all_descriptions,
-            schemas=all_schemas,
-            tools=all_functions,
-        )
-        return tool
     
     def get_tools(self) -> List[Tool]:
         """Return a list of MCPTools, one per server."""
