@@ -1078,7 +1078,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         trial_logs[trial_num]["mb_program_path"] = save_candidate_program(candidate_program, self.save_path, trial_num=trial_num, note="mb")
         trial_logs[trial_num]["mb_score"] = score
         trial_logs[trial_num]["total_eval_calls_so_far"] = total_eval_calls
-        trial_logs[trial_num]["mb_program"] = candidate_program.deep_copy()
+        trial_logs[trial_num]["mb_program"] = candidate_program.deepcopy()
 
         logger.info(f"Score: {score} on minibatch of size {batch_size} with parameters {chosen_params}.")
         minibatch_scores = ", ".join([f"{s['score']}" for s in score_data if not s["full_eval"]])

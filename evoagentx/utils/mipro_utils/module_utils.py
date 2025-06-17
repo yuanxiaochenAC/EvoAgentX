@@ -205,8 +205,9 @@ class PromptTuningModule(dspy.Module):
             prompt = prompt.replace(f"{{{{{name}}}}}", f"{{{name}}}")
         prompt = prompt.replace(r"{{{{", r"{{").replace(r"}}}}", r"}}")
 
-        if verbose and modified_messages:
-            logger.warning("Prompt modified: " + " | ".join(modified_messages))
+        # if verbose and modified_messages:
+            # logger.warning("Prompt modified: " + " | ".join(modified_messages))
+        
         return prompt
     
     def get_field_type(self, field: Field) -> str:

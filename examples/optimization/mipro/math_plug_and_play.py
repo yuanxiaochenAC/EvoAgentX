@@ -1,4 +1,5 @@
 import os
+import json 
 from dotenv import load_dotenv
 from typing import Any, Tuple
 
@@ -29,8 +30,8 @@ class MathSplits(MATH):
         full_test_data = self._test_data
         # radnomly select 50 samples for training and 100 samples for test
         # self._train_data = [full_test_data[idx] for idx in permutation[:50]]
-        self._train_data = [full_test_data[idx] for idx in permutation[:5]]
-        self._test_data = [full_test_data[idx] for idx in permutation[50:150]]
+        self._train_data = [full_test_data[idx] for idx in permutation[:100]]
+        self._test_data = [full_test_data[idx] for idx in permutation[100:200]]
 
     # define the input keys. 
     # If defined, the corresponding input key and value will be passed to the __call__ method of the program, 
@@ -57,15 +58,15 @@ class CustomProgram:
         self.prompt = "Let's think step by step to answer the math question: {problem}"
     
     # the program must have a `save` and `load` method to save and load the program
-    # def save(self, path: str):
-    #     params = {"prompt": self.prompt}
-    #     with open(path, "w") as f:
-    #         json.dump(params, f)
+    def save(self, path: str):
+        params = {"prompt": self.prompt}
+        with open(path, "w") as f:
+            json.dump(params, f)
 
-    # def load(self, path: str):
-    #     with open(path, "r") as f:
-    #         params = json.load(f)
-    #         self.prompt = params["prompt"]
+    def load(self, path: str):
+        with open(path, "r") as f:
+            params = json.load(f)
+            self.prompt = params["prompt"]
     
     # the program must have a `__call__` method to execute the program.
     # It receives the key-values (specified by `get_input_keys` in the benchmark) of an input example, 
@@ -81,9 +82,9 @@ class CustomProgram:
 
 def main():
 
-    openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=True)
+    openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=False)
     executor_llm = OpenAILLM(config=openai_config)
-    optimizer_config = OpenAILLMConfig(model="gpt-4o", openai_key=OPENAI_API_KEY, stream=True, output_response=True)
+    optimizer_config = OpenAILLMConfig(model="gpt-4o", openai_key=OPENAI_API_KEY, stream=True, output_response=False)
     optimizer_llm = OpenAILLM(config=optimizer_config)
 
     benchmark = MathSplits()
@@ -96,13 +97,16 @@ def main():
     registry.track(program, "prompt", input_names=["problem"], output_names=["solution"])
 
     # optimize the program 
+    # `evaluator` is optional. If not provided, the optimizer will construct an evaluator based on the `evaluate` method of the benchmark. 
     optimizer = MiproOptimizer(
         registry=registry, 
         program=program, 
         optimizer_llm=optimizer_llm,
-        num_threads=1,  
+        max_bootstrapped_demos=4, 
+        max_labeled_demos=4,
+        num_threads=20,  
         eval_rounds=1, 
-        auto="light",
+        auto="medium",
         save_path="examples/output/mipro/math_plug_and_play" 
     )
 

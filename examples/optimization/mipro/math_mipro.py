@@ -68,6 +68,7 @@ def main():
     agent_manager = AgentManager()
     agent_manager.add_agents_from_workflow(workflow_graph, llm_config=openai_config)
 
+    # define the evaluator 
     evaluator = Evaluator(
         llm = executor_llm,
         agent_manager = agent_manager,
@@ -75,9 +76,8 @@ def main():
         num_workers = 20,
         verbose = True
     )
-
-    # evaluator.evaluate(graph=workflow_graph, benchmark=benchmark, eval_mode="train", sample_k=5) 
     
+    # define the optimizer 
     optimizer = WorkFlowMiproOptimizer(
         graph = workflow_graph,
         evaluator = evaluator, 
@@ -92,11 +92,13 @@ def main():
     logger.info("Optimizing workflow...")
     optimizer.optimize(dataset=benchmark)
     from pdb import set_trace; set_trace()
-    # optimizer.restore_best_graph() # restore the best graph from the saved path
+    optimizer.restore_best_program() # restore the best graph from the saved path 
 
-    # with suppress_logger_info():
-    #     result = optimizer.evaluate(dataset = benchmark, eval_mode = "test")
-    # logger.info(f"Evaluation metrics (after optimization): {result}")
+    logger.info("Evaluating program on test set...")
+    with suppress_logger_info():
+        results = optimizer.evaluate(dataset=benchmark, eval_mode="test")
+    logger.info(f"Evaluation metrics (after optimization): {results}")
+    
 
 if __name__ == "__main__":
     main()
