@@ -7,9 +7,8 @@ from tenacity import (
 )
 from dashscope import Generation  # aliyun DashScope SDK
 import dashscope
-from litellm import token_counter, cost_per_token
 from ..core.registry import register_model
-from .model_configs import AliyunLLMConfig, LLMConfig
+from .model_configs import AliyunLLMConfig
 from .base_model import BaseLLM
 from .model_utils import Cost, cost_manager
 from ..core.logging import logger
