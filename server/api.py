@@ -5,8 +5,8 @@ import asyncio
 import uuid
 from datetime import datetime
 
-from .models import Config, ProcessResponse, WorkflowGenerationConfig, WorkflowExecutionConfig, ClientConnectResponse, ClientTaskResponse
-from .service import handle_process_request, start_streaming_task, process_workflow_generation_for_client, generate_workflow_from_goal, execute_workflow_from_config
+from .models import Config, ProcessResponse, ClientConnectResponse, ClientTaskResponse, ProjectSetupRequest, ProjectSetupResponse, ProjectWorkflowGenerationRequest, ProjectWorkflowExecutionRequest
+from .service import handle_process_request, start_streaming_task, setup_project, get_project, list_projects, generate_workflow_for_project, execute_workflow_for_project
 from .task_manager import (
     get_stream_task, get_stream_task_updates, is_stream_task_completed,
     create_client_session, get_client_session, get_client_updates, 
@@ -26,50 +26,32 @@ async def process_request(config: Config) -> ProcessResponse:
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Simple synchronous workflow generation endpoint
+# Project-based workflow generation endpoint
 @app.post("/workflow/generate")
-async def generate_workflow_sync(config: WorkflowGenerationConfig):
+async def generate_workflow_for_project_api(request: ProjectWorkflowGenerationRequest):
     """
-    Generate a workflow synchronously and return it directly.
-    This is a simple blocking API that returns the workflow in the response.
+    Generate a workflow for a specific project using the inputs string.
+    Uses default_llm_config if no config is provided.
     """
     try:
-        goal = config.goal
-        llm_config_dict = config.llm_config
-        mcp_config = config.mcp_config or {}
+        result = await generate_workflow_for_project(
+            request.project_id, 
+            request.inputs, 
+            request.llm_config
+        )
         
-        if not goal or not llm_config_dict:
+        if not result.get("success"):
             raise HTTPException(
-                status_code=400, 
-                detail="Missing required parameters: goal and llm_config are required"
+                status_code=400 if "not found" in result.get("error", "") else 500,
+                detail=result.get("error", "Unknown error")
             )
         
-        # Generate the workflow directly (this will block until complete)
-        workflow_graph = await generate_workflow_from_goal(goal, llm_config_dict, mcp_config)
-        
-        if workflow_graph is None:
-            raise HTTPException(status_code=500, detail="Failed to generate workflow")
-        
-        # Convert workflow_graph to serializable format
-        try:
-            if hasattr(workflow_graph, 'get_config'):
-                workflow_dict = workflow_graph.get_config()
-            elif hasattr(workflow_graph, 'get_workflow_description'):
-                workflow_dict = {
-                    "goal": workflow_graph.goal,
-                    "description": workflow_graph.get_workflow_description()
-                }
-            else:
-                workflow_dict = str(workflow_graph)
-        except Exception as e:
-            workflow_dict = f"Workflow generated successfully (serialization error: {str(e)})"
-        
-        # Return the workflow directly
         return {
             "success": True,
-            "goal": goal,
-            "workflow_graph": workflow_dict,
-            "message": "Workflow generated successfully",
+            "project_id": result["project_id"],
+            "workflow_graph": result["workflow_graph"],
+            "inputs": result["inputs"],
+            "message": result["message"],
             "timestamp": datetime.now().isoformat()
         }
         
@@ -78,35 +60,34 @@ async def generate_workflow_sync(config: WorkflowGenerationConfig):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating workflow: {str(e)}")
 
+# Project-based workflow execution endpoint
 @app.post("/workflow/execute")
-async def execute_workflow_sync(config: WorkflowExecutionConfig):
+async def execute_workflow_for_project_api(request: ProjectWorkflowExecutionRequest):
     """
-    Execute a workflow synchronously and return the results directly.
-    This is a simple blocking API that returns the execution results in the response.
+    Execute a workflow for a specific project using the inputs dictionary.
+    Uses default_llm_config if no config is provided.
+    Gets workflow from project database.
     """
     try:
-        workflow = config.workflow
-        llm_config_dict = config.llm_config
-        mcp_config = config.mcp_config or {}
+        result = await execute_workflow_for_project(
+            request.project_id, 
+            request.inputs, 
+            request.llm_config
+        )
         
-        if not workflow or not llm_config_dict:
+        if not result.get("success"):
             raise HTTPException(
-                status_code=400, 
-                detail="Missing required parameters: workflow and llm_config are required"
+                status_code=400 if "not found" in result.get("error", "") else 500,
+                detail=result.get("error", "Unknown error")
             )
         
-        # Execute the workflow directly (this will block until complete)
-        execution_result = await execute_workflow_from_config(workflow, llm_config_dict, mcp_config)
-        
-        if execution_result is None:
-            raise HTTPException(status_code=500, detail="Failed to execute workflow")
-        
-        # Return the execution results directly
         return {
             "success": True,
-            "workflow": workflow,
-            "execution_result": execution_result,
-            "message": "Workflow execution completed",
+            "project_id": result["project_id"],
+            "execution_result": result["execution_result"],
+            "workflow_info": result["workflow_info"],
+            "inputs": result["inputs"],
+            "message": result["message"],
             "timestamp": datetime.now().isoformat()
         }
         
@@ -122,37 +103,9 @@ async def start_stream_process(config: Config):
     """
     return await start_streaming_task(config.dict())
 
-@app.post("/stream/workflow/generate")
-async def start_workflow_generation(config: WorkflowGenerationConfig):
-    """
-    Start a streaming workflow generation process and return a task ID.
-    """
-    workflow_config = {
-        "task_type": "workflow_generation",
-        "parameters": {
-            "goal": config.goal,
-            "llm_config": config.llm_config,
-            "mcp_config": config.mcp_config
-        },
-        "timeout": config.timeout
-    }
-    return await start_streaming_task(workflow_config)
 
-@app.post("/stream/workflow/execute")
-async def start_workflow_execution(config: WorkflowExecutionConfig):
-    """
-    Start a streaming workflow execution process and return a task ID.
-    """
-    execution_config = {
-        "task_type": "workflow_execution",
-        "parameters": {
-            "workflow": config.workflow,
-            "llm_config": config.llm_config,
-            "mcp_config": config.mcp_config
-        },
-        "timeout": config.timeout
-    }
-    return await start_streaming_task(execution_config)
+
+
 
 # New client-session endpoints
 @app.post("/connect", response_model=ClientConnectResponse)
@@ -168,35 +121,7 @@ async def connect_client() -> ClientConnectResponse:
         stream_url=f"/stream/client/{client_id}"
     )
 
-@app.post("/client/{client_id}/workflow/generate", response_model=ClientTaskResponse)
-async def start_client_workflow_generation(client_id: str, config: WorkflowGenerationConfig) -> ClientTaskResponse:
-    """
-    Start workflow generation for a specific client session.
-    """
-    if not get_client_session(client_id):
-        raise HTTPException(status_code=404, detail="Client session not found")
-    
-    task_id = str(uuid.uuid4())
-    add_task_to_client(client_id, task_id)
-    
-    # Send initial status to client
-    send_to_client(client_id, {
-        "event_type": "task_started",
-        "task_id": task_id,
-        "task_type": "workflow_generation",
-        "goal": config.goal
-    })
-    
-    # Start processing in background
-    asyncio.create_task(
-        process_workflow_generation_for_client(client_id, task_id, config.dict())
-    )
-    
-    return ClientTaskResponse(
-        task_id=task_id,
-        status="started",
-        client_id=client_id
-    )
+
 
 @app.get("/stream/client/{client_id}")
 async def stream_client_updates(client_id: str):
@@ -330,3 +255,52 @@ async def list_clients():
             })
     
     return {"active_clients": active_clients, "total": len(active_clients)} 
+
+# New project-based endpoints
+@app.post("/project/setup", response_model=ProjectSetupResponse)
+async def setup_new_project(request: ProjectSetupRequest) -> ProjectSetupResponse:
+    """
+    Setup a new project with the given goal and return project information.
+    This is the main entry point for creating projects.
+    """
+    try:
+        result = setup_project(request.goal, request.additional_info)
+        
+        return ProjectSetupResponse(
+            project_id=result["project_id"],
+            public_url=result["public_url"],
+            local_url=result["local_url"],
+            task_info=result["task_info"]
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error setting up project: {str(e)}")
+
+@app.get("/project/{project_id}/status")
+async def get_project_status(project_id: str):
+    """
+    Get the current status and information for a specific project.
+    """
+    project = get_project(project_id)
+    
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    return {
+        "project_id": project_id,
+        "status": project.get("status", "unknown"),
+        "goal": project.get("goal", ""),
+        "created_at": project.get("created_at", ""),
+        "workflow_generated": project.get("workflow_generated", False),
+        "workflow_executed": project.get("workflow_executed", False),
+        "public_url": project.get("public_url", "Not available"),
+        "local_url": project.get("local_url", "Not available"),
+        "last_updated": project.get("last_updated", project.get("created_at", ""))
+    }
+
+@app.get("/projects")
+async def get_all_projects():
+    """
+    List all projects in the system.
+    """
+    return list_projects() 

@@ -1,892 +1,121 @@
 import aiohttp
 import asyncio
 import json
-from sseclient import SSEClient
 import requests
 import os
 from dotenv import load_dotenv
-from evoagentx.models.model_configs import LLMConfig, OpenAILLMConfig
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-sample_workflow_path = "examples/output/jobs/jobs_demo_4o_mini.json"
 
 # =============================================================================
-# BASIC HTTP API TESTS
+# PROJECT-BASED WORKFLOW TESTS
 # =============================================================================
 
-async def test_processing():
+def test_health_check():
+    """Test basic health check endpoint"""
+    print("\n=== Testing Health Check ===")
+    
+    response = requests.get('http://localhost:8001/health')
+    assert response.status_code == 200
+    
+    data = response.json()
+    print("✅ Health check passed:", data)
+    return data
+
+def test_project_setup():
     """
-    Test the basic synchronous processing endpoint.
+    Test project setup - the main entry point for the new system
     
-    Curl commands used:
+    Curl command:
     ```bash
-    # Health check
-    curl -X GET http://localhost:8001/health
-    
-    # Basic processing request
-    curl -X POST http://localhost:8001/process \
+    curl -X POST http://localhost:8001/project/setup \
       -H "Content-Type: application/json" \
       -d '{
-        "parameters": {
-          "sample_param": "test_value",
-          "another_param": 42
-        },
-        "timeout": 10
-      }'
-    ```
-    
-    This demonstrates:
-    - Simple HTTP request/response pattern
-    - No streaming, just direct result
-    - Good for quick operations that don't need progress updates
-    """
-    async with aiohttp.ClientSession() as session:
-        # Test health check
-        async with session.get('http://localhost:8001/health') as response:
-            assert response.status == 200
-            data = await response.json()
-            print("Health check response:", data)
-
-        # Test processing endpoint
-        test_config = {
-            "parameters": {
-                "sample_param": "test_value",
-                "another_param": 42
-            },
-            "timeout": 10
+        "goal": "Create a comprehensive market analysis workflow",
+        "additional_info": {
+          "industry": "technology",
+          "timeframe": "Q4 2024"
         }
-
-        async with session.post(
-            'http://localhost:8001/process',
-            json=test_config
-        ) as response:
-            assert response.status == 200
-            result = await response.json()
-            print("\nProcessing response:", json.dumps(result, indent=2))
-
-            # Verify the response structure
-            assert "task_id" in result
-            assert "status" in result
-            assert "result" in result
-
-# =============================================================================
-# TASK-BASED STREAMING TESTS
-# =============================================================================
-
-def test_streaming():
-    """
-    Test the task-based streaming pattern.
-    
-    Curl commands used:
-    ```bash
-    # Start streaming task
-    curl -X POST http://localhost:8001/stream/process \
-      -H "Content-Type: application/json" \
-      -d '{
-        "parameters": {
-          "stream_param": "test_stream",
-          "iterations": 5
-        },
-        "timeout": 30
       }'
-    
-    # Connect to SSE stream (returns task_id from above)
-    curl -N http://localhost:8001/stream/{task_id} \
-      -H "Accept: text/event-stream"
     ```
-    
-    This demonstrates:
-    - Starting a task and getting a task_id
-    - Connecting to a task-specific SSE stream
-    - Receiving real-time progress updates
-    - Good for long operations where you want progress feedback
-    - Each task gets its own stream URL
-    
-    Flow: POST /stream/process → get task_id → connect to /stream/{task_id}
     """
-    # Start a streaming process
-    test_config = {
-        "parameters": {
-            "stream_param": "test_stream",
-            "iterations": 5
-        },
-        "timeout": 30
+    print("\n=== Testing Project Setup ===")
+    
+    project_request = {
+        "goal": "Create a comprehensive market analysis workflow that analyzes current trends, competitor data, and generates actionable insights for the technology sector",
+        "additional_info": {
+            "industry": "technology",
+            "timeframe": "Q4 2024",
+            "target_audience": "executives",
+            "data_sources": ["financial_reports", "market_research", "news_articles"]
+        }
     }
     
-    # Start the streaming process
-    response = requests.post(
-        'http://localhost:8001/stream/process',
-        json=test_config
-    )
-    assert response.status_code == 200
-    process_data = response.json()
-    print("\nStream process started:", json.dumps(process_data, indent=2))
+    print(f"🚀 Setting up new project...")
+    print(f"   Goal: {project_request['goal'][:80]}...")
     
-    # Connect to the SSE stream
-    response = requests.get(f'http://localhost:8001{process_data["stream_url"]}', stream=True)
-    messages = SSEClient(response)
+    response = requests.post('http://localhost:8001/project/setup', json=project_request)
     
-    print("\nStreaming updates:")
-    for msg in messages.events():
-        if msg.event == "update":
-            data = json.loads(msg.data)
-            print(f"Progress: {data['progress']}% - {data['current_state']}")
-        elif msg.event == "complete":
-            data = json.loads(msg.data)
-            print("\nTask completed:", json.dumps(data, indent=2))
-            break
-        elif msg.event == "error":
-            data = json.loads(msg.data)
-            print("\nError:", data["error"])
-            break
-
-def test_workflow_generation():
-    """
-    Test task-based streaming for workflow generation.
-    
-    Curl commands used:
-    ```bash
-    # Start workflow generation task
-    curl -X POST http://localhost:8001/stream/workflow/generate \
-      -H "Content-Type: application/json" \
-      -d '{
-        "goal": "Create a simple data processing workflow that reads a CSV file and generates a summary report",
-        "llm_config": {
-          "model": "gpt-4o-mini",
-          "openai_key": "your_openai_key_here",
-          "stream": true,
-          "output_response": true,
-          "max_tokens": 16000
-        },
-        "timeout": 180
-      }'
-    
-    # Connect to workflow generation SSE stream
-    curl -N http://localhost:8001/stream/{task_id} \
-      -H "Accept: text/event-stream"
-    ```
-    
-    This demonstrates:
-    - Using the streaming pattern specifically for workflow generation
-    - How LLM configurations are passed
-    - Receiving the generated workflow through SSE
-    - Task-specific streaming (one task = one stream)
-    
-    Use this pattern when:
-    - You want progress updates during generation
-    - You might start the task and check back later
-    - You're building user-facing apps that need real-time feedback
-    """
-    llm_config = {
-        "model": "gpt-4o-mini",
-        "openai_key": OPENAI_API_KEY,
-        "stream": True,
-        "output_response": True,
-        "max_tokens": 16000
-    }
-    print(OpenAILLMConfig(**llm_config))
-    
-    
-    # Test workflow generation
-    workflow_config = {
-        "goal": "Create a simple data processing workflow that reads a CSV file and generates a summary report",
-        "llm_config": llm_config,
-        "timeout": 180
-    }
-    
-    # Start the workflow generation process
-    response = requests.post(
-        'http://localhost:8001/stream/workflow/generate',
-        json=workflow_config
-    )
-    assert response.status_code == 200
-    process_data = response.json()
-    print("\nWorkflow generation started:", json.dumps(process_data, indent=2))
-    
-    # Connect to the SSE stream
-    response = requests.get(f'http://localhost:8001{process_data["stream_url"]}', stream=True)
-    messages = SSEClient(response)
-    
-    print("\nWorkflow generation updates:")
-    for msg in messages.events():
-        if msg.event == "update":
-            data = json.loads(msg.data)
-            print(f"Step {data['step']}/{data['total_steps']} - Progress: {data['progress']}% - {data['current_state']}")
-        elif msg.event == "complete":
-            data = json.loads(msg.data)
-            print("\nWorkflow generation completed:", json.dumps(data, indent=2))
-            break
-        elif msg.event == "error":
-            data = json.loads(msg.data)
-            print("\nError:", data["error"])
-            break
-
-# =============================================================================
-# CLIENT-SESSION STREAMING TESTS
-# =============================================================================
-
-def test_client_session():
-    """
-    Test client session creation - the foundation of persistent streaming.
-    
-    Curl commands used:
-    ```bash
-    # Create client session
-    curl -X POST http://localhost:8001/connect
-    ```
-    
-    This demonstrates:
-    - Creating a persistent client session
-    - Getting a client_id and persistent stream URL
-    - Setting up for multiple tasks on one connection
-    
-    Client sessions enable:
-    - Running multiple tasks without reconnecting
-    - Persistent SSE connections
-    - Better resource management
-    - Interactive application patterns
-    """
-    print("\n=== Testing Client Session ===")
-    
-    # Step 1: Connect and get client session
-    response = requests.post('http://localhost:8001/connect')
-    assert response.status_code == 200
-    client_data = response.json()
-    print(f"Connected with client_id: {client_data['client_id']}")
-    print(client_data)
-    
-    return client_data
-
-def start_task_and_get_result(client_id, stream_url, task_config, timeout=180):
-    """
-    Helper function: Start a single task and wait for its specific result.
-    
-    Curl commands used:
-    ```bash
-    # Start workflow generation for specific client
-    curl -X POST http://localhost:8001/client/{client_id}/workflow/generate \
-      -H "Content-Type: application/json" \
-      -d '{
-        "goal": "Create a simple email notification workflow",
-        "llm_config": {
-          "model": "gpt-4o-mini",
-          "openai_key": "your_openai_key_here",
-          "stream": true,
-          "output_response": true,
-          "max_tokens": 8000
-        },
-        "timeout": 120
-      }'
-    
-    # Connect to client SSE stream
-    curl -N http://localhost:8001/stream/client/{client_id} \
-      -H "Accept: text/event-stream"
-    ```
-    
-    This demonstrates:
-    - How to extract results from a multi-task stream
-    - Task ID matching to get specific results
-    - Thread-based SSE listening with result capture
-    - Building reusable workflow generation functions
-    
-    This pattern is perfect for:
-    - Building libraries or SDKs
-    - When you need the workflow result programmatically
-    - Sequential workflow generation
-    """
-    import threading
-    import time
-    
-    # Start the task
-    response = requests.post(
-        f'http://localhost:8001/client/{client_id}/workflow/generate',
-        json=task_config
-    )
-    task_data = response.json()
-    task_id = task_data['task_id']
-    
-    print(f"🚀 Started task {task_id[:8]} - waiting for result...")
-    
-    # Variable to store the result
-    task_result = {"completed": False, "result": None, "error": None}
-    
-    def listen_for_task_result():
-        response = requests.get(f'http://localhost:8001{stream_url}', stream=True)
-        messages = SSEClient(response)
+    if response.status_code == 200:
+        result = response.json()
         
-        for msg in messages.events():
-            try:
-                data = json.loads(msg.data)
-                event_type = data.get("event_type", msg.event)
-                msg_task_id = data.get("task_id")
-                
-                # Only process events for our specific task
-                if msg_task_id == task_id:
-                    if event_type == "task_completed":
-                        print(f"✅ Task {task_id[:8]} completed!")
-                        task_result["completed"] = True
-                        task_result["result"] = data.get("result", {})
-                        break
-                    elif event_type == "task_error":
-                        print(f"❌ Task {task_id[:8]} failed!")
-                        task_result["completed"] = True  
-                        task_result["error"] = data.get("error", "Unknown error")
-                        break
-                    elif event_type == "task_processing":
-                        print(f"⚙️  Task {task_id[:8]} processing...")
-                        
-            except Exception as e:
-                print(f"Error parsing message: {e}")
-    
-    # Start listener thread
-    listener_thread = threading.Thread(target=listen_for_task_result)
-    listener_thread.start()
-    
-    # Wait for completion
-    listener_thread.join(timeout=timeout)
-    
-    if task_result["completed"]:
-        if task_result["error"]:
-            print(f"❌ Task failed: {task_result['error']}")
-            return None
-        else:
-            print(f"🎯 Got workflow result for task {task_id[:8]}!")
-            return task_result["result"]
+        print(f"✅ Project created successfully!")
+        print(f"   Project ID: {result['project_id']}")
+        print(f"   Public URL: {result['public_url']}")
+        print(f"   Local URL: {result['local_url']}")
+        print(f"\n📄 Task Info Preview:")
+        print(result['task_info'][:500] + "..." if len(result['task_info']) > 500 else result['task_info'])
+        
+        return result
     else:
-        print(f"⏰ Task {task_id[:8]} timed out!")
+        print(f"❌ Project setup failed: {response.status_code}")
+        print(f"   Error: {response.text}")
         return None
 
-def test_single_task_with_result():
-    """
-    Test getting a single workflow result using client sessions.
+def test_project_status(project_id):
+    """Test retrieving project status"""
+    print(f"\n=== Testing Project Status for {project_id} ===")
     
-    Curl commands used:
-    ```bash
-    # 1. Create client session
-    curl -X POST http://localhost:8001/connect
+    response = requests.get(f'http://localhost:8001/project/{project_id}/status')
     
-    # 2. Start workflow generation for client
-    curl -X POST http://localhost:8001/client/{client_id}/workflow/generate \
-      -H "Content-Type: application/json" \
-      -d '{
-        "goal": "Create a simple email notification workflow",
-        "llm_config": {
-          "model": "gpt-4o-mini",
-          "openai_key": "your_openai_key_here",
-          "stream": true,
-          "output_response": true,
-          "max_tokens": 8000
-        },
-        "timeout": 120
-      }'
-    
-    # 3. Listen to client events
-    curl -N http://localhost:8001/stream/client/{client_id} \
-      -H "Accept: text/event-stream"
-    ```
-    
-    This demonstrates:
-    - How to use client sessions for single workflow generation
-    - Capturing and using the workflow result programmatically
-    - The helper function pattern for clean code
-    
-    Use this pattern when:
-    - You need the workflow result for further processing
-    - Building scripts or automation tools
-    - You want the simplicity of "start task, get result"
-    """
-    print("\n=== Testing Single Task with Result Capture ===")
-    
-    # Connect
-    client_data = test_client_session()
-    client_id = client_data["client_id"]
-    
-    # Task configuration
-    task_config = {
-        "goal": "Create a simple email notification workflow",
-        "llm_config": {
-            "model": "gpt-4o-mini",
-            "openai_key": OPENAI_API_KEY,
-            "stream": True,
-            "output_response": True,
-            "max_tokens": 8000
-        },
-        "timeout": 120
-    }
-    
-    # Get the workflow result
-    workflow_result = start_task_and_get_result(
-        client_id, 
-        client_data["stream_url"], 
-        task_config
-    )
-    
-    if workflow_result:
-        print(f"\n🎯 WORKFLOW RESULT:")
-        print(f"   Goal: {workflow_result.get('goal', 'N/A')}")
-        print(f"   Message: {workflow_result.get('message', 'N/A')}")
+    if response.status_code == 200:
+        status = response.json()
         
-        # Now you can use the workflow result!
-        workflow_graph = workflow_result.get("workflow_graph")
-        if workflow_graph:
-            print(f"   🔧 Workflow has {len(str(workflow_graph))} characters")
-            # Do something with the workflow...
-    
-    return workflow_result
-
-def test_client_workflow_generation():
-    """
-    Test basic client-session workflow generation with event monitoring.
-    
-    Curl commands used:
-    ```bash
-    # 1. Create client session
-    curl -X POST http://localhost:8001/connect
-    
-    # 2. Connect to client SSE stream (keep this running)
-    curl -N http://localhost:8001/stream/client/{client_id} \
-      -H "Accept: text/event-stream"
-    
-    # 3. In another terminal, start workflow generation
-    curl -X POST http://localhost:8001/client/{client_id}/workflow/generate \
-      -H "Content-Type: application/json" \
-      -d '{
-        "goal": "Create a workflow for processing customer feedback data and generating insights",
-        "llm_config": {
-          "model": "gpt-4o-mini",
-          "openai_key": "your_openai_key_here",
-          "stream": true,
-          "output_response": true,
-          "max_tokens": 16000
-        },
-        "timeout": 180
-      }'
-    ```
-    
-    This demonstrates:
-    - Client session workflow generation
-    - Real-time event monitoring through SSE
-    - How events flow through a persistent connection
-    - Proper thread cleanup after task completion
-    
-    This is the foundation pattern that enables:
-    - Interactive applications (like chat interfaces)
-    - Real-time progress monitoring
-    - Multi-task workflows on persistent connections
-    """
-    print("\n=== Testing Client-Session Workflow Generation ===")
-    
-    # Connect to get client session
-    client_data = test_client_session()
-    client_id = client_data["client_id"]
-    
-    # LLM configuration
-    llm_config = {
-        "model": "gpt-4o-mini",
-        "openai_key": OPENAI_API_KEY,
-        "stream": True,
-        "output_response": True,
-        "max_tokens": 16000
-    }
-    
-    # Start SSE connection in a separate thread
-    import threading
-    
-    def listen_to_events():
-        response = requests.get(f'http://localhost:8001{client_data["stream_url"]}', stream=True)
-        messages = SSEClient(response)
+        print(f"✅ Project status retrieved:")
+        print(f"   Status: {status['status']}")
+        print(f"   Workflow Generated: {status['workflow_generated']}")
+        print(f"   Workflow Executed: {status['workflow_executed']}")
+        print(f"   Created: {status['created_at']}")
+        print(f"   Last Updated: {status.get('last_updated', 'N/A')}")
         
-        print(f"\n🔄 Listening to client {client_id} events...")
-        for msg in messages.events():
-            try:
-                data = json.loads(msg.data)
-                event_type = data.get("event_type", msg.event)
-                
-                print(f"📡 Event: {event_type} - {data}")
-                
-                # Exit when task is completed or failed
-                if event_type in ["task_completed", "task_error"]:
-                    print(f"🎯 Task finished with event: {event_type}")
-                    break
-                    
-            except Exception as e:
-                print(f"Error parsing message: {e}")
-                print(f"Raw message: {msg.data}")
-    
-    # Start SSE listener in background
-    listener_thread = threading.Thread(target=listen_to_events)
-    listener_thread.start()
-    
-    # Give SSE connection time to establish
-    import time
-    time.sleep(1)
-    
-    # Start workflow generation
-    workflow_config = {
-        "goal": "Create a workflow for processing customer feedback data and generating insights",
-        "llm_config": llm_config,
-        "timeout": 180
-    }
-    
-    response = requests.post(
-        f'http://localhost:8001/client/{client_id}/workflow/generate',
-        json=workflow_config
-    )
-    
-    print(response.json())
-    assert response.status_code == 200
-    task_data = response.json()
-    print(f"Started workflow generation task: {task_data['task_id']}")
-    
-    # Wait for the listener thread to complete
-    listener_thread.join(timeout=200)  # 200 second timeout
-    
-    return client_id
+        return status
+    else:
+        print(f"❌ Failed to get project status: {response.status_code}")
+        print(f"   Error: {response.text}")
+        return None
 
-def test_multiple_tasks_single_client():
+def test_project_workflow_generation(project_id):
     """
-    Test multiple concurrent workflow generations on a single client session.
+    Test the new project-based workflow generation
     
-    Curl commands used:
+    Curl command:
     ```bash
-    # 1. Create client session
-    curl -X POST http://localhost:8001/connect
-    
-    # 2. Connect to client SSE stream (keep this running)
-    curl -N http://localhost:8001/stream/client/{client_id} \
-      -H "Accept: text/event-stream"
-    
-    # 3. In other terminals, start multiple tasks concurrently
-    # Task 1:
-    curl -X POST http://localhost:8001/client/{client_id}/workflow/generate \
-      -H "Content-Type: application/json" \
-      -d '{
-        "goal": "Create a data validation workflow for incoming user data",
-        "llm_config": {
-          "model": "gpt-4o-mini",
-          "openai_key": "your_openai_key_here",
-          "max_tokens": 8000
-        },
-        "timeout": 120
-      }'
-    
-    # Task 2:
-    curl -X POST http://localhost:8001/client/{client_id}/workflow/generate \
-      -H "Content-Type: application/json" \
-      -d '{
-        "goal": "Create a reporting workflow for monthly sales analysis",
-        "llm_config": {
-          "model": "gpt-4o-mini",
-          "openai_key": "your_openai_key_here",
-          "max_tokens": 8000
-        },
-        "timeout": 120
-      }'
-    ```
-    
-    This demonstrates:
-    - The power of persistent client sessions
-    - Handling multiple concurrent tasks through one SSE connection
-    - Task result capture and organization by task_id
-    - Real-world multi-task workflow scenarios
-    
-    This pattern enables:
-    - Batch workflow generation
-    - Interactive workflow building sessions
-    - Dashboard-like applications with multiple concurrent operations
-    - Efficient resource usage (one connection, many tasks)
-    
-    Key concepts shown:
-    - Task ID matching for result routing
-    - Shared data structures for result capture
-    - Proper thread synchronization
-    - File-based result persistence
-    """
-    print("\n=== Testing Multiple Tasks on Single Client ===")
-    
-    # Connect
-    client_data = test_client_session()
-    client_id = client_data["client_id"]
-    
-    # LLM configuration
-    llm_config = {
-        "model": "gpt-4o-mini",
-        "openai_key": OPENAI_API_KEY,
-        "stream": True,
-        "output_response": True,
-        "max_tokens": 8000
-    }
-    
-    # Start SSE listener
-    import threading
-    import time
-    
-    # Shared data structure to capture results
-    task_results = {}  # task_id -> workflow result
-    completed_tasks = []
-    
-    def listen_to_events():
-        response = requests.get(f'http://localhost:8001{client_data["stream_url"]}', stream=True)
-        messages = SSEClient(response)
-        
-        print(f"\n🔄 Listening to client {client_id} events...")
-        for msg in messages.events():
-            try:
-                data = json.loads(msg.data)
-                event_type = data.get("event_type", msg.event)
-                task_id = data.get("task_id")
-                
-                if event_type == "task_started":
-                    print(f"📋 Task {task_id[:8]} started: {data.get('goal', 'N/A')[:50]}...")
-                elif event_type == "task_processing":
-                    print(f"⚙️  Task {task_id[:8]} processing...")
-                elif event_type == "task_completed":
-                    print(f"✅ Task {task_id[:8]} completed!")
-                    
-                    # 🎯 CAPTURE THE WORKFLOW RESULT HERE!
-                    task_results[task_id] = data.get("result", {})
-                    completed_tasks.append(task_id)
-                    
-                    # Print the workflow result
-                    workflow = data.get("result", {}).get("workflow_graph", "No workflow")
-                    goal = data.get("result", {}).get("goal", "No goal")
-                    print(f"   📊 Task {task_id[:8]} Result:")
-                    print(f"      Goal: {goal}")
-                    print(f"      Workflow: {str(workflow)[:100]}...")
-                    
-                    if len(completed_tasks) >= 2:  # Wait for both tasks
-                        break
-                elif event_type == "task_error":
-                    print(f"❌ Task {task_id[:8]} error: {data.get('error', 'Unknown')}")
-                    completed_tasks.append(task_id)  # Count errors as completed for loop exit
-                    if len(completed_tasks) >= 2:
-                        break
-            except Exception as e:
-                print(f"Error parsing message: {e}")
-    
-    # Start listener
-    listener_thread = threading.Thread(target=listen_to_events)
-    listener_thread.start()
-    time.sleep(1)  # Let SSE connect
-    
-    # Start first task
-    task1_config = {
-        "goal": "Create a data validation workflow for incoming user data",
-        "llm_config": llm_config,
-        "timeout": 120
-    }
-    
-    response1 = requests.post(
-        f'http://localhost:8001/client/{client_id}/workflow/generate',
-        json=task1_config
-    )
-    
-    task1_data = response1.json()
-    task1_id = task1_data['task_id']
-    print(f"Started task 1: {task1_id}")
-    
-    # Start second task (should be queued and processed)
-    task2_config = {
-        "goal": "Create a reporting workflow for monthly sales analysis",
-        "llm_config": llm_config,
-        "timeout": 120
-    }
-    
-    response2 = requests.post(
-        f'http://localhost:8001/client/{client_id}/workflow/generate',
-        json=task2_config
-    )
-    task2_data = response2.json()
-    task2_id = task2_data['task_id']
-    print(f"Started task 2: {task2_id}")
-    
-    # Wait for completion
-    listener_thread.join(timeout=300)  # 5 minute timeout
-    
-    print(f"✅ Completed {len(completed_tasks)} tasks")
-    
-    # 🎯 NOW YOU CAN ACCESS THE WORKFLOW RESULTS!
-    print("\n🎯 CAPTURED WORKFLOW RESULTS:")
-    
-    if task1_id in task_results:
-        print(f"📋 Task 1 Result:")
-        print(f"   Goal: {task_results[task1_id].get('goal', 'N/A')}")
-        print(f"   Workflow: {task_results[task1_id].get('workflow_graph', 'N/A')}")
-        
-        # Save Task 1 workflow to file
-        with open(f"workflow_task1_{task1_id[:8]}.json", "w") as f:
-            json.dump(task_results[task1_id], f, indent=2)
-        print(f"   💾 Saved to workflow_task1_{task1_id[:8]}.json")
-    
-    if task2_id in task_results:
-        print(f"📋 Task 2 Result:")
-        print(f"   Goal: {task_results[task2_id].get('goal', 'N/A')}")
-        print(f"   Workflow: {task_results[task2_id].get('workflow_graph', 'N/A')}")
-        
-        # Save Task 2 workflow to file
-        with open(f"workflow_task2_{task2_id[:8]}.json", "w") as f:
-            json.dump(task_results[task2_id], f, indent=2)
-        print(f"   💾 Saved to workflow_task2_{task2_id[:8]}.json")
-    
-    # Return the results so calling code can use them
-    return {
-        "client_id": client_id,
-        "task_results": task_results,
-        "task1_id": task1_id,
-        "task2_id": task2_id
-    }
-
-# =============================================================================
-# UTILITY AND DEBUG TESTS
-# =============================================================================
-
-def test_list_clients():
-    """
-    Test the client listing endpoint for debugging and monitoring.
-    
-    Curl commands used:
-    ```bash
-    # List all active clients
-    curl -X GET http://localhost:8001/clients
-    ```
-    
-    This demonstrates:
-    - Server-side session management
-    - Debugging capabilities for active sessions
-    - Session lifecycle tracking
-    
-    Useful for:
-    - Development and debugging
-    - Monitoring server load
-    - Understanding session lifecycles
-    """
-    print("\n=== Testing Client Listing ===")
-    
-    response = requests.get('http://localhost:8001/clients')
-    assert response.status_code == 200
-    clients_data = response.json()
-    
-    print(f"Active clients: {clients_data['total']}")
-    for client in clients_data['active_clients']:
-        print(f"  - Client {client['client_id']}")
-        print(f"    Created: {client['created_at']}")
-        print(f"    Last Activity: {client['last_activity']}")
-        print(f"    Active Tasks: {len(client['active_tasks'])}")
-
-def test_stream_workflow_generation():
-    """
-    Test streaming workflow generation (task-based pattern).
-    
-    Curl commands used:
-    ```bash
-    # Start streaming workflow generation
-    curl -X POST http://localhost:8001/stream/workflow/generate \
-      -H "Content-Type: application/json" \
-      -d '{
-        "goal": "Create a simple data processing workflow that reads a CSV file",
-        "llm_config": {
-          "model": "gpt-4o-mini",
-          "openai_key": "your_openai_key_here",
-          "stream": true,
-          "output_response": true,
-          "max_tokens": 16000
-        },
-        "timeout": 180
-      }'
-    
-    # Connect to the SSE stream (use task_id from above response)
-    curl -N http://localhost:8001/stream/{task_id} \
-      -H "Accept: text/event-stream"
-    ```
-    
-    This demonstrates:
-    - Traditional task-based streaming for workflow generation
-    - How to handle streaming events and capture final results
-    - Comparison with client-session approach
-    
-    Use this when:
-    - You need a simple one-task-one-stream pattern
-    - Building simple workflow generation tools
-    - You don't need persistent connections
-    """
-    print("\n=== Testing One-Off Workflow Generation ===")
-    
-    llm_config = {
-        "model": "gpt-4o-mini",
-        "openai_key": OPENAI_API_KEY,
-        "stream": True,
-        "output_response": True,
-        "max_tokens": 16000
-    }
-    
-    workflow_config = {
-        "goal": "Create a simple data processing workflow that reads a CSV file",
-        "llm_config": llm_config,
-        "timeout": 180
-    }
-    
-    stream_response = requests.post('http://localhost:8001/stream/workflow/generate', json=workflow_config)
-    print(stream_response.json())
-    
-    stream_url = stream_response.json()["stream_url"]
-    
-    response = requests.get(f'http://localhost:8001{stream_url}', stream=True)
-    messages = SSEClient(response)
-    
-    for msg in messages.events():
-        print(msg.data)
-    
-    return msg.data
-
-def test_simple_workflow_generation():
-    """
-    Test the simple synchronous workflow generation endpoint.
-    
-    Curl commands used:
-    ```bash
-    # Simple synchronous workflow generation
     curl -X POST http://localhost:8001/workflow/generate \
       -H "Content-Type: application/json" \
       -d '{
-        "goal": "Create a simple email notification workflow for new user registrations",
+        "project_id": "proj_abc123def456",
+        "inputs": "Create a comprehensive market analysis workflow...",
         "llm_config": {
           "model": "gpt-4o-mini",
-          "openai_key": "your_openai_key_here",
-          "stream": true,
-          "output_response": true,
-          "max_tokens": 8000
-        },
-        "timeout": 120
+          "openai_key": "your_key_here"
+        }
       }'
     ```
-    
-    This demonstrates:
-    - The simplest possible workflow generation pattern
-    - Synchronous HTTP request/response (no streaming)
-    - Direct workflow result in the response body
-    - Perfect for scripts, CLIs, and simple integrations
-    
-    Use this pattern when:
-    - You want the simplest possible integration
-    - Building command-line tools or scripts
-    - You don't need progress updates
-    - One-off workflow generation is sufficient
-    
-    Benefits:
-    - No SSE complexity
-    - Standard HTTP patterns
-    - Easy to integrate into existing codebases
-    - Immediate results
-    
-    Trade-offs:
-    - Blocks HTTP connection during generation
-    - No progress updates
-    - Risk of timeouts for very long workflows
     """
-    print("\n=== Testing Simple Synchronous Workflow Generation ===")
+    print(f"\n=== Testing Project Workflow Generation for {project_id} ===")
     
-    # LLM configuration
+    # Default LLM config (can be omitted to use server default)
     llm_config = {
         "model": "gpt-4o-mini",
         "openai_key": OPENAI_API_KEY,
@@ -895,94 +124,150 @@ def test_simple_workflow_generation():
         "max_tokens": 8000
     }
     
-    # Workflow configuration
-    workflow_config = {
-        "goal": "Create a simple email notification workflow for new user registrations",
-        "llm_config": llm_config,
-        "timeout": 120
+    generation_request = {
+        "project_id": project_id,
+        "inputs": """Create a comprehensive market analysis workflow that includes the following steps:
+        1. Data Collection: Gather market data from multiple sources including financial reports, news articles, and industry research
+        2. Trend Analysis: Analyze market trends and identify key patterns
+        3. Competitor Analysis: Research and analyze main competitors in the technology sector
+        4. Risk Assessment: Identify potential risks and opportunities
+        5. Report Generation: Generate a detailed executive summary with actionable insights
+        6. Visualization: Create charts and graphs to support the findings
+        
+        The workflow should be designed for Q4 2024 technology sector analysis and target executive-level decision makers.""",
+        "llm_config": llm_config  # Optional - will use default if omitted
     }
     
-    print(f"🚀 Requesting workflow generation...")
-    print(f"   Goal: {workflow_config['goal']}")
+    print(f"🚀 Generating workflow for project...")
+    print(f"   Using LLM: {llm_config['model']}")
+    print(f"   Input length: {len(generation_request['inputs'])} characters")
     
-    # Make the synchronous request (this will block until workflow is generated)
-    response = requests.post('http://localhost:8001/workflow/generate', json=workflow_config)
+    response = requests.post('http://localhost:8001/workflow/generate', json=generation_request)
     
     if response.status_code == 200:
         result = response.json()
         
         print(f"✅ Workflow generated successfully!")
-        print(f"   Success: {result.get('success', False)}")
-        print(f"   Goal: {result.get('goal', 'N/A')}")
-        print(f"   Message: {result.get('message', 'N/A')}")
-        print(f"   Timestamp: {result.get('timestamp', 'N/A')}")
+        print(f"   Success: {result['success']}")
+        print(f"   Project ID: {result['project_id']}")
+        print(f"   Message: {result['message']}")
+        print(f"   Timestamp: {result['timestamp']}")
         
-        # The workflow is right here in the response!
+        # Show workflow preview
         workflow_graph = result.get('workflow_graph')
-        if workflow_graph:
-            print(f"   📊 Workflow preview: {str(workflow_graph)[:100]}...")
+        if isinstance(workflow_graph, dict):
+            nodes_count = len(workflow_graph.get('nodes', []))
+            edges_count = len(workflow_graph.get('edges', []))
+            print(f"   📊 Workflow Structure: {nodes_count} nodes, {edges_count} edges")
+        else:
+            print(f"   📄 Workflow: {str(workflow_graph)[:200]}...")
         
         return result
     else:
-        print(f"❌ Request failed: {response.status_code}")
+        print(f"❌ Workflow generation failed: {response.status_code}")
         print(f"   Error: {response.text}")
         return None
 
-def test_simple_workflow_execution():
-    """
-    Test the simple synchronous workflow execution endpoint.
+def test_project_workflow_generation_with_default_config(project_id):
+    """Test workflow generation using default LLM config (no config provided)"""
+    print(f"\n=== Testing Workflow Generation with Default Config for {project_id} ===")
     
-    Curl commands used:
+    generation_request = {
+        "project_id": project_id,
+        "inputs": "Create a simple data processing workflow that reads CSV files, processes the data, and generates a summary report with basic statistics and visualizations."
+        # No llm_config provided - should use default
+    }
+    
+    print(f"🚀 Generating workflow with default config...")
+    print(f"   Input: {generation_request['inputs'][:80]}...")
+    
+    response = requests.post('http://localhost:8001/workflow/generate', json=generation_request)
+    
+    if response.status_code == 200:
+        result = response.json()
+        
+        print(f"✅ Workflow generated with default config!")
+        print(f"   Success: {result['success']}")
+        print(f"   Message: {result['message']}")
+        
+        print(result)
+        return result
+    else:
+        print(f"❌ Workflow generation failed: {response.status_code}")
+        print(f"   Error: {response.text}")
+        return None
+
+def test_list_projects():
+    """Test listing all projects"""
+    print(f"\n=== Testing Project Listing ===")
+    
+    response = requests.get('http://localhost:8001/projects')
+    
+    if response.status_code == 200:
+        projects = response.json()
+        
+        print(f"✅ Projects retrieved:")
+        print(f"   Total: {projects['total_count']}")
+        print(f"   Active: {len(projects['active_projects'])}")
+        print(f"   All Projects: {projects['projects']}")
+        
+        return projects
+    else:
+        print(f"❌ Failed to list projects: {response.status_code}")
+        print(f"   Error: {response.text}")
+        return None
+    
+def test_invalid_project():
+    """Test behavior with invalid project ID"""
+    print(f"\n=== Testing Invalid Project Handling ===")
+    
+    invalid_project_id = "proj_nonexistent123"
+    
+    # Test invalid project status
+    response = requests.get(f'http://localhost:8001/project/{invalid_project_id}/status')
+    print(f"Status check for invalid project: {response.status_code}")
+    
+    # Test workflow generation for invalid project
+    generation_request = {
+        "project_id": invalid_project_id,
+        "inputs": "Test input for invalid project"
+    }
+    
+    response = requests.post('http://localhost:8001/workflow/generate', json=generation_request)
+    print(f"Workflow generation for invalid project: {response.status_code}")
+    
+    if response.status_code == 400:
+        error = response.json()
+        print(f"✅ Proper error handling: {error.get('detail', 'Unknown error')}")
+        return True
+    else:
+        print(f"⚠️  Unexpected response: {response.text}")
+        return False
+
+def test_project_workflow_execution(project_id):
+    """
+    Test the new project-based workflow execution
+    
+    Curl command:
     ```bash
-    # Simple synchronous workflow execution
     curl -X POST http://localhost:8001/workflow/execute \
       -H "Content-Type: application/json" \
       -d '{
-        "workflow": {
-          "nodes": [...],
-          "edges": [...],
-          // workflow definition
+        "project_id": "proj_abc123def456",
+        "inputs": {
+          "input": "Market analysis data",
+          "timeframe": "Q4 2024"
         },
         "llm_config": {
           "model": "gpt-4o-mini",
-          "openai_key": "your_openai_key_here",
-          "stream": true,
-          "output_response": true,
-          "max_tokens": 8000
-        },
-        "mcp_config": {
-          // optional MCP configuration
-        },
-        "timeout": 300
+          "openai_key": "your_key_here"
+        }
       }'
     ```
-    
-    This demonstrates:
-    - The simplest possible workflow execution pattern
-    - Synchronous HTTP request/response (no streaming)
-    - Direct execution results in the response body
-    - Perfect for scripts, CLIs, and simple integrations
-    
-    Use this pattern when:
-    - You want the simplest possible integration
-    - Building command-line tools or scripts
-    - You don't need progress updates during execution
-    - One-off workflow execution is sufficient
-    
-    Benefits:
-    - No SSE complexity
-    - Standard HTTP patterns
-    - Easy to integrate into existing codebases
-    - Immediate results
-    
-    Trade-offs:
-    - Blocks HTTP connection during execution
-    - No progress updates
-    - Risk of timeouts for very long workflows
     """
-    print("\n=== Testing Simple Synchronous Workflow Execution ===")
+    print(f"\n=== Testing Project Workflow Execution for {project_id} ===")
     
-    # LLM configuration
+    # Default LLM config (can be omitted to use server default)
     llm_config = {
         "model": "gpt-4o-mini",
         "openai_key": OPENAI_API_KEY,
@@ -991,263 +276,81 @@ def test_simple_workflow_execution():
         "max_tokens": 8000
     }
     
-    # Sample workflow definition (this should be a real workflow structure)
-    # For now, using a minimal example - you can replace with actual workflow
-    with open(sample_workflow_path) as f: workflow_dict = json.load(f)
-    
-    # Workflow execution configuration
-    execution_config = {
-        "workflow": workflow_dict,
-        "llm_config": llm_config,
-        "mcp_config": {},  # Optional MCP config
-        "timeout": 300
+    execution_request = {
+        "project_id": project_id,
+        "inputs": {
+            "input": "Please analyze the technology market trends for Q4 2024, focusing on AI and machine learning sectors. Include competitor analysis, market size, growth projections, and investment opportunities.",
+            "timeframe": "Q4 2024",
+            "focus_sectors": ["AI", "machine_learning", "cloud_computing"],
+            "analysis_depth": "comprehensive",
+            "target_audience": "executives"
+        },
+        "llm_config": llm_config  # Optional - will use default if omitted
     }
     
-    print(f"🚀 Requesting workflow execution...")
-    print(f"   Workflow nodes: {len(workflow_dict['nodes'])}")
-    print(f"   Workflow edges: {len(workflow_dict['edges'])}")
+    print(f"🚀 Executing workflow for project...")
+    print(f"   Using LLM: {llm_config['model']}")
+    print(f"   Input keys: {list(execution_request['inputs'].keys())}")
     
-    # Make the synchronous request (this will block until workflow execution is complete)
-    response = requests.post('http://localhost:8001/workflow/execute', json=execution_config)
+    response = requests.post('http://localhost:8001/workflow/execute', json=execution_request)
     
     if response.status_code == 200:
         result = response.json()
         
         print(f"✅ Workflow executed successfully!")
-        print(f"   Success: {result.get('success', False)}")
-        print(f"   Message: {result.get('message', 'N/A')}")
-        print(f"   Timestamp: {result.get('timestamp', 'N/A')}")
+        print(f"   Success: {result['success']}")
+        print(f"   Project ID: {result['project_id']}")
+        print(f"   Message: {result['message']}")
+        print(f"   Timestamp: {result['timestamp']}")
         
-        # The execution results are right here in the response!
+        # Show execution results preview
         execution_result = result.get('execution_result')
         if execution_result:
-            print(f"   📊 Execution status: {execution_result.get('status', 'unknown')}")
-            print(f"   📝 Execution message: {execution_result.get('message', 'N/A')}")
-            if execution_result.get('status') == 'completed':
-                print(f"   🎉 Workflow execution completed successfully!")
-            elif execution_result.get('status') == 'error':
-                print(f"   ❌ Workflow execution failed: {execution_result.get('message', 'Unknown error')}")
+            print(f"   📊 Execution Status: {execution_result.get('status', 'unknown')}")
+            print(f"   📝 Execution Message: {execution_result.get('message', 'N/A')[:100]}...")
+        
+        # Show workflow info preview
+        workflow_info = result.get('workflow_info')
+        if workflow_info:
+            print(f"   📄 Workflow Info: {workflow_info[:200]}...")
         
         return result
     else:
-        print(f"❌ Request failed: {response.status_code}")
+        print(f"❌ Workflow execution failed: {response.status_code}")
         print(f"   Error: {response.text}")
         return None
 
-def test_stream_workflow_execution():
-    """
-    Test streaming workflow execution (task-based pattern).
-    
-    Curl commands used:
-    ```bash
-    # Start streaming workflow execution
-    curl -X POST http://localhost:8001/stream/workflow/execute \
-      -H "Content-Type: application/json" \
-      -d '{
-        "workflow": {
-          "nodes": [...],
-          "edges": [...],
-          // workflow definition
-        },
-        "llm_config": {
-          "model": "gpt-4o-mini",
-          "openai_key": "your_openai_key_here",
-          "stream": true,
-          "output_response": true,
-          "max_tokens": 16000
-        },
-        "timeout": 300
-      }'
-    
-    # Connect to the SSE stream (use task_id from above response)
-    curl -N http://localhost:8001/stream/{task_id} \
-      -H "Accept: text/event-stream"
-    ```
-    
-    This demonstrates:
-    - Real-time workflow execution with progress updates
-    - Log capture and keyword-based progress reporting
-    - Stdout/stderr capture during execution
-    - How to handle streaming events during workflow execution
-    - Comparison with synchronous execution approach
-    
-    Use this when:
-    - You need progress updates during long-running workflows
-    - Building user-facing apps that need real-time feedback
-    - You want to monitor execution logs and outputs
-    - Building workflow monitoring dashboards
-    """
-    print("\n=== Testing Streaming Workflow Execution ===")
-    
-    llm_config = {
-        "model": "gpt-4o-mini",
-        "openai_key": OPENAI_API_KEY,
-        "stream": True,
-        "output_response": True,
-        "max_tokens": 16000
-    }
-    
-    # Load the sample workflow for execution
-    with open(sample_workflow_path) as f: 
-        workflow_dict = json.load(f)
-    
-    execution_config = {
-        "workflow": workflow_dict,
-        "llm_config": llm_config,
-        "mcp_config": {},
-        "timeout": 300
-    }
-    
-    print(f"🚀 Starting streaming workflow execution...")
-    print(f"   Workflow nodes: {len(workflow_dict['nodes'])}")
-    print(f"   Workflow edges: {len(workflow_dict['edges'])}")
-    
-    # Start the streaming execution process
-    stream_response = requests.post('http://localhost:8001/stream/workflow/execute', json=execution_config)
-    
-    if stream_response.status_code != 200:
-        print(f"❌ Failed to start streaming execution: {stream_response.status_code}")
-        print(f"   Error: {stream_response.text}")
-        return None
-    
-    stream_data = stream_response.json()
-    print(f"✅ Streaming execution started!")
-    print(f"   Task ID: {stream_data['task_id']}")
-    print(f"   Stream URL: {stream_data['stream_url']}")
-    
-    # Give the server a moment to initialize the task before connecting to stream
-    import time
-    print(f"   Waiting for task initialization...")
-    time.sleep(1)
-    
-    # Connect to the SSE stream
-    stream_url = stream_data["stream_url"]
-    
-    print(f"\n📊 Connecting to streaming updates...")
-    print("-" * 50)
-    
-    try:
-        response = requests.get(f'http://localhost:8001{stream_url}', stream=True, timeout=60)
-        messages = SSEClient(response)
-        
-        execution_completed = False
-        final_result = None
-        update_count = 0
-        
-        # Add timeout handling
-        import signal
-        
-        def timeout_handler(signum, frame):
-            raise TimeoutError("Stream timeout - no updates received")
-        
-        signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(120)  # 30 second timeout
-        
-        try:
-            for msg in messages.events():
-                update_count += 1
-                signal.alarm(120)  # Reset timeout on each message
-                
-                if msg.event == "update":
-                    try:
-                        data = json.loads(msg.data)
-                        status = data.get('status', 'unknown')
-                        progress = data.get('progress', 0)
-                        message = data.get('message', 'No message')
-                        
-                        # Display progress updates
-                        print(f"⚙️  [{progress:3d}%] {status.upper()}: {message}")
-                            
-                    except json.JSONDecodeError:
-                        print(f"⚠️  Raw message: {msg.data}")
-                        
-                elif msg.event == "complete":
-                    try:
-                        data = json.loads(msg.data)
-                        final_result = data
-                        execution_completed = True
-                        
-                        print(f"\n🎉 Workflow execution completed!")
-                        print(f"   Status: {data.get('status', 'unknown')}")
-                        print(f"   Progress: {data.get('progress', 0)}%")
-                        
-                        result = data.get('result', {})
-                        if result:
-                            execution_result = result.get('execution_result')
-                            if execution_result:
-                                print(f"   Execution status: {execution_result.get('status', 'unknown')}")
-                                print(f"   Execution message: {execution_result.get('message', 'N/A')}")
-                        
-                        break
-                        
-                    except json.JSONDecodeError:
-                        print(f"⚠️  Raw completion message: {msg.data}")
-                        execution_completed = True
-                        break
-                        
-                elif msg.event == "error":
-                    try:
-                        data = json.loads(msg.data)
-                        print(f"\n❌ Execution error: {data.get('error', 'Unknown error')}")
-                        execution_completed = True
-                        break
-                    except json.JSONDecodeError:
-                        print(f"\n❌ Raw error message: {msg.data}")
-                        execution_completed = True
-                        break
-                        
-        except TimeoutError:
-            print(f"\n⏰ Stream timeout after 120 seconds")
-            print(f"   Received {update_count} updates before timeout")
-            execution_completed = True
-            
-        finally:
-            signal.alarm(0)  # Disable timeout
-            
-    except requests.exceptions.RequestException as e:
-        print(f"\n❌ Connection error: {e}")
-        return None
-    
-    print("-" * 50)
-    
-    if execution_completed:
-        print("✅ Streaming workflow execution test completed!")
-        return final_result
-    else:
-        print("⚠️  Streaming execution ended unexpectedly")
-        return None
 
 # =============================================================================
 # TEST RUNNER
 # =============================================================================
 
 if __name__ == "__main__":
-    # print("Running test client...")
+    print("🚀 Starting Project-Based Workflow System Tests...")
     
-    # # Test new client-session functionality
-    # print("\n" + "="*50)
-    # print("TESTING CLIENT-SESSION FUNCTIONALITY")
-    # print("="*50)
+    test_health_check()
     
-    # # Test single client session
-    # test_client_workflow_generation()
+    project_result = test_project_setup()
+    if not project_result:
+        print("❌ Project setup failed, stopping test")
+        raise Exception("Project setup failed")
+    project_id = project_result['project_id']
     
-    # # Test multiple tasks on single client
-    # test_multiple_tasks_single_client()
+    # test_project_status(project_id)
     
-    # # Test client listing
-    # test_list_clients()
+    # workflow_result = test_project_workflow_generation(project_id)
+    # if not workflow_result:
+    #     print("❌ Workflow generation failed")
+    #     return False
     
-    # # Test simple synchronous workflow generation
-    # test_simple_workflow_generation()
+    # test_project_status(project_id)
     
-    # # Test streaming workflow generation
-    # test_stream_workflow_generation()
+    test_project_workflow_generation_with_default_config(project_id)
     
-    # Test simple synchronous workflow execution
-    test_simple_workflow_execution()
+    test_project_workflow_execution(project_id)
+
+    # test_list_projects()
     
-    # # Test streaming workflow execution
-    # test_stream_workflow_execution()
+    # test_invalid_project()
     
-    print("\n✅ All tests completed!")
+    print("\n🏁 Test execution completed.") 
