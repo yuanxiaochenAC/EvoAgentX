@@ -36,6 +36,7 @@ from ..agents.agent_manager import AgentManager
 from ..workflow.workflow_graph import WorkFlowGraph
 from ..workflow.workflow import WorkFlow 
 from ..evaluators.evaluator import Evaluator 
+from ..prompts.template import PromptTemplate, MiproPromptTemplate
 from ..utils.mipro_utils.signature_utils import signature_from_registry
 from ..utils.mipro_utils.module_utils import PromptTuningModule
 
@@ -301,7 +302,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         optimizer_llm: BaseLLM,
         evaluator: Optional[Callable] = None,
         eval_rounds: Optional[int] = 1, 
-        metric_threshold: Optional[int] = None,
+        metric_threshold: Optional[float] = None,
         max_bootstrapped_demos: int = 4, 
         max_labeled_demos: int = 4, 
         auto: Optional[Literal["light", "medium", "heavy"]] = "medium", 
@@ -338,7 +339,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
                 examples from a benchmark's train/dev/test set and return a float score. Must also have a `metric(example, prediction) -> float` 
                 method that evaluates a single example. If not provided, will construct a default evaluator using the benchmark's evaluate method.
             eval_rounds (Optional[int]): number of rounds to evaluate the program. Defaults to 1. 
-            metric_threshold (Optional[int]): threshold for the metric score. If provided, only examples with scores above this threshold will be used as demonstrations. 
+            metric_threshold (Optional[float]): threshold for the metric score. If provided, only examples with scores above this threshold will be used as demonstrations. 
                 If not provided, examples with scores above 0 will be used as demonstrations. 
             max_bootstrapped_demos (int): maximum number of bootstrapped demonstrations to use. Defaults to 4.
             max_labeled_demos (int): maximum number of labeled demonstrations to use. Defaults to 4.
@@ -346,7 +347,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
                 "light": n=6, val_size=100; "medium": n=12, val_size=300; "heavy": n=18, val_size=1000. Defaults to "medium".
             max_steps (int): maximum number of optimization steps. Required if auto is None.
             num_candidates (Optional[int]): number of candidates to generate for each optimization step. Required if auto is None.
-            num_threads (Optional[int]): number of threads to use for parallel evaluation. If None, will use single thread.
+            num_threads (Optional[int]): number of threads to use for parallel evaluation. If None, will use single thread. Only used if evaluator is not provided. 
             max_errors (int): maximum number of errors allowed during evaluation before stopping. Defaults to 10.
             seed (int): random seed for reproducibility. Defaults to 9.
             init_temperature (float): initial temperature for instruction generation. Defaults to 0.5.
@@ -373,13 +374,14 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         BaseOptimizer.__init__(self, registry=registry, program=program, evaluator=evaluator)
 
         # convert the registry and program to dspy-compatible module
+        self._validate_program(program=program)
         self.model = self._convert_to_dspy_module(registry, program)
-        self._validate_program(self.model)
         self.optimizer_llm = MiproLMWrapper(optimizer_llm)
         dspy.configure(lm=self.optimizer_llm)
         self.task_model = dspy.settings.lm 
         self.prompt_model = dspy.settings.lm 
         self.metric_threshold = metric_threshold
+        self.metric_name = None 
         self.teacher_settings = {"use_teacher": True} 
 
         # Validate 'auto' parameter
@@ -434,30 +436,36 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         
         # Check if program has save method
         if not hasattr(program, 'save'):
-            raise ValueError("program must have a `save` method")
+            # raise ValueError("program must have a `save` method")
+            logger.warning("program does not have a `save(path=...)` method, will use the default save method in dspy.Module")
+        else:
+            # Check save method signature
+            save_sig = inspect.signature(program.save)
+            save_params = list(save_sig.parameters.keys())
+            if 'path' not in save_params:
+                raise ValueError("program.save must accept a 'path' parameter")
         
         # Check if program has load method
         if not hasattr(program, 'load'):
-            raise ValueError("program must have a `load` method")
-        
-        # Check save method signature
-        save_sig = inspect.signature(program.save)
-        save_params = list(save_sig.parameters.keys())
-        if 'path' not in save_params:
-            raise ValueError("program.save must accept a 'path' parameter")
-        
-        # Check load method signature
-        load_sig = inspect.signature(program.load)
-        load_params = list(load_sig.parameters.keys())
-        if 'path' not in load_params:
-            raise ValueError("program.load must accept a 'path' parameter")
+            # raise ValueError("program must have a `load` method")
+            logger.warning("program does not have a `load(path=...)` method, will use the default load method in dspy.Module")
+        else:
+            # Check load method signature
+            load_sig = inspect.signature(program.load)
+            load_params = list(load_sig.parameters.keys())
+            if 'path' not in load_params:
+                raise ValueError("program.load must accept a 'path' parameter")
 
     def _validate_evaluator(self, evaluator: Callable = None, benchmark: Benchmark = None, metric_name: Optional[str] = None) -> Callable:
         """
         Validate that the evaluator meets the required interface and wrap it with runtime checks.
         
         Args:
-            evaluator (Callable): The evaluator to validate
+            evaluator (Callable): The evaluator to validate. 
+                If provided, it must have a `__call__(program, evalset, *kwargs) -> float` method that receives a program and a list of examples from a benchmark's train/dev/test set and return a float score. 
+                It must also have a `metric(example: dspy.Example, prediction: Any) -> float/int/bool` method that evaluates a single example. 
+            benchmark (Benchmark): The benchmark to use for evaluation. Only used if evaluator is not provided. In this case, the evaluator will be constructed using the `evaluate` method (return a dictionary of scores) in the benchmark. 
+            metric_name (Optional[str]): The name of the metric to use for evaluation. Only used if evaluator is not provided. It will be used to select the metric for optimization from the dictionary of scores returned by the benchmark's `evaluate` method. 
             
         Raises:
             TypeError: If evaluator is not callable or doesn't return float
@@ -496,7 +504,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
             
         # check if the evaluator has a `metric` method with correct signature 
         if not hasattr(evaluator, 'metric'):
-            raise ValueError("evaluator must have a `metric` method")
+            raise ValueError("evaluator must have a `metric(example: dspy.Example, prediction: Any) -> float/int/bool` method")
         
         metric_sig = inspect.signature(evaluator.metric)
         metric_params = list(metric_sig.parameters.keys())
@@ -573,8 +581,10 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
 
         Args:
             dataset (Benchmark): a Benchmark object that contains the training and validation data. 
-            metric_name (Optional[str]): the name of the metric to use for evaluation. Only used when the evaluator returns a dictionary of scores. 
-                If not provided, the first score returned by the evaluator will be used. 
+            metric_name (Optional[str]): the name of the metric to use for optimization. Only used when `self.evaluator` is not provided. 
+                In this case, the evaluator will be constructed using the `evaluate` method (return a dictionary of scores) in the benchmark, 
+                and the metric specified by `metric_name` will be used for optimization. If not provided, the average of all scores returned by the evaluator will be used. 
+                If `self.evaluator` is provided, this argument will be ignored. 
             **kwargs: additional keyword arguments to pass to the evaluator. 
         """
 
@@ -582,6 +592,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         student = self.model
         num_trials = self.max_steps
         minibatch = self.minibatch
+        self.metric_name = metric_name
 
         # If auto is None, and num_trials is not provided (but num_candidates is), raise an error that suggests a good num_trials value
         if self.auto is None and (self.num_candidates is not None and num_trials is None):
@@ -634,12 +645,9 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         self.metric = evaluator.metric
 
         # Step 1: Bootstrap few-shot examples 
-        """
-        with suppress_cost_logging():
-            demo_candidates = self._bootstrap_fewshot_examples(program, trainset, seed, teacher=None)
+        demo_candidates = self._bootstrap_fewshot_examples(program, trainset, seed, teacher=None)
 
         # Step 2: Propose instruction candidates 
-        
         with suppress_cost_logging():
             instruction_candidates = self._propose_instructions(
                 program,
@@ -651,11 +659,6 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
                 self.tip_aware_proposer,
                 self.fewshot_aware_proposer,
             )
-        """ 
-
-        import pickle
-        demo_candidates = pickle.load(open("debug/demo_candidates_debug.pkl", "rb"))
-        instruction_candidates = pickle.load(open("debug/instruction_candidates_debug.pkl", "rb"))
 
         # Step 3: Find optimal prompt parameters 
         with suppress_cost_logging():
@@ -677,11 +680,14 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
             self.best_program_path = os.path.join(self.save_path, "best_program.json")
             best_program.save(self.best_program_path)
         
-
         # reset the self.model. After optimization, the model will be reset to the original state.
         # This is necessary to avoid the model being modified by the optimization process. 
         # Use self.restore_best_program() to restore the best program. 
         self.model.reset()
+
+    def restore_best_program(self):
+        # todo: implement this
+        pass 
 
     def _get_input_keys(self, dataset: Benchmark) -> Optional[List[str]]:
 
@@ -751,22 +757,23 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         zeroshot = self.max_bootstrapped_demos == 0 and self.max_labeled_demos == 0
 
         try:
-            demo_candidates = create_n_fewshot_demo_sets(
-                student=program,
-                num_candidate_sets=self.num_fewshot_candidates,
-                trainset=trainset,
-                max_labeled_demos=(LABELED_FEWSHOT_EXAMPLES_IN_CONTEXT if zeroshot else self.max_labeled_demos),
-                max_bootstrapped_demos=(
-                    BOOTSTRAPPED_FEWSHOT_EXAMPLES_IN_CONTEXT if zeroshot else self.max_bootstrapped_demos
-                ),
-                metric=self.metric,
-                max_errors=self.max_errors,
-                teacher=teacher,
-                teacher_settings=self.teacher_settings,
-                seed=seed,
-                metric_threshold=self.metric_threshold,
-                rng=self.rng,
-            )
+            with suppress_logger_info():
+                demo_candidates = create_n_fewshot_demo_sets(
+                    student=program,
+                    num_candidate_sets=self.num_fewshot_candidates,
+                    trainset=trainset,
+                    max_labeled_demos=(LABELED_FEWSHOT_EXAMPLES_IN_CONTEXT if zeroshot else self.max_labeled_demos),
+                    max_bootstrapped_demos=(
+                        BOOTSTRAPPED_FEWSHOT_EXAMPLES_IN_CONTEXT if zeroshot else self.max_bootstrapped_demos
+                    ),
+                    metric=self.metric,
+                    max_errors=self.max_errors,
+                    teacher=teacher,
+                    teacher_settings=self.teacher_settings,
+                    seed=seed,
+                    metric_threshold=self.metric_threshold,
+                    rng=self.rng,
+                )
         except Exception as e:
             logger.info(f"Error generating few-shot examples: {e}")
             logger.info("Running without few-shot examples.")
@@ -785,7 +792,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         tip_aware_proposer: bool,
         fewshot_aware_proposer: bool,
     ) -> Dict[int, List[str]]:
-        logger.info("\n==> STEP 2: PROPOSE INSTRUCTION CANDIDATES <==")
+        logger.info("==> STEP 2: PROPOSE INSTRUCTION CANDIDATES <==")
         logger.info(
             "We will use the few-shot examples from the previous step, a generated dataset summary, a summary of the program code, and a randomly selected prompting tip to propose instructions."
         )
@@ -807,7 +814,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
             rng=self.rng,
         )
 
-        logger.info(f"\nProposing N={self.num_instruct_candidates} instructions...\n")
+        logger.info(f"Proposing N={self.num_instruct_candidates} instructions...")
         instruction_candidates = proposer.propose_instructions_for_program(
             trainset=trainset,
             program=program,
@@ -852,8 +859,14 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         adjusted_num_trials = int((num_trials + num_trials // minibatch_full_eval_steps + 1 + run_additional_full_eval_at_end) if minibatch else num_trials)
         logger.info(f"== Trial {1} / {adjusted_num_trials} - Full Evaluation of Default Program ==")
 
-        default_score = eval_candidate_program(
-            len(valset), valset, program, evaluator, self.rng, eval_rounds=self.eval_rounds 
+        # default_score = eval_candidate_program(
+        #     len(valset), valset, program, evaluator, self.rng,
+        # )
+        default_score = self.evaluate(
+            evalset=valset, 
+            program=program, 
+            evaluator=evaluator, 
+            batch_size=len(valset)
         )
         logger.info(f"Default program score: {default_score}\n")
 
@@ -904,7 +917,13 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
 
             # Evaluate the candidate program (on minibatch if minibatch=True)
             batch_size = minibatch_size if minibatch else len(valset)
-            score = eval_candidate_program(batch_size, valset, candidate_program, evaluator, self.rng)
+            # score = eval_candidate_program(batch_size, valset, candidate_program, evaluator, self.rng)
+            score = self.evaluate(
+                evalset=valset, 
+                program=candidate_program,
+                evaluator=evaluator, 
+                batch_size=batch_size
+            )
             total_eval_calls += batch_size
 
             # Update best score and program
@@ -1056,10 +1075,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         candidate_program,
         total_eval_calls,
     ):
-        if self.save_interval is None or trial_num % self.save_interval == 0:
-            trial_logs[trial_num]["mb_program_path"] = save_candidate_program(candidate_program, self.save_path, trial_num=trial_num, note="mb")
-        else:
-            trial_logs[trial_num]["mb_program_path"] = ""
+        trial_logs[trial_num]["mb_program_path"] = save_candidate_program(candidate_program, self.save_path, trial_num=trial_num, note="mb")
         trial_logs[trial_num]["mb_score"] = score
         trial_logs[trial_num]["total_eval_calls_so_far"] = total_eval_calls
         trial_logs[trial_num]["mb_program"] = candidate_program.deep_copy()
@@ -1127,7 +1143,13 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
             param_score_dict, fully_evaled_param_combos
         )
         logger.info(f"Doing full eval on next top averaging program (Avg Score: {mean_score}) from minibatch trials...")
-        full_eval_score = eval_candidate_program(len(valset), valset, highest_mean_program, evaluator, self.rng)
+        # full_eval_score = eval_candidate_program(len(valset), valset, highest_mean_program, evaluator, self.rng)
+        full_eval_score = self.evaluate(
+            evalset=valset, 
+            program=highest_mean_program, 
+            evaluator=evaluator, 
+            batch_size=len(valset)
+        )
         score_data.append({"score": full_eval_score, "program": highest_mean_program, "full_eval": True})
 
         # Log full eval as a trial so that optuna can learn from the new results
@@ -1175,6 +1197,7 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
         dataset: Optional[Benchmark] = None, 
         eval_mode: Optional[str] = "dev", 
         program: Optional[PromptTuningModule] = None, 
+        evaluator: Optional[Callable] = None, 
         indices: Optional[List[int]] = None, 
         sample_k: Optional[int] = None, 
         batch_size: Optional[int] = None, # if provided, sample `batch_size` examples from the evalset
@@ -1182,7 +1205,10 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
     ):
         # if program is not provided, use the model as the program
         if program is None:
-            program = self.model 
+            program = self.model
+        
+        if evaluator is None:
+            evaluator = self._validate_evaluator(evaluator=self.evaluator, benchmark=dataset, metric_name=self.metric_name)
 
         # if evalset is not provided, use the dataset to get the evalset
         if evalset is None:
@@ -1205,9 +1231,12 @@ class MiproOptimizer(BaseOptimizer, MIPROv2):
                 batch_size=batch_size, 
                 evalset=evalset, 
                 candidate_program=program, 
-                evaluator=None # todo !!! 
+                evaluator=evaluator, 
+                rng=self.rng
             )
-
+            score_list.append(score)
+        
+        return sum(score_list) / len(score_list)
 
 
 def eval_candidate_program(
@@ -1233,11 +1262,11 @@ def eval_candidate_program(
                 return_all_scores=return_all_scores, 
             )
     
-    except Exception:
-        logger.error("An exception occurred during evaluation", exc_info=True)
+    except Exception as e:
+        logger.error(f"An exception occurred during evaluation: {str(e)}", exc_info=True)
         if return_all_scores:
             return 0.0, [0.0] * len(evalset)
-        return 0.0 
+        return 0.0
 
 
 class WorkFlowGraphProgram:
@@ -1350,8 +1379,6 @@ class MiproEvaluatorWrapper(MiproEvaluator):
         # sync the candidate prompts and instructions to the workflow graph
         program.sync_predict_inputs_to_program()
 
-        program.save()
-
         return_all_scores = kwargs.get("return_all_scores", None) or self.return_all_scores
         return_outputs = kwargs.get("return_outputs", None) or self.return_outputs
         
@@ -1446,6 +1473,9 @@ class WorkFlowMiproOptimizer(MiproOptimizer):
                 - requires_permission_to_run (bool): whether to require user permission before running optimization. Defaults to False.
                 - provide_traceback (Optional[bool]): whether to provide traceback for evaluation errors. If None, will use default setting.
         """
+
+        # check if the graph is compatible with the WorkFlowMipro optimizer.
+        graph = self._validate_graph_compatibility(graph=graph)
         
         # convert the workflow graph to a callable program  
         workflow_graph_program = WorkFlowGraphProgram(
@@ -1467,22 +1497,101 @@ class WorkFlowMiproOptimizer(MiproOptimizer):
             **kwargs
         )
 
+    def _validate_graph_compatibility(self, graph: WorkFlowGraph):
+        """
+        Check if the graph is compatible with the WorkFlowMipro optimizer. Also, convert the MiproPromptTemplate data to MiproPromptTemplate instances. 
+        """
+        for node in graph.nodes:
+            if len(node.agents) > 1:
+                raise ValueError("WorkFlowMiproOptimizer only supports workflows where every node only has a single agent.")
+            else:
+                agent = node.agents[0]
+                if not isinstance(agent, dict):
+                    raise ValueError(f"Unsupported agent type {type(agent)}. Expected 'dict'.")
+                else:
+                    if "actions" in agent:
+                        # Agent has actions in its dict
+                        # All agents have a `ContextExtraction` action, filter it out
+                        non_ContextExtraction_actions = [
+                            action for action in agent["actions"] if action["class_name"] != "ContextExtraction"
+                        ]
+                        if len(non_ContextExtraction_actions) > 1:
+                            raise ValueError(f"WorkFlowMiproOptimizer only supports workflows where every agent only has a single action. {agent['name']} has {len(non_ContextExtraction_actions)} actions.")
+                        # if "prompt_template" not in non_ContextExtraction_actions[0]:
+                        if non_ContextExtraction_actions[0].get("prompt_template", None) is None:
+                            # raise ValueError(f"Please provide a PromptTemplate for {agent['name']}.")
+                            logger.warning(f"{agent['name']} does not have a MiproPromptTemplate, its prompt will not be optimized.")
+                        else:
+                            prompt_template = non_ContextExtraction_actions[0]["prompt_template"]
+                            if isinstance(prompt_template, dict):
+                                prompt_template = PromptTemplate.from_dict(prompt_template)
+                            if isinstance(prompt_template, MiproPromptTemplate):
+                                # in some cases, the raw `prompt_template` can be a dict, convert it to a MiproPromptTemplate instance
+                                non_ContextExtraction_actions[0]["prompt_template"] = prompt_template 
+                            else:
+                                logger.warning(f"{agent['name']} has a non-MiproPromptTemplate, its prompt will not be optimized. You should use `MiproPromptTemplate` to define the optimizable prompt.")
+                    else:
+                        # CustomizeAgent does not have actions in its dict
+                        # if "prompt_template" not in agent:
+                            # raise ValueError(f"Please provide a PromptTemplate for {agent['name']}.")
+                        if agent.get("prompt_template", None) is None:
+                            logger.warning(f"{agent['name']} does not have a MiproPromptTemplate, its prompt will not be optimized.")
+                        else:
+                            prompt_template = agent["prompt_template"]
+                            if isinstance(prompt_template, dict):
+                                prompt_template = PromptTemplate.from_dict(prompt_template)
+                            if isinstance(prompt_template, MiproPromptTemplate):
+                                # in some cases, the raw `prompt_template` can be a dict, convert it to a MiproPromptTemplate instance
+                                agent["prompt_template"] = prompt_template
+                            else:
+                                logger.warning(f"{agent['name']} has a non-MiproPromptTemplate, its prompt will not be optimized. You should use `MiproPromptTemplate` to define the optimizable prompt.")
+        return graph 
+
     def _validate_evaluator(self, evaluator: Callable = None, benchmark: Benchmark = None, metric_name: str = None) -> Callable:
         if evaluator and isinstance(evaluator, Evaluator):
             # if evaluator is an Evaluator, convert it to a MiproEvaluatorWrapper
-            evaluator = MiproEvaluatorWrapper(evaluator=evaluator, benchmark=benchmark)
+            evaluator = MiproEvaluatorWrapper(evaluator=evaluator, benchmark=benchmark, metric_name=metric_name)
         return super()._validate_evaluator(evaluator, benchmark, metric_name)
     
     def _register_optimizable_parameters(self, program: WorkFlowGraphProgram):
 
         registry = MiproRegistry()
-        registry.track(
-            root_or_obj=program,
-            path_or_attr="graph.nodes[0].agents[0]['prompt_template']", 
-            name="test_prompt",
-            input_names=["problem"],
-            output_names=["solution"]
-        ) # todo 
+        workflow_graph = program.graph
+        for i, node in enumerate(workflow_graph.nodes):
+            agent = node.agents[0] # only one agent per node is allowed
+            if "actions" in agent:
+                # Agent Instance 
+                for j, action in enumerate(agent["actions"]):
+                    # only one action is allowed per agent. Use for loop because all the agent 
+                    # will have the ContextExtraction action, which will be filtered out by default 
+                    # since it does not have a prompt template. 
+                    action_prompt_template = action.get("prompt_template", None)
+                    if action_prompt_template and isinstance(action_prompt_template, MiproPromptTemplate):
+                        registry.track(
+                            root_or_obj=program, 
+                            path_or_attr=f"graph.nodes[{i}].agents[0]['actions'][{j}]['prompt_template']",
+                            name=f"{agent['name']}_prompt_template",
+                            input_names=node.get_input_names(),
+                            output_names=node.get_output_names()
+                        )
+            else:
+                # CustomizeAgent Instance
+                prompt_template = agent.get("prompt_template", None)
+                if prompt_template and isinstance(prompt_template, MiproPromptTemplate):
+                    registry.track(
+                        root_or_obj=program, 
+                        path_or_attr=f"graph.nodes[{i}].agents[0]['prompt_template']",
+                        name=f"{agent['name']}_prompt_template",
+                        input_names=node.get_input_names(),
+                        output_names=node.get_output_names()
+                    )
+        
+        if not registry.fields:
+            raise ValueError(
+                "No optimizable parameters found in the workflow graph. "
+                "Please check if the workflow graph is compatible with the WorkFlowMiproOptimizer. "
+                "You should use `MiproPromptTemplate` to define the optimizable prompt."
+            )
         
         return registry
     
