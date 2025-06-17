@@ -6,7 +6,7 @@ from evoagentx.agents import CustomizeAgent
 from evoagentx.prompts import StringTemplate 
 from evoagentx.core.module_utils import extract_code_blocks as util_extract_code_blocks
 from evoagentx.core.registry import register_parse_function
-from evoagentx.tools import FileTool 
+from evoagentx.tools.file_tool import FileToolCollection 
 from evoagentx.tools.mcp import MCPToolkit
 
 load_dotenv()
@@ -475,12 +475,12 @@ def test_xml_parse_mode_with_template():
     print("Places:", message.content.places)
 
 if __name__ == "__main__":
-    build_customize_agent()
-    build_customize_agent_with_inputs()
-    build_customize_agent_with_inputs_and_outputs()
-    build_customize_agent_with_custom_parse_func()
-    build_customize_agent_with_prompt_template()
-    build_customize_agent_with_inputs_and_outputs_and_prompt_template()
+    # build_customize_agent()
+    # build_customize_agent_with_inputs()
+    # build_customize_agent_with_inputs_and_outputs()
+    # build_customize_agent_with_custom_parse_func()
+    # build_customize_agent_with_prompt_template()
+    # build_customize_agent_with_inputs_and_outputs_and_prompt_template()
     build_customize_agent_with_tools()
     build_customize_agent_with_custom_parse_and_format()
     

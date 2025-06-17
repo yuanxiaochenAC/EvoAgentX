@@ -20,7 +20,7 @@ def test_MCP_server():
         name="CodeWriter",
         description="Writes Python code based on requirements",
         prompt_template= StringTemplate(
-            instruction="Summarize all your tools."
+            instruction="Do some operations based on the user's instruction."
         ), 
         llm_config=openai_config,
         inputs=[
@@ -29,12 +29,11 @@ def test_MCP_server():
         outputs=[
             {"name": "result", "type": "string", "description": "The tools you have"}
         ],
-        tool_names=[tool.name for tool in tools],
-        tool_dict={tool.name: tool for tool in tools}
+        tools=tools
     )
 
     message = code_writer(
-        inputs={"instruction": "Summarize all your tools."}
+        inputs={"instruction": "lets try **get_stock_info** tool to get the stock info of **AAPL**"}
     )
     print(f"Response from {code_writer.name}:")
     print(message.content.result)
