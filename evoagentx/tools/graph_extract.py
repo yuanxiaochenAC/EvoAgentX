@@ -52,8 +52,6 @@ class GraphExtract(Tool):
         return entities
 
     def get_tool_schemas(self) -> List[Dict[str, Any]]:
-        """
-        """
         return [
             {
                 "type": "function",

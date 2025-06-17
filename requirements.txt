@@ -67,8 +67,6 @@ mcp
 # Should install torch
 neo4j
 llama-index
-llama-index-llms-openai
-llama-index-embeddings-openai
 llama-index-vector-stores-faiss
 llama-index-graph-stores-neo4j
 llama-index-embeddings-huggingface

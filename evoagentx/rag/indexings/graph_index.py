@@ -1,4 +1,4 @@
-from typing import Dict, Any, Union, List
+from typing import Dict, Any, Union, List, Optional
 
 from llama_index.core.schema import BaseNode
 from llama_index.core.storage import StorageContext

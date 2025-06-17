@@ -51,11 +51,7 @@ class SearchEngine:
         # Maybe reinit by the load funcion.
         self.embed_model = self.embedding_factory.create(
             provider=self.config.embedding.provider,
-            model_config={
-                "model_name": self.config.embedding.model_name,
-                "api_key": self.config.embedding.api_key,
-                "api_base": self.config.embedding.api_url,
-            }
+            model_config=self.config.embedding.model_dump(exclude_unset=True),
         )
 
         # Initialize chunker
@@ -139,7 +135,7 @@ class SearchEngine:
                     index_type=index_type,
                     embed_model=self.embed_model.get_embedding_model(),
                     storage_handler=self.storage_handler,
-                    index_config=self.config.index.model_dump() if self.config.index else {}
+                    index_config=self.config.index.model_dump(exclude_unset=True) if self.config.index else {}
                 )
                 self.indices[corpus_id][index_type] = index
                 self.retrievers[corpus_id][index_type] = self.retriever_factory.create(
@@ -398,11 +394,7 @@ class SearchEngine:
                         logger.info(f"Reinitializing embedding model to {metadata.embedding_model_name}")
                         self.embed_model = self.embedding_factory.create(
                             provider=self.config.embedding.provider,
-                            model_config={
-                                "model_name": metadata.embedding_model_name,
-                                "api_key": self.config.embedding.api_key,
-                                "api_base": self.config.embedding.api_url,
-                            }
+                            model_config=self.config.embedding.model_dump(exclude_unset=True)
                         )
 
                     # Load index
@@ -461,12 +453,7 @@ class SearchEngine:
                         logger.info(f"Reinitializing embedding model to {metadata.embedding_model_name}")
                         self.embed_model = self.embedding_factory.create(
                             provider=self.config.embedding.provider,
-                            model_config={
-                                "model_name": metadata.embedding_model_name,
-                                "api_key": self.config.embedding.api_key,
-                                "api_base": self.config.embedding.api_url,
-                                "dimensions": metadata.dimension
-                            }
+                            model_config=self.config.embedding.model_dump(exclude_unset=True)
                         )
 
                     # Load index
@@ -489,7 +476,7 @@ class SearchEngine:
                     index_type=index_type,
                     embed_model=self.embed_model.get_embedding_model(),
                     storage_handler=self.storage_handler,
-                    index_config=self.config.index.model_dump() if self.config.index else {}
+                    index_config=self.config.index.model_dump(exclude_unset=True) if self.config.index else {}
                 )
                 self.indices[corpus_id][index_type] = index
 

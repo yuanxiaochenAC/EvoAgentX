@@ -27,7 +27,7 @@ store_config = StoreConfig(
     ),
     vectorConfig=VectorStoreConfig(
         vector_name="faiss",
-        dimensions=1536,
+        dimensions=768,    # 1536: text-embedding-ada-002, 384: bge-small-en-v1.5, 768: nomic-embed-text
         index_type="flat_l2",
     ),
     graphConfig=None,
@@ -36,6 +36,29 @@ store_config = StoreConfig(
 storage_handler = StorageHandler(storageConfig=store_config)
 
 # Initialize SearchEngine
+# Define 3 embeddings models
+"""
+# For openai example
+embedding=EmbeddingConfig(
+        provider="openai",
+        model_name="text-embedding-ada-002",
+        api_key=os.environ["OPENAI_API_KEY"],
+    )
+# For huggingface example
+embedding=EmbeddingConfig(
+        provider="huggingface",
+        model_name="debug/weights/bge-small-en-v1.5",
+        device="cpu"
+    )
+"""
+embedding=EmbeddingConfig(
+        provider="ollama",
+        model_name="nomic-embed-text",
+        base_url="10.168.1.71:17174",
+        dimensions=768
+        # api_key=os.environ["OPENAI_API_KEY"],
+    )
+
 rag_config = RAGConfig(
     reader=ReaderConfig(
         recursive=False, exclude_hidden=True,
@@ -49,11 +72,7 @@ rag_config = RAGConfig(
         chunk_overlap=0,
         max_chunks=None
     ),
-    embedding=EmbeddingConfig(
-        provider="openai",
-        model_name="text-embedding-ada-002",
-        api_key=os.environ["OPENAI_API_KEY"],
-    ),
+    embedding=embedding,
     index=IndexConfig(index_type="vector"),
     retrieval=RetrievalConfig(
         retrivel_type="vector",
@@ -183,3 +202,13 @@ if __name__ == "__main__":
     # Save results
     with open("./debug/data/hotpotqa/evaluation_results.json", "w") as f:
         json.dump(avg_metrics, f, indent=2)
+
+    """
+    Results using 20 samples:
+        text-embedding-ada-002:
+            precision@k:0.3400, recall@k:0.7117, f1@k:0.4539, mrr:0.9250, hit@k: 1.0000, jaccard:0.3089
+        bge-small-en-v1.5:
+            precision@k:0.3100, recall@k:0.6767, f1@k:0.4207, mrr: 0.7667, hit@k: 0.9500, jaccard:0.2837
+        nomic-embed-text:
+            precision@k:0.3500, recall@k:0.7367, f1@k: 0.4682, mrr:0.7958, hit@k: 0.9500, jaccard: 0.3268
+    """

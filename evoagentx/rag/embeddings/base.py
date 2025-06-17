@@ -1,3 +1,4 @@
+import os
 from enum import Enum
 from typing import Dict, List
 
@@ -16,22 +17,29 @@ SUPPORTED_MODELS: Dict[str, List[str]] = {
         "sentence-transformers/all-mpnet-base-v2",
         "sentence-transformers/multi-qa-mpnet-base-dot-v1",
         "BAAI/bge-small-en-v1.5",
-        "BAAI/bge-large-en-v1.5"
-        # Add more Hugging Face models as needed for your use case
+        "BAAI/bge-large-en-v1.5",
     ],
+    "ollama": [
+        "nomic-embed-text",
+        "mxbai-embed-large",
+        "bge-m3",
+        "all-minilm"
+        "snowflake-arctic-embed"
+    ]
 }
 
 
 class EmbeddingProvider(str, Enum):
     OPENAI = "openai"
     HUGGINGFACE = "huggingface"
+    OLLAMA = "ollama"
 
     @classmethod
     def validate_model(cls, provider: str, model_name: str) -> bool:
         """Validate if the model is supported for the given provider.
 
         Args:
-            provider (str): The embedding provider (e.g., 'openai', 'huggingface', 'custom').
+            provider (str): The embedding provider (e.g., 'openai', 'huggingface', 'ollama').
             model_name (str): The name of the embedding model to validate.
 
         Returns:
@@ -42,6 +50,13 @@ class EmbeddingProvider(str, Enum):
         """
         if provider not in SUPPORTED_MODELS:
             raise ValueError(f"Unsupported provider: {provider}")
+        
+        # Handle the local model.
+        if provider == "huggingface":
+            if os.path.exists(model_name):
+                return True
+            return model_name in SUPPORTED_MODELS.get(provider, [])
+
         return model_name in SUPPORTED_MODELS.get(provider, [])
 
 
