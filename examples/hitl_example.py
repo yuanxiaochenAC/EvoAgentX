@@ -88,7 +88,8 @@ async def main():
         inputs=[{"name": "data_source", "type": "string", "description": "Source data location"}],
         outputs=[{"name": "extracted_data", "type": "string", "description": "Extracted data"}],
         prompt="Extract data from source: {data_source}",
-        llm_config=llm_config
+        llm_config=llm_config,
+        parse_mode="str"
     )  
 
     dummy_data_sending_agent = Agent(
