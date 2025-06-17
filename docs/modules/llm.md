@@ -137,6 +137,8 @@ Execute the following command in your bash terminal to set the API key:
 export DASHSCOPE_API_KEY="your-api-key-here"
 ```
 
+You can use python to call the model as below template.
+
 ```python
 from evoagentx.models import AliyunLLM, AliyunLLMConfig
 
