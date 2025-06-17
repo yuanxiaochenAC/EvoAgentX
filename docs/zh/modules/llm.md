@@ -134,6 +134,9 @@ AliyunLLM 是 EvoAgentX 框架的实现，用于访问 Aliyun Tongyi Qianqian �
 
 ```bash
 export DASHSCOPE_API_KEY="您的-api-密钥"
+```
+
+使用python调用模型的样例如下：
 
 ```python
 from evoagentx.models import AliyunLLM, AliyunLLMConfig
