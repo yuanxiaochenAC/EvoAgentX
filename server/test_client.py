@@ -109,13 +109,7 @@ def test_project_setup():
     print("\n=== Testing Project Setup - Stock Analysis ===")
     
     project_request = {
-        "goal": "Create a stock price and trend analysis workflow that can analyze any company's stock performance, including current price metrics, historical trends, and generate comprehensive reports with insights and recommendations",
-        "additional_info": {
-            "domain": "financial_analysis",
-            "output_format": "detailed_report",
-            "analysis_type": "comprehensive",
-            "data_sources": ["financial_data", "market_trends", "news_sentiment"]
-        }
+        "goal": "Create a stock price and trend analysis workflow that can analyze any company's stock performance, including current price metrics, historical trends, and generate comprehensive reports with insights and recommendations"
     }
     
     print(f"🚀 Setting up stock analysis project...")
@@ -127,10 +121,8 @@ def test_project_setup():
         result = response.json()
         
         print(f"✅ Project created successfully!")
-        print(f"   Project ID: {result['project_id']}")
-        print(f"   Public URL: {result['public_url']}")
-        print(f"\n📄 Task Info:")
-        print(result['task_info'])
+        print(f"\n📄 FULL PROJECT SETUP RESPONSE:")
+        print(json.dumps(result, indent=2))
         
         return result
     else:
@@ -148,11 +140,8 @@ def test_project_status(project_id):
         status = response.json()
         
         print(f"✅ Project status retrieved:")
-        print(f"   Status: {status['status']}")
-        print(f"   Workflow Generated: {status['workflow_generated']}")
-        print(f"   Workflow Executed: {status['workflow_executed']}")
-        print(f"   Created: {status['created_at']}")
-        print(f"   Last Updated: {status.get('last_updated', 'N/A')}")
+        print(f"\n📄 FULL PROJECT STATUS RESPONSE:")
+        print(json.dumps(status, indent=2))
         
         return status
     else:
@@ -169,32 +158,19 @@ def test_project_workflow_generation(project_id):
     curl -X POST http://localhost:8001/workflow/generate \
       -H "Content-Type: application/json" \
       -d '{
-        "project_id": "proj_abc123def456",
-        "llm_config": {
-          "model": "gpt-4o-mini",
-          "openai_key": "your_key_here"
-        }
+        "project_id": "proj_abc123def456"
       }'
     ```
     """
     print(f"\n=== Testing Stock Analysis Workflow Generation for {project_id} ===")
     
-    # Default LLM config (can be omitted to use server default)
-    llm_config = {
-        "model": "gpt-4o-mini",
-        "openai_key": OPENAI_API_KEY,
-        "stream": True,
-        "output_response": True,
-        "max_tokens": 8000
-    }
+    
     
     generation_request = {
         "project_id": project_id,
-        "llm_config": llm_config  # Optional - will use default if omitted
     }
     
     print(f"🚀 Generating stock analysis workflow...")
-    print(f"   Using LLM: {llm_config['model']}")
     print(f"   Getting goal and specifications from project data")
     
     response = requests.post('http://localhost:8001/workflow/generate', json=generation_request)
@@ -203,32 +179,8 @@ def test_project_workflow_generation(project_id):
         result = response.json()
         
         print(f"✅ Workflow generated successfully!")
-        print(f"   Success: {result['success']}")
-        print(f"   Project ID: {result['project_id']}")
-        
-        # Show workflow preview - SUMMARY
-        workflow_graph = result.get('workflow_graph')
-        if isinstance(workflow_graph, dict):
-            nodes_count = len(workflow_graph.get('nodes', []))
-            edges_count = len(workflow_graph.get('edges', []))
-            print(f"   📊 Workflow Structure: {nodes_count} nodes, {edges_count} edges")
-            
-            # Show workflow node names only (not the full graph)
-            nodes = workflow_graph.get('nodes', [])
-            if nodes:
-                print(f"   📋 Workflow Tasks:")
-                for i, node in enumerate(nodes, 1):
-                    task_name = node.get('id', f'task_{i}')
-                    task_description = node.get('description', 'No description')
-                    print(f"      {i}. {task_name}: {task_description[:80]}...")
-        else:
-            print(f"\n   📄 WORKFLOW:")
-            # Show only first 300 characters if it's a string
-            workflow_str = str(workflow_graph)
-            if len(workflow_str) > 300:
-                print(f"   {workflow_str[:300]}...")
-            else:
-                print(f"   {workflow_str}")
+        print(f"\n📄 FULL WORKFLOW GENERATION RESPONSE:")
+        print(json.dumps(result, indent=2))
         
         return result
     else:
@@ -237,12 +189,11 @@ def test_project_workflow_generation(project_id):
         return None
 
 def test_project_workflow_generation_with_default_config(project_id):
-    """Test workflow generation using default LLM config (no config provided)"""
+    """Test workflow generation"""
     print(f"\n=== Testing Workflow Generation with Default Config for {project_id} ===")
     
     generation_request = {
         "project_id": project_id
-        # No llm_config provided - should use default
     }
     
     print(f"🚀 Generating workflow with default config...")
@@ -254,17 +205,8 @@ def test_project_workflow_generation_with_default_config(project_id):
         result = response.json()
         
         print(f"✅ Workflow generated with default config!")
-        print(f"   Success: {result['success']}")
-        print(f"   Project ID: {result.get('project_id')}")
-        
-        # Show workflow graph summary
-        workflow_graph = result.get('workflow_graph')
-        if isinstance(workflow_graph, dict):
-            nodes_count = len(workflow_graph.get('nodes', []))
-            edges_count = len(workflow_graph.get('edges', []))
-            print(f"   📊 Workflow Structure: {nodes_count} nodes, {edges_count} edges")
-        else:
-            print(f"   📊 Workflow generated successfully")
+        print(f"\n📄 FULL WORKFLOW GENERATION (DEFAULT CONFIG) RESPONSE:")
+        print(json.dumps(result, indent=2))
         
         return result
     else:
@@ -282,9 +224,8 @@ def test_list_projects():
         projects = response.json()
         
         print(f"✅ Projects retrieved:")
-        print(f"   Total: {projects['total_count']}")
-        print(f"   Active: {len(projects['active_projects'])}")
-        print(f"   All Projects: {projects['projects']}")
+        print(f"\n📄 FULL PROJECTS LIST RESPONSE:")
+        print(json.dumps(projects, indent=2))
         
         return projects
     else:
@@ -330,35 +271,21 @@ def test_project_workflow_execution(project_id):
         "project_id": "proj_abc123def456",
         "inputs": {
           "goal": "Analyze the price and trend for company Apple"
-        },
-        "llm_config": {
-          "model": "gpt-4o-mini",
-          "openai_key": "your_key_here"
         }
       }'
     ```
     """
     print(f"\n=== Testing Apple Stock Analysis Workflow Execution for {project_id} ===")
     
-    # Default LLM config (can be omitted to use server default)
-    llm_config = {
-        "model": "gpt-4o-mini",
-        "openai_key": OPENAI_API_KEY,
-        "stream": True,
-        "output_response": True,
-        "max_tokens": 8000
-    }
     
     execution_request = {
         "project_id": project_id,
         "inputs": {
             "goal": "Analyze the price and trend for company Apple"
-        },
-        "llm_config": llm_config  # Optional - will use default if omitted
+        }
     }
     
     print(f"🚀 Executing Apple stock analysis workflow...")
-    print(f"   Using LLM: {llm_config['model']}")
     print(f"   Analysis Target: Apple Inc.")
     print(f"   Input keys: {list(execution_request['inputs'].keys())}")
     
@@ -368,25 +295,8 @@ def test_project_workflow_execution(project_id):
         result = response.json()
         
         print(f"✅ Apple stock analysis completed successfully!")
-        print(f"   Success: {result['success']}")
-        print(f"   Project ID: {result['project_id']}")
-        print(f"   Message: {result['message']}")
-        print(f"   Timestamp: {result['timestamp']}")
-        
-        # Show execution results - FULL OUTPUT
-        execution_result = result.get('execution_result')
-        if execution_result:
-            print(f"   📊 Execution Status: {execution_result.get('status', 'unknown')}")
-            execution_message = execution_result.get('message', 'N/A')
-            if isinstance(execution_message, dict):
-                print(f"\n   📝 FULL ANALYSIS RESULTS:")
-                for key, value in execution_message.items():
-                    print(f"      📋 {key}:")
-                    print(f"      {str(value)}")
-                    print()
-            else:
-                print(f"\n   📝 FULL EXECUTION MESSAGE:")
-                print(f"   {str(execution_message)}")
+        print(f"\n📄 FULL WORKFLOW EXECUTION RESPONSE:")
+        print(json.dumps(result, indent=2))
         
         return result
     else:

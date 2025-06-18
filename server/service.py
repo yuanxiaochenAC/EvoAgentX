@@ -551,7 +551,8 @@ async def execute_workflow_for_project(project_id: str, inputs: Dict[str, Any], 
             "execution_result": execution_result,
             "workflow_info": workflow_info,
             "inputs": inputs,
-            "message": "Workflow executed successfully for project"
+            "message": "Workflow executed successfully for project",
+            "timestamp": datetime.now().isoformat()
         }
         
     except Exception as e:
