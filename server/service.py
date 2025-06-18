@@ -11,8 +11,8 @@ from evoagentx.models import LLMConfig
 from evoagentx.models.model_configs import OpenAILLMConfig
 from evoagentx.models.model_utils import create_llm_instance
 from evoagentx.agents.agent_manager import AgentManager
-from evoagentx.tools.mcp import MCPToolkit
 from evoagentx.core.module_utils import parse_json_from_text
+from evoagentx.tools import MCPToolkit, FileTool
 
 from .prompts import WORKFLOW_GENERATION_PROMPT, TASK_INFO_PROMPT_SUDO, CONNECTION_INSTRUCTION_PROMPT
 
@@ -36,6 +36,7 @@ default_llm_config = {
     "max_tokens": 16000
 }
 TUNNEL_INFO_PATH = "./server/tunnel_info.json"
+MCP_CONFIG_PATH = "./server/mcp.config"
 # sudo_workflow = WorkFlow.from_file("examples/output/jobs/jobs_demo_4o_mini.json")
 sudo_workflow = None
 # sudo_execution_result = "Sudo execution result for the given workflow."
@@ -44,6 +45,9 @@ sudo_execution_result = None
 
 # In-memory project database
 project_info: Dict[str, Dict[str, Any]] = {}
+default_tools = MCPToolkit(config_path=MCP_CONFIG_PATH).get_tools()
+default_tools += [FileTool()]
+# default_tools = []
 
 def read_tunnel_info():
     """Read tunnel information from JSON file"""
@@ -238,7 +242,7 @@ async def generate_workflow_from_goal(goal: str, llm_config_dict: Dict[str, Any]
         if mcp_config:
             tools = MCPToolkit(config=mcp_config)
         else:
-            tools = []
+            tools = default_tools
     except Exception as e:
         print(f"Error initializing components: {e}")
         return None
@@ -281,7 +285,7 @@ async def execute_workflow_from_config(workflow: Dict[str, Any], llm_config_dict
             mcp_toolkit = MCPToolkit(config=mcp_config)
             tools = mcp_toolkit.get_tools()
         else:
-            tools = []
+            tools = default_tools
         
         agent_manager = AgentManager(tools=tools)
         agent_manager.add_agents_from_workflow(workflow_graph, llm_config=llm_config)

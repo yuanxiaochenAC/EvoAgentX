@@ -120,5 +120,5 @@ debug/
 debug*.py
 logs/
 server/tunnel_info.json
-
+server/mcp.config
 
