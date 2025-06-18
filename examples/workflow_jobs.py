@@ -24,7 +24,6 @@ def main(goal=None):
     # Initialize the language model
     llm = OpenAILLM(config=openai_config)
     
-    # goal = "Search and summarize the github repo of camel-ai/camel based on its readme.md file."
     if not goal:
             goal = """
                 Read and analyze the pdf resume at examples/output/jobs/test_pdf.pdf, then find 5 real job opportunities based on the content of the resume by search the website.
