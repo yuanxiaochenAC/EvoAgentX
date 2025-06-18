@@ -37,7 +37,7 @@ from ..workflow.workflow_graph import WorkFlowGraph
 from ..workflow.workflow import WorkFlow 
 from ..evaluators.evaluator import Evaluator 
 from ..prompts.template import PromptTemplate, MiproPromptTemplate
-from ..utils.mipro_utils.signature_utils import signature_from_registry
+# from ..utils.mipro_utils.signature_utils import signature_from_registry
 from ..utils.mipro_utils.module_utils import PromptTuningModule
 
 # Constants
