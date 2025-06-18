@@ -126,7 +126,7 @@ response = llm.generate(
 
 AliyunLLM 是 EvoAgentX 框架的实现，用于访问 Aliyun通义千文系列模型。它提供了与 Aliyun DashScope API 的无缝集成，并支持 Tongyi Qianqian 的多种模型，包括 qwen-turbo、qwen-plus、qwen-max 等。我们已提供参考成本供您参考；然而，请以实际费用为准。
 
-要使用 DashScope API 与 AliyunLLM 进行集成，需要一个 API 密钥。以下步骤概述了该过程：
+要使用 DashScope API 与 AliyunLLM 进行集成，需要一个来自百炼平台的 API 密钥。以下步骤概述了该过程：
 
 **基本用法**
 
@@ -155,13 +155,10 @@ config = AliyunLLMConfig(
 llm = AliyunLLM(config)
 
 # 生成文本
-messages = llm.formulate_messages(
-    prompts=["用简单语言解释量子计算"],
-    system_messages=["您是一个擅长用简单方式解释复杂话题的助手"]
-)[0]
-
-response = llm.single_generate(messages=messages)
-print(f"模型响应: {response}")
+response = llm.generate(
+    prompt="Explain quantum computing in simple terms.",
+    system_message="You are a helpful assistant that explains complex topics simply."
+)
 ```
 
 ### 本地 LLM
