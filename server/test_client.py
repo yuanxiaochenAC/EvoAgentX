@@ -261,7 +261,7 @@ def test_invalid_project():
 
 def test_project_workflow_execution(project_id):
     """
-    Test workflow execution for Apple stock analysis
+    Test workflow execution for HS300 index analysis
     
     Curl command:
     ```bash
@@ -270,23 +270,23 @@ def test_project_workflow_execution(project_id):
       -d '{
         "project_id": "proj_abc123def456",
         "inputs": {
-          "goal": "Analyze the price and trend for company Apple"
+          "goal": "Analyze the price and trend for HS300 index"
         }
       }'
     ```
     """
-    print(f"\n=== Testing Apple Stock Analysis Workflow Execution for {project_id} ===")
+    print(f"\n=== Testing HS300 Index Analysis Workflow Execution for {project_id} ===")
     
     
     execution_request = {
         "project_id": project_id,
         "inputs": {
-            "goal": "Analyze the price and trend for company Apple"
+            "goal": "Analyze the price and trend for HS300 index"
         }
     }
     
-    print(f"🚀 Executing Apple stock analysis workflow...")
-    print(f"   Analysis Target: Apple Inc.")
+    print(f"🚀 Executing HS300 index analysis workflow...")
+    print(f"   Analysis Target: HS300 Index (Shanghai-Hong Kong Stock Connect 300)")
     print(f"   Input keys: {list(execution_request['inputs'].keys())}")
     
     response = requests.post('http://localhost:8001/workflow/execute', json=execution_request)
@@ -294,13 +294,13 @@ def test_project_workflow_execution(project_id):
     if response.status_code == 200:
         result = response.json()
         
-        print(f"✅ Apple stock analysis completed successfully!")
+        print(f"✅ HS300 index analysis completed successfully!")
         print(f"\n📄 FULL WORKFLOW EXECUTION RESPONSE:")
         print(json.dumps(result, indent=2))
         
         return result
     else:
-        print(f"❌ Apple stock analysis failed: {response.status_code}")
+        print(f"❌ HS300 index analysis failed: {response.status_code}")
         print(f"   Error: {response.text}")
         return None
 
