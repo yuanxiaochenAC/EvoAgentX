@@ -39,6 +39,8 @@ class HITLInterceptorAction(Action):
         try:
             # get current running loop
             loop = asyncio.get_running_loop()
+            if loop:
+                pass
             # if in async context, cannot use asyncio.run()
             raise RuntimeError("Cannot use asyncio.run() in async context. Use async_execute directly.")
         except RuntimeError:
