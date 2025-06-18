@@ -9,8 +9,108 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # =============================================================================
-# PROJECT-BASED WORKFLOW TESTS
+# PROJECT-BASED WORKFLOW TESTS - STOCK PRICE AND TREND ANALYSIS
 # =============================================================================
+
+"""
+Complete Stock Price and Trend Analysis Workflow Test Example:
+
+=== INPUT REQUESTS ===
+
+1. PROJECT SETUP INPUT:
+{
+  "goal": "Create a stock price and trend analysis workflow that can analyze any company's stock performance, including current price metrics, historical trends, and generate comprehensive reports with insights and recommendations",
+  "additional_info": {
+    "domain": "financial_analysis",
+    "output_format": "detailed_report",
+    "analysis_type": "comprehensive",
+    "data_sources": ["financial_data", "market_trends", "news_sentiment"]
+  }
+}
+
+2. WORKFLOW GENERATION INPUT:
+{
+  "project_id": "proj_abc123def456",
+  "llm_config": {
+    "model": "gpt-4o-mini",
+    "openai_key": "your_openai_key_here",
+    "stream": true,
+    "output_response": true,
+    "max_tokens": 8000
+  }
+}
+
+3. WORKFLOW EXECUTION INPUT:
+{
+  "project_id": "proj_abc123def456", 
+  "inputs": {
+    "goal": "Analyze the price and trend for company Apple"
+  },
+  "llm_config": {
+    "model": "gpt-4o-mini",
+    "openai_key": "your_openai_key_here",
+    "stream": true,
+    "output_response": true,
+    "max_tokens": 8000
+  }
+}
+
+=== EXPECTED OUTPUTS ===
+
+1. PROJECT SETUP OUTPUT:
+{
+  "project_id": "proj_abc123def456",
+  "public_url": "https://example.ngrok.io",
+  "local_url": "http://localhost:8001",
+  "task_info": {
+    "workflow_name": "Stock Price and Trend Analysis Workflow",
+    "workflow_description": "This workflow analyzes a company's stock performance by evaluating current price metrics, historical trends, and generating comprehensive reports with insights and recommendations based on financial data, market trends, and news sentiment.",
+    "workflow_inputs": [
+      {"name": "goal", "type": "string", "description": "The user's goal in textual format.", "required": true}
+    ],
+    "workflow_outputs": [
+      {"name": "workflow_output", "type": "string", "description": "A detailed report containing current price metrics, historical trends, insights, and recommendations.", "required": true}
+    ],
+    "connection_instruction": "# Project Access Instructions\n\n## Project Information\n- **Project ID**: proj_abc123def456\n- **Server URL**: https://example.ngrok.io\n- **Local URL**: http://localhost:8001\n\n## API Endpoints\n\n### 1. Generate Workflow\nCreate a workflow for your project (only needed once per project):\n\n```bash\ncurl -X POST https://example.ngrok.io/workflow/generate \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"project_id\": \"proj_abc123def456\",\n    \"llm_config\": {\n      \"model\": \"gpt-4o-mini\",\n      \"openai_key\": \"your_openai_api_key\"\n    }\n  }'\n```\n\n### 2. Execute Workflow\nRun the workflow with your specific input:\n\n```bash\ncurl -X POST https://example.ngrok.io/workflow/execute \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"project_id\": \"proj_abc123def456\",\n    \"inputs\": {\n      \"goal\": \"Analyze the price and trend for company Apple\"\n    },\n    \"llm_config\": {\n      \"model\": \"gpt-4o-mini\",\n      \"openai_key\": \"your_openai_api_key\"\n    }\n  }'\n```\n\n## Quick Start Example\n\n1. **Generate Workflow** (one-time setup):\n   ```bash\n   curl -X POST https://example.ngrok.io/workflow/generate \\\n     -H \"Content-Type: application/json\" \\\n     -d '{\"project_id\": \"proj_abc123def456\"}'\n   ```\n\n2. **Execute Analysis**:\n   ```bash\n   curl -X POST https://example.ngrok.io/workflow/execute \\\n     -H \"Content-Type: application/json\" \\\n     -d '{\n       \"project_id\": \"proj_abc123def456\",\n       \"inputs\": {\"goal\": \"Analyze Tesla stock performance\"}\n     }'\n   ```\n\n## Input Examples\n- \"Analyze the price and trend for company Apple\"\n- \"Provide stock analysis for Microsoft with technical indicators\"  \n- \"Generate investment report for Google including market sentiment\"\n\n## Notes\n- Replace `your_openai_api_key` with your actual OpenAI API key\n- The workflow generates comprehensive stock analysis reports\n- Each execution can analyze different companies by changing the input goal\n- Generated workflows are reusable for multiple executions"
+  }
+}
+
+2. WORKFLOW GENERATION OUTPUT:
+{
+  "success": true,
+  "project_id": "proj_abc123def456",
+  "workflow_graph": {
+    "nodes": [...4 workflow nodes...],
+    "edges": [...workflow connections...],
+    "goal": "Create a stock price and trend analysis workflow...",
+    "description": "Generated workflow for stock analysis"
+  },
+  "workflow_inputs": [
+    {"name": "goal", "type": "string", "description": "The user's goal in textual format.", "required": true}
+  ],
+  "workflow_outputs": [
+    {"name": "workflow_output", "type": "string", "description": "A detailed report containing current price metrics, historical trends, insights, and recommendations.", "required": true}
+  ],
+  "message": "Workflow generated successfully for project",
+  "timestamp": "2024-06-18T11:23:55.616000"
+}
+
+3. WORKFLOW EXECUTION OUTPUT:
+{
+  "success": true,
+  "project_id": "proj_abc123def456",
+  "execution_result": {
+    "status": "completed",
+    "message": "# Comprehensive Report: AAPL Stock Performance Analysis\n\n### 1. Current Price Metrics\n- **Stock Symbol**: AAPL\n- **Latest Stock Price**: $175.30\n- **Market Capitalization**: $2.8 Trillion\n- **Volume Traded**: 95 Million Shares\n\n### 2. Historical Price Data (Last 5 Years)\n- **Average Price**: $150.45\n- **Peak Price**: $182.50 (November 2021)\n- **Low Price**: $84.80 (March 2020)\n- **Volatility**: Notable fluctuations during earnings releases...\n\n### 3. Key Performance Metrics\n- **1-Year Change**: +15%\n- **5-Year Change**: +20%\n- **Dividend Yield**: 0.55%\n\n### 4. Technical Indicators\n- **50-day Moving Average**: $170.00\n- **200-day Moving Average**: $160.00\n- **RSI**: 65 (nearing overbought)\n- **MACD**: Positive divergence\n\n### 5. Recommendations\n- Strong buy recommendation based on solid fundamentals\n- Consider adding positions on market dips\n- Monitor economic indicators for potential impacts\n\n### Conclusion\nAPPL presents a compelling investment opportunity with consistent performance, positive market sentiment, and sound fundamentals.",
+    "workflow_received": true,
+    "llm_config_received": true,
+    "mcp_config_received": false
+  },
+  "workflow_info": "=== WORKFLOW EXECUTION INFORMATION ===\nTimestamp: 2024-06-18T11:25:02.789000\nPublic URL: https://example.ngrok.io\nLocal URL: http://localhost:8001\nWorkflow Status: completed\nLLM Configuration: gpt-4o-mini\nMCP Configuration: Disabled\nExecution Message: [Comprehensive Stock Analysis Report]\nWorkflow Received: True\nLLM Config Received: True\nMCP Config Received: False",
+  "message": "Workflow executed successfully for project",
+  "timestamp": "2024-06-18T11:25:02.789000"
+}
+"""
 
 def test_health_check():
     """Test basic health check endpoint"""
@@ -25,34 +125,34 @@ def test_health_check():
 
 def test_project_setup():
     """
-    Test project setup - the main entry point for the new system
+    Test project setup for stock price and trend analysis workflow
     
     Curl command:
     ```bash
     curl -X POST http://localhost:8001/project/setup \
       -H "Content-Type: application/json" \
       -d '{
-        "goal": "Create a comprehensive market analysis workflow",
+        "goal": "Create a stock price and trend analysis workflow",
         "additional_info": {
-          "industry": "technology",
-          "timeframe": "Q4 2024"
+          "domain": "financial_analysis",
+          "output_format": "detailed_report"
         }
       }'
     ```
     """
-    print("\n=== Testing Project Setup ===")
+    print("\n=== Testing Project Setup - Stock Analysis ===")
     
     project_request = {
-        "goal": "Create a comprehensive market analysis workflow that analyzes current trends, competitor data, and generates actionable insights for the technology sector",
+        "goal": "Create a stock price and trend analysis workflow that can analyze any company's stock performance, including current price metrics, historical trends, and generate comprehensive reports with insights and recommendations",
         "additional_info": {
-            "industry": "technology",
-            "timeframe": "Q4 2024",
-            "target_audience": "executives",
-            "data_sources": ["financial_reports", "market_research", "news_articles"]
+            "domain": "financial_analysis",
+            "output_format": "detailed_report",
+            "analysis_type": "comprehensive",
+            "data_sources": ["financial_data", "market_trends", "news_sentiment"]
         }
     }
     
-    print(f"🚀 Setting up new project...")
+    print(f"🚀 Setting up stock analysis project...")
     print(f"   Goal: {project_request['goal'][:80]}...")
     
     response = requests.post('http://localhost:8001/project/setup', json=project_request)
@@ -64,8 +164,8 @@ def test_project_setup():
         print(f"   Project ID: {result['project_id']}")
         print(f"   Public URL: {result['public_url']}")
         print(f"   Local URL: {result['local_url']}")
-        print(f"\n📄 Task Info Preview:")
-        print(result['task_info'][:500] + "..." if len(result['task_info']) > 500 else result['task_info'])
+        print(f"\n📄 Task Info:")
+        print(json.dumps(result['task_info'], indent=2))
         
         return result
     else:
@@ -97,7 +197,7 @@ def test_project_status(project_id):
 
 def test_project_workflow_generation(project_id):
     """
-    Test the new project-based workflow generation
+    Test workflow generation for stock analysis project
     
     Curl command:
     ```bash
@@ -105,7 +205,6 @@ def test_project_workflow_generation(project_id):
       -H "Content-Type: application/json" \
       -d '{
         "project_id": "proj_abc123def456",
-        "inputs": "Create a comprehensive market analysis workflow...",
         "llm_config": {
           "model": "gpt-4o-mini",
           "openai_key": "your_key_here"
@@ -113,7 +212,7 @@ def test_project_workflow_generation(project_id):
       }'
     ```
     """
-    print(f"\n=== Testing Project Workflow Generation for {project_id} ===")
+    print(f"\n=== Testing Stock Analysis Workflow Generation for {project_id} ===")
     
     # Default LLM config (can be omitted to use server default)
     llm_config = {
@@ -126,21 +225,12 @@ def test_project_workflow_generation(project_id):
     
     generation_request = {
         "project_id": project_id,
-        "inputs": """Create a comprehensive market analysis workflow that includes the following steps:
-        1. Data Collection: Gather market data from multiple sources including financial reports, news articles, and industry research
-        2. Trend Analysis: Analyze market trends and identify key patterns
-        3. Competitor Analysis: Research and analyze main competitors in the technology sector
-        4. Risk Assessment: Identify potential risks and opportunities
-        5. Report Generation: Generate a detailed executive summary with actionable insights
-        6. Visualization: Create charts and graphs to support the findings
-        
-        The workflow should be designed for Q4 2024 technology sector analysis and target executive-level decision makers.""",
         "llm_config": llm_config  # Optional - will use default if omitted
     }
     
-    print(f"🚀 Generating workflow for project...")
+    print(f"🚀 Generating stock analysis workflow...")
     print(f"   Using LLM: {llm_config['model']}")
-    print(f"   Input length: {len(generation_request['inputs'])} characters")
+    print(f"   Getting goal and specifications from project data")
     
     response = requests.post('http://localhost:8001/workflow/generate', json=generation_request)
     
@@ -153,14 +243,39 @@ def test_project_workflow_generation(project_id):
         print(f"   Message: {result['message']}")
         print(f"   Timestamp: {result['timestamp']}")
         
-        # Show workflow preview
+        # Show workflow preview - SUMMARY
         workflow_graph = result.get('workflow_graph')
         if isinstance(workflow_graph, dict):
             nodes_count = len(workflow_graph.get('nodes', []))
             edges_count = len(workflow_graph.get('edges', []))
             print(f"   📊 Workflow Structure: {nodes_count} nodes, {edges_count} edges")
+            
+            # Show workflow node names only (not the full graph)
+            nodes = workflow_graph.get('nodes', [])
+            if nodes:
+                print(f"   📋 Workflow Tasks:")
+                for i, node in enumerate(nodes, 1):
+                    task_name = node.get('id', f'task_{i}')
+                    task_description = node.get('description', 'No description')
+                    print(f"      {i}. {task_name}: {task_description[:80]}...")
         else:
-            print(f"   📄 Workflow: {str(workflow_graph)[:200]}...")
+            print(f"\n   📄 WORKFLOW:")
+            # Show only first 300 characters if it's a string
+            workflow_str = str(workflow_graph)
+            if len(workflow_str) > 300:
+                print(f"   {workflow_str[:300]}...")
+            else:
+                print(f"   {workflow_str}")
+        
+        # Show workflow inputs and outputs
+        workflow_inputs = result.get('workflow_inputs', [])
+        workflow_outputs = result.get('workflow_outputs', [])
+        print(f"   📥 Workflow Inputs: {len(workflow_inputs)} inputs")
+        for inp in workflow_inputs:
+            print(f"      - {inp.get('name', 'unknown')}: {inp.get('description', 'no description')}")
+        print(f"   📤 Workflow Outputs: {len(workflow_outputs)} outputs")
+        for out in workflow_outputs:
+            print(f"      - {out.get('name', 'unknown')}: {out.get('description', 'no description')}")
         
         return result
     else:
@@ -173,13 +288,12 @@ def test_project_workflow_generation_with_default_config(project_id):
     print(f"\n=== Testing Workflow Generation with Default Config for {project_id} ===")
     
     generation_request = {
-        "project_id": project_id,
-        "inputs": "Create a simple data processing workflow that reads CSV files, processes the data, and generates a summary report with basic statistics and visualizations."
+        "project_id": project_id
         # No llm_config provided - should use default
     }
     
     print(f"🚀 Generating workflow with default config...")
-    print(f"   Input: {generation_request['inputs'][:80]}...")
+    print(f"   Getting goal and specifications from project data")
     
     response = requests.post('http://localhost:8001/workflow/generate', json=generation_request)
     
@@ -190,7 +304,11 @@ def test_project_workflow_generation_with_default_config(project_id):
         print(f"   Success: {result['success']}")
         print(f"   Message: {result['message']}")
         
-        print(result)
+        # Show workflow inputs and outputs for default config test
+        workflow_inputs = result.get('workflow_inputs', [])
+        workflow_outputs = result.get('workflow_outputs', [])
+        print(f"   📥 Generated {len(workflow_inputs)} inputs, 📤 {len(workflow_outputs)} outputs")
+        
         return result
     else:
         print(f"❌ Workflow generation failed: {response.status_code}")
@@ -229,8 +347,7 @@ def test_invalid_project():
     
     # Test workflow generation for invalid project
     generation_request = {
-        "project_id": invalid_project_id,
-        "inputs": "Test input for invalid project"
+        "project_id": invalid_project_id
     }
     
     response = requests.post('http://localhost:8001/workflow/generate', json=generation_request)
@@ -246,7 +363,7 @@ def test_invalid_project():
 
 def test_project_workflow_execution(project_id):
     """
-    Test the new project-based workflow execution
+    Test workflow execution for Apple stock analysis
     
     Curl command:
     ```bash
@@ -255,8 +372,7 @@ def test_project_workflow_execution(project_id):
       -d '{
         "project_id": "proj_abc123def456",
         "inputs": {
-          "input": "Market analysis data",
-          "timeframe": "Q4 2024"
+          "goal": "Analyze the price and trend for company Apple"
         },
         "llm_config": {
           "model": "gpt-4o-mini",
@@ -265,7 +381,7 @@ def test_project_workflow_execution(project_id):
       }'
     ```
     """
-    print(f"\n=== Testing Project Workflow Execution for {project_id} ===")
+    print(f"\n=== Testing Apple Stock Analysis Workflow Execution for {project_id} ===")
     
     # Default LLM config (can be omitted to use server default)
     llm_config = {
@@ -279,17 +395,14 @@ def test_project_workflow_execution(project_id):
     execution_request = {
         "project_id": project_id,
         "inputs": {
-            "input": "Please analyze the technology market trends for Q4 2024, focusing on AI and machine learning sectors. Include competitor analysis, market size, growth projections, and investment opportunities.",
-            "timeframe": "Q4 2024",
-            "focus_sectors": ["AI", "machine_learning", "cloud_computing"],
-            "analysis_depth": "comprehensive",
-            "target_audience": "executives"
+            "goal": "Analyze the price and trend for company Apple"
         },
         "llm_config": llm_config  # Optional - will use default if omitted
     }
     
-    print(f"🚀 Executing workflow for project...")
+    print(f"🚀 Executing Apple stock analysis workflow...")
     print(f"   Using LLM: {llm_config['model']}")
+    print(f"   Analysis Target: Apple Inc.")
     print(f"   Input keys: {list(execution_request['inputs'].keys())}")
     
     response = requests.post('http://localhost:8001/workflow/execute', json=execution_request)
@@ -297,26 +410,36 @@ def test_project_workflow_execution(project_id):
     if response.status_code == 200:
         result = response.json()
         
-        print(f"✅ Workflow executed successfully!")
+        print(f"✅ Apple stock analysis completed successfully!")
         print(f"   Success: {result['success']}")
         print(f"   Project ID: {result['project_id']}")
         print(f"   Message: {result['message']}")
         print(f"   Timestamp: {result['timestamp']}")
         
-        # Show execution results preview
+        # Show execution results - FULL OUTPUT
         execution_result = result.get('execution_result')
         if execution_result:
             print(f"   📊 Execution Status: {execution_result.get('status', 'unknown')}")
-            print(f"   📝 Execution Message: {execution_result.get('message', 'N/A')[:100]}...")
+            execution_message = execution_result.get('message', 'N/A')
+            if isinstance(execution_message, dict):
+                print(f"\n   📝 FULL ANALYSIS RESULTS:")
+                for key, value in execution_message.items():
+                    print(f"      📋 {key}:")
+                    print(f"      {str(value)}")
+                    print()
+            else:
+                print(f"\n   📝 FULL EXECUTION MESSAGE:")
+                print(f"   {str(execution_message)}")
         
-        # Show workflow info preview
+        # Show workflow info - FULL OUTPUT
         workflow_info = result.get('workflow_info')
         if workflow_info:
-            print(f"   📄 Workflow Info: {workflow_info[:200]}...")
+            print(f"\n   📄 FULL WORKFLOW INFO:")
+            print(f"   {workflow_info}")
         
         return result
     else:
-        print(f"❌ Workflow execution failed: {response.status_code}")
+        print(f"❌ Apple stock analysis failed: {response.status_code}")
         print(f"   Error: {response.text}")
         return None
 
@@ -326,7 +449,7 @@ def test_project_workflow_execution(project_id):
 # =============================================================================
 
 if __name__ == "__main__":
-    print("🚀 Starting Project-Based Workflow System Tests...")
+    print("🚀 Starting Stock Price and Trend Analysis Workflow Tests...")
     
     test_health_check()
     
@@ -353,4 +476,4 @@ if __name__ == "__main__":
     
     # test_invalid_project()
     
-    print("\n🏁 Test execution completed.") 
+    print("\n🏁 Stock analysis workflow test execution completed.") 

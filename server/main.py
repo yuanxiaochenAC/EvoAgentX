@@ -14,27 +14,21 @@ target_port = 8001
 CREATE_PUBLIC_TUNNEL = True
 TUNNEL_INFO_PATH = "./server/tunnel_info.json"
 
-
 # Global variable to track the tunnel process
 tunnel_process = None
 
 def cleanup_tunnel():
-    """Clean up the tunnel process"""
+    """Clean up the tunnel process silently"""
     global tunnel_process
     if tunnel_process and tunnel_process.poll() is None:
-        print("🧹 Cleaning up tunnel process...")
         try:
             tunnel_process.terminate()
-            # Give it a moment to terminate gracefully
-            tunnel_process.wait(timeout=5)
-            print("✅ Tunnel process terminated")
+            tunnel_process.wait(timeout=3)
         except subprocess.TimeoutExpired:
-            print("⚠️  Tunnel process didn't terminate gracefully, forcing kill...")
             tunnel_process.kill()
             tunnel_process.wait()
-            print("✅ Tunnel process killed")
-        except Exception as e:
-            print(f"❌ Error cleaning up tunnel: {e}")
+        except Exception:
+            pass  # Suppress cleanup errors
 
 def signal_handler(signum, frame):
     """Handle shutdown signals"""
@@ -56,68 +50,55 @@ def save_tunnel_info(url, port):
         with open(TUNNEL_INFO_PATH, "w") as f:
             json.dump(tunnel_info, f, indent=2)
         return True
-    except Exception as e:
-        print(f"❌ Failed to save tunnel info: {e}")
+    except Exception:
         return False
 
 def create_public_tunnel(port):
-    """Create a public tunnel using localhost.run"""
+    """Create a public tunnel using localhost.run - completely silent"""
     global tunnel_process
     try:
-        # Run the SSH tunnel command silently
+        # Run the SSH tunnel command with all output suppressed
         tunnel_process = subprocess.Popen(
             ["ssh", "-R", f"80:localhost:{port}", "localhost.run"],
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            bufsize=1,  # Line buffered
-            universal_newlines=True
+            stderr=subprocess.DEVNULL,  # Suppress stderr completely
+            stdin=subprocess.DEVNULL,   # Suppress stdin
+            text=True
         )
         
-        # Read the output to get the public URL
-        url_found = False
-        qr_section = False
-        
-        for line in tunnel_process.stdout:
-            line = line.strip()
+        # Read output silently to extract URL
+        try:
+            # Give it time to establish connection
+            time.sleep(3)
             
-            # Skip empty lines
-            if not line:
-                continue
-                
-            # Detect QR code section and skip it
-            if "Open your tunnel address on your mobile with this QR:" in line:
-                qr_section = True
-                continue
-            elif qr_section and line and not line.startswith("http"):
-                # Skip QR code lines
-                continue
-            elif qr_section and line.startswith("http"):
-                # End of QR section
-                qr_section = False
-            
-            # Look for the tunnel URL
-            if "tunneled with tls termination" in line:
-                # Extract and save the URL silently
-                import re
-                url_match = re.search(r'https?://[^\s]+\.(localhost\.run|lhr\.life)', line)
-                if url_match:
-                    public_url = url_match.group(0)
-                    # Save to JSON file silently
-                    save_tunnel_info(public_url, port)
-                    url_found = True
+            # Try to read some output to get the URL
+            output_lines = []
+            while len(output_lines) < 20:  # Read first 20 lines max
+                try:
+                    line = tunnel_process.stdout.readline()
+                    if not line:
+                        break
+                    output_lines.append(line.strip())
+                except Exception:
                     break
+            
+            # Look for tunnel URL in the output
+            for line in output_lines:
+                if "tunneled with tls termination" in line:
+                    import re
+                    url_match = re.search(r'https?://[^\s]+\.(localhost\.run|lhr\.life)', line)
+                    if url_match:
+                        public_url = url_match.group(0)
+                        save_tunnel_info(public_url, port)
+                        break
+        except Exception:
+            pass  # Silently handle any errors
         
-        # Only print if there's an issue
-        if not url_found:
-            print("⚠️  Public URL not detected, tunnel may still be connecting...")
-                
-        # Keep the process running
+        # Keep process running silently
         tunnel_process.wait()
         
-    except Exception as e:
-        print(f"❌ Failed to create public tunnel: {e}")
-        print("💡 Make sure SSH is installed and you have internet connection")
+    except Exception:
+        pass  # Silently handle tunnel creation errors
 
 if __name__ == "__main__":
     import uvicorn
@@ -133,13 +114,13 @@ if __name__ == "__main__":
     create_tunnel = CREATE_PUBLIC_TUNNEL
     
     if create_tunnel:
-        # Start the tunnel in a separate thread
+        # Start the tunnel in a separate thread (completely silent)
         tunnel_thread = threading.Thread(target=create_public_tunnel, args=(target_port,))
         tunnel_thread.daemon = True
         tunnel_thread.start()
         
         # Give the tunnel a moment to start
-        time.sleep(2)
+        time.sleep(1)
     
     print(f"🖥️  Local server: http://localhost:{target_port}")
     if create_tunnel:
@@ -157,7 +138,14 @@ if __name__ == "__main__":
         print("🌍 Public tunnel: Not created")
     
     try:
-        uvicorn.run(app, host="0.0.0.0", port=target_port)
+        # Run uvicorn with minimal logging
+        uvicorn.run(
+            app, 
+            host="0.0.0.0", 
+            port=target_port,
+            log_level="info",  # Reduce log verbosity
+            access_log=True    # Keep access logs but clean
+        )
     except KeyboardInterrupt:
         print("\n🛑 Server interrupted by user")
     finally:

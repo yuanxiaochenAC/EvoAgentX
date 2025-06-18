@@ -12,6 +12,9 @@ from evoagentx.models.model_configs import OpenAILLMConfig
 from evoagentx.models.model_utils import create_llm_instance
 from evoagentx.agents.agent_manager import AgentManager
 from evoagentx.tools.mcp import MCPToolkit
+from evoagentx.core.module_utils import parse_json_from_text
+
+from .prompts import WORKFLOW_GENERATION_PROMPT, TASK_INFO_PROMPT_SUDO, CONNECTION_INSTRUCTION_PROMPT
 
 from .task_manager import (
     store_task_result,
@@ -33,10 +36,10 @@ default_llm_config = {
     "max_tokens": 16000
 }
 TUNNEL_INFO_PATH = "./server/tunnel_info.json"
-sudo_workflow = WorkFlow.from_file("examples/output/jobs/jobs_demo_4o_mini.json")
-# sudo_workflow = None
-sudo_execution_result = "Sudo execution result for the given workflow."
-# sudo_execution_result = None
+# sudo_workflow = WorkFlow.from_file("examples/output/jobs/jobs_demo_4o_mini.json")
+sudo_workflow = None
+# sudo_execution_result = "Sudo execution result for the given workflow."
+sudo_execution_result = None
 
 
 # In-memory project database
@@ -58,6 +61,7 @@ def create_workflow_info(config: Dict[str, Any], execution_result: Dict[str, Any
     
     # Extract key information
     public_url = tunnel_info.get("public_url", "Not available") if tunnel_info else "Not available"
+    local_url = tunnel_info.get("local_url", "Not available") if tunnel_info else "Not available"
     
     workflow_dict = config.get("workflow", {})
     
@@ -68,10 +72,47 @@ Timestamp: {datetime.now().isoformat()}
 
 === SERVER ACCESS INFORMATION ===
 Public URL: {public_url}
+Local URL: {local_url}
+
+=== WORKFLOW CONFIGURATION ===
+Workflow Status: {execution_result.get('status', 'Unknown')}
+LLM Configuration: {config.get('llm_config', {}).get('model', 'Unknown')}
+MCP Configuration: {'Enabled' if config.get('mcp_config') else 'Disabled'}
+
+=== EXECUTION RESULTS ===
+Execution Message: {execution_result.get('message', 'No message available')}
+Workflow Received: {execution_result.get('workflow_received', False)}
+LLM Config Received: {execution_result.get('llm_config_received', False)}
+MCP Config Received: {execution_result.get('mcp_config_received', False)}
+
+=== INPUTS PROVIDED ===
+{json.dumps(config.get('inputs', {}), indent=2)}
 
 """.strip()
     
     return workflow_info
+
+def create_task_info(project_id: str, goal: str, additional_info: Dict[str, Any] = None, public_url: str = None) -> dict:
+    """Generate comprehensive task info string for a project"""
+    task_prompt = TASK_INFO_PROMPT_SUDO.format(
+        goal=goal,
+        additional_info=additional_info
+    )
+    
+    llm_config = create_llm_config(additional_info.get("llm_config", default_llm_config))
+    llm = create_llm_instance(llm_config)
+    response = llm.single_generate([{"role": "user", "content": task_prompt}])
+    task_info = parse_json_from_text(response)
+    task_info = json.loads(task_info[0])
+    
+    # Add connection_instruction field using the template
+    connection_instruction = CONNECTION_INSTRUCTION_PROMPT.format(
+        project_id=project_id,
+        public_url=public_url or "Not available",
+    )
+    task_info["connection_instruction"] = connection_instruction
+    
+    return task_info
 
 def create_llm_config(llm_config_dict: Dict[str, Any]) -> LLMConfig:
     """
@@ -181,9 +222,6 @@ async def start_streaming_task(config: Dict[str, Any]) -> Dict[str, Any]:
     } 
 
 
-
-
-
 async def generate_workflow_from_goal(goal: str, llm_config_dict: Dict[str, Any], mcp_config: dict = None) -> str:
     """
     Generate a workflow from a goal.
@@ -276,59 +314,18 @@ def generate_project_id() -> str:
     """Generate a unique project ID"""
     return f"proj_{uuid.uuid4().hex[:12]}"
 
-def create_task_info(project_id: str, goal: str, additional_info: Dict[str, Any] = None) -> str:
-    """Generate comprehensive task info string for a project"""
-    tunnel_info = read_tunnel_info()
-    
-    # Extract server information
-    public_url = tunnel_info.get("public_url", "Not available") if tunnel_info else "Not available"
-    local_url = tunnel_info.get("local_url", "Not available") if tunnel_info else "Not available"
-    tunnel_status = tunnel_info.get("status", "Unknown") if tunnel_info else "Unknown"
-    
-    # Build comprehensive task info string
-    task_info = f"""
-=== PROJECT SETUP INFORMATION ===
-Project ID: {project_id}
-Created: {datetime.now().isoformat()}
-Status: Initialized
-
-=== PROJECT GOAL ===
-{goal}
-
-=== SERVER ACCESS INFORMATION ===
-Public URL: {public_url}
-Local URL: {local_url}
-Tunnel Status: {tunnel_status}
-
-=== PROJECT DETAILS ===
-Additional Info: {json.dumps(additional_info or {}, indent=2)}
-
-=== WORKFLOW STATUS ===
-Workflow Generated: No
-Workflow Executed: No
-Current Phase: Project Setup Complete
-
-=== PROJECT ENDPOINTS ===
-- Setup: POST /project/setup
-- Status: GET /project/{project_id}/status  
-- Workflow Generation: POST /project/{project_id}/generate-workflow
-- Workflow Execution: POST /project/{project_id}/execute-workflow
-
-=== NEXT STEPS ===
-1. Generate workflow for this project
-2. Execute workflow with appropriate inputs
-3. Monitor execution progress
-4. Retrieve results
-
-=== END OF PROJECT INFORMATION ===
-""".strip()
-    
-    return task_info
-
 def setup_project(goal: str, additional_info: Dict[str, Any] = None) -> Dict[str, Any]:
     """Setup a new project and store it in the project database"""
     project_id = generate_project_id()
     tunnel_info = read_tunnel_info()
+    
+    # Generate task info with URL information
+    task_info = create_task_info(
+        project_id, 
+        goal, 
+        additional_info,
+        public_url=tunnel_info.get("public_url") if tunnel_info else None,
+    )
     
     # Create project entry
     project_data = {
@@ -343,15 +340,14 @@ def setup_project(goal: str, additional_info: Dict[str, Any] = None) -> Dict[str
         "execution_results": None,
         "public_url": tunnel_info.get("public_url") if tunnel_info else None,
         "local_url": tunnel_info.get("local_url") if tunnel_info else None,
-        "tunnel_status": tunnel_info.get("status") if tunnel_info else None
+        "tunnel_status": tunnel_info.get("status") if tunnel_info else None,
+        "task_info": task_info
     }
     
     # Store in project database
     project_info[project_id] = project_data
     
-    # Generate task info
-    task_info = create_task_info(project_id, goal, additional_info)
-    
+        
     return {
         "project_id": project_id,
         "public_url": project_data["public_url"] or "Not available",
@@ -384,9 +380,10 @@ def list_projects() -> Dict[str, Any]:
         ]
     }
 
-async def generate_workflow_for_project(project_id: str, inputs: str, llm_config_dict: Dict[str, Any] = None) -> Dict[str, Any]:
+async def generate_workflow_for_project(project_id: str, llm_config_dict: Dict[str, Any] = None) -> Dict[str, Any]:
     """
-    Generate workflow for a specific project using inputs string.
+    Generate workflow for a specific project.
+    Gets goal and workflow specifications from stored project data.
     Uses default_llm_config if no config provided.
     """
     # Check if project exists
@@ -397,6 +394,24 @@ async def generate_workflow_for_project(project_id: str, inputs: str, llm_config
             "error": "Project not found"
         }
     
+    # Get goal from project data
+    goal = project.get("goal")
+    if not goal:
+        return {
+            "success": False,
+            "error": "Goal not found in project data"
+        }
+    
+    # Get workflow inputs and outputs from task_info
+    task_info = project.get("task_info", {})
+    print(project)
+    workflow_inputs = task_info.get("workflow_inputs", [])
+    workflow_outputs = task_info.get("workflow_outputs", [])
+    
+    # Format the prompt with goal, inputs, and outputs
+    formatted_goal = WORKFLOW_GENERATION_PROMPT.format(goal=goal, inputs=workflow_inputs, outputs=workflow_outputs)
+    print(formatted_goal)
+    
     # Use default config if none provided
     if not llm_config_dict:
         llm_config_dict = default_llm_config
@@ -405,8 +420,8 @@ async def generate_workflow_for_project(project_id: str, inputs: str, llm_config
         # Update project status
         update_project_status(project_id, "generating_workflow")
         
-        # Use the inputs string as the goal for workflow generation
-        workflow_graph = await generate_workflow_from_goal(inputs, llm_config_dict, mcp_config={})
+        # Use the formatted goal for workflow generation
+        workflow_graph = await generate_workflow_from_goal(formatted_goal, llm_config_dict, mcp_config={})
         
         if workflow_graph is None:
             update_project_status(project_id, "generation_failed")
@@ -441,7 +456,8 @@ async def generate_workflow_for_project(project_id: str, inputs: str, llm_config
             "success": True,
             "project_id": project_id,
             "workflow_graph": workflow_dict,
-            "inputs": inputs,
+            "workflow_inputs": workflow_inputs,
+            "workflow_outputs": workflow_outputs,
             "message": "Workflow generated successfully for project"
         }
         

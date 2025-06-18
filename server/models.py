@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 class Config(BaseModel):
     """Configuration model for processing requests"""
@@ -35,12 +35,11 @@ class ProjectSetupResponse(BaseModel):
     project_id: str
     public_url: str
     local_url: str
-    task_info: str  # Long string with project/task information
+    task_info: dict  # Contains workflow_inputs, workflow_outputs, connection_instruction, and other task information
 
 class ProjectWorkflowGenerationRequest(BaseModel):
     """Request model for project-based workflow generation"""
     project_id: str
-    inputs: str  # Long string input for workflow generation
     llm_config: Optional[Dict[str, Any]] = None  # Optional, will use default if not provided
 
 class ProjectWorkflowExecutionRequest(BaseModel):

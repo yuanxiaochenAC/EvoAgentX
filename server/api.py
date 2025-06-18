@@ -26,17 +26,38 @@ async def process_request(config: Config) -> ProcessResponse:
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# New project-based endpoints
+@app.post("/project/setup", response_model=ProjectSetupResponse)
+async def setup_new_project(request: ProjectSetupRequest) -> ProjectSetupResponse:
+    """
+    Setup a new project with the given goal and return project information.
+    This is the main entry point for creating projects.
+    """
+    try:
+        result = setup_project(request.goal, request.additional_info)
+        
+        return ProjectSetupResponse(
+            project_id=result["project_id"],
+            public_url=result["public_url"],
+            local_url=result["local_url"],
+            task_info=result["task_info"]
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error setting up project: {str(e)}")
+
+
 # Project-based workflow generation endpoint
 @app.post("/workflow/generate")
 async def generate_workflow_for_project_api(request: ProjectWorkflowGenerationRequest):
     """
-    Generate a workflow for a specific project using the inputs string.
+    Generate a workflow for a specific project.
+    Gets inputs and outputs from the stored project data.
     Uses default_llm_config if no config is provided.
     """
     try:
         result = await generate_workflow_for_project(
             request.project_id, 
-            request.inputs, 
             request.llm_config
         )
         
@@ -50,7 +71,8 @@ async def generate_workflow_for_project_api(request: ProjectWorkflowGenerationRe
             "success": True,
             "project_id": result["project_id"],
             "workflow_graph": result["workflow_graph"],
-            "inputs": result["inputs"],
+            "workflow_inputs": result["workflow_inputs"],
+            "workflow_outputs": result["workflow_outputs"],
             "message": result["message"],
             "timestamp": datetime.now().isoformat()
         }
@@ -256,25 +278,6 @@ async def list_clients():
     
     return {"active_clients": active_clients, "total": len(active_clients)} 
 
-# New project-based endpoints
-@app.post("/project/setup", response_model=ProjectSetupResponse)
-async def setup_new_project(request: ProjectSetupRequest) -> ProjectSetupResponse:
-    """
-    Setup a new project with the given goal and return project information.
-    This is the main entry point for creating projects.
-    """
-    try:
-        result = setup_project(request.goal, request.additional_info)
-        
-        return ProjectSetupResponse(
-            project_id=result["project_id"],
-            public_url=result["public_url"],
-            local_url=result["local_url"],
-            task_info=result["task_info"]
-        )
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error setting up project: {str(e)}")
 
 @app.get("/project/{project_id}/status")
 async def get_project_status(project_id: str):
