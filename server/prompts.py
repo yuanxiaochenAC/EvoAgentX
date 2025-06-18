@@ -30,10 +30,10 @@ You are expected to generate a workflow information based on the given goal:
     "workflow_name": "Market Analysis Workflow",
     "workflow_description": "This workflow is used to analyze the market and generate a report.",
     "workflow_inputs": [
-        {{"name": "goal", "type": "string", "description": "The original full programming task requirements.", "required": True}},
+        {{"name": "goal", "type": "string", "description": "The original full programming task requirements.", "required": true}}
     ],
     "workflow_outputs": [
-        {{"name": "workflow_output", "type": "string", "description": "The workflow output.", "required": True}},
+        {{"name": "workflow_output", "type": "string", "description": "The workflow output.", "required": true}}
     ]
 }}
 
@@ -43,7 +43,8 @@ You might be given additional information or instructions about the project. You
 
 """
 
-CONNECTION_INSTRUCTION_PROMPT = """# Project Access Instructions
+CONNECTION_INSTRUCTION_PROMPT = """
+Call Alex to complete the following tasks with the following instruction. The final result should be in Markdown format.
 
 ## Project Information
 - **Project ID**: {project_id}
@@ -61,10 +62,6 @@ curl -X POST {public_url}/workflow/execute \\
     "project_id": "{project_id}",
     "inputs": {{
       "goal": "Analyze the price and trend for company Apple"
-    }},
-    "llm_config": {{
-      "model": "gpt-4o-mini",
-      "openai_key": "your_openai_api_key"
     }}
   }}'
 ```
@@ -107,16 +104,22 @@ curl -X GET {public_url}/project/{project_id}/status
      }}'
    ```
 
-## Input Examples
-- "Analyze the price and trend for company Apple"
-- "Provide stock analysis for Microsoft with technical indicators"  
-- "Generate investment report for Google including market sentiment"
-
 ## Notes
-- LLM config is optional, dont use it unless you have related information
-- The workflow generates comprehensive stock analysis reports
-- Each execution can analyze different companies by changing the input goal
 - Generated workflows are reusable for multiple executions
+
+# Workflow Information / Guide
+While using the workflow, you should strictly follow the following instructions:
+
+## Basic Information
+- **workflow_name**: {workflow_name}
+- **workflow_description**: {workflow_description}
+
+## Workflow Inputs Format
+- **workflow_inputs**: {workflow_inputs}
+
+## Workflow Outputs Format
+- **workflow_outputs**: {workflow_outputs}
+
 
 """
 
@@ -136,14 +139,8 @@ You are expected to generate a workflow information based on the given goal:
 {{
     "workflow_name": "Market Analysis Workflow",
     "workflow_description": "This workflow is used to analyze the market and generate a report.",
-    "workflow_inputs": [
-        {{"name": "goal", "type": "string", "description": "The original full programming task requirements.", "required": True}},
-        {{"name": "personal_details", "type": "array", "description": "An array of job opportunities obtained from the search.", "required": True}}
-    ],
-    "workflow_outputs": [
-        {{"name": "resume_summary", "type": "string", "description": "A summary of the resume.", "required": True}},
-        {{"name": "job_opportunities", "type": "array", "description": "An array of job opportunities obtained from the search.", "required": True}}
-    ]
+    "workflow_inputs": {{"target": "The target of the workflow", "personal_details": "The personal details of the user."}},
+    "workflow_outputs": {{"resume_summary": "A summary of the resume.", "job_opportunities": "An array of job opportunities obtained from the search."}}
 }}
 
 ## Additional Information

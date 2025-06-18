@@ -30,14 +30,7 @@ Complete Stock Price and Trend Analysis Workflow Test Example:
 
 2. WORKFLOW GENERATION INPUT:
 {
-  "project_id": "proj_abc123def456",
-  "llm_config": {
-    "model": "gpt-4o-mini",
-    "openai_key": "your_openai_key_here",
-    "stream": true,
-    "output_response": true,
-    "max_tokens": 8000
-  }
+  "project_id": "proj_abc123def456"
 }
 
 3. WORKFLOW EXECUTION INPUT:
@@ -45,13 +38,6 @@ Complete Stock Price and Trend Analysis Workflow Test Example:
   "project_id": "proj_abc123def456", 
   "inputs": {
     "goal": "Analyze the price and trend for company Apple"
-  },
-  "llm_config": {
-    "model": "gpt-4o-mini",
-    "openai_key": "your_openai_key_here",
-    "stream": true,
-    "output_response": true,
-    "max_tokens": 8000
   }
 }
 
@@ -61,18 +47,7 @@ Complete Stock Price and Trend Analysis Workflow Test Example:
 {
   "project_id": "proj_abc123def456",
   "public_url": "https://example.ngrok.io",
-  "local_url": "http://localhost:8001",
-  "task_info": {
-    "workflow_name": "Stock Price and Trend Analysis Workflow",
-    "workflow_description": "This workflow analyzes a company's stock performance by evaluating current price metrics, historical trends, and generating comprehensive reports with insights and recommendations based on financial data, market trends, and news sentiment.",
-    "workflow_inputs": [
-      {"name": "goal", "type": "string", "description": "The user's goal in textual format.", "required": true}
-    ],
-    "workflow_outputs": [
-      {"name": "workflow_output", "type": "string", "description": "A detailed report containing current price metrics, historical trends, insights, and recommendations.", "required": true}
-    ],
-    "connection_instruction": "# Project Access Instructions\n\n## Project Information\n- **Project ID**: proj_abc123def456\n- **Server URL**: https://example.ngrok.io\n- **Local URL**: http://localhost:8001\n\n## API Endpoints\n\n### 1. Generate Workflow\nCreate a workflow for your project (only needed once per project):\n\n```bash\ncurl -X POST https://example.ngrok.io/workflow/generate \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"project_id\": \"proj_abc123def456\",\n    \"llm_config\": {\n      \"model\": \"gpt-4o-mini\",\n      \"openai_key\": \"your_openai_api_key\"\n    }\n  }'\n```\n\n### 2. Execute Workflow\nRun the workflow with your specific input:\n\n```bash\ncurl -X POST https://example.ngrok.io/workflow/execute \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"project_id\": \"proj_abc123def456\",\n    \"inputs\": {\n      \"goal\": \"Analyze the price and trend for company Apple\"\n    },\n    \"llm_config\": {\n      \"model\": \"gpt-4o-mini\",\n      \"openai_key\": \"your_openai_api_key\"\n    }\n  }'\n```\n\n## Quick Start Example\n\n1. **Generate Workflow** (one-time setup):\n   ```bash\n   curl -X POST https://example.ngrok.io/workflow/generate \\\n     -H \"Content-Type: application/json\" \\\n     -d '{\"project_id\": \"proj_abc123def456\"}'\n   ```\n\n2. **Execute Analysis**:\n   ```bash\n   curl -X POST https://example.ngrok.io/workflow/execute \\\n     -H \"Content-Type: application/json\" \\\n     -d '{\n       \"project_id\": \"proj_abc123def456\",\n       \"inputs\": {\"goal\": \"Analyze Tesla stock performance\"}\n     }'\n   ```\n\n## Input Examples\n- \"Analyze the price and trend for company Apple\"\n- \"Provide stock analysis for Microsoft with technical indicators\"  \n- \"Generate investment report for Google including market sentiment\"\n\n## Notes\n- Replace `your_openai_api_key` with your actual OpenAI API key\n- The workflow generates comprehensive stock analysis reports\n- Each execution can analyze different companies by changing the input goal\n- Generated workflows are reusable for multiple executions"
-  }
+  "task_info": "Add ALEX ..."
 }
 
 2. WORKFLOW GENERATION OUTPUT:
@@ -84,15 +59,7 @@ Complete Stock Price and Trend Analysis Workflow Test Example:
     "edges": [...workflow connections...],
     "goal": "Create a stock price and trend analysis workflow...",
     "description": "Generated workflow for stock analysis"
-  },
-  "workflow_inputs": [
-    {"name": "goal", "type": "string", "description": "The user's goal in textual format.", "required": true}
-  ],
-  "workflow_outputs": [
-    {"name": "workflow_output", "type": "string", "description": "A detailed report containing current price metrics, historical trends, insights, and recommendations.", "required": true}
-  ],
-  "message": "Workflow generated successfully for project",
-  "timestamp": "2024-06-18T11:23:55.616000"
+  }
 }
 
 3. WORKFLOW EXECUTION OUTPUT:
@@ -106,7 +73,6 @@ Complete Stock Price and Trend Analysis Workflow Test Example:
     "llm_config_received": true,
     "mcp_config_received": false
   },
-  "workflow_info": "=== WORKFLOW EXECUTION INFORMATION ===\nTimestamp: 2024-06-18T11:25:02.789000\nPublic URL: https://example.ngrok.io\nLocal URL: http://localhost:8001\nWorkflow Status: completed\nLLM Configuration: gpt-4o-mini\nMCP Configuration: Disabled\nExecution Message: [Comprehensive Stock Analysis Report]\nWorkflow Received: True\nLLM Config Received: True\nMCP Config Received: False",
   "message": "Workflow executed successfully for project",
   "timestamp": "2024-06-18T11:25:02.789000"
 }
@@ -163,9 +129,8 @@ def test_project_setup():
         print(f"✅ Project created successfully!")
         print(f"   Project ID: {result['project_id']}")
         print(f"   Public URL: {result['public_url']}")
-        print(f"   Local URL: {result['local_url']}")
         print(f"\n📄 Task Info:")
-        print(json.dumps(result['task_info'], indent=2))
+        print(result['task_info'])
         
         return result
     else:
@@ -240,8 +205,6 @@ def test_project_workflow_generation(project_id):
         print(f"✅ Workflow generated successfully!")
         print(f"   Success: {result['success']}")
         print(f"   Project ID: {result['project_id']}")
-        print(f"   Message: {result['message']}")
-        print(f"   Timestamp: {result['timestamp']}")
         
         # Show workflow preview - SUMMARY
         workflow_graph = result.get('workflow_graph')
@@ -266,16 +229,6 @@ def test_project_workflow_generation(project_id):
                 print(f"   {workflow_str[:300]}...")
             else:
                 print(f"   {workflow_str}")
-        
-        # Show workflow inputs and outputs
-        workflow_inputs = result.get('workflow_inputs', [])
-        workflow_outputs = result.get('workflow_outputs', [])
-        print(f"   📥 Workflow Inputs: {len(workflow_inputs)} inputs")
-        for inp in workflow_inputs:
-            print(f"      - {inp.get('name', 'unknown')}: {inp.get('description', 'no description')}")
-        print(f"   📤 Workflow Outputs: {len(workflow_outputs)} outputs")
-        for out in workflow_outputs:
-            print(f"      - {out.get('name', 'unknown')}: {out.get('description', 'no description')}")
         
         return result
     else:
@@ -302,12 +255,16 @@ def test_project_workflow_generation_with_default_config(project_id):
         
         print(f"✅ Workflow generated with default config!")
         print(f"   Success: {result['success']}")
-        print(f"   Message: {result['message']}")
+        print(f"   Project ID: {result.get('project_id')}")
         
-        # Show workflow inputs and outputs for default config test
-        workflow_inputs = result.get('workflow_inputs', [])
-        workflow_outputs = result.get('workflow_outputs', [])
-        print(f"   📥 Generated {len(workflow_inputs)} inputs, 📤 {len(workflow_outputs)} outputs")
+        # Show workflow graph summary
+        workflow_graph = result.get('workflow_graph')
+        if isinstance(workflow_graph, dict):
+            nodes_count = len(workflow_graph.get('nodes', []))
+            edges_count = len(workflow_graph.get('edges', []))
+            print(f"   📊 Workflow Structure: {nodes_count} nodes, {edges_count} edges")
+        else:
+            print(f"   📊 Workflow generated successfully")
         
         return result
     else:
@@ -430,12 +387,6 @@ def test_project_workflow_execution(project_id):
             else:
                 print(f"\n   📝 FULL EXECUTION MESSAGE:")
                 print(f"   {str(execution_message)}")
-        
-        # Show workflow info - FULL OUTPUT
-        workflow_info = result.get('workflow_info')
-        if workflow_info:
-            print(f"\n   📄 FULL WORKFLOW INFO:")
-            print(f"   {workflow_info}")
         
         return result
     else:

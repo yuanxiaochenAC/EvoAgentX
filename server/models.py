@@ -34,8 +34,7 @@ class ProjectSetupResponse(BaseModel):
     """Response model for project setup"""
     project_id: str
     public_url: str
-    local_url: str
-    task_info: dict  # Contains workflow_inputs, workflow_outputs, connection_instruction, and other task information
+    task_info: str  # Contains connection_instruction from the LLM-generated task info
 
 class ProjectWorkflowGenerationRequest(BaseModel):
     """Request model for project-based workflow generation"""

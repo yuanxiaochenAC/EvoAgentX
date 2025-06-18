@@ -39,8 +39,7 @@ async def setup_new_project(request: ProjectSetupRequest) -> ProjectSetupRespons
         return ProjectSetupResponse(
             project_id=result["project_id"],
             public_url=result["public_url"],
-            local_url=result["local_url"],
-            task_info=result["task_info"]
+            task_info=result["task_info"]  # This is now the connection instruction string
         )
         
     except Exception as e:
@@ -70,11 +69,7 @@ async def generate_workflow_for_project_api(request: ProjectWorkflowGenerationRe
         return {
             "success": True,
             "project_id": result["project_id"],
-            "workflow_graph": result["workflow_graph"],
-            "workflow_inputs": result["workflow_inputs"],
-            "workflow_outputs": result["workflow_outputs"],
-            "message": result["message"],
-            "timestamp": datetime.now().isoformat()
+            "workflow_graph": result["workflow_graph"]
         }
         
     except HTTPException:
@@ -107,10 +102,8 @@ async def execute_workflow_for_project_api(request: ProjectWorkflowExecutionRequ
             "success": True,
             "project_id": result["project_id"],
             "execution_result": result["execution_result"],
-            "workflow_info": result["workflow_info"],
-            "inputs": result["inputs"],
             "message": result["message"],
-            "timestamp": datetime.now().isoformat()
+            "timestamp": result["timestamp"]
         }
         
     except HTTPException:
@@ -297,7 +290,6 @@ async def get_project_status(project_id: str):
         "workflow_generated": project.get("workflow_generated", False),
         "workflow_executed": project.get("workflow_executed", False),
         "public_url": project.get("public_url", "Not available"),
-        "local_url": project.get("local_url", "Not available"),
         "last_updated": project.get("last_updated", project.get("created_at", ""))
     }
 

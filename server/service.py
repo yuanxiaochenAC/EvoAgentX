@@ -106,13 +106,33 @@ def create_task_info(project_id: str, goal: str, additional_info: Dict[str, Any]
     llm_config = create_llm_config(additional_info.get("llm_config", default_llm_config))
     llm = create_llm_instance(llm_config)
     response = llm.single_generate([{"role": "user", "content": task_prompt}])
+    
+    # Debug: Print the LLM response
+    print(f"LLM Response: {response}")
+    
     task_info = parse_json_from_text(response)
-    task_info = json.loads(task_info[0])
+    
+    # Debug: Print what parse_json_from_text extracted
+    print(f"Parsed JSON list: {task_info}")
+    
+    if not task_info:
+        raise ValueError(f"No JSON found in LLM response: {response}")
+    
+    try:
+        task_info = json.loads(task_info[0])
+    except json.JSONDecodeError as e:
+        print(f"JSON decode error: {e}")
+        print(f"Failed to parse: {task_info[0]}")
+        raise ValueError(f"Invalid JSON in LLM response: {task_info[0]}")
     
     # Add connection_instruction field using the template
     connection_instruction = CONNECTION_INSTRUCTION_PROMPT.format(
         project_id=project_id,
         public_url=public_url or "Not available",
+        workflow_name=task_info.get("workflow_name", "Not available"),
+        workflow_description=task_info.get("workflow_description", "Not available"),
+        workflow_inputs=task_info.get("workflow_inputs", "Not available"),
+        workflow_outputs=task_info.get("workflow_outputs", "Not available")
     )
     task_info["connection_instruction"] = connection_instruction
     
@@ -319,44 +339,35 @@ def generate_project_id() -> str:
     return f"proj_{uuid.uuid4().hex[:12]}"
 
 def setup_project(goal: str, additional_info: Dict[str, Any] = None) -> Dict[str, Any]:
-    """Setup a new project and store it in the project database"""
+    """Setup a new project with the given goal and additional information"""
     project_id = generate_project_id()
+    
+    # Get tunnel information
     tunnel_info = read_tunnel_info()
+    public_url = tunnel_info.get("public_url") if tunnel_info else None
     
-    # Generate task info with URL information
-    task_info = create_task_info(
-        project_id, 
-        goal, 
-        additional_info,
-        public_url=tunnel_info.get("public_url") if tunnel_info else None,
-    )
+    # Generate comprehensive task info
+    task_info = create_task_info(project_id, goal, additional_info or {}, public_url)
     
-    # Create project entry
+    # Store project in database
     project_data = {
         "project_id": project_id,
         "goal": goal,
         "additional_info": additional_info or {},
+        "status": "created",
         "created_at": datetime.now().isoformat(),
-        "status": "initialized",
         "workflow_generated": False,
         "workflow_executed": False,
-        "workflow_data": None,
-        "execution_results": None,
-        "public_url": tunnel_info.get("public_url") if tunnel_info else None,
-        "local_url": tunnel_info.get("local_url") if tunnel_info else None,
-        "tunnel_status": tunnel_info.get("status") if tunnel_info else None,
-        "task_info": task_info
+        "public_url": public_url,
+        "task_info": task_info  # Store the full task_info object
     }
     
-    # Store in project database
     project_info[project_id] = project_data
     
-        
     return {
         "project_id": project_id,
         "public_url": project_data["public_url"] or "Not available",
-        "local_url": project_data["local_url"] or "Not available", 
-        "task_info": task_info
+        "task_info": task_info.get("connection_instruction", "Not available")  # Return connection instruction string
     }
 
 def get_project(project_id: str) -> Dict[str, Any]:
@@ -459,10 +470,7 @@ async def generate_workflow_for_project(project_id: str, llm_config_dict: Dict[s
         return {
             "success": True,
             "project_id": project_id,
-            "workflow_graph": workflow_dict,
-            "workflow_inputs": workflow_inputs,
-            "workflow_outputs": workflow_outputs,
-            "message": "Workflow generated successfully for project"
+            "workflow_graph": workflow_dict
         }
         
     except Exception as e:
