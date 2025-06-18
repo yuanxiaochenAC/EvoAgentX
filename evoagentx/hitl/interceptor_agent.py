@@ -1,5 +1,7 @@
 # evoagentx/hitl/interceptor_agent.py
 
+import asyncio
+import sys
 from typing import Tuple
 from ..agents.agent import Agent
 from ..actions.action import Action
@@ -33,8 +35,15 @@ class HITLInterceptorAction(Action):
         self.interaction_type = interaction_type
         self.mode = mode
         
-    def execute(self, llm, inputs: dict, sys_msg: str = None, **kwargs) -> Tuple[dict, str]:
-        return self.async_execute(llm, inputs, sys_msg, **kwargs)
+    def execute(self, llm, inputs: dict, hitl_manager: HITLManager, sys_msg: str = None, **kwargs) -> Tuple[dict, str]:
+        try:
+            # get current running loop
+            loop = asyncio.get_running_loop()
+            # if in async context, cannot use asyncio.run()
+            raise RuntimeError("Cannot use asyncio.run() in async context. Use async_execute directly.")
+        except RuntimeError:
+            # if not in async context, use asyncio.run()
+            return asyncio.run(self.async_execute(llm, inputs, hitl_manager, sys_msg=sys_msg, **kwargs))
     
     async def async_execute(self, llm, inputs: dict, hitl_manager:HITLManager, sys_msg: str = None, **kwargs) -> Tuple[dict, str]:
         """
@@ -73,7 +82,8 @@ class HITLInterceptorAction(Action):
             return result, prompt
         elif result["hitl_decision"] == HITLDecision.REJECT:
             prompt += "\nHITL rejected, the action will not be executed"
-            return result, prompt
+            sys.exit()
+            # return result, prompt
 
 class HITLPostExecutionAction(Action):
     pass
