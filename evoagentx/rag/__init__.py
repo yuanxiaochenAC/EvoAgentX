@@ -1,4 +1,4 @@
-from .search_engine import SearchEngine
+from .rag import RAGEngine
 from .readers import LLamaIndexReader
 from .chunkers import SimpleChunker, SemanticChunker, HierarchicalChunker
 from .embeddings import OpenAIEmbeddingWrapper
@@ -7,7 +7,7 @@ from .retrievers import VectorRetriever
 from .postprocessors import SimpleReranker
 from .rag_config import RAGConfig
 
-__all__ = ['SearchEngine', 'LLamaIndexReader', 
+__all__ = ['RAGEngine', 'LLamaIndexReader', 
            'SimpleChunker', 'SemanticChunker', 'HierarchicalChunker',
            'OpenAIEmbeddingWrapper',
            'VectorIndexing', 

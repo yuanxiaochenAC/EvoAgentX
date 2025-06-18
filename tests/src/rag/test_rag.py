@@ -9,7 +9,7 @@ from evoagentx.core.logging import logger
 from evoagentx.storages.base import IndexStore
 from evoagentx.rag.indexings.base import IndexType
 from evoagentx.storages.base import StorageHandler
-from evoagentx.rag.search_engine import SearchEngine
+from evoagentx.rag.rag import RAGEngine
 from evoagentx.rag.schema import RagQuery, Corpus, ChunkMetadata, RagResult
 from evoagentx.storages.storages_config import VectorStoreConfig, DBConfig, StoreConfig
 from evoagentx.rag.rag_config import RAGConfig, ReaderConfig, ChunkerConfig, IndexConfig, EmbeddingConfig, RetrievalConfig
@@ -80,7 +80,7 @@ class TestSearchEngine(unittest.TestCase):
                 metadata_filters=None
             )
         )
-        self.search_engine = SearchEngine(config=self.rag_config, storage_handler=self.storage_handler)
+        self.search_engine = RAGEngine(config=self.rag_config, storage_handler=self.storage_handler)
 
 
         # Prepare HotpotQA corpus

@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 from evoagentx.core.logging import logger
 from evoagentx.storages.base import StorageHandler
-from evoagentx.rag.search_engine import SearchEngine
+from evoagentx.rag.rag import SearchEngine
 from evoagentx.storages.storages_config import VectorStoreConfig, DBConfig, StoreConfig
 from evoagentx.rag.rag_config import RAGConfig, ReaderConfig, ChunkerConfig, IndexConfig, EmbeddingConfig, RetrievalConfig
 from evoagentx.rag.schema import RagQuery, Corpus, Chunk, ChunkMetadata

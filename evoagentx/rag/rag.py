@@ -25,7 +25,7 @@ from evoagentx.models.base_model import BaseLLM
 from evoagentx.core.logging import logger
 
 
-class SearchEngine:
+class RAGEngine:
     def __init__(self, config: RAGConfig, storage_handler: StorageHandler, llm: Optional[BaseLLM] = None):
         self.config = config
         self.storage_handler = storage_handler
