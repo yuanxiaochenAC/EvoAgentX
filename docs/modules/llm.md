@@ -123,6 +123,80 @@ response = llm.generate(
 )
 ```
 
+### Aliyun LLM
+
+AliyunLLM is an implementation of the EvoAgentX framework for accessing the Aliyun Tongyi Qianqian family of models. It provides seamless integration with Aliyun DashScope API and supports various models of Tongyiqianqian, including qwen-turbo, qwen-plus, qwen-max and so on. We have included reference costs for your consideration; however, please note that actual expenses should be regarded as the definitive amount.
+
+To utilize the DashScope API with AliyunLLM, an API key from Bailian is required. The following steps outline the process:
+
+**Basic Usage:**
+
+Execute the following command in your bash terminal to set the API key:
+
+```bash
+export DASHSCOPE_API_KEY="your-api-key-here"
+```
+
+You can use python to call the model as below template.
+
+```python
+from evoagentx.models import AliyunLLM, AliyunLLMConfig
+
+# Configure the model
+config = AliyunLLMConfig(
+    model="qwen-turbo",  # you can use qwen-turbo, qwen-plus, qwen-max and so on.
+    aliyun_api_key="Your DASHSCOPE_API_KEY",
+    temperature=0.7,
+    max_tokens=2000,
+    stream=False,
+    output_response=True
+)
+
+# Initialize the model
+llm = AliyunLLM(config)
+
+# Generate text
+response = llm.generate(
+    prompt="Explain quantum computing in simple terms.",
+    system_message="You are a helpful assistant that explains complex topics simply."
+)
+```
+
+
+### Local LLM
+
+We now support calling local models for your tasks, built on the LiteLLM framework for a familiar user experience. For example, to use Ollama, follow these steps:
+
+1. Download the desired model, such as `ollama3`.
+2. Run the model locally.
+3. Configure the settings by specifying `api_base` (typically port `11434`) and setting `is_local` to `True`.
+
+You're now ready to leverage your local model seamlessly!
+
+**Basic Usage:**
+
+```python
+
+from evoagentx.models.model_configs import LiteLLMConfig
+from evoagentx.models import LiteLLM
+
+# use local model
+config = LiteLLMConfig(
+    model="ollama/llama3",
+    api_base="http://localhost:11434",
+    is_local=True,
+    temperature=0.7,
+    max_tokens=1000,
+    output_response=True
+)
+
+# Generate 
+llm = LiteLLM(config)
+response = llm.generate(prompt="What is Agentic Workflow?")
+
+```
+
+
 ## Core Functions
 
 All LLM implementations in EvoAgentX provide a consistent set of core functions for generating text and managing the generation process.
