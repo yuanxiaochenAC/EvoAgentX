@@ -19,6 +19,14 @@ except ImportError:
         raise ImportError("The 'ollama' library is required.")
 
 
+MODEL_DIMENSIONS = {
+    "nomic-embed-text": 384,
+    # "mxbai-embed-large": ,
+    # "bge-m3": ,
+    # "all-minilm": ,
+    # "snowflake-arctic-embed",
+}
+
 class OllamaEmbedding(BaseEmbedding):
     """Ollama embedding model compatible with LlamaIndex BaseEmbedding."""
     
@@ -124,7 +132,7 @@ class OllamaEmbeddingWrapper(BaseEmbeddingWrapper):
     ):
         self.model_name = model_name
         self.base_url = base_url
-        self.dimensions = dimensions
+        self._dimensions = dimensions or MODEL_DIMENSIONS.get(model_name, None)
         self.kwargs = kwargs
         self._embedding_model = None
 
@@ -135,7 +143,7 @@ class OllamaEmbeddingWrapper(BaseEmbeddingWrapper):
                 self._embedding_model = OllamaEmbedding(
                     model_name=self.model_name,
                     base_url=self.base_url,
-                    embedding_dims=self.dimensions,
+                    embedding_dims=self._dimensions,
                     **self.kwargs
                 )
                 logger.debug(f"Initialized Ollama embedding wrapper for model: {self.model_name}")
@@ -143,3 +151,8 @@ class OllamaEmbeddingWrapper(BaseEmbeddingWrapper):
                 logger.error(f"Failed to initialize Ollama embedding wrapper: {str(e)}")
                 raise
         return self._embedding_model
+    
+    @property
+    def dimensions(self) -> int:
+        """Return the embedding dimensions."""
+        return self._dimensions

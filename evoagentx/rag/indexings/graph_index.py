@@ -48,7 +48,7 @@ class GraphIndexing(BaseIndexWrapper):
                 use_async=self.index_config.get("use_async", True),
             )
         except Exception as e:
-            logger.error(f"Failed to initialize VectorStoreIndex: {str(e)}")
+            logger.error(f"Failed to initialize {self.__class__}: {str(e)}")
             raise
 
     def _create_storage_context(self):

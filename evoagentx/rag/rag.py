@@ -26,7 +26,7 @@ from evoagentx.core.logging import logger
 class RAGEngine:
     def __init__(self, config: RAGConfig, storage_handler: StorageHandler):
         self.config = config
-        self.storage_handler = storage_handler
+        self.storage_handler = storage_handler  # Maybe reinit the vector_store by the load funcion.
         self.embedding_factory = EmbeddingFactory()
         self.index_factory = IndexFactory()
         self.chunk_factory = ChunkFactory()
@@ -46,11 +46,17 @@ class RAGEngine:
         )
 
         # Initialize embedding model. 
-        # Maybe reinit by the load funcion.
         self.embed_model = self.embedding_factory.create(
             provider=self.config.embedding.provider,
             model_config=self.config.embedding.model_dump(exclude_unset=True),
         )
+        
+        # Dynamic Check the dimensions in StorageHandler
+        if (self.storage_handler.vector_store is not None) and (self.embed_model.dimensions is not None):
+            if self.storage_handler.vector_store.dimensions != self.embed_model.dimensions:
+                logger.warning(f"The dimensions in vector_store is not equal with embed_model. Reiniliaze vector_store.")
+                self.storage_handler.storageConfig.vectorConfig.dimensions = self.embed_model.dimensions
+                self.storage_handler._init_vector_store()
 
         # Initialize chunker
         self.chunker = self.chunk_factory.create(
@@ -508,7 +514,8 @@ class RAGEngine:
         """
         return await retriever.aretrieve(query)
 
-    def query(self, query: Union[str, Query], corpus_id: Optional[str] = None) -> RagResult:
+    def query(self, query: Union[str, Query], corpus_id: Optional[str] = None,
+              query_transforms: Optional[List] = None) -> RagResult:
         """Execute a query across indices and return processed results.
 
         Performs query preprocessing, multi-threaded retrieval, and post-processing.
@@ -516,6 +523,7 @@ class RAGEngine:
         Args:
             query (Union[str, Query]): Query string or Query object.
             corpus_id (Optional[str]): Specific corpus to query. If None, queries all corpora.
+            query_transforms (Optional[List]): Query Transforms is used to augment query in pre-processing.
 
         Returns:
             RagResult: Retrieved chunks with scores and metadata.
@@ -532,6 +540,9 @@ class RAGEngine:
                 return RagResult(corpus=Corpus(chunks=[]), scores=[], metadata={"query": query.query_str})
 
             # Pre-Processing
+            if query_transforms and query_transforms is not None:
+                for t in query_transforms:
+                    query = t(query)
 
             results = []
             target_corpora = [corpus_id] if corpus_id else self.indices.keys()

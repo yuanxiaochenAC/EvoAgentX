@@ -131,3 +131,8 @@ class HuggingFaceEmbeddingWrapper(BaseEmbeddingWrapper):
                 logger.error(f"Failed to initialize HuggingFace embedding wrapper: {str(e)}")
                 raise
         return self._embedding_model
+    
+    @property
+    def dimensions(self) -> int:
+        """Return the embedding dimensions."""
+        return self._embedding_model.dimension

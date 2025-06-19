@@ -50,12 +50,19 @@ embedding=EmbeddingConfig(
         model_name="debug/weights/bge-small-en-v1.5",
         device="cpu"
     )
-"""
+# For ollama example
 embedding=EmbeddingConfig(
         provider="ollama",
         model_name="nomic-embed-text",
         base_url="10.168.1.71:17174",
         dimensions=768
+    )
+"""
+# For ollama example
+embedding=EmbeddingConfig(
+        provider="openai",
+        model_name="text-embedding-ada-002",
+        api_key=os.environ["OPENAI_API_KEY"],
     )
 
 rag_config = RAGConfig(

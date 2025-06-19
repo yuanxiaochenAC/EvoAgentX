@@ -1,6 +1,6 @@
 from typing import Optional
 
-from evoagentx.rag.schema import RagQuery
+from evoagentx.rag.schema import Query
 from evoagentx.core.logging import logger
 from .simple_reranker import SimpleReranker
 from .base import BasePostprocessor, RerankerType
@@ -14,7 +14,7 @@ class PostprocessorFactory:
     def create(
         self,
         postprocessor_type: str,
-        query: Optional[RagQuery] = None
+        query: Optional[Query] = None
     ) -> BasePostprocessor:
         """Create a post-processor based on configuration.
         

@@ -78,3 +78,7 @@ class BaseEmbeddingWrapper:
             bool: True if the model is supported, False otherwise.
         """
         return EmbeddingProvider.validate_model(provider, model_name)
+    
+    @property
+    def dimensions(self) -> int:
+        raise NotImplementedError()

@@ -37,7 +37,7 @@ class VectorIndexing(BaseIndexWrapper):
                 show_progress=self.index_config.get("show_progress", False)
             )
         except Exception as e:
-            logger.error(f"Failed to initialize VectorStoreIndex: {str(e)}")
+            logger.error(f"Failed to initialize {self.__class__}: {str(e)}")
             raise
 
     def _create_storage_context(self, ):

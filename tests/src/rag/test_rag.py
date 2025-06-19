@@ -10,7 +10,7 @@ from evoagentx.storages.base import IndexStore
 from evoagentx.rag.indexings.base import IndexType
 from evoagentx.storages.base import StorageHandler
 from evoagentx.rag.rag import RAGEngine
-from evoagentx.rag.schema import RagQuery, Corpus, ChunkMetadata, RagResult
+from evoagentx.rag.schema import Query, Corpus, ChunkMetadata, RagResult
 from evoagentx.storages.storages_config import VectorStoreConfig, DBConfig, StoreConfig
 from evoagentx.rag.rag_config import RAGConfig, ReaderConfig, ChunkerConfig, IndexConfig, EmbeddingConfig, RetrievalConfig
 
@@ -151,7 +151,7 @@ class TestSearchEngine(unittest.TestCase):
             nodes=corpus,
             corpus_id=self.corpus_id
         )
-        query = RagQuery(query_str=self.query_text, top_k=10)
+        query = Query(query_str=self.query_text, top_k=10)
         result = self.search_engine.query(query, corpus_id=self.corpus_id)
         self.assertIsInstance(result, RagResult, "query should return a RagResult object")
         self.assertLessEqual(len(result.corpus.chunks), 10, "Should return at most top_k chunks")
@@ -295,7 +295,7 @@ class TestSearchEngine(unittest.TestCase):
         self.assertIn(self.corpus_id, self.search_engine.indices, "Corpus should be loaded")
         index = self.search_engine.indices[self.corpus_id][IndexType.VECTOR]
         self.assertGreater(len(index.id_to_node), 0, "Index should contain nodes")
-        query = RagQuery(query_str=self.query_text, top_k=10)
+        query = Query(query_str=self.query_text, top_k=10)
         result = self.search_engine.query(query, corpus_id=self.corpus_id)
         self.assertGreater(len(result.corpus.chunks), 0, "Query should return chunks after load")
         logger.info(f"Loaded indices from {output_path}")
@@ -350,7 +350,7 @@ class TestSearchEngine(unittest.TestCase):
         self.assertIn(self.corpus_id, self.search_engine.indices, "Corpus should be loaded")
         index = self.search_engine.indices[self.corpus_id][IndexType.VECTOR]
         self.assertGreater(len(index.id_to_node), 0, "Index should contain nodes")
-        query = RagQuery(query_str=self.query_text, top_k=10)
+        query = Query(query_str=self.query_text, top_k=10)
         result = self.search_engine.query(query, corpus_id=self.corpus_id)
         self.assertGreater(len(result.corpus.chunks), 0, "Query should return chunks after load")
         logger.info(f"Loaded indices from database table indexing")

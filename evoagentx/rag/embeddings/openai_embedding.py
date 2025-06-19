@@ -10,10 +10,12 @@ from .base import BaseEmbeddingWrapper, EmbeddingProvider, SUPPORTED_MODELS
 
 # Mapping of default embedding dimensions for OpenAI models
 MODEL_DIMENSIONS = {
+    "text-embedding-ada-002": 1536,
     "text-embedding-3-small": 1536,
     "text-embedding-3-large": 3072
 }
 
+SUPPORTED_DIMENSIONS = ["text-embedding-3-small", "text-embedding-3-large",]
 
 class OpenAIEmbedding(BaseEmbedding):
     """OpenAI embedding model compatible with LlamaIndex BaseEmbedding."""
@@ -55,13 +57,13 @@ class OpenAIEmbedding(BaseEmbedding):
         if not EmbeddingProvider.validate_model(EmbeddingProvider.OPENAI, model_name):
             raise ValueError(f"Unsupported OpenAI model: {model_name}. Supported models: {SUPPORTED_MODELS['openai']}")
         # Check for the dimensions support
-        if dimensions is not None and model_name not in MODEL_DIMENSIONS:
+        if dimensions is not None and model_name not in SUPPORTED_DIMENSIONS:
             logger.warning(
                 f"Dimensions parameter is not supported for model {model_name}. "
-                f"Only '{[k for k in MODEL_DIMENSIONS.keys()]}' support custom dimensions. Ignoring dimensions parameter."
+                f"Only '{[k for k in SUPPORTED_DIMENSIONS.keys()]}' support custom dimensions. Ignoring dimensions parameter."
             )
             self.dimensions = None
-        else:
+        elif dimensions is None and model_name in SUPPORTED_DIMENSIONS:
             self.dimensions = dimensions or MODEL_DIMENSIONS.get(model_name)
 
         try:
@@ -142,7 +144,7 @@ class OpenAIEmbeddingWrapper(BaseEmbeddingWrapper):
     ):
         self.model_name = model_name
         self.api_key = api_key
-        self.dimensions = dimensions
+        self._dimensions = dimensions
         self.base_url = base_url
         self.kwargs = kwargs
         self._embedding_model = None
@@ -154,7 +156,7 @@ class OpenAIEmbeddingWrapper(BaseEmbeddingWrapper):
                 self._embedding_model = OpenAIEmbedding(
                     model_name=self.model_name,
                     api_key=self.api_key,
-                    dimensions=self.dimensions,
+                    dimensions=self._dimensions,
                     base_url=self.base_url,
                     **self.kwargs
                 )
@@ -163,3 +165,8 @@ class OpenAIEmbeddingWrapper(BaseEmbeddingWrapper):
                 logger.error(f"Failed to initialize OpenAI embedding wrapper: {str(e)}")
                 raise
         return self._embedding_model
+    
+    @property
+    def dimensions(self) -> int:
+        """Return the embedding dimensions."""
+        return self._embedding_model or MODEL_DIMENSIONS.get(self.model_name, None)

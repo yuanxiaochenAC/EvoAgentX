@@ -1,11 +1,13 @@
 from string import Template
 from typing import Dict, Union, Optional
 
+from .base import BaseTransform
 from evoagentx.rag.schema import Query
 from evoagentx.models.base_model import BaseLLM
 from evoagentx.prompts.rag.hyde import DEFAULT_HYDE_PROMPT
 
-class HyDETransform:
+
+class HyDETransform(BaseTransform):
     """
     Hypothetical Document Embeddings (HyDE) query transform.
 
@@ -42,28 +44,3 @@ class HyDETransform:
         tmp_query = query.deepcopy()
         tmp_query.custom_embedding_strs = embedding_strs
         return tmp_query
-
-    def run(
-        self,
-        query_or_str: Union[str, Query],
-        metadata: Optional[Dict] = None,
-    ) -> Query:
-        """Run query transform."""
-        metadata = metadata or {}
-        if isinstance(query_or_str, str):
-            query = Query(
-                query_str=query_or_str,
-                custom_embedding_strs=[query_or_str],
-            )
-        else:
-            query = query_or_str
-
-        return self._run(query, metadata=metadata)
-
-    def __call__(
-        self,
-        query_bundle_or_str: Union[str, Query],
-        metadata: Optional[Dict] = None,
-    ) -> Query:
-        """Run query processor."""
-        return self.run(query_bundle_or_str, metadata=metadata)
