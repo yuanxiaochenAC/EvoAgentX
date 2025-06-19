@@ -105,7 +105,7 @@ def main():
         program=program, 
         optimizer_llm=optimizer_llm,
         max_bootstrapped_demos=4, 
-        max_labeled_demos=4,
+        max_labeled_demos=0,
         num_threads=20,  
         eval_rounds=1, 
         auto="medium",
