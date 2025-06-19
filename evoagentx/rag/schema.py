@@ -432,7 +432,7 @@ class Corpus(BaseModule):
         return len(self.chunks)
     
 
-class RagQuery(BaseModule):
+class Query(BaseModule):
     """Represents a retrieval query."""
     
     query_str: str = Field(description="The query string.")

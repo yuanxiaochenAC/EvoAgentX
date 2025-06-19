@@ -6,10 +6,10 @@ from dotenv import load_dotenv
 
 from evoagentx.core.logging import logger
 from evoagentx.storages.base import StorageHandler
-from evoagentx.rag.rag import SearchEngine
+from evoagentx.rag.rag import RAGEngine
 from evoagentx.storages.storages_config import VectorStoreConfig, DBConfig, StoreConfig
 from evoagentx.rag.rag_config import RAGConfig, ReaderConfig, ChunkerConfig, IndexConfig, EmbeddingConfig, RetrievalConfig
-from evoagentx.rag.schema import RagQuery, Corpus, Chunk, ChunkMetadata
+from evoagentx.rag.schema import Query, Corpus, Chunk, ChunkMetadata
 from evoagentx.benchmark.hotpotqa import HotPotQA, download_raw_hotpotqa_data
 
 # Load environment
@@ -35,7 +35,7 @@ store_config = StoreConfig(
 )
 storage_handler = StorageHandler(storageConfig=store_config)
 
-# Initialize SearchEngine
+# Initialize RAGEngine
 # Define 3 embeddings models
 """
 # For openai example
@@ -56,7 +56,6 @@ embedding=EmbeddingConfig(
         model_name="nomic-embed-text",
         base_url="10.168.1.71:17174",
         dimensions=768
-        # api_key=os.environ["OPENAI_API_KEY"],
     )
 
 rag_config = RAGConfig(
@@ -83,7 +82,7 @@ rag_config = RAGConfig(
         metadata_filters=None
     )
 )
-search_engine = SearchEngine(config=rag_config, storage_handler=storage_handler)
+search_engine = RAGEngine(config=rag_config, storage_handler=storage_handler)
 
 # Define Helper function and evaluation function
 def create_corpus_from_context(context: List[List], corpus_id: str) -> Corpus:
@@ -169,7 +168,7 @@ def run_evaluation(samples: List[Dict], top_k: int = 5) -> Dict[str, float]:
         search_engine.add(index_type="vector", nodes=corpus, corpus_id=corpus_id)
         
         # Query
-        query = RagQuery(query_str=question, top_k=top_k)
+        query = Query(query_str=question, top_k=top_k)
         result = search_engine.query(query, corpus_id=corpus_id)
         retrieved_chunks = result.corpus.chunks
         logger.info(f"Retrieved {len(retrieved_chunks)} chunks for query")

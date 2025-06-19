@@ -7,7 +7,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Union, Optional, Sequence, Dict, Any, Tuple
 
 from llama_index.core.schema import NodeWithScore, TextNode, RelatedNodeInfo
-# from llama_index.core.indices.query.query_transform import HyDEQueryTransform
 
 from .rag_config import RAGConfig
 from .readers import LLamaIndexReader
@@ -18,15 +17,14 @@ from .retrievers import RetrieverFactory, BaseRetrieverWrapper
 from .postprocessors import PostprocessorFactory
 from .indexings.base import IndexType
 from .retrievers.base import RetrieverType
-from .schema import Chunk, Corpus, ChunkMetadata, IndexMetadata, RagQuery, RagResult
+from .schema import Chunk, Corpus, ChunkMetadata, IndexMetadata, Query, RagResult
 from evoagentx.storages.base import StorageHandler
 from evoagentx.storages.schema import IndexStore
-from evoagentx.models.base_model import BaseLLM
 from evoagentx.core.logging import logger
 
 
 class RAGEngine:
-    def __init__(self, config: RAGConfig, storage_handler: StorageHandler, llm: Optional[BaseLLM] = None):
+    def __init__(self, config: RAGConfig, storage_handler: StorageHandler):
         self.config = config
         self.storage_handler = storage_handler
         self.embedding_factory = EmbeddingFactory()
@@ -143,7 +141,7 @@ class RAGEngine:
                     index=index.get_index(),
                     graph_store=index.get_index().storage_context.graph_store,
                     embed_model=self.embed_model.get_embedding_model(),
-                    query=RagQuery(query_str="", top_k=self.config.retrieval.top_k if self.config.retrieval else 5)
+                    query=Query(query_str="", top_k=self.config.retrieval.top_k if self.config.retrieval else 5)
                 )
 
             nodes_to_insert = nodes.to_llama_nodes() if isinstance(nodes, Corpus) else nodes
@@ -486,7 +484,7 @@ class RAGEngine:
                     index=index.get_index(),
                     graph_store=index.get_index().storage_context.graph_store if index_type == IndexType.GRAPH else None,
                     embed_model=self.embed_model.get_embedding_model(),
-                    query=RagQuery(query_str="", top_k=self.config.retrieval.top_k if self.config.retrieval else 5)
+                    query=Query(query_str="", top_k=self.config.retrieval.top_k if self.config.retrieval else 5)
                 )
 
             nodes = corpus.to_llama_nodes()
@@ -498,25 +496,25 @@ class RAGEngine:
             logger.error(f"Failed to load index for corpus {corpus_id}, index_type {index_type}: {str(e)}")
             raise
 
-    async def _retrieve_async(self, retriever: BaseRetrieverWrapper, query: RagQuery):
+    async def _retrieve_async(self, retriever: BaseRetrieverWrapper, query: Query):
         """Asynchronously retrieve results using a retriever.
 
         Args:
             retriever (BaseRetrieverWrapper): Retriever to process the query.
-            query (RagQuery): Query parameters for retrieval.
+            query (Query): Query parameters for retrieval.
 
         Returns:
             RagResult: Retrieved results.
         """
         return await retriever.aretrieve(query)
 
-    def query(self, query: Union[str, RagQuery], corpus_id: Optional[str] = None) -> RagResult:
+    def query(self, query: Union[str, Query], corpus_id: Optional[str] = None) -> RagResult:
         """Execute a query across indices and return processed results.
 
         Performs query preprocessing, multi-threaded retrieval, and post-processing.
 
         Args:
-            query (Union[str, RagQuery]): Query string or RagQuery object.
+            query (Union[str, Query]): Query string or Query object.
             corpus_id (Optional[str]): Specific corpus to query. If None, queries all corpora.
 
         Returns:
@@ -527,7 +525,7 @@ class RAGEngine:
         """
         try:
             if isinstance(query, str):
-                query = RagQuery(query_str=query, top_k=self.config.retrieval.top_k)
+                query = Query(query_str=query, top_k=self.config.retrieval.top_k)
             
             if not self.indices or (corpus_id and corpus_id not in self.indices):
                 logger.warning(f"No indices found for corpus {corpus_id or 'any'}")
@@ -544,7 +542,7 @@ class RAGEngine:
                             continue
                         future = executor.submit(
                             asyncio.run, self._retrieve_async(
-                                retriever, RagQuery(
+                                retriever, Query(
                                     query_str=query.query_str,
                                     top_k=query.top_k or self.config.retrieval.top_k,   # dynamic top_k. check if None, init by config
                                     similarity_cutoff=query.similarity_cutoff,
