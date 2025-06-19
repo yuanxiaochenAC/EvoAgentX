@@ -7,9 +7,9 @@ from evoagentx.workflow.operators import Predictor
 
 class aggregate(block):
     
-    def __init__(self, llm, n=3):
+    def __init__(self, llm):
         self.predictor = Predictor(llm=llm)
-        self.n = n
+        self.n = 0
         self.activate = True
     
     def __call__(self, question, **kwargs):
