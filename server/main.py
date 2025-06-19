@@ -12,15 +12,23 @@ from dotenv import load_dotenv
 load_dotenv()
 target_port = 8001
 CREATE_PUBLIC_TUNNEL = True
+# TUNNEL_METHOD = "ngrok"
+TUNNEL_METHOD = "ssh"
 TUNNEL_INFO_PATH = "./server/tunnel_info.json"
 
-# Global variable to track the tunnel process
 tunnel_process = None
+ngrok_tunnel = None
 
 def cleanup_tunnel():
-    """Clean up the tunnel process silently"""
-    global tunnel_process
-    if tunnel_process and tunnel_process.poll() is None:
+    global tunnel_process, ngrok_tunnel
+    if TUNNEL_METHOD == "ngrok" and ngrok_tunnel:
+        try:
+            ngrok_tunnel.close()
+            from pyngrok import ngrok
+            ngrok.kill()
+        except Exception:
+            pass
+    elif tunnel_process and tunnel_process.poll() is None:
         try:
             tunnel_process.terminate()
             tunnel_process.wait(timeout=3)
@@ -28,16 +36,14 @@ def cleanup_tunnel():
             tunnel_process.kill()
             tunnel_process.wait()
         except Exception:
-            pass  # Suppress cleanup errors
+            pass
 
 def signal_handler(signum, frame):
-    """Handle shutdown signals"""
     print(f"\n🛑 Received signal {signum}, shutting down...")
     cleanup_tunnel()
     exit(0)
 
 def save_tunnel_info(url, port):
-    """Save tunnel information to JSON file"""
     tunnel_info = {
         "public_url": url,
         "local_port": port,
@@ -53,27 +59,32 @@ def save_tunnel_info(url, port):
     except Exception:
         return False
 
-def create_public_tunnel(port):
-    """Create a public tunnel using localhost.run - completely silent"""
+def create_ngrok_tunnel(port):
+    global ngrok_tunnel
+    try:
+        from pyngrok import ngrok
+        ngrok_tunnel = ngrok.connect(port)
+        public_url = ngrok_tunnel.public_url
+        save_tunnel_info(public_url, port)
+    except Exception:
+        pass
+
+def create_ssh_tunnel(port):
     global tunnel_process
     try:
-        # Run the SSH tunnel command with all output suppressed
         tunnel_process = subprocess.Popen(
             ["ssh", "-R", f"80:localhost:{port}", "localhost.run"],
             stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,  # Suppress stderr completely
-            stdin=subprocess.DEVNULL,   # Suppress stdin
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
             text=True
         )
         
-        # Read output silently to extract URL
         try:
-            # Give it time to establish connection
             time.sleep(3)
             
-            # Try to read some output to get the URL
             output_lines = []
-            while len(output_lines) < 20:  # Read first 20 lines max
+            while len(output_lines) < 20:
                 try:
                     line = tunnel_process.stdout.readline()
                     if not line:
@@ -82,7 +93,6 @@ def create_public_tunnel(port):
                 except Exception:
                     break
             
-            # Look for tunnel URL in the output
             for line in output_lines:
                 if "tunneled with tls termination" in line:
                     import re
@@ -92,34 +102,37 @@ def create_public_tunnel(port):
                         save_tunnel_info(public_url, port)
                         break
         except Exception:
-            pass  # Silently handle any errors
+            pass
         
-        # Keep process running silently
         tunnel_process.wait()
         
     except Exception:
-        pass  # Silently handle tunnel creation errors
+        pass
+
+def create_public_tunnel(port):
+    if TUNNEL_METHOD == "ngrok":
+        create_ngrok_tunnel(port)
+    else:
+        create_ssh_tunnel(port)
 
 if __name__ == "__main__":
     import uvicorn
     
-    # Register cleanup function to run on exit
     atexit.register(cleanup_tunnel)
     
-    # Register signal handlers for graceful shutdown
-    signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
-    signal.signal(signal.SIGTERM, signal_handler)  # Termination signal
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     
-    # Check if public tunnel should be created
     create_tunnel = CREATE_PUBLIC_TUNNEL
     
     if create_tunnel:
-        # Start the tunnel in a separate thread (completely silent)
-        tunnel_thread = threading.Thread(target=create_public_tunnel, args=(target_port,))
-        tunnel_thread.daemon = True
-        tunnel_thread.start()
+        if TUNNEL_METHOD == "ngrok":
+            create_public_tunnel(target_port)
+        else:
+            tunnel_thread = threading.Thread(target=create_public_tunnel, args=(target_port,))
+            tunnel_thread.daemon = True
+            tunnel_thread.start()
         
-        # Give the tunnel a moment to start
         time.sleep(1)
     
     print(f"🖥️  Local server: http://localhost:{target_port}")
@@ -138,13 +151,12 @@ if __name__ == "__main__":
         print("🌍 Public tunnel: Not created")
     
     try:
-        # Run uvicorn with minimal logging
         uvicorn.run(
             app, 
             host="0.0.0.0", 
             port=target_port,
-            log_level="info",  # Reduce log verbosity
-            access_log=True    # Keep access logs but clean
+            log_level="info",
+            access_log=True
         )
     except KeyboardInterrupt:
         print("\n🛑 Server interrupted by user")

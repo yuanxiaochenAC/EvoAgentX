@@ -5,3 +5,4 @@ pydantic
 aiohttp
 sseclient-py
 requests
+pyngrok
