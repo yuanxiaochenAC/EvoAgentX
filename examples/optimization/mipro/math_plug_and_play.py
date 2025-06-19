@@ -9,8 +9,7 @@ from evoagentx.models import OpenAILLM, OpenAILLMConfig
 from evoagentx.optimizers import MiproOptimizer
 from evoagentx.core.callbacks import suppress_logger_info
 from evoagentx.utils.mipro_utils.register_utils import MiproRegistry
-
-
+from evoagentx.workflow.operators import Predictor
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -80,6 +79,8 @@ class CustomProgram:
         return solution, {"problem": problem, "solution": solution}
     
 
+
+
 def main():
 
     openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=False)
@@ -88,13 +89,14 @@ def main():
     optimizer_llm = OpenAILLM(config=optimizer_config)
 
     benchmark = MathSplits()
-    program = CustomProgram(model=executor_llm)
+    # program = CustomProgram(model=executor_llm)
+    program = Predictor(llm=executor_llm)
 
     # register the parameters to optimize 
     registry = MiproRegistry()
     # MiproRegistry requires specify the input_names and output_names for the specific parameter. 
     # The input_names and output_names should appear in the execution_data returned by the program's __call__ method. 
-    registry.track(program, "prompt", input_names=["problem"], output_names=["solution"])
+    registry.track(program, "prompt", input_names=["problem"], output_names=["reasoning","answer"])
 
     # optimize the program 
     # `evaluator` is optional. If not provided, the optimizer will construct an evaluator based on the `evaluate` method of the benchmark. 
@@ -107,7 +109,7 @@ def main():
         num_threads=20,  
         eval_rounds=1, 
         auto="medium",
-        save_path="examples/output/mipro/math_plug_and_play" 
+        save_path="examples" 
     )
 
     logger.info("Optimizing program...")
@@ -118,7 +120,11 @@ def main():
     with suppress_logger_info():
         results = optimizer.evaluate(dataset=benchmark, eval_mode="test")
     logger.info(f"Evaluation metrics (after optimization): {results}")
+    
 
+    print("\n\n")
+    print(optimizer.program.prompt)
+    print("\n\n")
 
 if __name__ == "__main__":
     main()

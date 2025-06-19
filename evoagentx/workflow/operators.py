@@ -481,17 +481,21 @@ class Predictor(Operator):
     def __init__(self, llm: BaseLLM, **kwargs):
         name = "Predictor"
         description = "Predict the answer to the problem"
-        interface = "predictor(question: str) -> dict with key 'response' of type str"
+        interface = "predictor(question: str) -> dict with key 'reasoning' (str) and 'answer' (str)"
         prompt = kwargs.pop("prompt", PREDICTOR_PROMPT)
         super().__init__(name=name, description=description, interface=interface, prompt=prompt, llm=llm, outputs_format=PredictorOutput, **kwargs)
 
-    def execute(self, question, **kwargs) -> dict:
-        prompt = self.prompt.format(question = question, **kwargs)
+    def __call__(self, problem):
+        response = self.execute(problem)
+        return response['answer'], {"problem":problem, "reasoning":response['reasoning'], "answer":response['answer']}
+    
+    def execute(self, question) -> dict:
+        prompt = self.prompt.format(problem = question)
         response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
     
-    async def async_execute(self, question, **kwargs) -> dict:
-        prompt = self.prompt.format(question = question, **kwargs)
+    async def async_execute(self, question) -> dict:
+        prompt = self.prompt.format(problem = question)
         response = await self.llm.async_generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
 

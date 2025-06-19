@@ -1,0 +1,57 @@
+{
+    "predicts[0]": {
+        "traces": [],
+        "train": [],
+        "demos": [
+            {
+                "id": "test-916",
+                "problem": "Given that $x+y = 7$ and $3x+y = 45,$ evaluate $x^2-y^2.$",
+                "level": "Level 2",
+                "type": "Algebra",
+                "solution": "From the first equation, we can see that $y = 7 - x.$ Substituting for $y$ in the second equation, we obtain $3x + (7 - x) = 45,$ so $x = 19.$ We can then find that $y = -12.$ Thus, $$x^2 - y^2 = 19^2 - (-12)^2 = \\boxed{217}.$$- OR -\n\nNote that $$x^2 - y^2 = (x + y)(x - y).$$If we subtract two times the first equation from the second equation, we obtain $x - y = 31.$ We can then substitute for $x + y$ and $x - y$ to obtain $7\\cdot 31 = \\boxed{217}.$"
+            },
+            {
+                "id": "test-795",
+                "problem": "Given that the point $(4,7)$ is on the graph of $y=3f\\left(2x\\right)+1$, there is one point that must be on the graph of $y=f(x)$. What is the sum of coordinates of that point?",
+                "level": "Level 5",
+                "type": "Algebra",
+                "solution": "Given that $(4,7)$ is on the graph of $y=3f\\left(2x\\right)+1$, we can substitute $x=4$ and $y=7$ in that equation to obtain $$7 = 3f\\left(2\\cdot4\\right)+1.$$We can rewrite this information as $$2 = f(8),$$which tells us that $(8,2)$ must be on the graph of $y=f(x)$. The sum of coordinates of this point is $\\boxed{10}$."
+            },
+            {
+                "id": "test-2587",
+                "problem": "Let $a,$ $b,$ $c$ be positive real numbers such that $a + b + c = 1.$  Find the minimum value of $a^2 + 2b^2 + c^2.$",
+                "level": "Level 4",
+                "type": "Intermediate Algebra",
+                "solution": "By Cauchy-Schwarz,\n\\[(a^2 + 2b^2 + c^2) \\left( 1 + \\frac{1}{2} + 1 \\right) \\ge (a + b + c)^2 = 1,\\]so $a^2 + 2b^2 + c^2 \\ge \\frac{2}{5}.$\n\nEquality occurs when $\\frac{a^2}{1} = \\frac{2b^2}{1\/2} = \\frac{c^2}{1}$ and $a + b + c = 1.$  We can solve to get $a = \\frac{2}{5},$ $b = \\frac{1}{5},$ and $c = \\frac{2}{5},$ so the minimum value is $\\boxed{\\frac{2}{5}}.$"
+            },
+            {
+                "id": "test-2414",
+                "problem": "Let \\[f(n) =\n\\begin{cases}\n4n+3 &\\text{if }n<a, \\\\\n7n-12 &\\text{if }n\\ge{a}.\n\\end{cases}\n\\]Find $a$ if the graph of $y=f(n)$ is continuous.",
+                "level": "Level 2",
+                "type": "Intermediate Algebra",
+                "solution": "In order for the graph to be continuous, the two pieces of the function must meet at $n=a$. In order for this to happen, we know that $4a+3=7a-12$. Solving for $a$, we find that $a=\\frac{15}{3}=\\boxed{5}$."
+            }
+        ],
+        "signature": {
+            "instructions": "To solve the following mathematical problem, we'll carefully analyze it using a structured reasoning approach. Begin by understanding the problem thoroughly and identifying key elements, then proceed to apply the necessary mathematical principles and logic step-by-step. Illustrate the thought process in a detailed and logical manner, ensuring that both reasoning and solution are clearly articulated. The final output should be formatted in XML, with your estimations and final conclusions placed in `<reasoning>` and `<answer>` tags accurately reflecting your comprehensive analysis. Ensure every step contributes to the overall problem-solving schema.\n\nGiven Problem: {problem}\n\nReasoning Steps: Let's methodically approach this problem by breaking it down into manageable parts, examining each element closely, and applying relevant mathematical operations to arrive at a solution. \n\nProposed Answer: \n\nEnsure that the output maintains a valid XML structure as outlined above, encapsulating both the reasoning and conclusion within the designated tags for clarity and consistency.",
+            "fields": [
+                {
+                    "prefix": "Problem:",
+                    "description": "The Input for prompt `prompt`."
+                },
+                {
+                    "prefix": "Solution:",
+                    "description": "The Output for prompt `prompt`."
+                }
+            ]
+        },
+        "lm": null
+    },
+    "metadata": {
+        "dependency_versions": {
+            "python": "3.10",
+            "dspy": "2.6.27",
+            "cloudpickle": "3.1"
+        }
+    }
+}

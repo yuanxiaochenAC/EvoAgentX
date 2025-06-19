@@ -1,0 +1,55 @@
+{
+    "predicts[0]": {
+        "traces": [],
+        "train": [],
+        "demos": [
+            {
+                "augmented": true,
+                "problem": "If $\\log_{3}6 \\approx 1.63$, what is the value of $\\log_{9} 4$, accurate to two decimal places?",
+                "solution": "0.63"
+            },
+            {
+                "id": "test-3544",
+                "problem": "Solve the congruence $5n \\equiv 8 \\pmod{17}$, as a residue modulo 17.  (Give an answer between 0 and 16.)",
+                "level": "Level 3",
+                "type": "Number Theory",
+                "solution": "Note that $8 \\equiv 25 \\pmod{17}$, so we can write the given congruence as $5n \\equiv 25 \\pmod{17}$.  Since 5 is relatively prime to 17, we can divide both sides by 5, to get $n \\equiv \\boxed{5} \\pmod{17}$."
+            },
+            {
+                "id": "test-1056",
+                "problem": "What is the sum of the 10 smallest positive multiples of three?",
+                "level": "Level 2",
+                "type": "Algebra",
+                "solution": "The first ten positive multiples of 3 are 3, $3 \\cdot 2$, $\\dots$, $3 \\cdot 10$, so we want to find the sum $3 + 3 \\cdot 2 + \\dots + 3 \\cdot 10 = 3 \\cdot (1 + 2 + \\dots + 10)$.\n\nFor all $n$, $1 + 2 + \\dots + n = n(n + 1)\/2$, so $3 \\cdot (1 + 2 + \\dots + 10) = 3 \\cdot 10 \\cdot 11\/2 = \\boxed{165}$."
+            },
+            {
+                "id": "test-1745",
+                "problem": "The lengths of the perpendiculars drawn to the sides of a regular hexagon from an interior point are 4, 5, 6, 8, 9, and 10 centimeters. What is the number of centimeters in the length of a side of this hexagon? Express your answer as a common fraction in simplest radical form.",
+                "level": "Level 5",
+                "type": "Geometry",
+                "solution": "We will calculate the area of the hexagon in two different ways.  Let the interior point in the figure be called $P$, and let $s$ be the side length of the hexagon. The areas of the triangles $APB$, $BPC$, $CPD$, $DPE$, $EPF$, and $FPA$ are $\\frac{1}{2}(s)(4)$, $\\frac{1}{2}(s)(6)$, $\\frac{1}{2}(s)(9)$, $\\frac{1}{2}(s)(10)$, $\\frac{1}{2}(s)(8)$, and $\\frac{1}{2}(s)(5)$, respectively.  Also, the area of a regular hexagon with side length $s$ is $3s^2\\sqrt{3}\/2$.  Setting the sum of the triangles' areas equal to $3s^2\\sqrt{3}\/2$ gives \\begin{align*}\n\\frac{1}{2}s(4 + 6 + 9 + 10 + 8 + 5)&=\\frac{3s^2\\sqrt{3}}{2} \\implies \\\\\n21s&=\\frac{3s^2\\sqrt{3}}{2} \\implies \\\\\n14s &= s^2\\sqrt{3} \\implies \\\\\ns=0 \\quad \\text{or} \\quad s &= \\frac{14}{\\sqrt{3}} \\\\\n&= \\frac{14}{\\sqrt{3}}\\cdot\\frac{\\sqrt{3}}{\\sqrt{3}}=\\boxed{\\frac{14\\sqrt{3}}{3}} \\text{ cm}.\n\\end{align*}[asy]\nunitsize(0.3 cm);\n\npair A, B, C, D, E, F, P, U, V, W, X, Y, Z;\n\nA = 14*sqrt(3)\/3*dir(60);\nB = 14*sqrt(3)\/3*dir(120);\nC = 14*sqrt(3)\/3*dir(180);\nD = 14*sqrt(3)\/3*dir(240);\nE = 14*sqrt(3)\/3*dir(300);\nF = 14*sqrt(3)\/3*dir(360);\nP = extension(A + (0,-4), B + (0,-4), A + 5*dir(210), F + 5*dir(210));\n\nU = (P + reflect(A,B)*(P))\/2;\nV = (P + reflect(B,C)*(P))\/2;\nW = (P + reflect(C,D)*(P))\/2;\nX = (P + reflect(D,E)*(P))\/2;\nY = (P + reflect(E,F)*(P))\/2;\nZ = (P + reflect(F,A)*(P))\/2;\n\ndraw(A--B--C--D--E--F--cycle);\ndraw(U--X,dotted);\ndraw(V--Y,dotted);\ndraw(W--Z,dotted);\ndraw(A--P);\ndraw(B--P);\ndraw(C--P);\ndraw(D--P);\ndraw(E--P);\ndraw(F--P);\n\nlabel(\"$A$\", A, dir(60));\nlabel(\"$B$\", B, dir(120));\nlabel(\"$C$\", C, dir(180));\nlabel(\"$D$\", D, dir(240));\nlabel(\"$E$\", E, dir(300));\nlabel(\"$F$\", F, dir(360));\nlabel(\"$P$\", P, SW, UnFill);\nlabel(\"$4$\", (P + U)\/2, dir(180));\nlabel(\"$6$\", (P + V)\/2, SW);\nlabel(\"$9$\", (P + W)\/2, SE);\nlabel(\"$10$\", (P + X)\/2, dir(180));\nlabel(\"$8$\", (P + Y)\/2, SW);\nlabel(\"$5$\", (P + Z)\/2, SE);\n[\/asy]"
+            }
+        ],
+        "signature": {
+            "instructions": "To solve the following mathematical problem, we'll carefully analyze it using a structured reasoning approach. Begin by understanding the problem thoroughly and identifying key elements, then proceed to apply the necessary mathematical principles and logic step-by-step. Illustrate the thought process in a detailed and logical manner, ensuring that both reasoning and solution are clearly articulated. The final output should be formatted in XML, with your estimations and final conclusions placed in `<reasoning>` and `<answer>` tags accurately reflecting your comprehensive analysis. Ensure every step contributes to the overall problem-solving schema.\n\nGiven Problem: {problem}\n\nReasoning Steps: Let's methodically approach this problem by breaking it down into manageable parts, examining each element closely, and applying relevant mathematical operations to arrive at a solution. \n\nProposed Answer: \n\nEnsure that the output maintains a valid XML structure as outlined above, encapsulating both the reasoning and conclusion within the designated tags for clarity and consistency.",
+            "fields": [
+                {
+                    "prefix": "Problem:",
+                    "description": "The Input for prompt `prompt`."
+                },
+                {
+                    "prefix": "Solution:",
+                    "description": "The Output for prompt `prompt`."
+                }
+            ]
+        },
+        "lm": null
+    },
+    "metadata": {
+        "dependency_versions": {
+            "python": "3.10",
+            "dspy": "2.6.27",
+            "cloudpickle": "3.1"
+        }
+    }
+}

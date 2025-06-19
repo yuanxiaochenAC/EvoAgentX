@@ -3,22 +3,21 @@ import string
 import unicodedata
 from collections import Counter
 from evoagentx.workflow.blocks.block import block
-from evoagentx.workflow.operators import Predictor
 
 class aggregate(block):
     
-    def __init__(self, llm):
-        self.predictor = Predictor(llm=llm)
+    def __init__(self, predictor):
+        self.predictor = predictor
         self.n = 0
         self.activate = True
     
-    def __call__(self, question, **kwargs):
+    def __call__(self, problem, **kwargs):
         """聚合多个预测结果，返回最常见的答案"""
         predictions = []
         
         # 生成n个预测
         for _ in range(3):
-            prediction = self.predictor.execute(question=question)
+            prediction = self.predictor.execute(problem = problem)
             predictions.append(prediction['answer'])
         
         # 标准化并统计
@@ -39,12 +38,12 @@ class aggregate(block):
         
         return predictions[0]  # 兜底返回第一个答案
 
-    def execute(self, question):
+    def execute(self, problem):
         """执行预测并返回所有结果"""
         predictions = []
         
         for _ in range(self.n):
-            prediction = self.predictor.execute(question=question)
+            prediction = self.predictor.execute(problem = problem)
             predictions.append(prediction['answer'])
 
         return predictions

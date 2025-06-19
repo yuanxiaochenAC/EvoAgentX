@@ -59,6 +59,16 @@ class MassOptimiser(BaseModule):
         trainset = trainset or self.trainset
         valset = valset or self.valset
         self.benchmark = benchmark
+
+        # Step  0: Optimize Predictor_0
+        predictor = predictor(llm = self.executor_llm)
+
+        predictor_registry = MiproRegistry()
+        predictor_registry.track(predictor, "prompt", input_names=['problem'], output_names=['answer'])
+        optimized_predictor = self._prompt_optimize()
+        print(optimized_predictor.prompt)
+
+
         # 计算每个 block 的影响力
         incremental_influence = self._incremental_influence(trainset, valset)
         selection_probability = self._softmax_with_temperature(incremental_influence, softmax_temperature)
@@ -136,3 +146,20 @@ class MassOptimiser(BaseModule):
             if total >= agent_budget:
                 return [-1]
         return values
+    
+    def _prompt_optimize(self, registry, program, llm, max_bootstrapped_demos, max_labeled_demos, num_threads, eval_rounds, save_path):
+        optimizer = MiproOptimizer(
+            registry = registry,
+            program = program,
+            optimizer_llm = llm,
+            max_bootstrapped_demos= max_bootstrapped_demos,
+            max_labeled_demos = max_labeled_demos,
+            num_threads = num_threads,
+            eval_rounds= eval_rounds,
+            auto = 'medium',
+            save_path = save_path
+        )
+
+        optimizer.optimize(dataset = self.benchamrk)
+
+        return optimizer.restore_best_program

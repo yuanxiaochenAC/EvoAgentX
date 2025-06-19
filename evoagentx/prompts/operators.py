@@ -77,7 +77,7 @@ Please ensure your code is efficient, well-commented, and follows Python best pr
 PREDICTOR_PROMPT = """
 Let's think step by step.
 
-Question: {question}
+Question: {problem}
 Reasoning: Let's think step by step in order to produce the answer. We ...
 Answer: 
 
@@ -88,7 +88,7 @@ You should format your output in xml format. For example, ouptut the answer in <
 REFLECTOR_PROMPT = """
 Please review the answer and crticize on where might be wron. If you are absolutely sure it is correct, output 'True' in 'correctness'.
 
-Question: {question}
+Question: {problem}
 Text: {text}
 Reasoning: Let's think step by step in order to produce the correctness. We ...
 Feedback:
@@ -101,7 +101,7 @@ REFINER_PROMPT = """
 Given previous attempts and feedback, carefully consider where you could go wrong in your latest attempt. Using insights from previous attempts, try to solve the task better. Show your final answer bracketed between <answer> and </answer> at the end.
 
 ---
-Question: {question}
+Question: {problem}
 Previous answer: {previous_answer}
 Reflection: {reflection}
 Correctness: {correctness}
@@ -116,7 +116,7 @@ Please output your reasoning and final answer in the following xml format:
 SUMMARIZER_PROMPT = """"
 Based on the question, retrive relevant information from context that is ONLY helpful in answering the question. Include all key information. Do not repeat context
 
-Question: {question}
+Question: {problem}
 Context: {context}
 Summary: Only generate the summary. Start with Summary:
 
@@ -127,7 +127,7 @@ DEBATOR_PROMPT = """
 These are the solutions to the question from other agents. Examine the solutions from other agents in your rationale, finish by giving an updated answer. Let's think step by step. Provide a complete and correct code implementation in python.
 
 ---
-Question: {question}
+Question: {problem}
 Solutions: {solutions}
 Reasoning: Let's think step by step in order to examine the solutions from other agents. We ...
 
