@@ -91,29 +91,29 @@ def test_health_check():
 
 def test_project_setup():
     """
-    Test project setup for stock price and trend analysis workflow
+    Test project setup for Gaokao score estimation website workflow
     
     Curl command:
     ```bash
     curl -X POST http://localhost:8001/project/setup \
       -H "Content-Type: application/json" \
       -d '{
-        "goal": "Create a stock price and trend analysis workflow",
+        "goal": "写一个高考估分网站",
         "additional_info": {
-          "domain": "financial_analysis",
+          "domain": "education",
           "output_format": "detailed_report"
         }
       }'
     ```
     """
-    print("\n=== Testing Project Setup - Stock Analysis ===")
+    print("\n=== Testing Project Setup - Gaokao Score Estimation ===")
     
     project_request = {
-        "goal": "Create a stock price and trend analysis workflow that can analyze any company's stock performance, including current price metrics, historical trends, and generate comprehensive reports with insights and recommendations"
+        "goal": "写一个高考估分网站"
     }
     
-    print(f"🚀 Setting up stock analysis project...")
-    print(f"   Goal: {project_request['goal'][:80]}...")
+    print(f"🚀 Setting up Gaokao score estimation project...")
+    print(f"   Goal: {project_request['goal']}")
     
     response = requests.post('http://localhost:8001/project/setup', json=project_request)
     
@@ -151,7 +151,7 @@ def test_project_status(project_id):
 
 def test_project_workflow_generation(project_id):
     """
-    Test workflow generation for stock analysis project
+    Test workflow generation for Gaokao score estimation project
     
     Curl command:
     ```bash
@@ -162,7 +162,7 @@ def test_project_workflow_generation(project_id):
       }'
     ```
     """
-    print(f"\n=== Testing Stock Analysis Workflow Generation for {project_id} ===")
+    print(f"\n=== Testing Gaokao Score Estimation Workflow Generation for {project_id} ===")
     
     
     
@@ -170,7 +170,7 @@ def test_project_workflow_generation(project_id):
         "project_id": project_id,
     }
     
-    print(f"🚀 Generating stock analysis workflow...")
+    print(f"🚀 Generating Gaokao score estimation workflow...")
     print(f"   Getting goal and specifications from project data")
     
     response = requests.post('http://localhost:8001/workflow/generate', json=generation_request)
@@ -261,7 +261,7 @@ def test_invalid_project():
 
 def test_project_workflow_execution(project_id):
     """
-    Test workflow execution for HS300 index analysis
+    Test workflow execution for Gaokao score estimation
     
     Curl command:
     ```bash
@@ -270,23 +270,23 @@ def test_project_workflow_execution(project_id):
       -d '{
         "project_id": "proj_abc123def456",
         "inputs": {
-          "goal": "Analyze the price and trend for HS300 index"
+          "goal": "Math: 80, English: 120, Physics: 120"
         }
       }'
     ```
     """
-    print(f"\n=== Testing HS300 Index Analysis Workflow Execution for {project_id} ===")
+    print(f"\n=== Testing Gaokao Score Estimation Workflow Execution for {project_id} ===")
     
     
     execution_request = {
         "project_id": project_id,
         "inputs": {
-            "goal": "Analyze the price and trend for HS300 index"
+            "goal": "Math: 80, English: 120, Physics: 120"
         }
     }
     
-    print(f"🚀 Executing HS300 index analysis workflow...")
-    print(f"   Analysis Target: HS300 Index (Shanghai-Hong Kong Stock Connect 300)")
+    print(f"🚀 Executing Gaokao score estimation workflow...")
+    print(f"   Input Scores: Math: 80, English: 120, Physics: 120")
     print(f"   Input keys: {list(execution_request['inputs'].keys())}")
     
     response = requests.post('http://localhost:8001/workflow/execute', json=execution_request)
@@ -294,13 +294,13 @@ def test_project_workflow_execution(project_id):
     if response.status_code == 200:
         result = response.json()
         
-        print(f"✅ HS300 index analysis completed successfully!")
+        print(f"✅ Gaokao score estimation completed successfully!")
         print(f"\n📄 FULL WORKFLOW EXECUTION RESPONSE:")
         print(json.dumps(result, indent=2))
         
         return result
     else:
-        print(f"❌ HS300 index analysis failed: {response.status_code}")
+        print(f"❌ Gaokao score estimation failed: {response.status_code}")
         print(f"   Error: {response.text}")
         return None
 
@@ -310,7 +310,7 @@ def test_project_workflow_execution(project_id):
 # =============================================================================
 
 if __name__ == "__main__":
-    print("🚀 Starting Stock Price and Trend Analysis Workflow Tests...")
+    print("🚀 Starting Gaokao Score Estimation Workflow Tests...")
     
     test_health_check()
     
@@ -337,4 +337,4 @@ if __name__ == "__main__":
     
     # test_invalid_project()
     
-    print("\n🏁 Stock analysis workflow test execution completed.") 
+    print("\n🏁 Gaokao score estimation workflow test execution completed.") 

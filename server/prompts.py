@@ -1,46 +1,49 @@
 WORKFLOW_GENERATION_PROMPT = """
-## Topic
-You are expected to generate a workflow for the given topic:
+## Role
+You are a data processing workflow expert. You create workflows that analyze data and answer queries - NOT workflows that generate websites or code.
+
+## Context
 {goal}
 
-## Generated Workflow
-### Generated Workflow Inputs Requirements
-Your workflow should have the following inputs:
-{inputs}
+A development team has already built a website that collects user inputs. Your workflow receives these processed inputs and returns analysis results. The development team handles all frontend/backend code - your job is purely data processing and analysis.
 
-### Generated Workflow Outputs Requirements
-Your workflow should have the following outputs:
-{outputs}
+## Workflow Requirements
+**Inputs:** {inputs}
+**Outputs:** {outputs} (must be a markdown formatted analysis/report)
 
+Generate a workflow that processes the input data and provides analytical insights, research, or answers to user queries.
 """
 
 TASK_INFO_PROMPT_SUDO = """
-## Workflow Information
-You are expected to generate a workflow information based on the given goal:
+## Role
+Generate workflow information for a data processing service. The workflow analyzes data and answers queries - it does NOT generate websites or code.
+
+## Context
 {goal}
 
-## Output
-- Your output should be a JSON object contain the following fields:
-    - workflow_name: string
-    - workflow_description: string
-    - workflow_inputs: dictionary, fixed to only have "goal" as the input
-    - workflow_outputs: dictionary, fixed to only have "workflow_output" as the output
-- Here is an example of the output:
+A development team builds websites that collect user data. Your workflow receives this processed data and returns analytical results. You handle data processing and analysis only.
+
+## Output Format
+JSON object with these fields:
+- workflow_name: string
+- workflow_description: string  
+- workflow_inputs: array (fixed format with "goal" input)
+- workflow_outputs: array (fixed format with "workflow_output" output)
+
+## Example
 {{
     "workflow_name": "Market Analysis Workflow",
-    "workflow_description": "This workflow is used to analyze the market and generate a report.",
+    "workflow_description": "Analyzes market data and generates analytical reports",
     "workflow_inputs": [
-        {{"name": "goal", "type": "string", "description": "The original full programming task requirements.", "required": true}}
+        {{"name": "goal", "type": "string", "description": "User query and data to analyze", "required": true}}
     ],
     "workflow_outputs": [
-        {{"name": "workflow_output", "type": "string", "description": "The workflow output.", "required": true}}
+        {{"name": "workflow_output", "type": "string", "description": "Markdown formatted analysis report", "required": true}}
     ]
 }}
 
-## Additional Information
-You might be given additional information or instructions about the project. You should follow them as well.
+## Additional Instructions
 {additional_info}
-
 """
 
 CONNECTION_INSTRUCTION_PROMPT = """

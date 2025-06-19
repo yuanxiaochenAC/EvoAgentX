@@ -527,6 +527,25 @@ async def execute_workflow_for_project(project_id: str, inputs: Dict[str, Any], 
                 "error": "Failed to execute workflow"
             }
         
+        # Extract the message from execution result if it's a dict
+        if isinstance(execution_result, dict):
+            execution_message = execution_result.get("message", "")
+        else:
+            execution_message = str(execution_result)
+            
+        # Clean up markdown formatting from the message
+        if isinstance(execution_message, str):
+            if execution_message.startswith("```markdown"):
+                execution_message = execution_message[11:]
+            if execution_message.endswith("```"):
+                execution_message = execution_message[:-3]
+        
+        # Update execution_result with cleaned message
+        if isinstance(execution_result, dict):
+            execution_result["message"] = execution_message
+        else:
+            execution_result = execution_message
+        
         # Create comprehensive workflow info including public URL
         config_for_workflow_info = {
             "workflow": workflow_data,
