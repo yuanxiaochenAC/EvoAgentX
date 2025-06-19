@@ -531,6 +531,8 @@ class RAGEngine:
                 logger.warning(f"No indices found for corpus {corpus_id or 'any'}")
                 return RagResult(corpus=Corpus(chunks=[]), scores=[], metadata={"query": query.query_str})
 
+            # Pre-Processing
+
             results = []
             target_corpora = [corpus_id] if corpus_id else self.indices.keys()
             with ThreadPoolExecutor(max_workers=self.config.num_workers or 4) as executor:

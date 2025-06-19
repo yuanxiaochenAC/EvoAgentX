@@ -25,6 +25,7 @@ class GraphIndexing(BaseIndexWrapper):
         super().__init__()
         self.index_type = IndexType.GRAPH
         self.embed_model = embed_model
+        self.storage_handler = storage_handler
         # create a storage_context for llama_index
         self._create_storage_context()
         # for caching llama_index node

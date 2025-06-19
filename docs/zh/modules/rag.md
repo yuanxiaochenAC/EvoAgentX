@@ -83,11 +83,11 @@ search_engine = SearchEngine(config=rag_config, storage_handler=storage_handler)
      ```
 
 3. **查询**：
-   - 使用 `query` 方法根据查询字符串或 `RagQuery` 对象检索相关分块。
+   - 使用 `query` 方法根据查询字符串或 `Query` 对象检索相关分块。
    - 示例：
      ```python
-     from evoagentx.rag.schema import RagQuery
-     query = RagQuery(query_str="法国的首都是什么？", top_k=5)
+     from evoagentx.rag.schema import Query
+     query = Query(query_str="法国的首都是什么？", top_k=5)
      result = search_engine.query(query, corpus_id="doc_corpus")
      print(result.corpus.chunks)  # 检索到的分块
      ```
@@ -139,7 +139,7 @@ from evoagentx.storages.base import StorageHandler
 from evoagentx.rag.search_engine import SearchEngine
 from evoagentx.storages.storages_config import VectorStoreConfig, DBConfig, StoreConfig
 from evoagentx.rag.rag_config import RAGConfig, ReaderConfig, ChunkerConfig, IndexConfig, EmbeddingConfig, RetrievalConfig
-from evoagentx.rag.schema import RagQuery, Corpus, Chunk, ChunkMetadata
+from evoagentx.rag.schema import Query, Corpus, Chunk, ChunkMetadata
 from evoagentx.benchmark.hotpotqa import HotPotQA, download_raw_hotpotqa_data
 
 # Configure logging
@@ -283,7 +283,7 @@ def run_evaluation(samples: List[Dict], top_k: int = 5) -> Dict[str, float]:
         search_engine.add(index_type="vector", nodes=corpus, corpus_id=corpus_id)
         
         # Query
-        query = RagQuery(query_str=question, top_k=top_k)
+        query = Query(query_str=question, top_k=top_k)
         result = search_engine.query(query, corpus_id=corpus_id)
         retrieved_chunks = result.corpus.chunks
         logger.info(f"Retrieved {len(retrieved_chunks)} chunks for query")

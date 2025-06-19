@@ -7,10 +7,10 @@ from evoagentx.storages.base import StorageHandler
 from .base import IndexType, BaseIndexWrapper
 from .vector_index import VectorIndexing
 from .graph_index import GraphIndexing
-from .summary_index import SummaryIndexing
-from .tree_index import TreeIndexing
+# from .summary_index import SummaryIndexing
+# from .tree_index import TreeIndexing
 
-__all__ = ['VectorIndexing', 'GraphIndexing', 'SummaryIndexing', 'TreeIndexing', 'IndexFactory', 'BaseIndexWrapper']
+__all__ = ['VectorIndexing', 'GraphIndexing', 'IndexFactory', 'BaseIndexWrapper']
 
 class IndexFactory:
     """Factory for creating LlamaIndex indices."""

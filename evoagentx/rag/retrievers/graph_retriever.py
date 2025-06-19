@@ -4,7 +4,7 @@ from llama_index.core.indices.property_graph import VectorContextRetriever
 
 from .base import BaseRetrieverWrapper
 from evoagentx.core.logging import logger
-from evoagentx.rag.schema import RagQuery, RagResult, Corpus
+from evoagentx.rag.schema import Query, RagResult, Corpus
 
 
 class GraphRetriever(BaseRetrieverWrapper):
@@ -21,9 +21,9 @@ class GraphRetriever(BaseRetrieverWrapper):
             similarity_top_k=self.top_k
         )
     
-    def retrieve(self, query: RagQuery) -> RagResult:
+    def retrieve(self, query: Query) -> RagResult:
         try:
-            nodes = self.retriever.retrieve(query.query_str)
+            nodes = self.retriever.retrieve(query.to_QueryBundle())
             corpus = Corpus.from_llama_nodes(nodes)
             scores = [node.score or 0.0 for node in nodes]
             
