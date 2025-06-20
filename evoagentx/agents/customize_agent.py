@@ -179,6 +179,16 @@ class CustomizeAgent(Agent):
         """
         return self.action.prompt
     
+    @property
+    def prompt_template(self) -> PromptTemplate:
+        """
+        Get the prompt template for the primary custom action.
+        
+        Returns:
+            The prompt template for the primary custom action
+        """
+        return self.action.prompt_template
+    
     def validate_data(self, prompt: str, prompt_template: PromptTemplate, inputs: List[dict], outputs: List[dict], output_parser: Type[ActionOutput], parse_mode: str, parse_func: Callable, title_format: str):
 
         # check if the prompt is provided

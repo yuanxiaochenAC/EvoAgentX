@@ -421,3 +421,8 @@ class AgentManager(BaseModule):
                 timeout=timeout
             )
 
+    def copy(self) -> "AgentManager":
+        """
+        Create a shallow copy of the AgentManager.
+        """
+        return AgentManager(agents=self.agents, storage_handler=self.storage_handler)
