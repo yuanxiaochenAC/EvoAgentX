@@ -6,10 +6,10 @@ from dotenv import load_dotenv
 
 from evoagentx.core.logging import logger
 from evoagentx.storages.base import StorageHandler
-from evoagentx.rag.search_engine import SearchEngine
+from evoagentx.rag.rag import RAGEngine
 from evoagentx.storages.storages_config import VectorStoreConfig, DBConfig, StoreConfig
 from evoagentx.rag.rag_config import RAGConfig, ReaderConfig, ChunkerConfig, IndexConfig, EmbeddingConfig, RetrievalConfig
-from evoagentx.rag.schema import RagQuery, Corpus, Chunk, ChunkMetadata
+from evoagentx.rag.schema import Query, Corpus, Chunk, ChunkMetadata
 from evoagentx.benchmark.hotpotqa import HotPotQA, download_raw_hotpotqa_data
 
 # Load environment
@@ -27,7 +27,7 @@ store_config = StoreConfig(
     ),
     vectorConfig=VectorStoreConfig(
         vector_name="faiss",
-        dimensions=1536,
+        dimensions=768,    # 1536: text-embedding-ada-002, 384: bge-small-en-v1.5, 768: nomic-embed-text
         index_type="flat_l2",
     ),
     graphConfig=None,
@@ -35,7 +35,36 @@ store_config = StoreConfig(
 )
 storage_handler = StorageHandler(storageConfig=store_config)
 
-# Initialize SearchEngine
+# Initialize RAGEngine
+# Define 3 embeddings models
+"""
+# For openai example
+embedding=EmbeddingConfig(
+        provider="openai",
+        model_name="text-embedding-ada-002",
+        api_key=os.environ["OPENAI_API_KEY"],
+    )
+# For huggingface example
+embedding=EmbeddingConfig(
+        provider="huggingface",
+        model_name="debug/weights/bge-small-en-v1.5",
+        device="cpu"
+    )
+# For ollama example
+embedding=EmbeddingConfig(
+        provider="ollama",
+        model_name="nomic-embed-text",
+        base_url="10.168.1.71:17174",
+        dimensions=768
+    )
+"""
+# For ollama example
+embedding=EmbeddingConfig(
+        provider="openai",
+        model_name="text-embedding-ada-002",
+        api_key=os.environ["OPENAI_API_KEY"],
+    )
+
 rag_config = RAGConfig(
     reader=ReaderConfig(
         recursive=False, exclude_hidden=True,
@@ -49,11 +78,7 @@ rag_config = RAGConfig(
         chunk_overlap=0,
         max_chunks=None
     ),
-    embedding=EmbeddingConfig(
-        provider="openai",
-        model_name="text-embedding-ada-002",
-        api_key=os.environ["OPENAI_API_KEY"],
-    ),
+    embedding=embedding,
     index=IndexConfig(index_type="vector"),
     retrieval=RetrievalConfig(
         retrivel_type="vector",
@@ -64,7 +89,7 @@ rag_config = RAGConfig(
         metadata_filters=None
     )
 )
-search_engine = SearchEngine(config=rag_config, storage_handler=storage_handler)
+search_engine = RAGEngine(config=rag_config, storage_handler=storage_handler)
 
 # Define Helper function and evaluation function
 def create_corpus_from_context(context: List[List], corpus_id: str) -> Corpus:
@@ -150,7 +175,7 @@ def run_evaluation(samples: List[Dict], top_k: int = 5) -> Dict[str, float]:
         search_engine.add(index_type="vector", nodes=corpus, corpus_id=corpus_id)
         
         # Query
-        query = RagQuery(query_str=question, top_k=top_k)
+        query = Query(query_str=question, top_k=top_k)
         result = search_engine.query(query, corpus_id=corpus_id)
         retrieved_chunks = result.corpus.chunks
         logger.info(f"Retrieved {len(retrieved_chunks)} chunks for query")
@@ -183,3 +208,13 @@ if __name__ == "__main__":
     # Save results
     with open("./debug/data/hotpotqa/evaluation_results.json", "w") as f:
         json.dump(avg_metrics, f, indent=2)
+
+    """
+    Results using 20 samples:
+        text-embedding-ada-002:
+            precision@k:0.3400, recall@k:0.7117, f1@k:0.4539, mrr:0.9250, hit@k: 1.0000, jaccard:0.3089
+        bge-small-en-v1.5:
+            precision@k:0.3100, recall@k:0.6767, f1@k:0.4207, mrr: 0.7667, hit@k: 0.9500, jaccard:0.2837
+        nomic-embed-text:
+            precision@k:0.3500, recall@k:0.7367, f1@k: 0.4682, mrr:0.7958, hit@k: 0.9500, jaccard: 0.3268
+    """
