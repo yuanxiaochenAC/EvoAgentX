@@ -1,7 +1,6 @@
 from typing import Optional, Callable, Dict, Any, List
 
 from pydantic import Field
-from llama_index.embeddings.openai.utils import DEFAULT_OPENAI_API_BASE
 
 from evoagentx.core.base_config import BaseConfig, BaseModule
 from .indexings.base import IndexType
@@ -35,8 +34,11 @@ class EmbeddingConfig(BaseModule):
     provider: str = Field(default=EmbeddingProvider.OPENAI, description="Embedding provider (OPENAI, HUGGINGFACE).")
     model_name: str = Field(default="text-embedding-ada-002", description="Name of the embedding model.")
     api_key: Optional[str] = Field(default=None, description="API key for the embedding provider (if required).")
-    api_url: str = Field(default=DEFAULT_OPENAI_API_BASE, description="api url for embedding model.")
-
+    api_url: str = Field(default="https://api.openai.com/v1", description="api url for embedding model.")
+    dimensions: Optional[int] = Field(default=None, description="Dimensions of the embedding model.")
+    # Huggingface
+    normalize: Optional[bool] = Field(default=True, description="Whether to normalize the embedding model(huggingface).")
+    device: Optional[str] = Field(default=None, description="The device was used for embedding model.")
 
 class IndexConfig(BaseModule):
     """Configuration for indexing stage."""

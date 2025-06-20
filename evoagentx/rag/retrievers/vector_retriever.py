@@ -3,7 +3,7 @@ from llama_index.core.retrievers import VectorIndexRetriever
 
 from .base import BaseRetrieverWrapper
 from evoagentx.core.logging import logger
-from evoagentx.rag.schema import RagQuery, RagResult, Corpus, Chunk
+from evoagentx.rag.schema import Query, RagResult, Corpus, Chunk
 
 
 class VectorRetriever(BaseRetrieverWrapper):
@@ -18,7 +18,7 @@ class VectorRetriever(BaseRetrieverWrapper):
             similarity_top_k=self.top_k
         )
 
-    async def aretrieve(self, query: RagQuery) -> RagResult:
+    async def aretrieve(self, query: Query) -> RagResult:
         try:
             # config the top_k
             self.retriever.similarity_top_k = query.top_k
@@ -47,7 +47,7 @@ class VectorRetriever(BaseRetrieverWrapper):
             logger.error(f"Vector retrieval failed: {str(e)}")
             raise
 
-    def retrieve(self, query: RagQuery) -> RagResult:
+    def retrieve(self, query: Query) -> RagResult:
         try:
             # config the top_k
             self.retriever.similarity_top_k = query.top_k
