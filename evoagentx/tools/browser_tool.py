@@ -3,7 +3,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
-from typing import Dict, Any, List, Callable, Optional, Tuple, Union
+from typing import Dict, Any, List, Optional, Tuple, Union
 from pydantic import Field
 from .tool import Tool, ToolKit
 from ..core.module import BaseModule
@@ -1777,6 +1777,7 @@ class CloseBrowserTool(Tool):
 class BrowserToolKit(ToolKit):
     def __init__(
         self,
+        name: str = "BrowserToolKit",
         browser_type: str = "chrome",
         headless: bool = False,
         timeout: int = 10,
@@ -1804,7 +1805,7 @@ class BrowserToolKit(ToolKit):
         ]
         
         # Initialize parent with tools
-        super().__init__(tools=tools)
+        super().__init__(name=name, tools=tools)
         
         # Store browser_tool as instance variable
         self.browser_tool = browser_tool

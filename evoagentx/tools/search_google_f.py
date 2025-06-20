@@ -1,7 +1,7 @@
 from .search_base import SearchBase
 from .tool import Tool, ToolKit
 from googlesearch import search as google_f_search
-from typing import Dict, Any, List, Callable, Optional
+from typing import Dict, Any, List, Optional
 from evoagentx.core.logging import logger
 
 class SearchGoogleFree(SearchBase):
@@ -114,6 +114,7 @@ class GoogleFreeSearchTool(Tool):
 class GoogleFreeSearchToolKit(ToolKit):
     def __init__(
         self,
+        name: str = "GoogleFreeSearchToolKit",
         num_search_pages: Optional[int] = 5,
         max_content_words: Optional[int] = None,
         **kwargs
@@ -132,7 +133,7 @@ class GoogleFreeSearchToolKit(ToolKit):
         ]
         
         # Initialize parent with tools
-        super().__init__(tools=tools)
+        super().__init__(name=name, tools=tools)
         
         # Store search_google_free as instance variable
         self.search_google_free = search_google_free

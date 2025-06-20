@@ -142,6 +142,7 @@ class GoogleSearchTool(Tool):
 class GoogleSearchToolKit(ToolKit):
     def __init__(
         self,
+        name: str = "GoogleSearchToolKit",
         num_search_pages: Optional[int] = 5,
         max_content_words: Optional[int] = None,
         **kwargs
@@ -160,7 +161,7 @@ class GoogleSearchToolKit(ToolKit):
         ]
         
         # Initialize parent with tools
-        super().__init__(tools=tools)
+        super().__init__(name=name, tools=tools)
         
         # Store search_google as instance variable
         self.search_google = search_google

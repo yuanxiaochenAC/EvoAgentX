@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from evoagentx.models import OpenAILLMConfig
 from evoagentx.agents import CustomizeAgent
 from evoagentx.prompts import StringTemplate 
-from evoagentx.tools.browser_tool import BrowserTool
+from evoagentx.tools.browser_tool import BrowserToolKit
 import tempfile
 import http.server
 import socketserver
@@ -82,7 +82,7 @@ async def test_browser_console_messages():
     """
     Test browser console messages by interacting with a button that triggers console output.
     """
-    from evoagentx.tools.browser_tool import BrowserTool
+    from evoagentx.tools.browser_tool import BrowserToolKit
     
     # Create a temporary HTML file with a button that logs to console
     test_html = """
@@ -151,7 +151,7 @@ async def test_browser_console_messages():
     
     try:
         # Initialize browser tool
-        browser_tool = BrowserTool()
+        browser_tool = BrowserToolKit()
         print("\nStep 1: Initializing browser...")
         init_result = browser_tool.initialize_browser()
         print("Initialization Result:")
@@ -243,8 +243,7 @@ def build_customize_agent_with_tools():
         outputs=[
             {"name": "result", "type": "string", "description": "The result of the search"}
         ],
-        tool_names=["browser_tool"],
-        tool_dict={"browser_tool": BrowserTool(headless=False, browser_type="chrome")}
+        tools=[BrowserToolKit(headless=False, browser_type="chrome")]
     )
 
     message = code_writer(

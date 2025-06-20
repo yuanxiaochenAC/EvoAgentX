@@ -15,7 +15,7 @@ from ..agents.workflow_reviewer import WorkFlowReviewer
 from ..actions.task_planning import TaskPlanningOutput
 from ..actions.agent_generation import AgentGenerationOutput
 from ..workflow.workflow_graph import WorkFlowGraph, WorkFlowNode, WorkFlowEdge
-from ..tools.tool import Tool
+from ..tools.tool import ToolKit
 
 class WorkFlowGenerator(BaseModule):
     """
@@ -38,7 +38,7 @@ class WorkFlowGenerator(BaseModule):
     agent_generator: Optional[AgentGenerator] = Field(default=None, description="Assigns or generates the appropriate agent(s) to handle each sub-task.")
     workflow_reviewer: Optional[WorkFlowReviewer] = Field(default=None, description="Provides feedback and reflections to improve the generated workflow.")
     num_turns: Optional[PositiveInt] = Field(default=0, description="Specifies the number of refinement iterations for the generated workflow.")
-    tools: Optional[List[Tool]] = Field(default=None, description="A list of tools that can be used in the workflow.")
+    tools: Optional[List[ToolKit]] = Field(default=None, description="A list of tools that can be used in the workflow.")
     
     def init_module(self):
         if self.tools is not None:

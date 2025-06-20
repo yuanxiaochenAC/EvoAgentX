@@ -1,12 +1,12 @@
 import os 
 from dotenv import load_dotenv
 from evoagentx.core import Message 
-from evoagentx.models import OpenAILLMConfig, LiteLLMConfig
+from evoagentx.models import OpenAILLMConfig
 from evoagentx.agents import CustomizeAgent
 from evoagentx.prompts import StringTemplate 
 from evoagentx.core.module_utils import extract_code_blocks as util_extract_code_blocks
 from evoagentx.core.registry import register_parse_function
-from evoagentx.tools.file_tool import FileToolCollection 
+from evoagentx.tools.file_tool import FileToolKit 
 from evoagentx.tools.mcp import MCPToolkit
 
 load_dotenv()
@@ -170,7 +170,7 @@ def build_customize_agent_with_tools():
         # outputs=[
         #     {"name": "code", "type": "string", "description": "The generated Python code"}
         # ],
-        tools=[FileTool()]
+        tools=[FileToolKit()]
     )
 
     message = code_writer(

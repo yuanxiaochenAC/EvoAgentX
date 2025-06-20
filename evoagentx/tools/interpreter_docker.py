@@ -4,7 +4,7 @@ import tarfile
 import uuid
 import docker
 from pathlib import Path
-from typing import ClassVar, Dict, Any, List, Optional
+from typing import ClassVar, Dict, List, Optional
 from .interpreter_base import BaseInterpreter
 from .tool import Tool, ToolKit
 import os
@@ -369,6 +369,7 @@ class DockerExecuteScriptTool(Tool):
 class DockerInterpreterToolKit(ToolKit):
     def __init__(
         self,
+        name: str = "DockerInterpreterToolKit",
         image_tag: Optional[str] = None,
         dockerfile_path: Optional[str] = None,
         require_confirm: bool = False,
@@ -402,7 +403,7 @@ class DockerInterpreterToolKit(ToolKit):
         ]
         
         # Initialize parent with tools
-        super().__init__(tools=tools)
+        super().__init__(name=name, tools=tools)
         
         # Store docker_interpreter as instance variable
         self.docker_interpreter = docker_interpreter

@@ -5,7 +5,7 @@ import importlib
 import sys
 import os
 import traceback
-from typing import List, Set, Optional, Union, Dict, Any, Callable
+from typing import List, Set, Optional, Union, Dict
 from .interpreter_base import BaseInterpreter
 from .tool import Tool, ToolKit
 from pydantic import Field
@@ -421,6 +421,7 @@ class PythonExecuteScriptTool(Tool):
 class PythonInterpreterToolKit(ToolKit):
     def __init__(
         self,
+        name: str = "PythonInterpreterToolKit",
         project_path: Optional[str] = ".",
         directory_names: Optional[List[str]] = None,
         allowed_imports: Optional[Set[str]] = None,
@@ -442,7 +443,7 @@ class PythonInterpreterToolKit(ToolKit):
         ]
         
         # Initialize parent with tools
-        super().__init__(tools=tools)
+        super().__init__(name=name, tools=tools)
         
         # Store python_interpreter as instance variable
         self.python_interpreter = python_interpreter

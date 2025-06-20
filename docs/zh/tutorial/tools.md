@@ -456,91 +456,97 @@ for i, result in enumerate(results.get("results", [])):
 
 ## 4. 文件操作
 
-EvoAgentX 提供处理文件操作的工具，包括读取和写入文件，并特别支持不同的文件格式，如 PDF。
+EvoAgentX 通过个别文件工具和统一的 FileToolKit 提供全面的文件处理功能。这些工具支持文本文件的标准文件操作，并使用 PyPDF2 为 PDF 等格式提供专门的处理器。
 
-### 4.1 FileTool
+### 4.1 文件工具
 
-**FileTool 提供文件处理功能，特别支持不同的文件格式。它为文本文件提供标准文件操作，并为 PDF 等格式提供专门的处理器，使用 PyPDF2 进行读取和基本 PDF 创建功能。**
+**EvoAgentX 通过个别文件工具和统一的 FileToolKit 提供全面的文件处理功能。这些工具支持文本文件的标准文件操作，并使用 PyPDF2 为 PDF 等格式提供专门的处理器。**
 
-#### 4.1.1 设置
+#### 4.1.1 FileToolKit 使用（推荐）
+
+`FileToolKit` 提供了访问所有文件相关工具的便捷方式：
 
 ```python
-from evoagentx.tools.file_tool import FileTool
+from evoagentx.tools.file_tool import FileToolKit
 
-# 初始化文件工具
-file_tool = FileTool()
+# 初始化文件工具包
+file_toolkit = FileToolKit()
 
 # 获取所有可用工具/方法
-available_tools = file_tool.get_tools()
-print(f"可用方法: {[tool.__name__ for tool in available_tools]}")
+available_tools = file_toolkit.get_tools()
+print(f"可用方法: {[tool.name for tool in available_tools]}")
 # 输出: ['read_file', 'write_file', 'append_file']
+
+# 从工具包中获取单个工具
+read_tool = file_toolkit.get_tool("read_file")
+write_tool = file_toolkit.get_tool("write_file")
+append_tool = file_toolkit.get_tool("append_file")
 ```
 
 #### 4.1.2 可用方法
 
-`FileTool` 通过 `get_tools()` 提供**3个可调用方法**：
+`FileToolKit` 通过 `get_tool()` 提供**3个可调用方法**：
 
 ##### 方法 1: read_file(file_path)
 
-**描述**：从文件中读取内容，对不同的文件类型有特殊处理。
+**描述**: 读取文件内容，对 PDF 等不同文件类型提供特殊处理。
 
-**使用示例**：
+**使用示例**:
 ```python
 # 读取文本文件
-text_result = file_tool.read_file("examples/sample.txt")
+read_tool = file_toolkit.get_tool("read_file")
+text_result = read_tool(file_path="examples/sample.txt")
 print(text_result)
 
 # 读取 PDF 文件（通过扩展名自动检测）
-pdf_result = file_tool.read_file("examples/document.pdf")
+pdf_result = read_tool(file_path="examples/document.pdf")
 print(pdf_result)
 ```
 
-**返回类型**：`dict`
+**参数**:
+- `file_path` (str): 要读取的文件路径
 
-**示例返回**：
+**返回类型**: `Dict[str, Any]`
+
+**示例返回**:
 ```python
-# 对于文本文件
 {
     "success": True,
-    "content": "这是文本文件的内容。",
+    "content": "文件内容...",
     "file_path": "examples/sample.txt",
-    "file_type": ".txt"
-}
-
-# 对于 PDF 文件
-{
-    "success": True,
-    "content": "从 PDF 文档中提取的文本...",
-    "file_path": "examples/document.pdf",
-    "file_type": "pdf",
-    "pages": 5
+    "file_type": "text"
 }
 ```
 
 ---
 
-##### 方法 2: write_file(file_path, content, mode)
+##### 方法 2: write_file(file_path, content)
 
-**描述**：将内容写入文件，对不同的文件类型有特殊处理。
+**描述**: 向文件写入内容，对 PDF 等不同文件类型提供特殊处理。
 
-**使用示例**：
+**使用示例**:
 ```python
 # 写入文本文件
-text_result = file_tool.write_file(
-    "examples/output.txt", 
-    "这是文件的新内容。"
+write_tool = file_toolkit.get_tool("write_file")
+text_result = write_tool(
+    file_path="examples/output.txt", 
+    content="这是文件的新内容。"
 )
 
 # 写入 PDF 文件（创建基本 PDF）
-pdf_result = file_tool.write_file(
-    "examples/new_document.pdf", 
-    "这个内容将出现在 PDF 中。"
+pdf_result = write_tool(
+    file_path="examples/new_document.pdf", 
+    content="这个内容将出现在 PDF 中。"
 )
 ```
 
-**返回类型**：`dict`
+**参数**:
+- `file_path` (str): 要写入的文件路径
+- `content` (str): 要写入文件的内容
 
-**示例返回**：
+**返回类型**: `Dict[str, Any]`
+
+**示例返回**:
 ```python
 {
     "success": True,
@@ -553,21 +559,26 @@ pdf_result = file_tool.write_file(
 
 ##### 方法 3: append_file(file_path, content)
 
-**描述**：将内容追加到文件中，对不同的文件类型有特殊处理。
+**描述**: 向文件追加内容，对 PDF 等不同文件类型提供特殊处理。
 
-**使用示例**：
+**使用示例**:
 ```python
 # 追加到文本文件
-result = file_tool.append_file(
-    "examples/log.txt", 
-    "\n新日志条目：操作已完成。"
+append_tool = file_toolkit.get_tool("append_file")
+result = append_tool(
+    file_path="examples/log.txt", 
+    content="\n新日志条目：操作已完成。"
 )
 print(result)
 ```
 
-**返回类型**：`dict`
+**参数**:
+- `file_path` (str): 要追加内容的文件路径
+- `content` (str): 要追加到文件的内容
 
-**示例返回**：
+**返回类型**: `Dict[str, Any]`
+
+**示例返回**:
 ```python
 {
     "success": True,
@@ -576,359 +587,471 @@ print(result)
 }
 ```
 
-#### 4.1.3 设置提示
+#### 4.1.3 直接工具使用（可选）
 
-- **文件类型检测**：工具根据文件扩展名自动检测文件类型并应用适当的处理器。
+您也可以导入并直接使用个别文件工具：
 
-- **PDF 支持**：
-  - 读取 PDF 使用 PyPDF2 从所有页面提取文本内容
-  - 写入 PDF 创建基本 PDF 文档（对于带有文本格式的高级 PDF 创建，考虑使用 reportlab）
-  - PDF 追加功能目前有限，可能需要额外的库
+```python
+from evoagentx.tools.file_tool import ReadFileTool, WriteFileTool, AppendFileTool, FileToolBase
 
-- **错误处理**：所有方法都返回一个字典，其中包含表示操作是否成功的 `success` 字段，如果失败则包含 `error` 字段。
+# 为特殊格式处理创建共享文件基础
+file_base = FileToolBase()
 
-- **文件路径**：使用绝对或相对路径。写入文件时，如果目录不存在，工具将创建目录。
+# 创建单个工具
+read_tool = ReadFileTool(file_base=file_base)
+write_tool = WriteFileTool(file_base=file_base)
+append_tool = AppendFileTool(file_base=file_base)
+
+# 直接使用工具
+result = read_tool(file_path="example.txt")
+```
 
 ---
 
 ## 5. 浏览器自动化
 
-EvoAgentX 提供强大的浏览器自动化工具，用于控制网页浏览器与网站和 Web 应用程序交互。
+EvoAgentX 通过 `BrowserToolKit` 类和单独的浏览器工具类提供全面的浏览器自动化功能。这些工具允许代理控制网络浏览器、导航页面、与元素交互以及提取信息。
 
-### 5.1 BrowserTool
+### 5.1 浏览器工具
 
-**BrowserTool 使用 Selenium WebDriver 提供全面的浏览器自动化功能。它允许代理导航网站、与元素交互、填写表单，并通过完整的可视化浏览器控制或无头操作从网页提取信息。**
+**EvoAgentX 通过 `BrowserToolKit` 类和单独的浏览器工具类提供全面的浏览器自动化功能。这些工具允许代理控制网络浏览器、导航页面、与元素交互以及提取信息。**
 
-#### 5.1.1 设置和初始化
+#### 5.1.1 BrowserToolKit 使用（推荐）
 
 ```python
-from evoagentx.tools.browser_tool import BrowserTool
+from evoagentx.tools import BrowserToolKit
 
-# 使用可见浏览器窗口初始化
-browser_tool = BrowserTool(
-    browser_type="chrome",
-    headless=False,
-    timeout=10
+# 初始化浏览器工具包
+toolkit = BrowserToolKit(
+    browser_type="chrome",  # 选项："chrome"、"firefox"、"safari"、"edge"
+    headless=False,         # 设置为 True 进行后台操作
+    timeout=10              # 默认超时时间（秒）
 )
 
-# 使用无头浏览器初始化（无可见窗口）
-browser_tool = BrowserTool(
-    browser_type="chrome",
-    headless=True,
-    timeout=10
-)
-
-# 获取所有可用工具/方法
-available_tools = browser_tool.get_tools()
-print(f"可用方法: {[tool.__name__ for tool in available_tools]}")
-# 输出: ['initialize_browser', 'navigate_to_url', 'input_text', 'browser_click', 'browser_snapshot', 'browser_console_messages', 'close_browser']
-
-# 重要：在使用其他方法之前始终初始化浏览器
-result = browser_tool.initialize_browser()
-if result["status"] == "success":
-    print("浏览器已准备就绪！")
+# 获取特定工具
+initialize_tool = toolkit.get_tool("initialize_browser")
+navigate_tool = toolkit.get_tool("navigate_to_url")
+input_tool = toolkit.get_tool("input_text")
+click_tool = toolkit.get_tool("browser_click")
+snapshot_tool = toolkit.get_tool("browser_snapshot")
+console_tool = toolkit.get_tool("browser_console_messages")
+close_tool = toolkit.get_tool("close_browser")
 ```
 
 #### 5.1.2 可用方法
 
-`BrowserTool` 通过 `get_tools()` 提供**7个可调用方法**：
+`BrowserToolKit` 通过 `get_tool()` 提供**7个可调用方法**：
 
 ##### 方法 1: initialize_browser()
 
-**描述**：启动或重启浏览器会话。**在使用任何其他浏览器操作之前必须调用。**
+启动或重启浏览器会话。必须在任何其他浏览器操作之前调用。
 
-**使用示例**：
-```python
-# 初始化浏览器
-result = browser_tool.initialize_browser()
-print(result)
-```
+**参数：**
+- 无需参数
 
-**返回类型**：`dict`
-
-**示例返回**：
+**示例返回：**
 ```python
 {
     "status": "success",
-    "message": "浏览器初始化成功"
+    "message": "Browser chrome initialized successfully"
 }
+```
+
+**使用方法：**
+```python
+# 使用 ToolKit
+result = toolkit.get_tool("initialize_browser")()
+
+# 直接使用 BrowserTool
+result = browser.initialize_browser()
 ```
 
 ---
 
-##### 方法 2: navigate_to_url(url)
+##### 方法 2: navigate_to_url(url, timeout=None)
 
-**描述**：导航到特定 URL 并捕获交互元素的快照。
+导航到 URL 并自动捕获所有页面元素的快照以进行交互。
 
-**使用示例**：
-```python
-# 导航到网站
-result = browser_tool.navigate_to_url("https://www.google.com")
-print(f"标题: {result['title']}")
-print(f"找到 {len(result['snapshot']['interactive_elements'])} 个交互元素")
+**参数：**
+- `url`（str，必需）：完整的带协议的 URL（例如，"https://example.com"）
+- `timeout`（int，可选）：自定义超时时间（秒）
 
-# 显示可用元素
-for elem in result['snapshot']['interactive_elements'][:3]:
-    print(f"元素 {elem['id']}: {elem['description']}")
-```
-
-**返回类型**：`dict`
-
-**示例返回**：
+**示例返回：**
 ```python
 {
-    "status": "success",
-    "current_url": "https://www.google.com",
-    "title": "Google",
-    "snapshot": {
-        "interactive_elements": [
-            {"id": "e0", "description": "搜索文本框", "element_type": "input"},
-            {"id": "e1", "description": "Google 搜索按钮", "element_type": "button"},
-            {"id": "e2", "description": "手气不错按钮", "element_type": "button"}
-        ]
-    }
+    "status": "success", 
+    "title": "Example Domain",
+    "url": "https://example.com",
+    "accessibility_tree": {...},  # 完整页面结构
+    "page_content": "Example Domain\n\nThis domain is for use in illustrative examples...",
+    "interactive_elements": [
+        {
+            "id": "e0",
+            "description": "More information.../link", 
+            "purpose": "link",
+            "label": "More information...",
+            "category": "navigation",
+            "isPrimary": False,
+            "visible": True,
+            "interactable": True
+        }
+    ]
 }
+```
+
+**使用方法：**
+```python
+# 使用 ToolKit
+result = toolkit.get_tool("navigate_to_url")(url="https://example.com")
+
+# 直接使用 BrowserTool
+result = browser.navigate_to_url("https://example.com")
 ```
 
 ---
 
-##### 方法 3: input_text(element, ref, text, submit)
+##### 方法 3: input_text(element, ref, text, submit=False, slowly=True)
 
-**描述**：使用快照中的元素引用在输入字段中输入文本。
+使用快照中的元素引用向表单字段、搜索框或其他输入元素中输入文本。
 
-**使用示例**：
+**参数：**
+- `element`（str，必需）：人类可读的描述（例如，"搜索字段"、"用户名输入"）
+- `ref`（str，必需）：快照中的元素 ID（例如，"e0"、"e1"、"e2"）
+- `text`（str，必需）：要输入的文本
+- `submit`（bool，可选）：输入后按回车键（默认：False）
+- `slowly`（bool，可选）：逐字符输入以触发 JS 事件（默认：True）
+
+**示例返回：**
 ```python
-# 在搜索框中输入文本（快照中的元素 e0）
-result = browser_tool.input_text(
-    element="搜索框",
-    ref="e0",
-    text="人工智能",
-    submit=False
-)
+{
+    "status": "success",
+    "message": "Successfully input text into Search field and submitted",
+    "element": "Search field", 
+    "text": "python tutorial"
+}
+```
 
-# 输入并按回车键提交
-result = browser_tool.input_text(
-    element="搜索框",
-    ref="e0", 
-    text="机器学习",
+**使用方法：**
+```python
+# 使用 ToolKit
+result = toolkit.get_tool("input_text")(
+    element="搜索字段",
+    ref="e1", 
+    text="python 教程",
     submit=True
 )
-```
 
-**返回类型**：`dict`
-
-**示例返回**：
-```python
-{
-    "status": "success",
-    "message": "文本输入成功",
-    "element_ref": "e0"
-}
+# 直接使用 BrowserTool
+result = browser.input_text(
+    element="搜索字段",
+    ref="e1",
+    text="python 教程", 
+    submit=True
+)
 ```
 
 ---
 
 ##### 方法 4: browser_click(element, ref)
 
-**描述**：使用快照中的引用点击按钮、链接或其他可点击元素。
+使用快照中的元素引用点击按钮、链接或其他可点击元素。
 
-**使用示例**：
-```python
-# 点击按钮（快照中的元素 e1）
-result = browser_tool.browser_click(
-    element="搜索按钮",
-    ref="e1"
-)
-print(result)
-```
+**参数：**
+- `element`（str，必需）：人类可读的描述（例如，"登录按钮"、"下一页链接"）
+- `ref`（str，必需）：快照中的元素 ID（例如，"e0"、"e1"、"e2"）
 
-**返回类型**：`dict`
-
-**示例返回**：
+**示例返回：**
 ```python
 {
-    "status": "success", 
-    "message": "元素点击成功",
-    "element_ref": "e1"
+    "status": "success",
+    "message": "Successfully clicked Login button",
+    "element": "Login button",
+    "new_url": "https://example.com/dashboard"  # 如果发生了导航
 }
+```
+
+**使用方法：**
+```python
+# 使用 ToolKit
+result = toolkit.get_tool("browser_click")(
+    element="登录按钮",
+    ref="e3"
+)
+
+# 直接使用 BrowserTool
+result = browser.browser_click(element="登录按钮", ref="e3")
 ```
 
 ---
 
 ##### 方法 5: browser_snapshot()
 
-**描述**：捕获当前页面的新快照，包含所有交互元素。
+捕获当前页面状态的新快照，包括所有交互元素。在不是由导航或点击引起的页面更改后使用此功能。
 
-**使用示例**：
-```python
-# 在页面更改后获取新快照
-result = browser_tool.browser_snapshot()
-print(f"找到 {len(result['interactive_elements'])} 个元素")
-```
+**参数：**
+- 无需参数
 
-**返回类型**：`dict`
-
-**示例返回**：
+**示例返回：**
 ```python
 {
-    "title": "Google 搜索结果", 
-    "current_url": "https://www.google.com/search?q=ai",
+    "status": "success",
+    "title": "Search Results - Example",
+    "url": "https://example.com/search?q=python",
+    "accessibility_tree": {...},  # 完整页面结构
+    "page_content": "Search Results\n\nResult 1: Python Tutorial...",
     "interactive_elements": [
-        {"id": "e0", "description": "搜索结果链接", "element_type": "link"},
-        {"id": "e1", "description": "下一页按钮", "element_type": "button"}
+        {
+            "id": "e0",
+            "description": "search/search box",
+            "purpose": "search box", 
+            "label": "Search",
+            "category": "search",
+            "isPrimary": True,
+            "visible": True,
+            "editable": True
+        },
+        {
+            "id": "e1", 
+            "description": "Search/submit button",
+            "purpose": "submit button",
+            "label": "Search",
+            "category": "action",
+            "isPrimary": True,
+            "visible": True,
+            "interactable": True
+        }
     ]
 }
+```
+
+**使用方法：**
+```python
+# 使用 ToolKit
+result = toolkit.get_tool("browser_snapshot")()
+
+# 直接使用 BrowserTool
+result = browser.browser_snapshot()
 ```
 
 ---
 
 ##### 方法 6: browser_console_messages()
 
-**描述**：从浏览器获取 JavaScript 控制台消息（日志、警告、错误）用于调试。
+检索 JavaScript 控制台消息（日志、警告、错误）以调试 Web 应用程序。
 
-**使用示例**：
-```python
-# 获取控制台消息用于调试
-result = browser_tool.browser_console_messages()
-print("控制台消息：")
-for msg in result.get("messages", []):
-    print(f"[{msg['level']}] {msg['message']}")
-```
+**参数：**
+- 无需参数
 
-**返回类型**：`dict`
-
-**示例返回**：
+**示例返回：**
 ```python
 {
     "status": "success",
-    "messages": [
-        {"level": "INFO", "message": "页面加载成功", "timestamp": "2024-01-01T12:00:00"},
-        {"level": "WARNING", "message": "检测到已弃用的 API 使用", "timestamp": "2024-01-01T12:00:01"}
+    "console_messages": [
+        {
+            "level": "INFO",
+            "message": "Page loaded successfully",
+            "timestamp": "2024-01-15T10:30:45.123Z"
+        },
+        {
+            "level": "WARNING", 
+            "message": "Deprecated API usage detected",
+            "timestamp": "2024-01-15T10:30:46.456Z"
+        },
+        {
+            "level": "ERROR",
+            "message": "Failed to load resource: net::ERR_BLOCKED_BY_CLIENT", 
+            "timestamp": "2024-01-15T10:30:47.789Z"
+        }
     ]
 }
+```
+
+**使用方法：**
+```python
+# 使用 ToolKit
+result = toolkit.get_tool("browser_console_messages")()
+
+# 直接使用 BrowserTool
+result = browser.browser_console_messages()
 ```
 
 ---
 
 ##### 方法 7: close_browser()
 
-**描述**：关闭浏览器并结束会话。**完成后必须调用以释放资源。**
+关闭浏览器会话并释放系统资源。完成后始终调用此方法。
 
-**使用示例**：
-```python
-# 关闭浏览器
-result = browser_tool.close_browser()
-print(result)
-```
+**参数：**
+- 无需参数
 
-**返回类型**：`dict`
-
-**示例返回**：
+**示例返回：**
 ```python
 {
     "status": "success",
-    "message": "浏览器关闭成功"
+    "message": "Browser session closed successfully"
 }
 ```
 
-#### 5.1.3 完整工作流示例
-
-这是一个显示正确初始化和清理的完整示例：
-
+**使用方法：**
 ```python
-from evoagentx.tools.browser_tool import BrowserTool
+# 使用 ToolKit
+result = toolkit.get_tool("close_browser")()
 
-# 步骤 1：初始化工具
-browser_tool = BrowserTool(headless=False, timeout=10)
-
-try:
-    # 步骤 2：初始化浏览器会话
-    init_result = browser_tool.initialize_browser()
-    if init_result["status"] != "success":
-        raise Exception(f"浏览器初始化失败：{init_result}")
-    
-    # 步骤 3：导航到网站
-    nav_result = browser_tool.navigate_to_url("https://www.google.com")
-    elements = nav_result["snapshot"]["interactive_elements"]
-    
-    # 步骤 4：查找搜索元素
-    search_input = next((e for e in elements if "search" in e["description"].lower() and "input" in e["description"].lower()), None)
-    search_button = next((e for e in elements if "search" in e["description"].lower() and "button" in e["description"].lower()), None)
-    
-    if search_input and search_button:
-        # 步骤 5：执行搜索
-        browser_tool.input_text(element="搜索框", ref=search_input["id"], text="EvoAgentX")
-        browser_tool.browser_click(element="搜索按钮", ref=search_button["id"])
-        
-        # 步骤 6：获取控制台消息用于调试
-        console_result = browser_tool.browser_console_messages()
-        print(f"控制台消息：{len(console_result.get('messages', []))}")
-    
-except Exception as e:
-    print(f"浏览器操作失败：{e}")
-    
-finally:
-    # 步骤 7：始终关闭浏览器以释放资源
-    close_result = browser_tool.close_browser()
-    print(f"浏览器清理：{close_result['message']}")
+# 直接使用 BrowserTool
+result = browser.close_browser()
 ```
 
-#### 5.1.4 设置提示
+#### 5.1.3 元素引用系统
 
-- **浏览器要求**：
-  - Chrome 是默认和最稳定的选项
-  - 确保已安装 Chrome 或 ChromeDriver 用于 Selenium
-  - 对于其他浏览器，安装适当的 WebDriver
+浏览器工具使用独特的元素引用系统：
 
-- **初始化和清理**：
-  - **始终**首先调用 `initialize_browser()` - 没有它其他方法将无法工作
-  - **始终**在完成后调用 `close_browser()` 以释放系统资源
-  - 使用 try-finally 块确保即使发生错误也能进行清理
+1. **元素 ID**：拍摄快照后，交互元素被分配唯一的 ID，如 `e0`、`e1`、`e2` 等。
+2. **元素引用**：这些 ID 在内部映射到特定的选择器（CSS、XPath、ID 等）
+3. **交互元素**：只包含可以点击、输入或以其他方式交互的元素
+4. **元素属性**：每个元素包括描述、目的、标签、类别和可见性信息
+
+#### 5.1.4 最佳实践
+
+### 设置和初始化
+- 始终首先调用 `initialize_browser()`
+- 在服务器环境或后台自动化中使用 `headless=True`
+- 为加载缓慢的页面设置适当的 `timeout` 值
+
+### 元素交互
+- 在与元素交互之前，始终使用 `navigate_to_url()` 或 `browser_snapshot()` 拍摄快照
+- 使用快照返回的确切元素 ID（`e0`、`e1` 等）
+- 提供描述性的 `element` 参数以使交互清晰
+- 在 `input_text()` 中使用 `submit=True` 进行表单提交
+
+### 错误处理和调试
+- 在进行下一步操作之前检查返回状态
+- 使用 `browser_console_messages()` 调试 JavaScript 错误
+- 在页面状态更改后拍摄新快照
+- 优雅地处理超时错误
+
+### 资源管理
+- 完成后始终调用 `close_browser()`
+- 每个工具实例只保持一个活动的浏览器会话
+- 考虑使用上下文管理器进行自动清理
+
+#### 5.1.5 完整示例
+
+```python
+from evoagentx.tools import BrowserToolKit
+
+# 初始化浏览器工具包
+toolkit = BrowserToolKit(browser_type="chrome", headless=False)
+
+try:
+    # 启动浏览器
+    result = toolkit.get_tool("initialize_browser")()
+    print(f"浏览器初始化: {result['status']}")
+    
+    # 导航到页面并获取快照
+    result = toolkit.get_tool("navigate_to_url")(url="https://example.com")
+    print(f"导航: {result['status']}")
+    print(f"找到 {len(result['interactive_elements'])} 个交互元素")
+    
+    # 查找并与元素交互
+    for element in result['interactive_elements']:
+        if 'search' in element['purpose'].lower():
+            # 在搜索字段中输入文本
+            search_result = toolkit.get_tool("input_text")(
+                element="搜索字段",
+                ref=element['id'],
+                text="python 教程",
+                submit=True
+            )
+            print(f"搜索: {search_result['status']}")
+            break
+    
+    # 搜索后拍摄新快照
+    snapshot = toolkit.get_tool("browser_snapshot")()
+    print(f"新快照: {len(snapshot['interactive_elements'])} 个元素")
+    
+    # 检查控制台是否有任何错误
+    console = toolkit.get_tool("browser_console_messages")()
+    if console['console_messages']:
+        print(f"控制台消息: {len(console['console_messages'])}")
+        
+finally:
+    # 始终关闭浏览器
+    toolkit.get_tool("close_browser")()
+    print("浏览器已关闭")
+```
+
+#### 5.1.6 使用单独的浏览器工具（替代方案）
+
+```python
+from evoagentx.tools import BrowserTool
+
+# 直接初始化浏览器工具
+browser = BrowserTool(
+    browser_type="chrome",
+    headless=False,
+    timeout=10
+)
+```
+
+#### 5.1.7 设置提示
+
+- **浏览器要求**: 
+  - Chrome 是默认且最稳定的选项
+  - 确保您已为 Selenium 安装了 Chrome 或 ChromeDriver
+  - 对于其他浏览器，安装相应的 WebDriver
+
+- **初始化和清理**:
+  - **始终**首先调用 `initialize_browser()` - 没有它其他方法都不会工作
+  - 完成后**始终**调用 `close_browser()` 以释放系统资源
+  - 使用 try-finally 块确保即使出现错误也会进行清理
   - 浏览器工具维护内部状态，因此正确的初始化/清理至关重要
 
-- **无头模式与可视化模式**：
-  - 设置 `headless=False` 以查看浏览器窗口（对调试和演示有用）
+- **无头模式与可视模式**:
+  - 设置 `headless=False` 查看浏览器窗口（用于调试和演示）
   - 设置 `headless=True` 用于生产或自动化工作流
-  - 可视化模式有助于理解自动化在做什么
+  - 可视模式有助于理解自动化正在做什么
 
-- **元素引用和快照**：
+- **元素引用和快照**:
   - 所有交互都使用快照中的元素 ID，如 "e0"、"e1"、"e2"
-  - 导航或页面更改后刷新元素 ID
+  - 导航或页面更改后会刷新元素 ID
   - 始终使用最新快照的元素引用
-  - `navigate_to_url()` 方法自动捕获快照
+  - `navigate_to_url()` 方法会自动捕获快照
   - 在动态内容更改后使用 `browser_snapshot()` 刷新元素引用
 
-- **方法执行顺序**：
+- **方法执行顺序**:
   ```python
   # 必需的工作流模式
-  browser_tool.initialize_browser()          # 1. 启动浏览器（必需首先）
-  nav_result = browser_tool.navigate_to_url(url)  # 2. 转到页面，获取元素
-  browser_tool.input_text(ref="e0", text="查询")  # 3. 使用快照中的元素引用
-  browser_tool.browser_click(ref="e1")       # 4. 使用元素引用点击
-  browser_tool.close_browser()               # 5. 清理（必需最后）
+  browser_toolkit.get_tool("initialize_browser")()      # 1. 启动浏览器（必需首先）
+  nav_result = browser_toolkit.get_tool("navigate_to_url")(url=url)  # 2. 转到页面，获取元素
+  browser_toolkit.get_tool("input_text")(ref="e0", text="查询")     # 3. 使用快照中的元素引用
+  browser_toolkit.get_tool("browser_click")(ref="e1")               # 4. 使用元素引用点击
+  browser_toolkit.get_tool("close_browser")()                       # 5. 清理（必需最后）
   ```
 
-- **错误处理最佳实践**：
+- **错误处理最佳实践**:
   ```python
-  browser_tool = BrowserTool(headless=False)
+  browser_toolkit = BrowserToolKit(headless=False)
   try:
       # 始终检查初始化结果
-      init_result = browser_tool.initialize_browser()
+      init_tool = browser_toolkit.get_tool("initialize_browser")
+      init_result = init_tool()
       if init_result["status"] != "success":
           raise Exception("浏览器初始化失败")
       
       # 你的浏览器操作在这里
-      nav_result = browser_tool.navigate_to_url("https://example.com")
+      nav_tool = browser_toolkit.get_tool("navigate_to_url")
+      nav_result = nav_tool(url="https://example.com")
       # ... 更多操作
       
   except Exception as e:
       print(f"浏览器操作失败：{e}")
   finally:
       # 关键：始终关闭浏览器以释放资源
-      browser_tool.close_browser()
+      close_tool = browser_toolkit.get_tool("close_browser")
+      close_tool()
   ```
 
-- **超时和性能**：
+- **超时和性能**:
   - `timeout` 参数控制等待元素加载的时间
   - 对于慢速网站或复杂页面增加超时时间
   - 使用 `browser_console_messages()` 调试 JavaScript 错误或性能问题
@@ -981,9 +1104,7 @@ for i, tool in enumerate(tools):
     print(f"描述: {tool.descriptions[0]}")
 ```
 
-**返回类型**：`List[Tool]`
-
-**示例返回**：
+**返回类型**：`List[Tool]`**示例返回**：
 ```
 [MCPTool(name="HirebaseSearch", descriptions=["通过提供关键词搜索工作信息"]), 
  MCPTool(name="HirebaseAnalyze", descriptions=["分析给定技能的工作市场趋势"])]
@@ -1088,3 +1209,4 @@ if hirebase_tool:
 EvoAgentX 中的工具通过提供对外部资源和计算的访问来扩展你的代理功能。通过将这些工具与代理和工作流结合，你可以构建强大的 AI 系统，能够检索信息、执行计算并与世界交互。
 
 有关更高级的用法和自定义选项，请参考 [API 文档](../api/tools.md) 并探索仓库中的示例。 
+

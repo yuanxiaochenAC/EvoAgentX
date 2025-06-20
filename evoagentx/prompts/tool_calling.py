@@ -58,6 +58,7 @@ You should STOP GENERATING responds RIGHT AFTER you give the tool calling instru
 By checking the history, IF you get the information, you should **NOT** call any tool.
 Do not generate any tool calling instructions if you have the information. 
 Distinguish tool calls and tool calling arguments, only include "```ToolCalling" when you are calling the tool, otherwise you should pass arguments with out this catch phrase.
+The tools in the Example Output does not really exist, you should use the tools in the Available Tools section.
 
 ** Example Output **
 Base on the goal, I found out that I need to use the following tools:
@@ -95,13 +96,13 @@ After using a tool, analyze its output and determine next steps.
 {additional_context}
 
 ** Tool Calling Key Points **
-- You do not have to use the tool.
-- Tools might not be useful for the task, if you find out so, you should not call the tool.
-- You should always check the history to determine if you have the information or the tool is not useful, if you have the information, you should not use the tool.
-- You should try to use tools to get the information you need
-- You should not call any tool if you completed the goal
-- The tool you called must exist in the available tools
-- You should never write comments in the call_tool function
-- If your next move cannot be completed by the tool, you should not call the tool
+You do not have to use the tool.
+Tools might not be useful for the task, if you find out so, you should not call the tool.
+You should always check the history to determine if you have the information or the tool is not useful, if you have the information, you should not use the tool.
+You should try to use tools to get the information you need
+You should not call any tool if you completed the goal
+The tool you called must exist in the available tools
+You should never write comments in the call_tool function
+If your next move cannot be completed by the tool, you should not call the tool
 """
 

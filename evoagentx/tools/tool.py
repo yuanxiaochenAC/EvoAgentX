@@ -81,6 +81,7 @@ class Tool(BaseModule):
         raise NotImplementedError("All tools must implement __call__")
 
 class ToolKit(BaseModule):
+    name: str
     tools: List[Tool]
 
     def get_tool_names(self) -> List[str]:
@@ -91,9 +92,6 @@ class ToolKit(BaseModule):
 
     def get_tool_inputs(self) -> List[Dict]:
         return [tool.inputs for tool in self.tools]
-
-    def get_tool_schemas(self) -> List[Dict]:
-        return [tool.get_tool_schema() for tool in self.tools]
 
     def add_tool(self, tool: Tool):
         self.tools.append(tool)

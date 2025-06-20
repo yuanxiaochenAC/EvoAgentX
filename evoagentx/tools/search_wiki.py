@@ -140,6 +140,7 @@ class WikipediaSearchTool(Tool):
 class WikipediaSearchToolKit(ToolKit):
     def __init__(
         self,
+        name: str = "WikipediaSearchToolKit",
         num_search_pages: Optional[int] = 5,
         max_content_words: Optional[int] = None,
         max_summary_sentences: Optional[int] = None,
@@ -160,7 +161,7 @@ class WikipediaSearchToolKit(ToolKit):
         ]
         
         # Initialize parent with tools
-        super().__init__(tools=tools)
+        super().__init__(name=name, tools=tools)
         
         # Store search_wiki as instance variable
         self.search_wiki = search_wiki

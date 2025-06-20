@@ -1,7 +1,7 @@
 from .tool import Tool, ToolKit
 import os
 import PyPDF2
-from typing import Dict, Any, List, Callable, Optional
+from typing import Dict, Any, List, Optional
 from ..core.logging import logger
 from ..core.module import BaseModule
 
@@ -407,7 +407,7 @@ class AppendFileTool(Tool):
 
 
 class FileToolKit(ToolKit):
-    def __init__(self):
+    def __init__(self, name: str = "FileToolKit"):
         # Create the shared file base instance
         file_base = FileToolBase()
         
@@ -419,7 +419,7 @@ class FileToolKit(ToolKit):
         ]
         
         # Initialize parent with tools
-        super().__init__(tools=tools)
+        super().__init__(name=name, tools=tools)
         
         # Store file_base as instance variable
         self.file_base = file_base

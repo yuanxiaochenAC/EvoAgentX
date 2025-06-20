@@ -14,13 +14,11 @@ FastMCP 2.0 Integration Notes:
 """
 import threading
 import asyncio
-from pydantic import Field
 from functools import partial
 from typing import Optional, Any, List, Dict, Callable, Union
 from evoagentx.tools.tool import Tool, ToolKit
 from evoagentx.core.logging import logger
 from contextlib import AsyncExitStack, asynccontextmanager
-from evoagentx.core.module import BaseModule
 
 # FastMCP 2.0 imports - replacing official MCP SDK
 from fastmcp import Client
@@ -28,11 +26,19 @@ from fastmcp.exceptions import ClientError, McpError
 import json
 
 class MCPTool(Tool):
-    name: str = "mcp_tool"
+    name: str = "MCPTool"
     description: str = "MCP tool wrapper"
     inputs: Dict[str, Dict[str, str]] = {}
     required: Optional[List[str]] = None
     function: Callable = None
+    
+    def __init__(self, name: str, description: str, inputs: Dict[str, Dict[str, str]], required: Optional[List[str]] = None, function: Callable = None):
+        super().__init__(name=name, description=description, inputs=inputs, required=required)
+        self.function = function
+    
+    @property
+    def __name__(self):
+        return self.name
     
     def __call__(self, **kwargs):
         if not self.function:
@@ -131,8 +137,7 @@ class MCPClient:
         session: Client,
         mcp_tools: List[Any],  # List of FastMCP tool objects for a single server
         config: Dict[str, Any],
-    ) -> MCPTool:
-        """Create a single MCPTool that encapsulates all tools from a server."""
+    ) -> ToolKit:
         # Define the sync call function once
         def _sync_call_tool(name: str, **kwargs) -> Any:
             try:
@@ -168,11 +173,29 @@ class MCPClient:
             
             # Convert MCP properties to Tool.inputs format
             # Tool.inputs expects Dict[str, Dict[str, str]] format
+            
             converted_inputs = {}
+            ## get element name and type from the schema
             for prop_name, prop_details in properties.items():
+                # Handle different MCP schema formats
+                prop_type = "string"  # default fallback
+                prop_description = prop_details.get("title", prop_details.get("description", f"Parameter {prop_name}"))
+                
+                if "type" in prop_details:
+                    # Simple format: {'type': 'string', 'title': 'Job Id'}
+                    prop_type = prop_details["type"]
+                elif "anyOf" in prop_details:
+                    # Complex format: {'anyOf': [{'type': 'integer'}, {'type': 'null'}], 'title': 'Limit'}
+                    # Get the first non-null type from anyOf
+                    for type_option in prop_details["anyOf"]:
+                        if isinstance(type_option, dict) and "type" in type_option:
+                            if type_option["type"] != "null":
+                                prop_type = type_option["type"]
+                                break
+                
                 converted_inputs[prop_name] = {
-                    "type": prop_details.get("type", "string"),
-                    "description": prop_details.get("title", prop_details.get("description", f"Parameter {prop_name}"))
+                    "type": prop_type,
+                    "description": prop_description
                 }
             
             # Create the partial function and add __name__ attribute
@@ -188,12 +211,12 @@ class MCPClient:
             )
             all_tools.append(tool)
         
-        tool_collection = ToolKit(tools=all_tools)
+        tool_collection = ToolKit(name=next(iter(config.get("mcpServers").keys())), tools=all_tools)
         return tool_collection
 
     
     def get_tools(self) -> List[Tool]:
-        """Return a list of MCPTools, one per server."""
+        """Return a list of ToolKits, one per server."""
         if not self.sessions:
             raise RuntimeError("Session not initialized")
 

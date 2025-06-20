@@ -458,87 +458,93 @@ for i, result in enumerate(results.get("results", [])):
 
 EvoAgentX provides tools for handling file operations, including reading and writing files with special support for different file formats like PDFs.
 
-### 4.1 FileTool
+### 4.1 File Tools
 
-**The FileTool provides file handling capabilities with special support for different file formats. It offers standard file operations for text files and specialized handlers for formats like PDF, which use PyPDF2 for reading and basic PDF creation functionality.**
+**EvoAgentX provides comprehensive file handling capabilities through both individual file tools and a unified FileToolKit. The tools support standard file operations for text files and specialized handlers for formats like PDF using PyPDF2.**
 
-#### 4.1.1 Setup
+#### 4.1.1 FileToolKit Usage (Recommended)
+
+The `FileToolKit` provides a convenient way to access all file-related tools:
 
 ```python
-from evoagentx.tools.file_tool import FileTool
+from evoagentx.tools.file_tool import FileToolKit
 
-# Initialize the file tool
-file_tool = FileTool()
+# Initialize the file toolkit
+file_toolkit = FileToolKit()
 
 # Get all available tools/methods
-available_tools = file_tool.get_tools()
-print(f"Available methods: {[tool.__name__ for tool in available_tools]}")
+available_tools = file_toolkit.get_tools()
+print(f"Available methods: {[tool.name for tool in available_tools]}")
 # Output: ['read_file', 'write_file', 'append_file']
+
+# Get individual tools from the toolkit
+read_tool = file_toolkit.get_tool("read_file")
+write_tool = file_toolkit.get_tool("write_file")
+append_tool = file_toolkit.get_tool("append_file")
 ```
 
 #### 4.1.2 Available Methods
 
-The `FileTool` provides exactly **3 callable methods** accessible via `get_tools()`:
+The `FileToolKit` provides exactly **3 callable methods** accessible via `get_tool()`:
 
 ##### Method 1: read_file(file_path)
 
-**Description**: Reads content from a file with special handling for different file types.
+**Description**: Read content from a file with special handling for different file types like PDFs.
 
 **Usage Example**:
 ```python
 # Read a text file
-text_result = file_tool.read_file("examples/sample.txt")
+read_tool = file_toolkit.get_tool("read_file")
+text_result = read_tool(file_path="examples/sample.txt")
 print(text_result)
 
 # Read a PDF file (automatically detected by extension)
-pdf_result = file_tool.read_file("examples/document.pdf")
+pdf_result = read_tool(file_path="examples/document.pdf")
 print(pdf_result)
 ```
 
-**Return Type**: `dict`
+**Parameters**:
+- `file_path` (str): Path to the file to read
+
+**Return Type**: `Dict[str, Any]`
 
 **Sample Return**:
 ```python
-# For text files
 {
     "success": True,
-    "content": "This is the content of the text file.",
+    "content": "File content here...",
     "file_path": "examples/sample.txt",
-    "file_type": ".txt"
-}
-
-# For PDF files
-{
-    "success": True,
-    "content": "Extracted text from the PDF document...",
-    "file_path": "examples/document.pdf",
-    "file_type": "pdf",
-    "pages": 5
+    "file_type": "text"
 }
 ```
 
 ---
 
-##### Method 2: write_file(file_path, content, mode)
+##### Method 2: write_file(file_path, content)
 
-**Description**: Writes content to a file with special handling for different file types.
+**Description**: Write content to a file with special handling for different file types like PDFs.
 
 **Usage Example**:
 ```python
 # Write to a text file
-text_result = file_tool.write_file(
-    "examples/output.txt", 
-    "This is new content for the file."
+write_tool = file_toolkit.get_tool("write_file")
+text_result = write_tool(
+    file_path="examples/output.txt", 
+    content="This is new content for the file."
 )
 
 # Write to a PDF file (creates a basic PDF)
-pdf_result = file_tool.write_file(
-    "examples/new_document.pdf", 
-    "This content will be in a PDF."
+pdf_result = write_tool(
+    file_path="examples/new_document.pdf", 
+    content="This content will be in a PDF."
 )
 ```
 
-**Return Type**: `dict`
+**Parameters**:
+- `file_path` (str): Path to the file to write
+- `content` (str): Content to write to the file
+
+**Return Type**: `Dict[str, Any]`
 
 **Sample Return**:
 ```python
@@ -553,19 +559,24 @@ pdf_result = file_tool.write_file(
 
 ##### Method 3: append_file(file_path, content)
 
-**Description**: Appends content to a file with special handling for different file types.
+**Description**: Append content to a file with special handling for different file types like PDFs.
 
 **Usage Example**:
 ```python
 # Append to a text file
-result = file_tool.append_file(
-    "examples/log.txt", 
-    "\nNew log entry: Operation completed."
+append_tool = file_toolkit.get_tool("append_file")
+result = append_tool(
+    file_path="examples/log.txt", 
+    content="\nNew log entry: Operation completed."
 )
 print(result)
 ```
 
-**Return Type**: `dict`
+**Parameters**:
+- `file_path` (str): Path to the file to append to
+- `content` (str): Content to append to the file
+
+**Return Type**: `Dict[str, Any]`
 
 **Sample Return**:
 ```python
@@ -576,362 +587,395 @@ print(result)
 }
 ```
 
-#### 4.1.3 Setup Hints
+#### 4.1.3 Direct Tool Usage (Alternative)
 
-- **File Type Detection**: The tool automatically detects file types based on file extensions and applies appropriate handlers.
+You can also import and use individual file tools directly:
 
-- **PDF Support**: 
-  - Reading PDFs uses PyPDF2 to extract text content from all pages
-  - Writing PDFs creates basic PDF documents (for advanced PDF creation with text formatting, consider using reportlab)
-  - PDF appending is currently limited and may require additional libraries
+```python
+from evoagentx.tools.file_tool import ReadFileTool, WriteFileTool, AppendFileTool, FileToolBase
 
-- **Error Handling**: All methods return a dictionary with `success` field indicating whether the operation succeeded, and an `error` field if it failed.
+# Create shared file base for special format handling
+file_base = FileToolBase()
 
-- **File Paths**: Use absolute or relative paths. The tool will create directories if they don't exist when writing files.
+# Create individual tools
+read_tool = ReadFileTool(file_base=file_base)
+write_tool = WriteFileTool(file_base=file_base)
+append_tool = AppendFileTool(file_base=file_base)
+
+# Use the tools directly
+result = read_tool(file_path="example.txt")
+```
 
 ---
 
-## 5. Browser Automation
+## 5. Browser Tools
 
-EvoAgentX provides powerful browser automation tools for controlling web browsers to interact with websites and web applications.
+EvoAgentX provides comprehensive browser automation capabilities through the `BrowserToolKit` class and individual browser tool classes. These tools allow agents to control web browsers, navigate pages, interact with elements, and extract information.
 
-### 5.1 BrowserTool
+## Setup
 
-**The BrowserTool provides comprehensive browser automation capabilities using Selenium WebDriver. It allows agents to navigate websites, interact with elements, fill forms, and extract information from web pages with full visual browser control or headless operation.**
-
-#### 5.1.1 Setup and Initialization
+### Using BrowserToolKit (Recommended)
 
 ```python
-from evoagentx.tools.browser_tool import BrowserTool
+from evoagentx.tools import BrowserToolKit
 
-# Initialize with visible browser window
-browser_tool = BrowserTool(
+# Initialize the browser toolkit
+toolkit = BrowserToolKit(
+    browser_type="chrome",  # Options: "chrome", "firefox", "safari", "edge"  
+    headless=False,         # Set to True for background operation
+    timeout=10              # Default timeout in seconds
+)
+
+# Get specific tools
+initialize_tool = toolkit.get_tool("initialize_browser")
+navigate_tool = toolkit.get_tool("navigate_to_url")
+input_tool = toolkit.get_tool("input_text")
+click_tool = toolkit.get_tool("browser_click")
+snapshot_tool = toolkit.get_tool("browser_snapshot")
+console_tool = toolkit.get_tool("browser_console_messages")
+close_tool = toolkit.get_tool("close_browser")
+```
+
+### Using Individual Browser Tools (Alternative)
+
+```python
+from evoagentx.tools import BrowserTool
+
+# Initialize the browser tool directly
+browser = BrowserTool(
     browser_type="chrome",
     headless=False,
     timeout=10
 )
-
-# Initialize with headless browser (no visible window)
-browser_tool = BrowserTool(
-    browser_type="chrome",
-    headless=True,
-    timeout=10
-)
-
-# Get all available tools/methods
-available_tools = browser_tool.get_tools()
-print(f"Available methods: {[tool.__name__ for tool in available_tools]}")
-# Output: ['initialize_browser', 'navigate_to_url', 'input_text', 'browser_click', 'browser_snapshot', 'browser_console_messages', 'close_browser']
-
-# IMPORTANT: Always initialize the browser before using other methods
-result = browser_tool.initialize_browser()
-if result["status"] == "success":
-    print("Browser is ready for use!")
 ```
 
-#### 5.1.2 Available Methods
+## Available Methods
 
-The `BrowserTool` provides exactly **7 callable methods** accessible via `get_tools()`:
+### 1. initialize_browser()
 
-##### Method 1: initialize_browser()
+Start or restart a browser session. Must be called before any other browser operations.
 
-**Description**: Starts or restarts a browser session. **MUST be called before any other browser operations.**
+**Parameters:**
+- None required
 
-**Usage Example**:
-```python
-# Initialize the browser
-result = browser_tool.initialize_browser()
-print(result)
-```
-
-**Return Type**: `dict`
-
-**Sample Return**:
+**Sample Return:**
 ```python
 {
     "status": "success",
-    "message": "Browser initialized successfully"
+    "message": "Browser chrome initialized successfully"
 }
 ```
 
----
-
-##### Method 2: navigate_to_url(url)
-
-**Description**: Navigates to a specific URL and captures a snapshot of interactive elements.
-
-**Usage Example**:
+**Usage:**
 ```python
-# Navigate to a website
-result = browser_tool.navigate_to_url("https://www.google.com")
-print(f"Title: {result['title']}")
-print(f"Found {len(result['snapshot']['interactive_elements'])} interactive elements")
+# Using ToolKit
+result = toolkit.get_tool("initialize_browser")()
 
-# Show available elements
-for elem in result['snapshot']['interactive_elements'][:3]:
-    print(f"Element {elem['id']}: {elem['description']}")
+# Using BrowserTool directly  
+result = browser.initialize_browser()
 ```
 
-**Return Type**: `dict`
+### 2. navigate_to_url(url, timeout=None)
 
-**Sample Return**:
+Navigate to a URL and automatically capture a snapshot of all page elements for interaction.
+
+**Parameters:**
+- `url` (str, required): Complete URL with protocol (e.g., "https://example.com")
+- `timeout` (int, optional): Custom timeout in seconds
+
+**Sample Return:**
+```python
+{
+    "status": "success", 
+    "title": "Example Domain",
+    "url": "https://example.com",
+    "accessibility_tree": {...},  # Full page structure
+    "page_content": "Example Domain\n\nThis domain is for use in illustrative examples...",
+    "interactive_elements": [
+        {
+            "id": "e0",
+            "description": "More information.../link", 
+            "purpose": "link",
+            "label": "More information...",
+            "category": "navigation",
+            "isPrimary": False,
+            "visible": True,
+            "interactable": True
+        }
+    ]
+}
+```
+
+**Usage:**
+```python
+# Using ToolKit
+result = toolkit.get_tool("navigate_to_url")(url="https://example.com")
+
+# Using BrowserTool directly
+result = browser.navigate_to_url("https://example.com")
+```
+
+### 3. input_text(element, ref, text, submit=False, slowly=True)
+
+Type text into form fields, search boxes, or other input elements using element references from snapshots.
+
+**Parameters:**
+- `element` (str, required): Human-readable description (e.g., "Search field", "Username input")
+- `ref` (str, required): Element ID from snapshot (e.g., "e0", "e1", "e2") 
+- `text` (str, required): Text to input
+- `submit` (bool, optional): Press Enter after typing (default: False)
+- `slowly` (bool, optional): Type character by character to trigger JS events (default: True)
+
+**Sample Return:**
 ```python
 {
     "status": "success",
-    "current_url": "https://www.google.com",
-    "title": "Google",
-    "snapshot": {
-        "interactive_elements": [
-            {"id": "e0", "description": "Search textbox", "element_type": "input"},
-            {"id": "e1", "description": "Google Search button", "element_type": "button"},
-            {"id": "e2", "description": "I'm Feeling Lucky button", "element_type": "button"}
-        ]
-    }
+    "message": "Successfully input text into Search field and submitted",
+    "element": "Search field", 
+    "text": "python tutorial"
 }
 ```
 
----
-
-##### Method 3: input_text(element, ref, text, submit)
-
-**Description**: Types text into an input field using element references from snapshots.
-
-**Usage Example**:
+**Usage:**
 ```python
-# Type text in a search box (element e0 from snapshot)
-result = browser_tool.input_text(
-    element="Search box",
-    ref="e0",
-    text="artificial intelligence",
-    submit=False
+# Using ToolKit
+result = toolkit.get_tool("input_text")(
+    element="Search field",
+    ref="e1", 
+    text="python tutorial",
+    submit=True
 )
 
-# Type and submit with Enter key
-result = browser_tool.input_text(
-    element="Search box",
-    ref="e0", 
-    text="machine learning",
+# Using BrowserTool directly
+result = browser.input_text(
+    element="Search field",
+    ref="e1",
+    text="python tutorial", 
     submit=True
 )
 ```
 
-**Return Type**: `dict`
+### 4. browser_click(element, ref)
 
-**Sample Return**:
+Click on buttons, links, or other clickable elements using element references from snapshots.
+
+**Parameters:**
+- `element` (str, required): Human-readable description (e.g., "Login button", "Next page link")
+- `ref` (str, required): Element ID from snapshot (e.g., "e0", "e1", "e2")
+
+**Sample Return:**
 ```python
 {
     "status": "success",
-    "message": "Text input successful",
-    "element_ref": "e0"
+    "message": "Successfully clicked Login button",
+    "element": "Login button",
+    "new_url": "https://example.com/dashboard"  # If navigation occurred
 }
 ```
 
----
-
-##### Method 4: browser_click(element, ref)
-
-**Description**: Clicks on buttons, links, or other clickable elements using references from snapshots.
-
-**Usage Example**:
+**Usage:**
 ```python
-# Click a button (element e1 from snapshot)
-result = browser_tool.browser_click(
-    element="Search button",
-    ref="e1"
+# Using ToolKit
+result = toolkit.get_tool("browser_click")(
+    element="Login button",
+    ref="e3"
 )
-print(result)
+
+# Using BrowserTool directly  
+result = browser.browser_click(element="Login button", ref="e3")
 ```
 
-**Return Type**: `dict`
+### 5. browser_snapshot()
 
-**Sample Return**:
+Capture a fresh snapshot of the current page state, including all interactive elements. Use this after page changes not caused by navigation or clicking.
+
+**Parameters:**
+- None required
+
+**Sample Return:**
 ```python
 {
-    "status": "success", 
-    "message": "Element clicked successfully",
-    "element_ref": "e1"
-}
-```
-
----
-
-##### Method 5: browser_snapshot()
-
-**Description**: Captures a fresh snapshot of the current page with all interactive elements.
-
-**Usage Example**:
-```python
-# Take a new snapshot after page changes
-result = browser_tool.browser_snapshot()
-print(f"Found {len(result['interactive_elements'])} elements")
-```
-
-**Return Type**: `dict`
-
-**Sample Return**:
-```python
-{
-    "title": "Google Search Results", 
-    "current_url": "https://www.google.com/search?q=ai",
+    "status": "success",
+    "title": "Search Results - Example",
+    "url": "https://example.com/search?q=python",
+    "accessibility_tree": {...},  # Complete page structure
+    "page_content": "Search Results\n\nResult 1: Python Tutorial...",
     "interactive_elements": [
-        {"id": "e0", "description": "Search results link", "element_type": "link"},
-        {"id": "e1", "description": "Next page button", "element_type": "button"}
+        {
+            "id": "e0",
+            "description": "search/search box",
+            "purpose": "search box", 
+            "label": "Search",
+            "category": "search",
+            "isPrimary": True,
+            "visible": True,
+            "editable": True
+        },
+        {
+            "id": "e1", 
+            "description": "Search/submit button",
+            "purpose": "submit button",
+            "label": "Search",
+            "category": "action",
+            "isPrimary": True,
+            "visible": True,
+            "interactable": True
+        }
     ]
 }
 ```
 
----
-
-##### Method 6: browser_console_messages()
-
-**Description**: Retrieves JavaScript console messages (logs, warnings, errors) from the browser for debugging.
-
-**Usage Example**:
+**Usage:**
 ```python
-# Get console messages for debugging
-result = browser_tool.browser_console_messages()
-print("Console messages:")
-for msg in result.get("messages", []):
-    print(f"[{msg['level']}] {msg['message']}")
+# Using ToolKit
+result = toolkit.get_tool("browser_snapshot")()
+
+# Using BrowserTool directly
+result = browser.browser_snapshot()
 ```
 
-**Return Type**: `dict`
+### 6. browser_console_messages()
 
-**Sample Return**:
+Retrieve JavaScript console messages (logs, warnings, errors) for debugging web applications.
+
+**Parameters:**
+- None required
+
+**Sample Return:**
 ```python
 {
     "status": "success",
-    "messages": [
-        {"level": "INFO", "message": "Page loaded successfully", "timestamp": "2024-01-01T12:00:00"},
-        {"level": "WARNING", "message": "Deprecated API usage detected", "timestamp": "2024-01-01T12:00:01"}
+    "console_messages": [
+        {
+            "level": "INFO",
+            "message": "Page loaded successfully",
+            "timestamp": "2024-01-15T10:30:45.123Z"
+        },
+        {
+            "level": "WARNING", 
+            "message": "Deprecated API usage detected",
+            "timestamp": "2024-01-15T10:30:46.456Z"
+        },
+        {
+            "level": "ERROR",
+            "message": "Failed to load resource: net::ERR_BLOCKED_BY_CLIENT", 
+            "timestamp": "2024-01-15T10:30:47.789Z"
+        }
     ]
 }
 ```
 
----
-
-##### Method 7: close_browser()
-
-**Description**: Closes the browser and ends the session. **MUST be called when done to free resources.**
-
-**Usage Example**:
+**Usage:**
 ```python
-# Close the browser
-result = browser_tool.close_browser()
-print(result)
+# Using ToolKit
+result = toolkit.get_tool("browser_console_messages")()
+
+# Using BrowserTool directly
+result = browser.browser_console_messages()
 ```
 
-**Return Type**: `dict`
+### 7. close_browser()
 
-**Sample Return**:
+Close the browser session and free system resources. Always call this when finished.
+
+**Parameters:**
+- None required
+
+**Sample Return:**
 ```python
 {
     "status": "success",
-    "message": "Browser closed successfully"
+    "message": "Browser session closed successfully"
 }
 ```
 
-#### 5.1.3 Complete Workflow Example
+**Usage:**
+```python
+# Using ToolKit
+result = toolkit.get_tool("close_browser")()
 
-Here's a complete example showing proper initialization and cleanup:
+# Using BrowserTool directly
+result = browser.close_browser()
+```
+
+## Element Reference System
+
+The browser tools use a unique element reference system:
+
+1. **Element IDs**: After taking a snapshot, interactive elements are assigned unique IDs like `e0`, `e1`, `e2`, etc.
+2. **Element References**: These IDs map internally to specific selectors (CSS, XPath, ID, etc.)
+3. **Interactive Elements**: Only elements that can be clicked, typed into, or otherwise interacted with are included
+4. **Element Properties**: Each element includes description, purpose, label, category, and visibility information
+
+## Best Practices
+
+### Setup and Initialization
+- Always call `initialize_browser()` first
+- Use `headless=True` for server environments or background automation
+- Set appropriate `timeout` values for slow-loading pages
+
+### Element Interaction
+- Always take a snapshot with `navigate_to_url()` or `browser_snapshot()` before interacting with elements
+- Use the exact element IDs (`e0`, `e1`, etc.) returned from snapshots
+- Provide descriptive `element` parameters to make interactions clear
+- Use `submit=True` in `input_text()` for form submissions
+
+### Error Handling and Debugging
+- Check return status before proceeding with next operations
+- Use `browser_console_messages()` to debug JavaScript errors
+- Take fresh snapshots after page state changes
+- Handle timeout errors gracefully
+
+### Resource Management
+- Always call `close_browser()` when finished
+- Only keep one browser session active per tool instance
+- Consider using context managers for automatic cleanup
+
+## Complete Example
 
 ```python
-from evoagentx.tools.browser_tool import BrowserTool
+from evoagentx.tools import BrowserToolKit
 
-# Step 1: Initialize the tool
-browser_tool = BrowserTool(headless=False, timeout=10)
+# Initialize browser toolkit
+toolkit = BrowserToolKit(browser_type="chrome", headless=False)
 
 try:
-    # Step 2: Initialize browser session
-    init_result = browser_tool.initialize_browser()
-    if init_result["status"] != "success":
-        raise Exception(f"Failed to initialize browser: {init_result}")
+    # Start browser
+    result = toolkit.get_tool("initialize_browser")()
+    print(f"Browser init: {result['status']}")
     
-    # Step 3: Navigate to website
-    nav_result = browser_tool.navigate_to_url("https://www.google.com")
-    elements = nav_result["snapshot"]["interactive_elements"]
+    # Navigate to page and get snapshot
+    result = toolkit.get_tool("navigate_to_url")(url="https://example.com")
+    print(f"Navigation: {result['status']}")
+    print(f"Found {len(result['interactive_elements'])} interactive elements")
     
-    # Step 4: Find search elements
-    search_input = next((e for e in elements if "search" in e["description"].lower() and "input" in e["description"].lower()), None)
-    search_button = next((e for e in elements if "search" in e["description"].lower() and "button" in e["description"].lower()), None)
+    # Find and interact with elements
+    for element in result['interactive_elements']:
+        if 'search' in element['purpose'].lower():
+            # Input text into search field
+            search_result = toolkit.get_tool("input_text")(
+                element="Search field",
+                ref=element['id'],
+                text="python tutorial",
+                submit=True
+            )
+            print(f"Search: {search_result['status']}")
+            break
     
-    if search_input and search_button:
-        # Step 5: Perform search
-        browser_tool.input_text(element="Search box", ref=search_input["id"], text="EvoAgentX")
-        browser_tool.browser_click(element="Search button", ref=search_button["id"])
+    # Take a fresh snapshot after search
+    snapshot = toolkit.get_tool("browser_snapshot")()
+    print(f"New snapshot: {len(snapshot['interactive_elements'])} elements")
+    
+    # Check console for any errors
+    console = toolkit.get_tool("browser_console_messages")()
+    if console['console_messages']:
+        print(f"Console messages: {len(console['console_messages'])}")
         
-        # Step 6: Get console messages for debugging
-        console_result = browser_tool.browser_console_messages()
-        print(f"Console messages: {len(console_result.get('messages', []))}")
-    
-except Exception as e:
-    print(f"Browser operation failed: {e}")
-    
 finally:
-    # Step 7: ALWAYS close the browser to free resources
-    close_result = browser_tool.close_browser()
-    print(f"Browser cleanup: {close_result['message']}")
+    # Always close browser
+    toolkit.get_tool("close_browser")()
+    print("Browser closed")
 ```
-
-#### 5.1.4 Setup Hints
-
-- **Browser Requirements**: 
-  - Chrome is the default and most stable option
-  - Ensure you have Chrome or ChromeDriver installed for Selenium
-  - For other browsers, install the appropriate WebDriver
-
-- **Initialization and Cleanup**:
-  - **ALWAYS** call `initialize_browser()` first - no other methods will work without it
-  - **ALWAYS** call `close_browser()` when done to free system resources
-  - Use try-finally blocks to ensure cleanup happens even if errors occur
-  - The browser tool maintains internal state, so proper initialization/cleanup is critical
-
-- **Headless vs Visual Mode**:
-  - Set `headless=False` to see the browser window (useful for debugging and demonstrations)
-  - Set `headless=True` for production or automated workflows
-  - Visual mode helps understand what the automation is doing
-
-- **Element References and Snapshots**:
-  - All interactions use element IDs like "e0", "e1", "e2" from snapshots
-  - Element IDs are refreshed after navigation or page changes
-  - Always use the most recent snapshot's element references
-  - The `navigate_to_url()` method automatically captures a snapshot
-  - Use `browser_snapshot()` to refresh element references after dynamic content changes
-
-- **Method Execution Order**:
-  ```python
-  # Required workflow pattern
-  browser_tool.initialize_browser()          # 1. Start browser (required first)
-  nav_result = browser_tool.navigate_to_url(url)  # 2. Go to page, get elements
-  browser_tool.input_text(ref="e0", text="query")  # 3. Use element refs from snapshot
-  browser_tool.browser_click(ref="e1")       # 4. Click using element refs
-  browser_tool.close_browser()               # 5. Clean up (required last)
-  ```
-
-- **Error Handling Best Practices**:
-  ```python
-  browser_tool = BrowserTool(headless=False)
-  try:
-      # Always check initialization result
-      init_result = browser_tool.initialize_browser()
-      if init_result["status"] != "success":
-          raise Exception("Browser initialization failed")
-      
-      # Your browser operations here
-      nav_result = browser_tool.navigate_to_url("https://example.com")
-      # ... more operations
-      
-  except Exception as e:
-      print(f"Browser operation failed: {e}")
-  finally:
-      # CRITICAL: Always close browser to free resources
-      browser_tool.close_browser()
-  ```
-
-- **Timeouts and Performance**:
-  - The `timeout` parameter controls how long to wait for elements to load
-  - Increase timeout for slow websites or complex pages
-  - Use `browser_console_messages()` to debug JavaScript errors or performance issues
 
 ---
 
@@ -1088,3 +1132,5 @@ In this tutorial, we've explored the tool ecosystem in EvoAgentX:
 Tools in EvoAgentX extend your agents' capabilities by providing access to external resources and computation. By combining these tools with agents and workflows, you can build powerful AI systems that can retrieve information, perform calculations, and interact with the world.
 
 For more advanced usage and customization options, refer to the [API documentation](../api/tools.md) and explore the examples in the repository. 
+
+
