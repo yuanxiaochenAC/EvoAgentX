@@ -22,8 +22,14 @@ class TestModule(unittest.TestCase):
                     "name": "WriteFileToDisk",
                     "description": "save several files to local storage.", 
                     "tools": [{
-                        "class_name": "FileToolKit",
-                        "name": "FileToolKit"
+                        "name": "FileToolKit",
+                        "tools": [
+                            {
+                                "name": "WriteFile",
+                                "description": "Write file to disk",
+                                "inputs": {}
+                            }
+                        ]
                     }]
                 }
             ]
