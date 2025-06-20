@@ -32,7 +32,7 @@ The RAG pipeline in `RAGEngine` consists of four main stages, ensuring efficient
 4. **Retrieval**: Processes queries using a retriever (e.g., vector or graph retriever), applies preprocessing (e.g., HyDE query transform), retrieves relevant chunks, and post-processes results (e.g., reranking or filtering by metadata).
 
 <p align="center">
-  <img src="./assets/rag_pipeline.png">
+  <img src="../assets/rag_pipeline.png">
 </p>
 
 ## Configuration Details
@@ -98,7 +98,7 @@ Controls the retrieval stage, including preprocessing, retrieval, and post-proce
 
 ### Prerequisites
 - Install dependencies: `llama_index`, `pydantic`, and other required libraries.
-- Configure environment variables (e.g., `OPENAI_API_KEY` for embedding models). See [Installation Guide for EvoAgentX](./docs/installation.md).
+- Configure environment variables (e.g., `OPENAI_API_KEY` for embedding models). See [Installation Guide for EvoAgentX](../installation.md).
 - Ensure a `StorageHandler` instance is configured with appropriate storage backends (e.g., SQLite, FAISS, Neo4j).
 
 ### Initialization

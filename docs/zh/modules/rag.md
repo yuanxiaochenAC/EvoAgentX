@@ -32,7 +32,7 @@
 4. **检索**：使用检索器（如向量检索器或图检索器）处理查询，应用预处理（如 HyDE 查询转换），检索相关分块，并对结果进行后处理（如重新排序或元数据过滤）。
 
 <p align="center">
-  <img src="./assets/rag_pipeline.png">
+  <img src="../assets/rag_pipeline.png">
 </p>
 
 ## 配置详情
@@ -98,7 +98,7 @@
 
 ### 前置条件
 - 安装依赖：`llama_index`、`pydantic` 以及其他所需库。
-- 配置环境变量（例如，嵌入模型的 `OPENAI_API_KEY`）。参见 [EvoAgentX 安装指南](./docs/installation.md)。
+- 配置环境变量（例如，嵌入模型的 `OPENAI_API_KEY`）。参见 [EvoAgentX 安装指南](../installation.md)。
 - 确保 `StorageHandler` 实例已配置适当的存储后端（如 SQLite、FAISS、Neo4j）。
 
 ### 初始化

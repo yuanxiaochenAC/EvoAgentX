@@ -68,7 +68,7 @@ print("RAGEngine 已准备就绪！")
   - `ChunkerConfig`：将文档分割成 512 字符的分块，50 字符重叠。
   - `EmbeddingConfig`：使用 OpenAI 的 `text-embedding-ada-002` 生成嵌入。
   - `IndexConfig`：创建向量索引。
-  - `RetrievalConfig`：检索相似度得分高于 0.5 的前 3 个分块。
+  - `RetrievalConfig`：检索相似度得分高于 0.3 的前 3 个分块。
 - **初始化**：创建 `RAGEngine` 实例，准备处理文档。
 
 有关配置的更多详细信息，请参见 [RAGEngine 文档](../modules/rag.md)。
@@ -187,8 +187,6 @@ print("RAGEngine 已准备就绪！")
   "level": "hard"
 }
 ```
-
-为简化，我们只保留了关于 Scott Derrickson 和 Ed Wood 的相关上下文。
 
 ### 索引文档
 让我们编写一个脚本加载 JSON 文件，索引其内容并查询它。创建一个名为 `rag_tutorial.py` 的文件：
@@ -355,7 +353,7 @@ python rag_tutorial.py
  In "Doctor Strange", surgeon Strange learns the mystic arts after a career-ending car accident.
 ```
 
-这些分块确认 Scott Derrickson 和 Ed Wood 都是美国人，回答问题为“是”。
+这些分块的top1可以确认 Scott Derrickson 和 Ed Wood 都是美国人。
 
 有关索引和查询的更多详细信息，请参见 [RAGEngine 文档](../modules/rag.md)。
 
@@ -454,6 +452,6 @@ python rag_load.py
 - 实验不同的分块大小或嵌入模型（如 Hugging Face, ollama）。
 - 将 `RAGEngine` 与 EvoAgentX 代理结合，自动回答问题。
 
-有关完整示例，请参见 [RAGEngine 示例](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/rag_engine.py)。
+有关完整示例，请参见 [RAGEngine 示例](../../../examples/rag.py)。
 
 祝您在 EvoAgentX 中愉快地构建！
