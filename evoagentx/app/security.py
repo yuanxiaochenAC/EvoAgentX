@@ -15,6 +15,10 @@ from evoagentx.app.config import settings
 from evoagentx.app.db import Database
 from evoagentx.app.schemas import TokenPayload, UserCreate, UserResponse
 
+# try to fix login problem
+jwt_ins = jwt.JWT()
+secret_key = jwt.supported_key_types()['oct'](settings.SECRET_KEY.encode())
+
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -94,15 +98,15 @@ def create_access_token(subject: str, expires_delta: Optional[timedelta] = None)
     else:
         expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     
-    to_encode = {"exp": expire, "sub": subject}
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    to_encode = {"exp": str(expire), "sub": subject}
+    encoded_jwt = jwt_ins.encode(to_encode, secret_key, alg=settings.ALGORITHM)
     return encoded_jwt
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict[str, Any]:
     """Get the current user from a JWT token."""
     try:
-        payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        payload = jwt_ins.decode(
+            token, secret_key, alg=[settings.ALGORITHM]
         )
         token_data = TokenPayload(**payload)
         
