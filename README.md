@@ -327,6 +327,8 @@ If you have any questions or feedback about this project, please feel free to co
 
 We will respond to all questions within 2-3 business days.
 
+### Community Call
+
 ## 🙌 Contributing to EvoAgentX
 Thanks go to these awesome contributors
 
