@@ -328,7 +328,8 @@ If you have any questions or feedback about this project, please feel free to co
 We will respond to all questions within 2-3 business days.
 
 ### Community Call
-
+- [Bilibili](https://space.bilibili.com/3493105294641286/favlist?fid=3584589186&ftype=create&spm_id_from=333.788.0.0)
+- [Youtube](https://studio.youtube.com/playlist/PL_kuPS05qA1hyU6cLX--bJ93Km2-md8AA/edit)
 ## 🙌 Contributing to EvoAgentX
 Thanks go to these awesome contributors
 
