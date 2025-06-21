@@ -63,6 +63,7 @@
 - [🙋 Support](#-support)
   - [Join the Community](#join-the-community)
   - [Contact Information](#contact-information)
+  - [Watch past Community Call](#Community-call)
 - [🙌 Contributing to EvoAgentX](#-contributing-to-evoagentx)
 - [📚 Acknowledgements](#-acknowledgements)
 - [📄 License](#-license)
