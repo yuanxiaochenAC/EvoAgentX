@@ -11,3 +11,11 @@ class block:
     async def async_execute(self, problem):
 
         raise NotImplementedError
+
+    def save(self, path: str):
+
+        raise NotImplementedError
+    
+    def load(self, path: str):
+
+        raise NotImplementedError

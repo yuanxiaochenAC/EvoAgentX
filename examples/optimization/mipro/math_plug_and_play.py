@@ -98,6 +98,9 @@ def main():
     # The input_names and output_names should appear in the execution_data returned by the program's __call__ method. 
     registry.track(program, "prompt", input_names=["problem"], output_names=["reasoning","answer"])
 
+    print("\n before optimization \n")
+    print(program.prompt)
+
     # optimize the program 
     # `evaluator` is optional. If not provided, the optimizer will construct an evaluator based on the `evaluate` method of the benchmark. 
     optimizer = MiproOptimizer(
@@ -106,24 +109,24 @@ def main():
         optimizer_llm=optimizer_llm,
         max_bootstrapped_demos=4, 
         max_labeled_demos=0,
-        num_threads=20,  
+        num_threads=10,
         eval_rounds=1, 
-        auto="medium",
-        save_path="examples" 
+        auto="light",
+        save_path="example/"
     )
 
     logger.info("Optimizing program...")
     optimizer.optimize(dataset=benchmark)
-    optimizer.restore_best_program()
+    optimized_program = optimizer.restore_best_program()
 
-    logger.info("Evaluating program on test set...")
-    with suppress_logger_info():
-        results = optimizer.evaluate(dataset=benchmark, eval_mode="test")
-    logger.info(f"Evaluation metrics (after optimization): {results}")
+    # logger.info("Evaluating program on test set...")
+    # with suppress_logger_info():
+    #     results = optimizer.evaluate(dataset=benchmark, eval_mode="test")
+    # logger.info(f"Evaluation metrics (after optimization): {results}")
     
 
-    print("\n\n")
-    print(optimizer.program.prompt)
+    print("\n after optimization:\n")
+    print(optimized_program.prompt)
     print("\n\n")
 
 if __name__ == "__main__":

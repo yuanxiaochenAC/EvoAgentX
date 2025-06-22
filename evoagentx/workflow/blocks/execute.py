@@ -1,3 +1,4 @@
+import json
 import dspy
 from typing import Any
 from evoagentx.workflow.blocks.block import block
@@ -57,3 +58,25 @@ class execute(block):
             score = self._extract_score_from_dict(score)
         
         return score
+    
+    def save(self, path: str):
+        params = {
+            "predictor": self.predicotr.prompt,
+            "reflector": self.Reflector.prompt,
+            "refiner": self.Refiner.prompt,
+            "tester": self.Tester.prompt
+        }
+        
+        with open(path, "w") as f:
+            json.dump(params, f)
+    
+    def load(self, path: str):
+        with open(path, "r") as f:
+            params = json.load(f)
+            self.predicotr.prompt = params["predictor"]
+            self.Reflector.prompt = params["reflector"]
+            self.Refiner.prompt = params["refiner"]
+            self.Tester.prompt = params["tester"]
+    
+    def get_registry(self):
+        return []

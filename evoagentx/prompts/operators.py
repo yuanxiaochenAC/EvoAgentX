@@ -78,6 +78,7 @@ PREDICTOR_PROMPT = """
 Let's think step by step.
 
 Question: {problem}
+{context}
 Reasoning: Let's think step by step in order to produce the answer. We ...
 Answer: 
 
@@ -89,6 +90,7 @@ REFLECTOR_PROMPT = """
 Please review the answer and crticize on where might be wron. If you are absolutely sure it is correct, output 'True' in 'correctness'.
 
 Question: {problem}
+{context}
 Text: {text}
 Reasoning: Let's think step by step in order to produce the correctness. We ...
 Feedback:
@@ -102,6 +104,7 @@ Given previous attempts and feedback, carefully consider where you could go wron
 
 ---
 Question: {problem}
+{context}
 Previous answer: {previous_answer}
 Reflection: {reflection}
 Correctness: {correctness}
@@ -128,6 +131,7 @@ These are the solutions to the question from other agents. Examine the solutions
 
 ---
 Question: {problem}
+{context}
 Solutions: {solutions}
 Reasoning: Let's think step by step in order to examine the solutions from other agents. We ...
 

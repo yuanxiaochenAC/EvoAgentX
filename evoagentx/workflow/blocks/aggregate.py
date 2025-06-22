@@ -1,3 +1,4 @@
+import json
 import re
 import string
 import unicodedata
@@ -14,30 +15,34 @@ class aggregate(block):
     def __call__(self, problem, **kwargs):
         """聚合多个预测结果，返回最常见的答案"""
         predictions = []
-        
-        # 生成n个预测
+
+        # 生成 n 个预测
         for _ in range(3):
-            prediction = self.predictor.execute(problem = problem)
+            prediction = self.predictor.execute(problem=problem)
             predictions.append(prediction['answer'])
-        
+
         # 标准化并统计
         normalized_predictions = [self._normalize_text(answer) for answer in predictions]
         normalized_predictions = [x for x in normalized_predictions if x is not None]
-        
+
+        # 如果没有有效预测
         if not normalized_predictions:
-            return predictions[0] if predictions else None
-            
+            if predictions:
+                return predictions[0], {"problem": problem, "answer": predictions[0]}
+            else:
+                return "", {"problem": problem, "answer": None}
+
         # 找到最常见的标准化答案
         value_counts = Counter(normalized_predictions)
         most_common_normalized = value_counts.most_common(1)[0][0]
-        
+
         # 返回对应的原始答案
         for prediction in predictions:
             if self._normalize_text(prediction) == most_common_normalized:
-                return prediction
-        
-        return predictions[0]  # 兜底返回第一个答案
+                return prediction, {"problem": problem, "answer": prediction}
 
+        # 默认返回第一个预测
+        return predictions[0], {"problem": problem, "answer": predictions[0]}
     def execute(self, problem):
         """执行预测并返回所有结果"""
         predictions = []
@@ -70,3 +75,17 @@ class aggregate(block):
         text = " ".join(text.split())
         
         return text
+    
+    def save(self, path: str):
+        params = {"predictor": self.predictor.prompt}
+        
+        with open(path, "w") as f:
+            json.dump(params, f)
+    
+    def load(self, path: str):
+        with open(path, "r") as f:
+            params = json.load(f)
+            self.predictor.prompt = params["predictor"]
+        
+    def get_registry(self):
+        return ["aggregater.predictor.prompt"]

@@ -93,6 +93,16 @@ class Operator(BaseModule):
     def set_output(self, output):
         self.outputs_format = output
 
+    def save(self, path: str):
+        params = {"prompt": self.prompt}
+        with open(path, "w") as f:
+            json.dump(params, f)
+    
+    def load(self, path: str):
+        with open(path, "r") as f:
+            params = json.load(f)
+            self.prompt = params["prompt"]
+
 ## The following operators are inspired by AFlow's predefined operators: https://github.com/geekan/MetaGPT/blob/main/metagpt/ext/aflow/scripts/operator.py 
 
 class CustomOutput(OperatorOutput):
@@ -481,21 +491,31 @@ class Predictor(Operator):
     def __init__(self, llm: BaseLLM, **kwargs):
         name = "Predictor"
         description = "Predict the answer to the problem"
-        interface = "predictor(question: str) -> dict with key 'reasoning' (str) and 'answer' (str)"
+        interface = "predictor(problem: str) -> dict with key 'reasoning' (str) and 'answer' (str)"
         prompt = kwargs.pop("prompt", PREDICTOR_PROMPT)
         super().__init__(name=name, description=description, interface=interface, prompt=prompt, llm=llm, outputs_format=PredictorOutput, **kwargs)
 
-    def __call__(self, problem):
-        response = self.execute(problem)
+    def __call__(self, problem, **kwargs):
+        response = self.execute(problem, **kwargs)
         return response['answer'], {"problem":problem, "reasoning":response['reasoning'], "answer":response['answer']}
     
-    def execute(self, question) -> dict:
-        prompt = self.prompt.format(problem = question)
+    def execute(self, problem, **kwargs) -> dict:
+        context = kwargs.pop('context', None)
+        if context:
+            context = f"Context: {context}"
+        else:
+            context = ""
+        prompt = self.prompt.format(problem = problem, context = context)
         response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
     
-    async def async_execute(self, question) -> dict:
-        prompt = self.prompt.format(problem = question)
+    async def async_execute(self, problem, **kwargs) -> dict:
+        context = kwargs.pop('context', None)
+        if context:
+            context = f"Context: {context}"
+        else:
+            context = ""
+        prompt = self.prompt.format(problem = problem, context = context)
         response = await self.llm.async_generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
 
@@ -514,12 +534,22 @@ class Reflector(Operator):
         super().__init__(name=name, description=description, interface=interface, prompt=prompt, llm=llm, outputs_format=ReflectorOutput, **kwargs)
 
     def execute(self, text, **kwargs) -> dict:
-        prompt = self.prompt.format(text=text, **kwargs)
+        context = kwargs.pop('context', None)
+        if context:
+            context = f"Context: {context}"
+        else:
+            context = ""
+        prompt = self.prompt.format(text=text, context=context, **kwargs)
         response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
 
     async def async_execute(self, text, **kwargs) -> dict:
-        prompt = self.prompt.format(text=text, **kwargs)
+        context = kwargs.pop('context', None)
+        if context:
+            context = f"Context: {context}"
+        else:
+            context = ""
+        prompt = self.prompt.format(text=text, context=context, **kwargs)
         response = await self.llm.async_generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
 
@@ -536,12 +566,22 @@ class Refiner(Operator):
         super().__init__(name=name, description=description, interface=interface, prompt=prompt, llm=llm, outputs_format=RefinerOutput, **kwargs)
 
     def execute(self, question, **kwargs) -> dict:
-        prompt = self.prompt.format(question=question, **kwargs)
+        context = kwargs.pop('context', None)
+        if context:
+            context = f"Context: {context}"
+        else:
+            context = ""
+        prompt = self.prompt.format(question=question, context=context, **kwargs)
         response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
 
     async def async_execute(self, question, **kwargs) -> dict:
-        prompt = self.prompt.format(question=question, **kwargs)
+        context = kwargs.pop('context', None)
+        if context:
+            context = f"Context: {context}"
+        else:
+            context = ""
+        prompt = self.prompt.format(question=question, context=context, **kwargs)
         response = await self.llm.async_generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
     
@@ -558,13 +598,13 @@ class Summarizer(Operator):
         prompt = kwargs.pop("prompt",SUMMARIZER_PROMPT)
         super().__init__(name=name, description=description, interface=interface, prompt=prompt, llm=llm, outputs_format=SummarizerOutput, **kwargs)
 
-    def execute(self,question: str, **kwargs) -> dict:
-        prompt = self.prompt.format(question=question, **kwargs)
+    def execute(self,problem: str, context: str) -> dict:
+        prompt = self.prompt.format(problem=problem, context=context)
         response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
 
-    async def async_execute(self, question: str, **kwargs) -> dict:
-        prompt = self.prompt.format(question=question, **kwargs)
+    async def async_execute(self, problem: str, context: str) -> dict:
+        prompt = self.prompt.format(problem=problem, context=context)
         response = await self.llm.async_generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
 
@@ -572,7 +612,7 @@ class DebatorOutput(OperatorOutput):
     reasoning: str = Field(default="", description="Your reasoning for this problem")
     answer: str = Field(default="", description="Your prediction for this problem")
     index: str = Field(default="", description="The index of the solution to update")
-class Debator(Operator):
+class Debater(Operator):
     def __init__(self, llm: BaseLLM, **kwargs):
         name = "Debator"
         description = "Debate and provide reasoning and answer for the problem."
@@ -581,11 +621,21 @@ class Debator(Operator):
         super().__init__(name=name, description=description, interface=interface, prompt=prompt, llm=llm, outputs_format=DebatorOutput, **kwargs)
 
     def execute(self, question, **kwargs) -> dict:
-        prompt = self.prompt.format(question=question, **kwargs)
+        context = kwargs.pop('context', None)
+        if context:
+            context = f"Context: {context}"
+        else:
+            context = ""
+        prompt = self.prompt.format(question=question, context=context, **kwargs)
         response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
 
     async def async_execute(self, question, **kwargs) -> dict:
-        prompt = self.prompt.format(question=question, **kwargs)
+        context = kwargs.pop('context', None)
+        if context:
+            context = f"Context: {context}"
+        else:
+            context = ""
+        prompt = self.prompt.format(question=question, context=context, **kwargs)
         response = await self.llm.async_generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
