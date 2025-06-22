@@ -505,6 +505,5 @@ class CustomizeAgent(Agent):
         """
         config = self.get_customize_agent_info()
         config["llm_config"] = self.llm_config.to_dict()
-        config["tool_dict"] = {tool.name: tool for tool in self.tools}
         return config 
     
