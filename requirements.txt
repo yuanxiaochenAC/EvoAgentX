@@ -64,6 +64,7 @@ mcp
 # rag
 # Should install torch
 neo4j
+ollama
 llama-index
 llama-index-vector-stores-faiss
 llama-index-graph-stores-neo4j
