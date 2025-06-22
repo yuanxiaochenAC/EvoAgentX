@@ -444,6 +444,16 @@ class Query(BaseModule):
     keyword_filters: Optional[List[str]] = Field(default=None, description="Keywords to filter results.")
     metadata_filters: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata filters.")
 
+    @property
+    def embedding_strs(self) -> List[str]:
+        """Use custom embedding strs if specified, otherwise use query str."""
+        if self.custom_embedding_strs is None:
+            if len(self.query_str) == 0:
+                return []
+            return [self.query_str]
+        else:
+            return self.custom_embedding_strs
+
     def to_QueryBundle(self):
         return QueryBundle(
             query_str=self.query_str,
