@@ -64,6 +64,7 @@ class LiteLLMConfig(LLMConfig):
     llm_type: str = "LiteLLM"
     api_base: Optional[str] = Field(default=None, description="Base URL for the LLM API (e.g., http://localhost:11434/v1 for Ollama)") 
     is_local: Optional[bool] = Field(default=False, description="Whether the model is running locally (e.g., Ollama)")
+    api_key: Optional[str] = Field(default=None, description="the API key used to authenticate generic OpenAI-compatible requests (e.g., LM Studio, FastChat, LocalAI)")
 
     # LLM keys
     openai_key: Optional[str] = Field(default=None, description="the API key used to authenticate OpenAI requests")
