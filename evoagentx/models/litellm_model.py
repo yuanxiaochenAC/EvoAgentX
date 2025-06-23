@@ -9,7 +9,6 @@ from litellm import completion, acompletion
 from typing import List
 from ..core.registry import register_model
 from .model_configs import LiteLLMConfig
-# from .base_model import BaseLLM, LLMOutputParser
 from .openai_model import OpenAILLM
 from .model_utils import infer_litellm_company_from_model, Cost
 
@@ -27,6 +26,7 @@ class LiteLLM(OpenAILLM):
         # Set model and extract the company name
         self.model = self.config.model
         self.api_base = self.config.api_base  # save api_base
+        self.api_key = self.config.api_key
         # company = self.model.split("/")[0] if "/" in self.model else "openai"
         company = infer_litellm_company_from_model(self.model)
 
@@ -35,6 +35,7 @@ class LiteLLM(OpenAILLM):
                 raise ValueError("api_base is required for local models in LiteLLMConfig")
             # local llm doesn't need API key
             litellm.api_base = self.api_base  # set litellm global api_base
+            litellm.api_key = self.api_key
         else:
             # Set environment variables based on the company
             if company == "openai":
@@ -83,7 +84,7 @@ class LiteLLM(OpenAILLM):
         self._default_ignore_fields = [
             "llm_type", "output_response", "openai_key", "deepseek_key", "anthropic_key", 
             "gemini_key", "meta_llama_key", "openrouter_key", "openrouter_base", "perplexity_key", 
-            "groq_key", "api_base", "is_local", "azure_endpoint", "azure_key", "api_version"
+            "groq_key", "api_base", "is_local", "azure_endpoint", "azure_key", "api_version", "api_key"
         ] # parameters in LiteLLMConfig that are not LiteLLM models' input parameters 
     
     def _compute_cost(self, input_tokens: int, output_tokens: int) -> Cost:
