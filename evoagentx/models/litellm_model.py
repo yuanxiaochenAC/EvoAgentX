@@ -5,7 +5,7 @@ from tenacity import (
     stop_after_attempt,
     wait_random_exponential,
 )
-from litellm import completion, acompletion, token_counter, cost_per_token
+from litellm import completion, acompletion
 from typing import List
 from ..core.registry import register_model
 from .model_configs import LiteLLMConfig
