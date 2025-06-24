@@ -43,12 +43,12 @@ class aggregate(block):
 
         # 默认返回第一个预测
         return predictions[0], {"problem": problem, "answer": predictions[0]}
-    def execute(self, problem):
+    def execute(self, problem, **kwargs):
         """执行预测并返回所有结果"""
         predictions = []
         
         for _ in range(self.n):
-            prediction = self.predictor.execute(problem = problem)
+            prediction = self.predictor.execute(problem = problem, **kwargs)
             predictions.append(prediction['answer'])
 
         return predictions
@@ -88,4 +88,4 @@ class aggregate(block):
             self.predictor.prompt = params["predictor"]
         
     def get_registry(self):
-        return ["aggregater.predictor.prompt"]
+        return ["aggregator.predictor.prompt"]

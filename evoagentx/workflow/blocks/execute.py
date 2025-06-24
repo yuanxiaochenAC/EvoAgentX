@@ -1,82 +1,63 @@
 import json
 import dspy
+import sys
+import traceback
 from typing import Any
 from evoagentx.workflow.blocks.block import block
-from evoagentx.workflow.operators import Predictor, Reflector, Refiner, Test
-
+from evoagentx.workflow.operators import Predictor, CodeReflector
+from evoagentx.utils.aflow_utils.data_utils import test_case_2_test_function
 
 class execute(block):
-    def __init__(self, llm, n) -> None:        
-        self.n = n
-        self.predicotr = Predictor(llm=llm)
-        self.Reflector = Reflector(llm=llm)
-        self.Refiner = Refiner(llm=llm)
-        self.Tester = Test(llm=llm)
+    def __init__(self, llm) -> None:        
+        self.n = 0
+        self.predictor = Predictor(llm=llm)
+        self.code_reflector = CodeReflector(llm=llm)
         self.search_space = [0,1]
 
-    def __call__(self,question, solution, benchmark):
+    def __call__(self,problem, entry_point, testcases, **kwargs):
         # executor + reflector
-        
-        predictor_solution = self.executor.execute(solution=solution)
-        result = benchmark.evaluate(
-            prediction = predictor_solution,
-            label = benchmark.get_label(question)
-        )
+
+        predictor_prediction = self.predictor.execute(problem = problem, **kwargs)
+
+        traceback = self.exec_code(solution = predictor_prediction['answer'], entry_point = entry_point, testcases = testcases)
+
+        code_reflector_prediction = self.code_reflector.execute(question = problem, previous_solution = predictor_prediction['answer'], traceback = traceback)
+
+        return code_reflector_prediction['answer'], {"problem":problem, 
+                                                     "entry_point":entry_point, 
+                                                     "reasoning":code_reflector_prediction["reasoning"], 
+                                                     "correctness":code_reflector_prediction["correctness"], 
+                                                     "answer":code_reflector_prediction["answer"]}
 
 
-    def execute(self, question, solution, entry_point, benchmark):
-        predictor_prediction = self.predicotr.execute(question=question)
-        reflector_feedback = self.Reflector.execute(question=question, text=predictor_prediction['answer'])
-        refiner_prediction = self.Refiner.execute(question=question, text=reflector_feedback['feedback'])
-        tester_result = self.Tester.execute(problem=question, solution=refiner_prediction['answer'], entry_point=entry_point, benchmark=benchmark)
-        return tester_result['result']
+    def execute(self, problem, solution, entry_point, testcases):
     
-    def workflow_execute(self, question, solution, entry_point, benchmark):
         for i in range(self.n):
-            predictor_prediction = self.predicotr.execute(question=question)
-            reflector_feedback = self.Reflector.execute(question=question, text=predictor_prediction['answer'])
+            traceback = self.exec_code(solution = solution, entry_point = entry_point, testcases = testcases)
+            code_reflector_prediction = self.code_reflector.execute(question = problem, previous_solution = solution, traceback = traceback)
+            solution = code_reflector_prediction["answer"]
 
-    
-    def evaluate(self, question: dspy.Example, prediction: Any, *args, **kwargs):
+        return solution
+
+
+    def exec_code(self, solution, entry_point, testcases):
+        if entry_point is None or testcases is None:
+            return "No test cases available to execute"
         
-        if isinstance(self.benchmark.get_train_data()[0], dspy.Example):
-            # the data in original benchmark is a dspy.Example
-            score = self.benchmark.evaluate(
-                prediction=prediction, 
-                label=self.benchmark.get_label(question)
-            )
-        elif isinstance(self.benchmark.get_train_data()[0], dict):
-            # the data in original benchmark is a dict, convert the dspy.Example to a dict
-            score = self.benchmark.evaluate(
-                prediction=prediction, 
-                label=self.benchmark.get_label(question.toDict()) # convert the dspy.Example to a dict
-            )
+        fail_cases = []
+        for test_case in testcases:
+            test_code = test_case_2_test_function(solution, test_case, entry_point)
+            try:
+                exec(test_code, globals())
+            except AssertionError as e:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                tb_str = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+                error_msg = f"Test case failed: {test_case}\nAssertion Error: {str(e)}\nTraceback: {tb_str}"
+                fail_cases.append(error_msg)
+            except Exception as e:
+                return f"Code execution error: {str(e)}"
+        
+        if fail_cases:
+            return f"Test failed - {len(fail_cases)} case(s) failed:\n" + "\n---\n".join(fail_cases)
         else:
-            raise ValueError(f"Unsupported example type in `{type(self.benchmark)}`! Expected `dspy.Example` or `dict`, got {type(self.benchmark.get_train_data()[0])}")
-        
-        if isinstance(score, dict):
-            score = self._extract_score_from_dict(score)
-        
-        return score
-    
-    def save(self, path: str):
-        params = {
-            "predictor": self.predicotr.prompt,
-            "reflector": self.Reflector.prompt,
-            "refiner": self.Refiner.prompt,
-            "tester": self.Tester.prompt
-        }
-        
-        with open(path, "w") as f:
-            json.dump(params, f)
-    
-    def load(self, path: str):
-        with open(path, "r") as f:
-            params = json.load(f)
-            self.predicotr.prompt = params["predictor"]
-            self.Reflector.prompt = params["reflector"]
-            self.Refiner.prompt = params["refiner"]
-            self.Tester.prompt = params["tester"]
-    
-    def get_registry(self):
-        return []
+            return "All tests passed successfully"

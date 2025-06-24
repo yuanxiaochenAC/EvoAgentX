@@ -25,12 +25,10 @@ class MassOptimiser(BaseModule):
 
     def init_module(self, **kwargs):
         self.rng = None
+        self.max_steps = kwargs.get('max_steps', 10)  # 添加缺失的参数
         
-        if self.executor_llm is None and self.optimizer_llm is None:
+        if self.optimizer_llm is None:
             raise ValueError("Optimizer llm is required")
-
-        if self.executor_llm is None:
-            self.executor_llm = self.optimizer_llm
 
 
     def optimize(self, 
@@ -76,13 +74,14 @@ class MassOptimiser(BaseModule):
                 save_path= self.save_path
             )
 
-            score = optimizer.evaluate(dataset = self.benchamrk, eval_mode = "test")       
+            score = optimizer.evaluate(dataset = self.benchmark, eval_mode = "test")       
 
             if score > best_score:
                 best_score = score
                 best_workflow = copy.deepcopy(optimizer)
 
         best_workflow.optimize(dataset = self.benchmark)
+        
         return best_workflow.restore_best_program()
 
     def _softmax_with_temperature(self, temperature):        
@@ -96,16 +95,3 @@ class MassOptimiser(BaseModule):
 
         return exps / np.sum(exps)
 
-    def _random_sample_searchSpace(self, workflow, agent_budget):
-        values = []
-        total = 0
-        for block in workflow.blocks:
-            space = block.search_space
-            idx = random.randint(0, len(space) - 1)
-            val = space[idx]
-            total += val
-            values.append(val)
-
-            if total >= agent_budget:
-                return [-1]
-        return values

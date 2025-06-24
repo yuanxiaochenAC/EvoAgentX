@@ -126,7 +126,7 @@ Summary: Only generate the summary. Start with Summary:
 You should format your output in xml format. For example, ouptut the answer in <summary>xxx</summary>
 """
 
-DEBATOR_PROMPT = """
+DEBATER_PROMPT = """
 These are the solutions to the question from other agents. Examine the solutions from other agents in your rationale, finish by giving an updated answer. Let's think step by step. Provide a complete and correct code implementation in python.
 
 ---
@@ -142,4 +142,24 @@ Please output your reasoning and final answer in the following xml format:
 <index>xxx</index>
 <reasoning>xxx</reasoning>
 <answer>xxx</answer>
+"""
+
+CODE_REFLECTOR_PROMPT = """
+Please determine the correctness of the solution in passing all test cases . If it
+fails , based on the error message and trackback , think step by step , carefully
+propose an updated solution in the answer output with a correct code
+implementation in python .
+
+---
+Question: {question}
+Previous Solution: {previous_solution}
+## Traceback
+It contains the test cases, execution results, and ground truth. If there is an error, the relevant traceback is given.
+Traceback: {traceback}
+## Correctness: 'True False' based on the correctness of executive feedback. If there
+is an error message, output 'False' 
+Correctness:
+Reasoning:
+
+You should format your output in xml format. For example, ouptut the answer in <reasoning>xxx</reasoning>, <correctness>xxx</correctness> and <answer>xxx</answer> format. 
 """

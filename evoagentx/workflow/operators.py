@@ -22,7 +22,8 @@ from ..prompts.operators import (
     REFLECTOR_PROMPT,
     REFINER_PROMPT,
     SUMMARIZER_PROMPT,
-    DEBATOR_PROMPT
+    DEBATER_PROMPT,
+    CODE_REFLECTOR_PROMPT
 )
 from ..utils.sanitize import sanitize
 from ..benchmark.benchmark import Benchmark
@@ -608,17 +609,17 @@ class Summarizer(Operator):
         response = await self.llm.async_generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
 
-class DebatorOutput(OperatorOutput):
+class DebaterOutput(OperatorOutput):
     reasoning: str = Field(default="", description="Your reasoning for this problem")
     answer: str = Field(default="", description="Your prediction for this problem")
     index: str = Field(default="", description="The index of the solution to update")
 class Debater(Operator):
     def __init__(self, llm: BaseLLM, **kwargs):
-        name = "Debator"
+        name = "Debater"
         description = "Debate and provide reasoning and answer for the problem."
-        interface = "debator(question: str) -> dict with keys 'reasoning' and 'answer' of type str"
-        prompt = kwargs.pop("prompt", DEBATOR_PROMPT)
-        super().__init__(name=name, description=description, interface=interface, prompt=prompt, llm=llm, outputs_format=DebatorOutput, **kwargs)
+        interface = "debater(question: str) -> dict with keys 'reasoning' and 'answer' of type str"
+        prompt = kwargs.pop("prompt", DEBATER_PROMPT)
+        super().__init__(name=name, description=description, interface=interface, prompt=prompt, llm=llm, outputs_format=DebaterOutput, **kwargs)
 
     def execute(self, question, **kwargs) -> dict:
         context = kwargs.pop('context', None)
@@ -637,5 +638,28 @@ class Debater(Operator):
         else:
             context = ""
         prompt = self.prompt.format(question=question, context=context, **kwargs)
+        response = await self.llm.async_generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
+        return response.get_structured_data()
+
+class CodeReflectorOutput(OperatorOutput):
+    reasoning: str = Field(default="", description="Your reasoning for this problem")
+    correctness: bool = Field(default=False, description="Your conclusion if the solution is correct")
+    answer: str = Field(default = "", description="Your updated answer")
+
+class CodeReflector(Operator):
+    def __init__(self, llm: BaseLLM, **kwargs):
+        name = "CodeReflector"
+        description = "Reflect on code solution correctness and provide updated solution based on test feedback."
+        interface = "code_reflector(question: str, previous_solution: str, traceback: str) -> dict with keys 'reasoning' (str), 'correctness' (bool) and 'answer' (str)"
+        prompt = kwargs.pop("prompt", CODE_REFLECTOR_PROMPT)
+        super().__init__(name=name, description=description, interface=interface, prompt=prompt, llm=llm, outputs_format=CodeReflectorOutput, **kwargs)
+
+    def execute(self, question: str, previous_solution: str, traceback: str, **kwargs) -> dict:
+        prompt = self.prompt.format(question=question, previous_solution=previous_solution, traceback=traceback)
+        response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
+        return response.get_structured_data()
+
+    async def async_execute(self, question: str, previous_solution: str, traceback: str, **kwargs) -> dict:
+        prompt = self.prompt.format(question=question, previous_solution=previous_solution, traceback=traceback)
         response = await self.llm.async_generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
