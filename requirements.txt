@@ -19,6 +19,7 @@ nltk>=3.9.1
 numpy>=1.26.4
 openai>=1.55.3
 litellm>=1.55.6
+dashscope>=1.23.4
 # pydantic>=2.9.0
 pydantic>=2.9.0,<=2.10.6
 pydantic-settings==2.8.1
@@ -33,7 +34,9 @@ matplotlib>=3.10.0
 transformers>=4.47.1
 datasets>=3.4.0
 faiss-cpu==1.8.0.post1
+# faiss-gpu
 textgrad>=0.1.8
+dspy
 
 
 # fast api dependencies
@@ -57,3 +60,15 @@ docker
 googlesearch-python
 wikipedia
 mcp
+
+# rag
+# Should install torch
+neo4j
+ollama
+llama-index
+llama-index-vector-stores-faiss
+llama-index-graph-stores-neo4j
+sentence-transformers
+docx2txt
+python-pptx 
+Pillow
