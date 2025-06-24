@@ -15,7 +15,8 @@ from evoagentx.app.schemas import (
     ExecutionCreate, ExecutionResponse,
     PaginationParams, SearchParams,
     Token, UserCreate, UserResponse, AgentQueryRequest,
-    WorkflowGenerateRequest
+    GoalBasedWorkflowRequest, WorkflowExecutionRequest, StoredWorkflowExecutionRequest,
+    WorkflowGenerationResponse, WorkflowExecutionResponse
 )
 from ..core.logging import logger
 from evoagentx.app.services import AgentService, WorkflowService, WorkflowExecutionService, AgentBackupService, WorkflowGeneratorService
@@ -467,25 +468,30 @@ async def health_check():
         raise HTTPException(status_code=500, detail=f"Database connection error: {str(e)}")
 
 # Workflow Generator Routes
-@workflow_generator_router.post("/workflows/generate", response_model=Dict[str, Any], tags=["Workflow Generator"])
+@workflow_generator_router.post("/workflows/generate", response_model=WorkflowGenerationResponse, tags=["Workflow Generator"])
 async def generate_workflow(
-    request: WorkflowGenerateRequest,
+    request: GoalBasedWorkflowRequest,
     current_user: Dict[str, Any] = Depends(get_current_active_user)
 ):
     """
-    Generate a workflow based on a goal description and LLM configuration.
+    Generate a workflow from a high-level goal using the backbone system.
     
-    This endpoint will:
-    1. Take the provided goal and LLM configuration
-    2. Generate a workflow graph with appropriate tasks and relationships
-    3. Return the serialized workflow that can be stored in a database
+    This endpoint:
+    1. Converts the goal into detailed workflow specifications
+    2. Generates a workflow graph with appropriate tasks and relationships
+    3. Stores the generated workflow in the database
+    4. Returns the workflow graph, task information, and database ID
+    
+    This is the main workflow generation endpoint powered by the backbone system.
     """
     try:
         result = await WorkflowGeneratorService.generate_workflow(
             goal=request.goal,
-            llm_config=request.llm_config
+            llm_config=request.llm_config,
+            additional_info=request.additional_info,
+            user_id=str(current_user['_id'])
         )
-        return result
+        return WorkflowGenerationResponse(**result)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -493,6 +499,84 @@ async def generate_workflow(
         raise HTTPException(
             status_code=500,
             detail=f"An error occurred while generating the workflow: {str(e)}"
+        )
+
+@workflow_generator_router.post("/workflows/execute", response_model=WorkflowExecutionResponse, tags=["Workflow Generator"])
+async def execute_workflow(
+    request: WorkflowExecutionRequest,
+    current_user: Dict[str, Any] = Depends(get_current_active_user)
+):
+    """
+    Execute a workflow graph with the provided inputs and configuration.
+    
+    This endpoint:
+    1. Takes a workflow graph (dict or WorkFlowGraph object)
+    2. Sets up the execution environment with LLM and optional MCP tools
+    3. Executes the workflow with the provided inputs
+    4. Stores execution records in the database
+    5. Returns execution results, status, and database IDs
+    """
+    try:
+        result = await WorkflowGeneratorService.execute_workflow(
+            workflow_graph=request.workflow_graph,
+            llm_config=request.llm_config,
+            inputs=request.inputs,
+            mcp_config=request.mcp_config,
+            user_id=str(current_user['_id'])
+        )
+        return WorkflowExecutionResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error executing workflow: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while executing the workflow: {str(e)}"
+        )
+
+@workflow_generator_router.post("/workflows/{workflow_id}/execute", response_model=WorkflowExecutionResponse, tags=["Workflow Generator"])
+async def execute_stored_workflow(
+    workflow_id: str,
+    request: StoredWorkflowExecutionRequest,
+    current_user: Dict[str, Any] = Depends(get_current_active_user)
+):
+    """
+    Execute a workflow that was previously generated and stored in the database.
+    
+    This endpoint:
+    1. Retrieves the workflow from the database by ID
+    2. Sets up the execution environment with LLM and optional MCP tools
+    3. Executes the workflow with the provided inputs
+    4. Stores execution records in the database
+    5. Returns execution results, status, and database IDs
+    """
+    try:
+        # Get the workflow from database
+        workflow = await WorkflowService.get_workflow(workflow_id)
+        if not workflow:
+            raise HTTPException(status_code=404, detail="Workflow not found")
+        
+        # Extract the workflow graph from the stored definition
+        workflow_graph = workflow["definition"]
+        
+        result = await WorkflowGeneratorService.execute_workflow(
+            workflow_graph=workflow_graph,
+            llm_config=request.llm_config,
+            inputs=request.inputs,
+            mcp_config=request.mcp_config,
+            workflow_id=workflow_id,
+            user_id=str(current_user['_id'])
+        )
+        return WorkflowExecutionResponse(**result)
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as-is
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error executing stored workflow: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while executing the workflow: {str(e)}"
         )
 
 # Export the routers

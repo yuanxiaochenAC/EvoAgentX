@@ -174,3 +174,44 @@ class AgentQueryRequest(BaseModel):
 class WorkflowGenerateRequest(BaseSchema):
     goal: str
     llm_config: Dict[str, Any]
+
+class GoalBasedWorkflowRequest(BaseSchema):
+    goal: str
+    llm_config: Dict[str, Any]
+    additional_info: Optional[Dict[str, Any]] = None
+
+class WorkflowExecutionRequest(BaseSchema):
+    workflow_graph: Dict[str, Any]
+    llm_config: Dict[str, Any]
+    inputs: Dict[str, Any]
+    mcp_config: Optional[Dict[str, Any]] = None
+
+class StoredWorkflowExecutionRequest(BaseSchema):
+    inputs: Dict[str, Any]
+    llm_config: Dict[str, Any]
+    mcp_config: Optional[Dict[str, Any]] = None
+
+class WorkflowGenerationResponse(BaseSchema):
+    success: bool
+    workflow_id: Optional[str] = None
+    workflow_graph: Optional[Dict[str, Any]] = None
+    task_info: Optional[Dict[str, Any]] = None
+    original_goal: str
+    workflow_name: Optional[str] = None
+    workflow_description: Optional[str] = None
+    created_at: Optional[datetime] = None
+    created_by: Optional[str] = None
+    error: Optional[str] = None
+
+class WorkflowExecutionResponse(BaseSchema):
+    success: bool
+    status: str
+    message: Any
+    workflow_id: Optional[str] = None
+    execution_id: Optional[str] = None
+    workflow_received: bool
+    llm_config_received: bool
+    mcp_config_received: bool
+    inputs: Dict[str, Any]
+    created_at: Optional[datetime] = None
+    error: Optional[str] = None

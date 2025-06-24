@@ -2,10 +2,18 @@
 Business logic for agents, workflows, and executions.
 """
 import logging
+import os
+import json
+import uuid
+import glob
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 from bson import ObjectId
-from evoagentx.models.model_configs import OpenAILLMConfig
+
+from evoagentx.models.model_configs import OpenAILLMConfig, LLMConfig
+from evoagentx.models.openai_model import OpenAILLM
+from evoagentx.models.litellm_model import LiteLLM
+from evoagentx.models.siliconflow_model import SiliconFlowLLM
 
 from evoagentx.app.db import (
     Database, AgentStatus, WorkflowStatus, ExecutionStatus
@@ -14,8 +22,7 @@ from evoagentx.app.schemas import (
     AgentCreate, AgentUpdate, WorkflowCreate, WorkflowUpdate, 
     ExecutionCreate, PaginationParams, SearchParams, AgentQueryRequest
 )
-from evoagentx.app.shared import agent_manager
-
+from evoagentx.app.backbone import goal_based_workflow_generation, workflow_execution
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +30,7 @@ logger = logging.getLogger(__name__)
 class AgentService:
     @staticmethod
     async def create_agent(agent_data: AgentCreate, user_id: Optional[str] = None) -> Dict[str, Any]:
-        """Create a new agent and add it to the AgentManager."""
+        """Create a new agent."""
         agent_dict = agent_data.dict()
         agent_dict["created_by"] = user_id
         agent_dict["created_at"] = datetime.utcnow()
@@ -34,30 +41,6 @@ class AgentService:
         existing_agent = await Database.agents.find_one({"name": agent_dict["name"]})
         if existing_agent:
             raise ValueError(f"Agent with name '{agent_dict['name']}' already exists")
-                
-        try:
-            # Create OpenAILLMConfig from the configuration
-            llm_config = OpenAILLMConfig(
-                llm_type=agent_dict["config"]["llm_type"],
-                model=agent_dict["config"]["model"],
-                openai_key=agent_dict["config"]["openai_key"],
-                temperature=agent_dict["config"]["temperature"],
-                max_tokens=agent_dict["config"]["max_tokens"],
-                top_p=agent_dict["config"]["top_p"],
-                output_response=agent_dict["config"]["output_response"]
-            )
-            
-            agent_manager.add_agent({
-                "name": agent_dict["name"],
-                "description": agent_dict["description"],
-                "prompt": agent_dict["config"]["prompt"],
-                "llm_config": llm_config,
-                "runtime_params": agent_dict["runtime_params"],
-            })
-            logger.info(f"Added agent {agent_dict['name']} to AgentManager")
-        except Exception as e:
-            logger.error(f"Failed to add agent {agent_dict['name']} to AgentManager: {e}, agent_dict: {agent_dict}")
-            raise ValueError(f"Failed to add agent to AgentManager: {e}")
         
         try:
             result = await Database.agents.insert_one(agent_dict)
@@ -67,8 +50,6 @@ class AgentService:
         except Exception as e:
             logger.error(f"Failed to add agent {agent_dict['name']} to Database: {e}, agent_dict: {agent_dict}")
             raise ValueError(f"Failed to add agent to Database: {e}")
-        
-
     
     @staticmethod
     async def get_agent(agent_id: str) -> Optional[Dict[str, Any]]:
@@ -123,66 +104,15 @@ class AgentService:
         
         # Get the updated agent with all fields merged
         updated_agent = await Database.agents.find_one({"_id": ObjectId(agent_id)})
-        
-        # Update in agent_manager if it exists there
-        agent_id_to_preserve = None
-        try:
-            # Check if agent exists in manager
-            agent_exists_in_manager = agent_manager.has_agent(agent_name=agent["name"])
-            
-            if agent_exists_in_manager:
-                # Get the current agent from manager to preserve its ID
-                current_agent = agent_manager.get_agent(agent_name=agent["name"])
-                agent_id_to_preserve = current_agent.agent_id
-                
-                # Remove old agent from manager
-                agent_manager.remove_agent(agent_name=agent["name"])
-            
-            # Create config
-            llm_config = OpenAILLMConfig(
-                llm_type=updated_agent["config"]["llm_type"],
-                model=updated_agent["config"]["model"],
-                openai_key=updated_agent["config"]["openai_key"],
-                temperature=updated_agent["config"]["temperature"],
-                max_tokens=updated_agent["config"]["max_tokens"],
-                top_p=updated_agent["config"]["top_p"],
-                output_response=updated_agent["config"]["output_response"]
-            )
-            
-            # Add updated agent to manager with preserved ID if it existed before
-            agent_dict = {
-                "name": updated_agent["name"],
-                "description": updated_agent["description"],
-                "prompt": updated_agent["config"]["prompt"],
-                "llm_config": llm_config,
-                "runtime_params": updated_agent["runtime_params"]
-            }
-            
-            # Add the agent_id only if we had one before
-            if agent_id_to_preserve:
-                agent_dict["agent_id"] = agent_id_to_preserve
-                
-            agent_manager.add_agent(agent_dict)
-            logger.info(f"Updated agent {agent_id} in AgentManager")
-        except Exception as e:
-            logger.error(f"Failed to update agent {agent_id} in AgentManager: {e}")
-            # Don't raise an error here - we want the database update to succeed
-            # even if the agent_manager update fails
-        
         logger.info(f"Updated agent {agent_id}")
         
         return updated_agent
     
     @staticmethod
     async def delete_agent(agent_id: str) -> bool:
-        """Delete an agent and remove it from the AgentManager."""
+        """Delete an agent."""
         if not ObjectId.is_valid(agent_id):
             raise ValueError(f"Invalid agent ID: {agent_id}")
-          
-        # Remove the agent from the AgentManager
-        agent = await Database.agents.find_one({"_id": ObjectId(agent_id)})
-        if agent:
-            agent_manager.remove_agent(agent_name=agent["name"])
           
         # Check if agent is used in any workflows
         workflow_count = await Database.workflows.count_documents({"agent_ids": agent_id})
@@ -242,22 +172,27 @@ class AgentService:
             raise ValueError(f"Agent with ID {agent_id} not found")
 
         try:
-            # Get the agent instance from the manager
-            agent_instance = agent_manager.get_agent(agent_name=agent_data["name"])
-            
             # Get the model type from config
-            llm_type = agent_instance.llm_config.llm_type.lower()
+            llm_type = agent_data["config"]["llm_type"].lower()
+            
+            # Create LLM config
+            llm_config = LLMConfig(
+                llm_type=agent_data["config"]["llm_type"],
+                model=agent_data["config"]["model"],
+                openai_key=agent_data["config"]["openai_key"],
+                temperature=agent_data["config"]["temperature"],
+                max_tokens=agent_data["config"]["max_tokens"],
+                top_p=agent_data["config"]["top_p"],
+                output_response=agent_data["config"]["output_response"]
+            )
             
             # Initialize the appropriate LLM based on type
             if llm_type == "openaillm":
-                from evoagentx.models.openai_model import OpenAILLM
-                llm = OpenAILLM(config=agent_instance.llm_config)
+                llm = OpenAILLM(config=llm_config)
             elif llm_type == "litellm":
-                from evoagentx.models.litellm_model import LiteLLM
-                llm = LiteLLM(config=agent_instance.llm_config)
+                llm = LiteLLM(config=llm_config)
             elif llm_type == "siliconflow":
-                from evoagentx.models.siliconflow_model import SiliconFlowLLM
-                llm = SiliconFlowLLM(config=agent_instance.llm_config)
+                llm = SiliconFlowLLM(config=llm_config)
             else:
                 raise ValueError(f"Unsupported model type: {llm_type}")
             
@@ -268,8 +203,9 @@ class AgentService:
             messages = []
             
             # Add system message if present
-            if agent_instance.system_prompt:
-                messages.append({"role": "system", "content": agent_instance.system_prompt})
+            system_prompt = agent_data["config"].get("prompt", "")
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
             
             # Add conversation history if provided
             if query.history:
@@ -284,43 +220,6 @@ class AgentService:
         except Exception as e:
             logger.error(f"Error querying agent {agent_id}: {str(e)}")
             raise ValueError(f"Error querying agent: {str(e)}")
-
-    # @staticmethod
-    # async def execute_agent_action(agent_id: str, action_name: str, action_params: Dict[str, Any], user_id: str) -> Dict[str, Any]:
-    #     """Execute an action using a specific agent."""
-    #     try:
-    #         # Validate agent ID
-    #         agent = await Database.agents.find_one({"_id": ObjectId(agent_id)})
-    #         if not agent:
-    #             return {"success": False, "error": "Agent not found"}
-
-    #         # Check if the current user is the creator of the agent
-    #         # if agent["created_by"] != user_id:
-    #         #     return {"success": False, "error": "You do not have permission to execute this agent"}
-
-    #         # Retrieve the agent instance from the manager
-    #         agent_instance = agent_manager.get_agent(agent_name=agent["name"])
-
-    #         # Check if the action is valid
-    #         if action_name not in [action.name for action in agent_instance.get_all_actions()]:
-    #             return {"success": False, "error": f"Invalid action '{action_name}' for agent '{agent['name']}', allowed actions: {agent_instance.get_all_actions()}"}
-
-    #         # Execute the action
-    #         result_message = agent_instance.execute(
-    #             action_name=action_name,
-    #             action_input_data=action_params
-    #         )
-
-    #         # Return the result
-    #         return {
-    #             "success": True,
-    #             "result": result_message.content,
-    #             "prompt": result_message.prompt
-    #         }
-
-    #     except Exception as e:
-    #         logger.error(f"Error executing action '{action_name}' for agent '{agent_id}': {str(e)}")
-    #         return {"success": False, "error": f"Internal server error: {str(e)}"}
 
 # Workflow Service
 class WorkflowService:
@@ -529,10 +428,6 @@ class WorkflowExecutionService:
         
         logger.info(f"Created workflow execution {result.inserted_id}")
         
-        # Optional: Queue execution for async processing
-        # This would typically use a task queue like Celery
-        # await execute_workflow_async.delay(execution_dict)
-        
         return execution_dict
     
     @staticmethod
@@ -560,6 +455,23 @@ class WorkflowExecutionService:
         
         if error_message:
             update_data["error_message"] = error_message
+        
+        result = await Database.executions.find_one_and_update(
+            {"_id": ObjectId(execution_id)},
+            {"$set": update_data},
+            return_document=True
+        )
+        
+        return result
+    
+    @staticmethod
+    async def update_execution(execution_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update execution with arbitrary data."""
+        if not ObjectId.is_valid(execution_id):
+            raise ValueError(f"Invalid execution ID: {execution_id}")
+        
+        # Always update the timestamp
+        update_data["updated_at"] = datetime.utcnow()
         
         result = await Database.executions.find_one_and_update(
             {"_id": ObjectId(execution_id)},
@@ -661,24 +573,20 @@ class AgentBackupService:
         agent = await Database.agents.find_one({"_id": ObjectId(agent_id)})
         if not agent:
             raise ValueError(f"Agent with ID {agent_id} not found in database")
-            
-        # Check if agent exists in the AgentManager
-        agent_name = agent["name"]
-        if not agent_manager.has_agent(agent_name):
-            raise ValueError(f"Agent '{agent_name}' is not in the AgentManager (not running)")
-            
-        # Get the agent instance from manager
-        agent_instance = agent_manager.get_agent(agent_name=agent["name"])
         
         # Create backup directory if it doesn't exist
-        import os
         backup_dir = os.path.dirname(backup_path)
         if backup_dir and not os.path.exists(backup_dir):
             os.makedirs(backup_dir)
         
         # Save the agent to the specified path
         try:
-            agent_instance.save_module(path=backup_path)
+            with open(backup_path, 'w') as f:
+                # Convert ObjectId to string for JSON serialization
+                agent_copy = dict(agent)
+                agent_copy["_id"] = str(agent_copy["_id"])
+                json.dump(agent_copy, f, indent=2, default=str)
+            
             return {
                 "success": True,
                 "message": f"Agent backup saved to {backup_path}",
@@ -693,10 +601,6 @@ class AgentBackupService:
     @staticmethod
     async def restore_agent_backup(backup_path: str) -> Dict[str, Any]:
         """Restore an agent from a backup file and create it in the database."""
-        import os
-        import json
-        import uuid
-        
         if not os.path.exists(backup_path):
             raise ValueError(f"Backup file not found: {backup_path}")
             
@@ -724,42 +628,26 @@ class AgentBackupService:
             uuid_suffix = uuid.uuid4().hex[-8:]
             new_name = f"{base_name}_{uuid_suffix}"
             
-            # Get config data from the backup
-            config_data = agent_data.get("llm_config", {})
-            if not config_data and "config" in agent_data:
-                # Try the top-level config if llm_config doesn't exist
-                config_data = agent_data.get("config", {})
+            # Remove _id field if it exists (we'll generate a new one)
+            if "_id" in agent_data:
+                del agent_data["_id"]
             
-            # Create agent data in the format expected by AgentCreate
-            agent_create = AgentCreate(
-                name=new_name,
-                description=agent_data.get("description", "Restored agent"),
-                config={
-                    "llm_type": config_data.get("llm_type", "OpenAILLM"),
-                    "model": config_data.get("model", "gpt-3.5-turbo"),
-                    "openai_key": config_data.get("openai_key", ""),
-                    "temperature": config_data.get("temperature", 0.7),
-                    "max_tokens": config_data.get("max_tokens", 150),
-                    "top_p": config_data.get("top_p", 0.9),
-                    "output_response": config_data.get("output_response", True),
-                    "prompt": agent_data.get("system_prompt", "You are a helpful assistant.")
-                },
-                runtime_params=agent_data.get("runtime_params", {}),
-                tags=agent_data.get("tags", ["restored"])
-            )
+            # Update the name
+            agent_data["name"] = new_name
+            agent_data["created_at"] = datetime.utcnow()
+            agent_data["updated_at"] = agent_data["created_at"]
+            agent_data["status"] = AgentStatus.CREATED
             
             # Create the agent using AgentService
-            created_agent = await AgentService.create_agent(
-                agent_data=agent_create,
-                user_id=None  # User ID is not available from the backup
-            )
+            result = await Database.agents.insert_one(agent_data)
+            agent_data["_id"] = result.inserted_id
             
             return {
                 "success": True,
                 "message": f"Agent restored from {backup_path} with new name {new_name}",
-                "agent_id": str(created_agent["_id"]),
+                "agent_id": str(result.inserted_id),
                 "backup_path": backup_path,
-                "agent_name": created_agent["name"]
+                "agent_name": new_name
             }
         except Exception as e:
             logger.error(f"Failed to restore agent from backup: {str(e)}")
@@ -777,9 +665,6 @@ class AgentBackupService:
             raise ValueError(f"Agent with ID {agent_id} not found")
             
         try:
-            import os
-            import glob
-            
             # Create backup directory if it doesn't exist
             if not os.path.exists(backup_dir):
                 os.makedirs(backup_dir)
@@ -809,7 +694,7 @@ class AgentBackupService:
     @staticmethod
     async def backup_all_agents(backup_dir: str) -> Dict[str, Any]:
         """
-        Backup all agents in the AgentManager to the specified directory.
+        Backup all agents in the database to the specified directory.
         
         Args:
             backup_dir: Directory where agent backups will be stored
@@ -817,51 +702,38 @@ class AgentBackupService:
         Returns:
             Dict with results of the batch backup operation
         """
-        import os
-        
-        # Create backup directory if it doesn't exist
         if not os.path.exists(backup_dir):
             os.makedirs(backup_dir)
             
-        # Get all agent names from the AgentManager
-        agent_names = agent_manager.list_agents()
+        # Get all agents from the database
+        agents = await Database.agents.find({}).to_list(length=None)
         
         results = []
         success_count = 0
         error_count = 0
         
-        # Backup each agent in the AgentManager
-        for agent_name in agent_names:
+        # Backup each agent
+        for agent in agents:
             try:
-                # Find the agent in the database
-                agent = await Database.agents.find_one({"name": agent_name})
-                if not agent:
-                    results.append({
-                        "success": False,
-                        "agent_name": agent_name,
-                        "error": f"Agent '{agent_name}' found in AgentManager but not in database"
-                    })
-                    error_count += 1
-                    continue
-                
                 agent_id = str(agent["_id"])
+                agent_name = agent["name"]
                 backup_path = os.path.join(backup_dir, f"{agent_name}_backup.json")
                 
                 result = await AgentBackupService.save_agent_backup(agent_id, backup_path)
                 results.append(result)
                 success_count += 1
             except Exception as e:
-                logger.error(f"Failed to back up agent {agent_name}: {str(e)}")
+                logger.error(f"Failed to back up agent {agent.get('name', 'unknown')}: {str(e)}")
                 results.append({
                     "success": False,
-                    "agent_name": agent_name,
+                    "agent_name": agent.get("name", "unknown"),
                     "error": str(e)
                 })
                 error_count += 1
                 
         return {
             "success": error_count == 0,
-            "total": len(agent_names),
+            "total": len(agents),
             "successful": success_count,
             "failed": error_count,
             "backup_dir": backup_dir,
@@ -871,7 +743,7 @@ class AgentBackupService:
     @staticmethod
     async def backup_agents(agent_ids: List[str], backup_dir: str) -> Dict[str, Any]:
         """
-        Backup specific agents to the specified directory, only if they exist in the AgentManager.
+        Backup specific agents to the specified directory.
         
         Args:
             agent_ids: List of agent IDs to back up
@@ -880,18 +752,12 @@ class AgentBackupService:
         Returns:
             Dict with results of the batch backup operation
         """
-        import os
-        
-        # Create backup directory if it doesn't exist
         if not os.path.exists(backup_dir):
             os.makedirs(backup_dir)
             
         results = []
         success_count = 0
         error_count = 0
-        
-        # Get all agent names in the AgentManager
-        agent_names_in_manager = agent_manager.list_agents()
         
         # Backup each specified agent
         for agent_id in agent_ids:
@@ -908,18 +774,6 @@ class AgentBackupService:
                     continue
                     
                 agent_name = agent["name"]
-                
-                # Check if agent is in the AgentManager
-                if agent_name not in agent_names_in_manager:
-                    results.append({
-                        "success": False,
-                        "agent_id": agent_id,
-                        "agent_name": agent_name,
-                        "error": f"Agent '{agent_name}' is not in the AgentManager (not running)"
-                    })
-                    error_count += 1
-                    continue
-                
                 backup_path = os.path.join(backup_dir, f"{agent_name}_backup.json")
                 
                 result = await AgentBackupService.save_agent_backup(agent_id, backup_path)
@@ -992,10 +846,6 @@ class AgentBackupService:
         Returns:
             Dict with results of the batch restore operation
         """
-        import os
-        import glob
-        
-        # Check if directory exists
         if not os.path.exists(backup_dir):
             raise ValueError(f"Backup directory not found: {backup_dir}")
             
@@ -1014,43 +864,172 @@ class AgentBackupService:
 
 class WorkflowGeneratorService:
     @staticmethod
-    async def generate_workflow(goal: str, llm_config: Dict[str, Any]) -> Dict[str, Any]:
+    async def generate_workflow(goal: str, llm_config: Dict[str, Any], additional_info: Optional[Dict[str, Any]] = None, user_id: Optional[str] = None) -> Dict[str, Any]:
         """
-        Generate a workflow graph based on a goal and LLM configuration.
+        Generate a workflow graph based on a goal and LLM configuration using the backbone system.
+        Also stores the generated workflow in the database.
         
         Args:
             goal: The goal or task description for the workflow
             llm_config: Configuration for the language model
+            additional_info: Optional additional context or instructions
+            user_id: ID of the user creating the workflow
             
         Returns:
-            A serialized workflow graph that can be stored in the database
+            A result dict containing the workflow graph, task information, and database ID
         """
         try:
-            # Create the LLM config
-            from evoagentx.models.model_configs import OpenAILLMConfig
-            from evoagentx.models.openai_model import OpenAILLM
-            from evoagentx.workflow.workflow_generator import WorkFlowGenerator
-            from evoagentx.utils.workflow_serialization import workflow_graph_to_dict
+            # Use the backbone goal-based workflow generation
+            logger.info(f"Generating workflow using backbone for goal: {goal}")
+            result = await goal_based_workflow_generation(
+                goal=goal,
+                llm_config=llm_config,
+                additional_info=additional_info
+            )
             
-            # Configure LLM
-            config = OpenAILLMConfig(**llm_config)
-            llm = OpenAILLM(config=config)
+            # If generation was successful and we have a workflow graph, store it in database
+            if result.get("success") and result.get("workflow_graph"):
+                try:
+                    # Extract workflow information - workflow_graph is always a dict from backbone
+                    workflow_graph_dict = result["workflow_graph"]
+                    task_info = result.get("task_info", {})
+        
+                    # Create workflow name and description
+                    workflow_name = task_info.get("workflow_name", f"Generated Workflow for: {goal[:50]}...")
+                    workflow_description = task_info.get("workflow_description", f"Auto-generated workflow from goal: {goal}")
+        
+                    # The workflow_graph is already a dictionary from backbone, ready for storage
+                    workflow_definition = workflow_graph_dict
+                    
+                    # Create WorkflowCreate object and store using WorkflowService
+                    workflow_create = WorkflowCreate(
+                        name=workflow_name,
+                        description=workflow_description,
+                        definition=workflow_definition,
+                        tags=["auto-generated", "goal-based"]
+                    )
+                    
+                    created_workflow = await WorkflowService.create_workflow(
+                        workflow_data=workflow_create,
+                        user_id=user_id
+                    )
+                    
+                    workflow_id = str(created_workflow["_id"])
+                    
+                    result["workflow_id"] = workflow_id
+                    result["created_at"] = datetime.utcnow()
+                    result["created_by"] = user_id
+                    logger.info(f"Successfully stored generated workflow with ID: {workflow_id}")
+                except Exception as e:
+                    logger.warning(f"Failed to store workflow in database: {str(e)}")
+                    # Don't fail the entire generation if storage fails
+                    result["storage_warning"] = f"Workflow generated but not stored: {str(e)}"
             
-            # Initialize workflow generator
-            workflow_generator = WorkFlowGenerator(llm=llm)
-            
-            # Generate workflow
-            logger.info(f"Generating workflow for goal: {goal}")
-            workflow_graph = workflow_generator.generate_workflow(goal=goal)
-            
-            # Convert to dictionary (only built-in types)
-            workflow_dict = workflow_graph_to_dict(workflow_graph)
-            
-            return {
-                "success": True,
-                "workflow": workflow_dict,
-                "goal": goal
-            }
+            return result
         except Exception as e:
             logger.error(f"Failed to generate workflow: {str(e)}")
             raise ValueError(f"Failed to generate workflow: {str(e)}")
+    
+
+    @staticmethod
+    async def execute_workflow(workflow_graph, llm_config: Dict[str, Any], inputs: Dict[str, Any], mcp_config: Optional[Dict[str, Any]] = None, workflow_id: Optional[str] = None, user_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Execute a workflow graph with the given configuration.
+        Also stores execution records in the database.
+        
+        Args:
+            workflow_graph: The workflow graph object (WorkFlowGraph) or dict to execute
+            llm_config: LLM configuration dictionary
+            inputs: Input parameters for the workflow execution
+            mcp_config: Optional MCP configuration dictionary
+            workflow_id: Optional workflow ID if executing a stored workflow
+            user_id: ID of the user executing the workflow
+            
+        Returns:
+            Dict containing execution results, status, and database IDs
+        """
+        execution_id = None
+        try:
+            # Create execution record first using WorkflowExecutionService
+            if workflow_id:
+                try:
+                    execution_create = ExecutionCreate(
+                        workflow_id=workflow_id,
+                        input_params=inputs
+                    )
+                    
+                    execution_record = await WorkflowExecutionService.create_execution(
+                        execution_data=execution_create,
+                        user_id=user_id
+                    )
+                    execution_id = str(execution_record["_id"])
+                    
+                    # Update status to running
+                    await WorkflowExecutionService.update_execution_status(
+                        execution_id=execution_id,
+                        status=ExecutionStatus.RUNNING
+                    )
+                    logger.info(f"Created execution record with ID: {execution_id}")
+                except Exception as e:
+                    logger.warning(f"Failed to create execution record: {e}")
+            
+            # Use the backbone workflow execution
+            logger.info("Executing workflow using backbone")
+            result = await workflow_execution(
+                workflow_graph=workflow_graph,
+                llm_config=llm_config,
+                inputs=inputs,
+                mcp_config=mcp_config
+            )
+            
+            # Update execution record with results using WorkflowExecutionService
+            if execution_id and result.get("success"):
+                try:
+                    # Update status and results in one call
+                    await WorkflowExecutionService.update_execution(
+                        execution_id=execution_id,
+                        update_data={
+                            "status": ExecutionStatus.COMPLETED,
+                            "end_time": datetime.utcnow(),
+                            "results": result
+                        }
+                    )
+                    logger.info(f"Updated execution record {execution_id} with success")
+                except Exception as e:
+                    logger.warning(f"Failed to update execution record: {e}")
+            elif execution_id and not result.get("success"):
+                try:
+                    await WorkflowExecutionService.update_execution_status(
+                        execution_id=execution_id,
+                        status=ExecutionStatus.FAILED,
+                        error_message=result.get("error", "Unknown error")
+                    )
+                    logger.info(f"Updated execution record {execution_id} with failure")
+                except Exception as e:
+                    logger.warning(f"Failed to update execution record: {e}")
+            
+            # Add database IDs to result
+            if workflow_id:
+                result["workflow_id"] = workflow_id
+            if execution_id:
+                result["execution_id"] = execution_id
+                result["created_at"] = datetime.utcnow()
+            
+            return result
+        except Exception as e:
+            # Update execution record with error if it exists
+            if execution_id:
+                try:
+                    await WorkflowExecutionService.update_execution(
+                        execution_id=execution_id,
+                        update_data={
+                            "status": ExecutionStatus.FAILED,
+                            "end_time": datetime.utcnow(),
+                            "error_message": str(e)
+                        }
+                    )
+                except Exception as update_error:
+                    logger.warning(f"Failed to update execution record with error: {update_error}")
+            
+            logger.error(f"Failed to execute workflow: {str(e)}")
+            raise ValueError(f"Failed to execute workflow: {str(e)}")

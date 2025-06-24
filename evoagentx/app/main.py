@@ -18,9 +18,9 @@ from evoagentx.app.api import (
     agents_router,
     workflows_router,
     executions_router,
-    system_router
+    system_router,
+    workflow_generator_router
 )
-from evoagentx.app.shared import agent_manager
 
 # Configure logging
 logging.basicConfig(
@@ -43,9 +43,6 @@ async def lifespan(app: FastAPI):
         
         # Initialize users collection and create admin user if not exists
         await init_users_collection()
-        
-        # Initialize the agent manager
-        agent_manager.init_module()
         
         logger.info("Application startup completed successfully")
         yield
@@ -85,6 +82,7 @@ app.include_router(agents_router)
 app.include_router(workflows_router)
 app.include_router(executions_router)
 app.include_router(system_router)
+app.include_router(workflow_generator_router)
 
 # Global exception handlers
 @app.exception_handler(RequestValidationError)
