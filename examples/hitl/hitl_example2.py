@@ -1,13 +1,14 @@
+# this example shows the use case of HITLUserInputCollectorAgent, an Agent which enable a full user input in a single WorkFlow Node
+
 import asyncio
 from dotenv import load_dotenv
 import os
 from typing import Optional
 from pydantic import Field
-from evoagentx.models.base_model import BaseLLM
 from evoagentx.workflow import WorkFlow, WorkFlowGraph
 from evoagentx.workflow.workflow_graph import WorkFlowNode, WorkFlowEdge
-from evoagentx.agents import Agent, CustomizeAgent, AgentManager
-from evoagentx.actions import Action, ActionInput, ActionOutput
+from evoagentx.agents import CustomizeAgent, AgentManager
+from evoagentx.actions import ActionInput, ActionOutput
 from evoagentx.hitl import (
     HITLUserInputCollectorAgent,
     HITLManager
@@ -26,59 +27,6 @@ class UserProfileInput(ActionInput):
 class UserProfileOutput(ActionOutput):
     profile_summary: str = Field(description="User's profile summary")
     recommendations: str = Field(description="Personalized recommendations based on user information")
-
-# class ProfileProcessingAction(Action):
-#     def __init__(
-#         self,
-#         name: str="ProfileProcessingAction",
-#         description: str="Process user's profile and generate recommendations",
-#         prompt: str="Generate profile summary and personalized recommendations based on the following user information:\nName: {user_name}\nAge: {user_age}\nEmail: {user_email}\nPreferences: {user_preferences}\n\nPlease provide profile summary and personalized recommendations.",
-#         inputs_format: ActionInput=None,
-#         outputs_format: ActionOutput=None,
-#         **kwargs
-#     ):
-#         inputs_format = inputs_format or UserProfileInput
-#         outputs_format = outputs_format or UserProfileOutput
-#         super().__init__(
-#             name=name,
-#             description=description,
-#             prompt=prompt,
-#             inputs_format=inputs_format,
-#             outputs_format=outputs_format,
-#             **kwargs
-#         )
-    
-#     def execute(
-#         self, 
-#         llm: Optional[BaseLLM] = None, 
-#         inputs: Optional[dict] = None, 
-#         sys_msg: Optional[str] = None, 
-#         return_prompt: bool = False, 
-#         **kwargs
-#     ) -> UserProfileOutput:
-#         action_input_attrs = self.inputs_format.get_attrs()
-#         action_input_data = {attr: inputs.get(attr, "not provided") for attr in action_input_attrs}
-#         prompt = self.prompt.format(**action_input_data)
-        
-#         output = llm.generate(
-#             prompt=prompt, 
-#             system_message=sys_msg or "You are a professional user profile analyst.",
-#             parser=self.outputs_format, 
-#             parse_mode="json"
-#         )
-#         if return_prompt:
-#             return output, prompt
-#         return output
-
-#     async def async_execute(
-#         self, 
-#         llm: Optional[BaseLLM] = None, 
-#         inputs: dict = None, 
-#         sys_msg: str = None, 
-#         return_prompt: bool = False, 
-#         **kwargs
-#     ) -> UserProfileOutput:
-#         return self.execute(llm, inputs, sys_msg, return_prompt, **kwargs)
 
 async def main():
     print("🚀 EvoAgentX HITL user input collection example")
@@ -120,13 +68,6 @@ async def main():
         input_fields=user_input_fields,
     )
 
-    # create profile processing agent
-    # profile_processor = Agent(
-    #     name="ProfileProcessor",
-    #     description="process user's profile and generate recommendations",
-    #     actions=[ProfileProcessingAction()],
-    #     llm_config=llm_config,
-    # )
     profile_processor = CustomizeAgent(
         name="ProfileProcessor",
         description="process user's profile and generate recommendations",
