@@ -62,9 +62,9 @@ def build_sequential_workflow():
     )
 
     # [optional] save the workflow graph to a file 
-    # graph.save_module("examples/output/saved_sequential_workflow.json")
+    graph.save_module("debug/tool/sequential_workflow.json")
     # [optional] load the workflow graph from a file 
-    # graph = SequentialWorkFlowGraph.from_file("examples/output/saved_sequential_workflow.json")
+    graph = SequentialWorkFlowGraph.from_file("debug/tool/sequential_workflow.json")
     
     # create agent instance from the workflow graph 
     agent_manager = AgentManager(tools = [FileToolKit()])

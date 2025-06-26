@@ -16,6 +16,7 @@ from ..utils.utils import generate_dynamic_class_name, make_parent_folder
 from ..actions.customize_action import CustomizeAction
 from ..tools.tool import Tool
 from ..actions.action import ActionInput
+from ..tools.tool import ToolKit
 
 
 class CustomizeAgent(Agent):
@@ -438,10 +439,10 @@ class CustomizeAgent(Agent):
         return config
     
     @classmethod
-    def load_module(cls, path: str, llm_config: LLMConfig = None, tool_dict: dict = None, **kwargs) -> "CustomizeAgent":
+    def load_module(cls, path: str, llm_config: LLMConfig = None, tools: List[ToolKit] = None, **kwargs) -> "CustomizeAgent":
         """
         load the agent from local storage. Must provide `llm_config` when loading the agent from local storage. 
-            If tool_names is provided, tool_dict must also be provided. 
+            If tools is provided, tool_names must also be provided. 
 
         Args:
             path: The path of the file
@@ -452,8 +453,12 @@ class CustomizeAgent(Agent):
         Returns:
             CustomizeAgent: The loaded agent instance
         """
+        match_dict = {}
+        if tools:
+            for tool in tools:
+                match_dict[tool.name] = tool
         agent = super().load_module(path=path, llm_config=llm_config, **kwargs)
-        agent["tools"] = [tool_dict[tool_name] for tool_name in agent["tool_names"]]
+        agent["tools"] = [match_dict[tool_name] for tool_name in agent["tool_names"]]
         return agent 
     
     def save_module(self, path: str, ignore: List[str] = [], **kwargs)-> str:

@@ -31,10 +31,13 @@ def test_MCP_server():
         ],
         tools=tools
     )
+    code_writer.save_module("debug/tool/code_writer.json")
+    code_writer.load_module("debug/tool/code_writer.json", llm_config=openai_config, tools=tools)
 
     message = code_writer(
         inputs={"instruction": "lets try **get_stock_info** tool to get the stock info of **AAPL**"}
     )
+    
     print(f"Response from {code_writer.name}:")
     print(message.content.result)
 
