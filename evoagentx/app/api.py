@@ -458,8 +458,9 @@ async def get_execution_logs(
 async def health_check():
     """Simple health check endpoint."""
     try:
+        from evoagentx.app.db import database
         # You can add more comprehensive health checks here
-        await Database.db.command('ping')
+        await database.ping()
         return {
             "status": "healthy", 
             "version": "1.0.0"

@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     MONGODB_URL: str
     MONGODB_DB_NAME: str
     
+    # Supabase settings
+    SUPABASE_URL: str
+    SUPABASE_KEY: str
+    
     # JWT Authentication
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int

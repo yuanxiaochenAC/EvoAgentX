@@ -21,3 +21,4 @@ httpx==0.24.1
 asgi-lifespan==1.0.1
 python-dotenv==1.0.0
 loguru==0.7.3
+supabase

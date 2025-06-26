@@ -16,7 +16,7 @@ from evoagentx.models.litellm_model import LiteLLM
 from evoagentx.models.siliconflow_model import SiliconFlowLLM
 
 from evoagentx.app.db import (
-    Database, AgentStatus, WorkflowStatus, ExecutionStatus
+    database, AgentStatus, WorkflowStatus, ExecutionStatus
 )
 from evoagentx.app.schemas import (
     AgentCreate, AgentUpdate, WorkflowCreate, WorkflowUpdate, 
@@ -38,14 +38,14 @@ class AgentService:
         agent_dict["status"] = AgentStatus.CREATED
         
         # Validate agent exists with the same name
-        existing_agent = await Database.agents.find_one({"name": agent_dict["name"]})
+        existing_agent = await database.find_one("agents", {"name": agent_dict["name"]})
         if existing_agent:
             raise ValueError(f"Agent with name '{agent_dict['name']}' already exists")
         
         try:
-            result = await Database.agents.insert_one(agent_dict)
-            agent_dict["_id"] = result.inserted_id
-            logger.info(f"Created agent {agent_dict['name']} with ID {result.inserted_id}")
+            result_id = await database.write("agents", agent_dict)
+            agent_dict["_id"] = result_id
+            logger.info(f"Created agent {agent_dict['name']} with ID {result_id}")
             return agent_dict
         except Exception as e:
             logger.error(f"Failed to add agent {agent_dict['name']} to Database: {e}, agent_dict: {agent_dict}")
@@ -57,13 +57,13 @@ class AgentService:
         if not ObjectId.is_valid(agent_id):
             raise ValueError(f"Invalid agent ID: {agent_id}")
             
-        agent = await Database.agents.find_one({"_id": ObjectId(agent_id)})
+        agent = await database.find_one("agents", {"_id": ObjectId(agent_id)})
         return agent
     
     @staticmethod
     async def get_agent_by_name(name: str) -> Optional[Dict[str, Any]]:
         """Get an agent by name."""
-        return await Database.agents.find_one({"name": name})
+        return await database.find_one("agents", {"name": name})
     
     @staticmethod
     async def update_agent(agent_id: str, agent_data: AgentUpdate) -> Optional[Dict[str, Any]]:
@@ -71,7 +71,7 @@ class AgentService:
         if not ObjectId.is_valid(agent_id):
             raise ValueError(f"Invalid agent ID: {agent_id}")
             
-        agent = await Database.agents.find_one({"_id": ObjectId(agent_id)})
+        agent = await database.find_one("agents", {"_id": ObjectId(agent_id)})
         if not agent:
             return None
         
@@ -80,7 +80,7 @@ class AgentService:
         
         if "name" in update_data:
             # Check if the new name already exists
-            existing = await Database.agents.find_one({
+            existing = await database.find_one("agents", {
                 "name": update_data["name"],
                 "_id": {"$ne": ObjectId(agent_id)}
             })
@@ -97,13 +97,14 @@ class AgentService:
             logger.info(f"Merged config update for agent {agent_id}: {update_data['config']}")
         
         # Update in database
-        await Database.agents.update_one(
+        await database.update(
+            "agents",
             {"_id": ObjectId(agent_id)},
             {"$set": update_data}
         )
         
         # Get the updated agent with all fields merged
-        updated_agent = await Database.agents.find_one({"_id": ObjectId(agent_id)})
+        updated_agent = await database.find_one("agents", {"_id": ObjectId(agent_id)})
         logger.info(f"Updated agent {agent_id}")
         
         return updated_agent
@@ -115,12 +116,12 @@ class AgentService:
             raise ValueError(f"Invalid agent ID: {agent_id}")
           
         # Check if agent is used in any workflows
-        workflow_count = await Database.workflows.count_documents({"agent_ids": agent_id})
+        workflow_count = await database.count("workflows", {"agent_ids": agent_id})
         if workflow_count > 0:
             raise ValueError(f"Cannot delete agent {agent_id} as it is used in {workflow_count} workflows")
 
-        result = await Database.agents.delete_one({"_id": ObjectId(agent_id)})
-        if result.deleted_count:
+        result = await database.delete("agents", {"_id": ObjectId(agent_id)})
+        if result > 0:
             logger.info(f"Deleted agent {agent_id}")
             return True
         return False
@@ -153,21 +154,20 @@ class AgentService:
             elif search.end_date:
                 query["created_at"] = {"$lte": search.end_date}
         
-        total = await Database.agents.count_documents(query)
+        total = await database.count("agents", query)
         
-        cursor = Database.agents.find(query)\
-            .sort("created_at", -1)\
-            .skip(params.skip)\
-            .limit(params.limit)
+        agents = await database.search("agents", query, 
+                                skip=params.skip, 
+                                limit=params.limit, 
+                                sort=[("created_at", -1)])
         
-        agents = await cursor.to_list(length=params.limit)
         return agents, total
     
     @staticmethod
     async def query_agent(agent_id: str, query: AgentQueryRequest, user_id: Optional[str] = None) -> str:
         """Query an agent with a prompt and get a response."""
         # Get the agent from database
-        agent_data = await Database.agents.find_one({"_id": ObjectId(agent_id)})
+        agent_data = await database.find_one("agents", {"_id": ObjectId(agent_id)})
         if not agent_data:
             raise ValueError(f"Agent with ID {agent_id} not found")
 
@@ -250,14 +250,14 @@ class WorkflowService:
         workflow_dict["agent_ids"] = list(agent_ids)
         
         # Check for existing workflow with the same name
-        existing = await Database.workflows.find_one({"name": workflow_dict["name"]})
+        existing = await database.find_one("workflows", {"name": workflow_dict["name"]})
         if existing:
             raise ValueError(f"Workflow with name '{workflow_dict['name']}' already exists")
         
-        result = await Database.workflows.insert_one(workflow_dict)
-        workflow_dict["_id"] = result.inserted_id
+        result_id = await database.write("workflows", workflow_dict)
+        workflow_dict["_id"] = result_id
         
-        logger.info(f"Created workflow {workflow_dict['name']} with ID {result.inserted_id}")
+        logger.info(f"Created workflow {workflow_dict['name']} with ID {result_id}")
         
         return workflow_dict
     
@@ -266,13 +266,13 @@ class WorkflowService:
         """Get a workflow by ID."""
         if not ObjectId.is_valid(workflow_id):
             raise ValueError(f"Invalid workflow ID: {workflow_id}")
-        workflow = await Database.workflows.find_one({"_id": ObjectId(workflow_id)})
+        workflow = await database.find_one("workflows", {"_id": ObjectId(workflow_id)})
         return workflow
     
     @staticmethod
     async def get_workflow_by_name(name: str) -> Optional[Dict[str, Any]]:
         """Get a workflow by name."""
-        return await Database.workflows.find_one({"name": name})
+        return await database.find_one("workflows", {"name": name})
     
     @staticmethod
     async def update_workflow(workflow_id: str, workflow_data: WorkflowUpdate) -> Optional[Dict[str, Any]]:
@@ -280,7 +280,7 @@ class WorkflowService:
         if not ObjectId.is_valid(workflow_id):
             raise ValueError(f"Invalid workflow ID: {workflow_id}")
             
-        workflow = await Database.workflows.find_one({"_id": ObjectId(workflow_id)})
+        workflow = await database.find_one("workflows", {"_id": ObjectId(workflow_id)})
         if not workflow:
             return None
         
@@ -307,19 +307,20 @@ class WorkflowService:
         
         # Check for name conflict if name is being updated
         if "name" in update_data:
-            existing = await Database.workflows.find_one({
+            existing = await database.find_one("workflows", {
                 "name": update_data["name"],
                 "_id": {"$ne": ObjectId(workflow_id)}
             })
             if existing:
                 raise ValueError(f"Workflow with name '{update_data['name']}' already exists")
         
-        await Database.workflows.update_one(
+        await database.update(
+            "workflows",
             {"_id": ObjectId(workflow_id)},
             {"$set": update_data}
         )
         
-        updated_workflow = await Database.workflows.find_one({"_id": ObjectId(workflow_id)})
+        updated_workflow = await database.find_one("workflows", {"_id": ObjectId(workflow_id)})
         logger.info(f"Updated workflow {workflow_id}")
         
         return updated_workflow
@@ -331,7 +332,7 @@ class WorkflowService:
             raise ValueError(f"Invalid workflow ID: {workflow_id}")
         
         # Find all executions for the workflow
-        executions = await Database.executions.find({"workflow_id": workflow_id}).to_list(length=None)
+        executions = await database.search("executions", {"workflow_id": workflow_id})
         
         # Separate pending and running executions
         pending_executions = [exec for exec in executions if exec["status"] == ExecutionStatus.PENDING]
@@ -347,14 +348,14 @@ class WorkflowService:
                 execution_id=str(exec["_id"]),
                 status=ExecutionStatus.CANCELLED
             )
-            await Database.executions.delete_one({"_id": exec["_id"]})
+            await database.delete("executions", {"_id": exec["_id"]})
             logger.info(f"Stopped and removed pending execution {exec['_id']} for workflow {workflow_id}")
         
         # Delete the workflow
-        result = await Database.workflows.delete_one({"_id": ObjectId(workflow_id)})
-        if result.deleted_count:
+        result = await database.delete("workflows", {"_id": ObjectId(workflow_id)})
+        if result > 0:
             # Optionally, delete associated logs
-            await Database.logs.delete_many({"workflow_id": workflow_id})
+            await database.delete("logs", {"workflow_id": workflow_id})
             logger.info(f"Deleted workflow {workflow_id}")
             return True
         
@@ -388,14 +389,12 @@ class WorkflowService:
             elif search.end_date:
                 query["created_at"] = {"$lte": search.end_date}
         
-        total = await Database.workflows.count_documents(query)
+        total = await database.count("workflows", query)
         
-        cursor = Database.workflows.find(query)\
-            .sort("created_at", -1)\
-            .skip(params.skip)\
-            .limit(params.limit)
-        
-        workflows = await cursor.to_list(length=params.limit)
+        workflows = await database.search("workflows", query, 
+                                         skip=params.skip, 
+                                         limit=params.limit, 
+                                         sort=[("created_at", -1)])
         return workflows, total
 
 # Workflow Execution Service
@@ -423,10 +422,10 @@ class WorkflowExecutionService:
         }
         
         # Insert execution record
-        result = await Database.executions.insert_one(execution_dict)
-        execution_dict["_id"] = result.inserted_id
+        result_id = await database.write("executions", execution_dict)
+        execution_dict["_id"] = result_id
         
-        logger.info(f"Created workflow execution {result.inserted_id}")
+        logger.info(f"Created workflow execution {result_id}")
         
         return execution_dict
     
@@ -436,7 +435,7 @@ class WorkflowExecutionService:
         if not ObjectId.is_valid(execution_id):
             raise ValueError(f"Invalid execution ID: {execution_id}")
             
-        execution = await Database.executions.find_one({"_id": ObjectId(execution_id)})
+        execution = await database.find_one("executions", {"_id": ObjectId(execution_id)})
         return execution
     
     @staticmethod
@@ -456,10 +455,10 @@ class WorkflowExecutionService:
         if error_message:
             update_data["error_message"] = error_message
         
-        result = await Database.executions.find_one_and_update(
+        result = await database.find_one_and_update(
+            "executions",
             {"_id": ObjectId(execution_id)},
-            {"$set": update_data},
-            return_document=True
+            {"$set": update_data}
         )
         
         return result
@@ -473,10 +472,10 @@ class WorkflowExecutionService:
         # Always update the timestamp
         update_data["updated_at"] = datetime.utcnow()
         
-        result = await Database.executions.find_one_and_update(
+        result = await database.find_one_and_update(
+            "executions",
             {"_id": ObjectId(execution_id)},
-            {"$set": update_data},
-            return_document=True
+            {"$set": update_data}
         )
         
         return result
@@ -507,14 +506,12 @@ class WorkflowExecutionService:
             elif search.end_date:
                 query["created_at"] = {"$lte": search.end_date}
         
-        total = await Database.executions.count_documents(query)
+        total = await database.count("executions", query)
         
-        cursor = Database.executions.find(query)\
-            .sort("created_at", -1)\
-            .skip(params.skip)\
-            .limit(params.limit)
-        
-        executions = await cursor.to_list(length=params.limit)
+        executions = await database.search("executions", query, 
+                                          skip=params.skip, 
+                                          limit=params.limit, 
+                                          sort=[("created_at", -1)])
         return executions, total
     
     @staticmethod
@@ -539,8 +536,8 @@ class WorkflowExecutionService:
             "details": details or {}
         }
         
-        result = await Database.logs.insert_one(log_entry)
-        log_entry["_id"] = result.inserted_id
+        result_id = await database.write("logs", log_entry)
+        log_entry["_id"] = result_id
         
         return log_entry
     
@@ -552,14 +549,12 @@ class WorkflowExecutionService:
         """Retrieve logs for a specific execution."""
         query = {"execution_id": execution_id}
         
-        total = await Database.logs.count_documents(query)
+        total = await database.count("logs", query)
         
-        cursor = Database.logs.find(query)\
-            .sort("timestamp", 1)\
-            .skip(params.skip)\
-            .limit(params.limit)
-        
-        logs = await cursor.to_list(length=params.limit)
+        logs = await database.search("logs", query, 
+                                    skip=params.skip, 
+                                    limit=params.limit, 
+                                    sort=[("timestamp", 1)])
         return logs, total
 
 class AgentBackupService:
@@ -570,7 +565,7 @@ class AgentBackupService:
             raise ValueError(f"Invalid agent ID: {agent_id}")
             
         # Get the agent from database
-        agent = await Database.agents.find_one({"_id": ObjectId(agent_id)})
+        agent = await database.find_one("agents", {"_id": ObjectId(agent_id)})
         if not agent:
             raise ValueError(f"Agent with ID {agent_id} not found in database")
         
@@ -639,13 +634,13 @@ class AgentBackupService:
             agent_data["status"] = AgentStatus.CREATED
             
             # Create the agent using AgentService
-            result = await Database.agents.insert_one(agent_data)
-            agent_data["_id"] = result.inserted_id
+            result_id = await database.write("agents", agent_data)
+            agent_data["_id"] = result_id
             
             return {
                 "success": True,
                 "message": f"Agent restored from {backup_path} with new name {new_name}",
-                "agent_id": str(result.inserted_id),
+                "agent_id": str(result_id),
                 "backup_path": backup_path,
                 "agent_name": new_name
             }
@@ -660,7 +655,7 @@ class AgentBackupService:
             raise ValueError(f"Invalid agent ID: {agent_id}")
             
         # Get the agent from database
-        agent = await Database.agents.find_one({"_id": ObjectId(agent_id)})
+        agent = await database.find_one("agents", {"_id": ObjectId(agent_id)})
         if not agent:
             raise ValueError(f"Agent with ID {agent_id} not found")
             
@@ -706,7 +701,7 @@ class AgentBackupService:
             os.makedirs(backup_dir)
             
         # Get all agents from the database
-        agents = await Database.agents.find({}).to_list(length=None)
+        agents = await database.search("agents", {})
         
         results = []
         success_count = 0
@@ -763,7 +758,7 @@ class AgentBackupService:
         for agent_id in agent_ids:
             try:
                 # Get agent from DB to get its name
-                agent = await Database.agents.find_one({"_id": ObjectId(agent_id)})
+                agent = await database.find_one("agents", {"_id": ObjectId(agent_id)})
                 if not agent:
                     results.append({
                         "success": False,

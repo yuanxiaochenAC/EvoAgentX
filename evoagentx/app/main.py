@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError, HTTPException
 
 from evoagentx.app.config import settings
-from evoagentx.app.db import Database
+from evoagentx.app.db import database
 from evoagentx.app.security import init_users_collection
 from evoagentx.app.api import (
     auth_router,
@@ -29,7 +29,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
 # Lifespan context manager for startup and shutdown events
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -39,7 +38,7 @@ async def lifespan(app: FastAPI):
     # Startup tasks
     try:
         # Connect to database
-        await Database.connect()
+        await database.connect()
         
         # Initialize users collection and create admin user if not exists
         await init_users_collection()
@@ -52,7 +51,7 @@ async def lifespan(app: FastAPI):
     finally:
         # Shutdown tasks
         try:
-            await Database.disconnect()
+            await database.disconnect()
             logger.info("Application shutdown completed successfully")
         except Exception as e:
             logger.error(f"Error during application shutdown: {e}")
@@ -133,16 +132,16 @@ async def get_metrics():
     # Collect metrics from different services
     try:
         # Collect agent metrics
-        total_agents = await Database.agents.count_documents({})
-        active_agents = await Database.agents.count_documents({"status": "active"})
+        total_agents = await database.count("agents")
+        active_agents = await database.count("agents", {"status": "active"})
         
         # Collect workflow metrics
-        total_workflows = await Database.workflows.count_documents({})
-        running_workflows = await Database.workflows.count_documents({"status": "running"})
+        total_workflows = await database.count("workflows")
+        running_workflows = await database.count("workflows", {"status": "running"})
         
         # Collect execution metrics
-        total_executions = await Database.executions.count_documents({})
-        failed_executions = await Database.executions.count_documents({"status": "failed"})
+        total_executions = await database.count("executions")
+        failed_executions = await database.count("executions", {"status": "failed"})
         
         return {
             "agents": {

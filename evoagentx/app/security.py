@@ -12,7 +12,7 @@ from pymongo.errors import DuplicateKeyError
 from bson import ObjectId
 
 from evoagentx.app.config import settings
-from evoagentx.app.db import Database
+from evoagentx.app.db import database
 from evoagentx.app.schemas import TokenPayload, UserCreate, UserResponse
 
 # Password hashing
@@ -41,7 +41,7 @@ def get_password_hash(password: str) -> str:
 
 async def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
     """Get a user by email."""
-    return await Database.db.users.find_one({"email": email})
+    return await database.find_one("users", {"email": email})
 
 async def authenticate_user(email: str, password: str) -> Optional[Dict[str, Any]]:
     """Authenticate a user by email and password."""
@@ -78,8 +78,8 @@ async def create_user(user_create: UserCreate) -> UserResponse:
     }
     
     try:
-        insert_result = await Database.db.users.insert_one(new_user)
-        new_user["_id"] = insert_result.inserted_id
+        user_id = await database.write("users", new_user)
+        new_user["_id"] = user_id
         return UserResponse(**new_user)
     except DuplicateKeyError:
         raise HTTPException(
@@ -146,7 +146,9 @@ async def get_current_admin_user(current_user: Dict[str, Any] = Depends(get_curr
 # Initialize the users collection
 async def init_users_collection():
     """Initialize the users collection with indexes."""
-    await Database.db.users.create_index("email", unique=True)
+    # For MongoDB, create index using specific method
+    if hasattr(database, 'create_index'):
+        await database.create_index("users", "email", unique=True)
     
     # Create admin user if it doesn't exist
     admin_email = "admin@clayx.ai"
@@ -169,4 +171,4 @@ async def init_users_collection():
             "created_at": datetime.utcnow()
         }
         
-        await Database.db.users.insert_one(new_admin)
+        await database.write("users", new_admin)
