@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 from evoagentx.core.logging import logger
 from evoagentx.storages.base import StorageHandler
 from evoagentx.rag.rag import RAGEngine
-from evoagentx.storages.storages_config import VectorStoreConfig, DBConfig, StoreConfig
+from evoagentx.models import OpenRouterConfig, OpenRouterLLM
+from evoagentx.storages.storages_config import VectorStoreConfig, DBConfig, GraphStoreConfig, StoreConfig
 from evoagentx.rag.rag_config import RAGConfig, ReaderConfig, ChunkerConfig, IndexConfig, EmbeddingConfig, RetrievalConfig
 from evoagentx.rag.schema import Query, Corpus, Chunk, ChunkMetadata
 from evoagentx.benchmark.hotpotqa import HotPotQA, download_raw_hotpotqa_data
@@ -30,7 +31,14 @@ store_config = StoreConfig(
         dimensions=768,    # 1536: text-embedding-ada-002, 384: bge-small-en-v1.5, 768: nomic-embed-text
         index_type="flat_l2",
     ),
-    graphConfig=None,
+    graphConfig=GraphStoreConfig(
+        graph_name="neo4j",
+        uri="bolt://localhost:7687",
+        username= "neo4j",
+        password= "12345678",
+        database="neo4j",
+    ),
+    # graphConfig=None,
     path="./debug/data/hotpotqa/cache/indexing"
 )
 storage_handler = StorageHandler(storageConfig=store_config)
@@ -63,7 +71,7 @@ embedding=EmbeddingConfig(
         provider="openai",
         model_name="text-embedding-ada-002",
         api_key=os.environ["OPENAI_API_KEY"],
-    )
+)
 
 rag_config = RAGConfig(
     reader=ReaderConfig(
@@ -89,7 +97,16 @@ rag_config = RAGConfig(
         metadata_filters=None
     )
 )
-search_engine = RAGEngine(config=rag_config, storage_handler=storage_handler)
+
+OPEN_ROUNTER_API_KEY = os.environ["OPEN_ROUNTER_API_KEY"]
+config = OpenRouterConfig(
+    openrouter_key=OPEN_ROUNTER_API_KEY,
+    temperature=0.5,
+    model="google/gemini-2.5-flash-lite-preview-06-17",
+)
+llm = OpenRouterLLM(config=config)
+
+search_engine = RAGEngine(config=rag_config, storage_handler=storage_handler, llm=llm)
 
 # Define Helper function and evaluation function
 def create_corpus_from_context(context: List[List], corpus_id: str) -> Corpus:
@@ -168,11 +185,10 @@ def run_evaluation(samples: List[Dict], top_k: int = 5) -> Dict[str, float]:
         corpus_id = sample["_id"]
         
         logger.info(f"Processing sample: {corpus_id}, question: {question}")
-        
         # Create and index corpus
         corpus = create_corpus_from_context(context, corpus_id)
         logger.info(f"Created corpus with {len(corpus.chunks)} chunks")
-        search_engine.add(index_type="vector", nodes=corpus, corpus_id=corpus_id)
+        search_engine.add(index_type="graph", nodes=corpus, corpus_id=corpus_id)
         
         # Query
         query = Query(query_str=question, top_k=top_k)
@@ -187,6 +203,7 @@ def run_evaluation(samples: List[Dict], top_k: int = 5) -> Dict[str, float]:
         logger.info(f"Metrics for sample {corpus_id}: {sample_metrics}")
         
         # Clear index to avoid memory issues
+        import pdb;pdb.set_trace()
         search_engine.clear(corpus_id=corpus_id)
     
     # Aggregate metrics

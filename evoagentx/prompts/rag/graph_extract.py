@@ -10,15 +10,12 @@ Text:
 
 Output JSON:
 ```json
-[
-    {"name": "entity_name", "type": "entity_type"},
-    ...
-]
+{"entities": [{"name": "entity_name", "type": "entity_type"}, ...]}
 ```
 """
 
 RELATION_EXTRACT_PROMPT = """
-Given the following text and a list of extracted entities, identify explicit, directed relationships between pairs of entities. A relationship should describe a clear, meaningful connection (e.g., "works_for", "located_in", "founded"). Return the results in JSON format as a list of triplets, each with 'source', 'target', and 'relation' fields. The 'source' and 'target' must match entity names from the provided list. Limit to {max_relations} triplets. 
+Given the following text and a list of extracted entities, identify explicit, directed relationships between pairs of entities. A relationship should describe a clear, meaningful connection (e.g., "works_for", "located_in", "founded"). Return the results in JSON format as a list of triplets, each with 'source', 'target', and 'relation' fields. The 'source' and 'target' must match entity names from the provided list. 
 Ensure relationships are specific and grounded in the text.
 
 ***DO NOT*** answer the question itself if the given text is a question.
@@ -31,9 +28,6 @@ Entities:
 
 Output JSON:
 ```json
-[
-    {"source": "entity1", "target": "entity2", "relation": "relationship_label"},
-    ...
-]
+{"graph": [{"source": "entity1", "target": "entity2", "relation": "relationship_label"}, ...]}
 ```
 """
