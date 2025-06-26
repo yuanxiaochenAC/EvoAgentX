@@ -20,11 +20,12 @@ from .retrievers.base import RetrieverType
 from .schema import Chunk, Corpus, ChunkMetadata, IndexMetadata, Query, RagResult
 from evoagentx.storages.base import StorageHandler
 from evoagentx.storages.schema import IndexStore
+from evoagentx.models.base_model import BaseLLM
 from evoagentx.core.logging import logger
 
 
 class RAGEngine:
-    def __init__(self, config: RAGConfig, storage_handler: StorageHandler):
+    def __init__(self, config: RAGConfig, storage_handler: StorageHandler, llm: Optional[BaseLLM] = None):
         self.config = config
         self.storage_handler = storage_handler  # Maybe reinit the vector_store by the load funcion.
         self.embedding_factory = EmbeddingFactory()
@@ -32,6 +33,7 @@ class RAGEngine:
         self.chunk_factory = ChunkFactory()
         self.retriever_factory = RetrieverFactory()
         self.postprocessor_factory = PostprocessorFactory()
+        self.llm = llm  # LLM for entity extractor
 
         # Initialize reader
         self.reader = LLamaIndexReader(
@@ -139,7 +141,8 @@ class RAGEngine:
                     index_type=index_type,
                     embed_model=self.embed_model.get_embedding_model(),
                     storage_handler=self.storage_handler,
-                    index_config=self.config.index.model_dump(exclude_unset=True) if self.config.index else {}
+                    index_config=self.config.index.model_dump(exclude_unset=True) if self.config.index else {},
+                    llm=self.llm,
                 )
                 self.indices[corpus_id][index_type] = index
                 self.retrievers[corpus_id][index_type] = self.retriever_factory.create(
@@ -284,7 +287,7 @@ class RAGEngine:
                         corpus_id=cid,
                         index_type=idx_type,
                         collection_name=vector_config.get("qdrant_collection_name", "default_collection"),
-                        dimension=vector_config.get("dimensions", 1536),
+                        dimension=self.embed_model.dimensions,
                         vector_db_type=vector_config.get("vector_name", None),
                         graph_db_type=graph_config.get("graph_name", None),
                         embedding_model_name=self.config.embedding.model_name,

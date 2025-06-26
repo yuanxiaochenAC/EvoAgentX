@@ -24,7 +24,6 @@ class Neo4jGraphStoreWrapper(GraphStoreBase):
                 username=username,
                 password=password,
                 database=database,
-                **kwargs
             )
         except Exception as e:
             raise ValueError(f"Failed to connect to Neo4j: {str(e)}")
