@@ -131,7 +131,26 @@ class HumanEval(CodingBenchmark):
         pass_at_k = self.compute_pass_at_k(results, k_list)
         
         return pass_at_k
-    
+
+    def evluate_with_msg(self, prediction, label):
+        prediction, label = self._check_evaluation_inputs(prediction, label)
+
+        results = []
+        for solution in prediction:
+            solution_states = []
+            for label_data in label:
+                task_id = label_data["task_id"]
+                prompt = self.get_example_by_id(task_id)["prompt"]
+                unit_test = label_data["test"]
+                entry_point = label_data["entry_point"]
+                state, message = self.check_solution(
+                    task_id=task_id, 
+                    solution=prompt + solution,
+                    test=unit_test, 
+                    entry_point=entry_point
+                )
+            
+            return state, message
 
 class HumanEvaluPlus(HumanEval):
 

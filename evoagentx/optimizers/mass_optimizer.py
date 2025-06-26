@@ -57,7 +57,8 @@ class MassOptimiser(BaseModule):
                     total += blocki.n
                 
                 if blocki.n > 0:
-                    registry.track(blocki, blocki.get_registry(), input_names=['problem', 'context'], output_names=['answer'])
+                    for register in blocki.get_registry():
+                        registry.track(self.workflow, register, input_names = ['problem', 'context'], output_names=['answer'] )
 
             if total > agent_budget:
                 continue

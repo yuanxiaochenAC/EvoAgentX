@@ -133,7 +133,7 @@ class Custom(Operator):
 
 class AnswerGenerateOutput(OperatorOutput):
     thought: str = Field(default="", description="The step by step thinking process")
-    answer: str = Field(default="", description="The final answer to the question")
+    answer: str = Field(default="", description="The final answer to the problem")
 
 
 class AnswerGenerate(Operator):
@@ -530,7 +530,7 @@ class Reflector(Operator):
     def __init__(self, llm: BaseLLM, **kwargs):
         name = "Reflector"
         description = "Reflect on the answer or solution."
-        interface = "reflector(question:str, text: str) -> dict with keys 'feedback' (str) and 'correctness' (bool)"
+        interface = "reflector(problem:str, text: str) -> dict with keys 'feedback' (str) and 'correctness' (bool)"
         prompt = kwargs.pop("prompt", REFLECTOR_PROMPT)
         super().__init__(name=name, description=description, interface=interface, prompt=prompt, llm=llm, outputs_format=ReflectorOutput, **kwargs)
 
@@ -562,27 +562,27 @@ class Refiner(Operator):
     def __init__(self, llm: BaseLLM, **kwargs):
         name = "Refiner"
         description = "Refine the answer to the problem."
-        interface = "refiner(question: str) -> dict with keys 'reasoning' and 'answer' of type str"
+        interface = "refiner(problem: str) -> dict with keys 'reasoning' and 'answer' of type str"
         prompt = kwargs.pop("prompt", REFINER_PROMPT)
         super().__init__(name=name, description=description, interface=interface, prompt=prompt, llm=llm, outputs_format=RefinerOutput, **kwargs)
 
-    def execute(self, question, **kwargs) -> dict:
+    def execute(self, problem, **kwargs) -> dict:
         context = kwargs.pop('context', None)
         if context:
             context = f"Context: {context}"
         else:
             context = ""
-        prompt = self.prompt.format(question=question, context=context, **kwargs)
+        prompt = self.prompt.format(problem=problem, context=context, **kwargs)
         response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
 
-    async def async_execute(self, question, **kwargs) -> dict:
+    async def async_execute(self, problem, **kwargs) -> dict:
         context = kwargs.pop('context', None)
         if context:
             context = f"Context: {context}"
         else:
             context = ""
-        prompt = self.prompt.format(question=question, context=context, **kwargs)
+        prompt = self.prompt.format(problem=problem, context=context, **kwargs)
         response = await self.llm.async_generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
     
@@ -595,7 +595,7 @@ class Summarizer(Operator):
     def __init__(self, llm: BaseLLM, **kwargs):
         name = "Summarizer"
         description = "Summarize the given content."
-        interface = "summarizer(question: str, context: str) -> dict with key 'summary' of type str"
+        interface = "summarizer(problem: str, context: str) -> dict with key 'summary' of type str"
         prompt = kwargs.pop("prompt",SUMMARIZER_PROMPT)
         super().__init__(name=name, description=description, interface=interface, prompt=prompt, llm=llm, outputs_format=SummarizerOutput, **kwargs)
 
@@ -617,27 +617,27 @@ class Debater(Operator):
     def __init__(self, llm: BaseLLM, **kwargs):
         name = "Debater"
         description = "Debate and provide reasoning and answer for the problem."
-        interface = "debater(question: str) -> dict with keys 'reasoning' and 'answer' of type str"
+        interface = "debater(problem: str) -> dict with keys 'reasoning' and 'answer' of type str"
         prompt = kwargs.pop("prompt", DEBATER_PROMPT)
         super().__init__(name=name, description=description, interface=interface, prompt=prompt, llm=llm, outputs_format=DebaterOutput, **kwargs)
 
-    def execute(self, question, **kwargs) -> dict:
+    def execute(self, problem, **kwargs) -> dict:
         context = kwargs.pop('context', None)
         if context:
             context = f"Context: {context}"
         else:
             context = ""
-        prompt = self.prompt.format(question=question, context=context, **kwargs)
+        prompt = self.prompt.format(problem=problem, context=context, **kwargs)
         response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
 
-    async def async_execute(self, question, **kwargs) -> dict:
+    async def async_execute(self, problem, **kwargs) -> dict:
         context = kwargs.pop('context', None)
         if context:
             context = f"Context: {context}"
         else:
             context = ""
-        prompt = self.prompt.format(question=question, context=context, **kwargs)
+        prompt = self.prompt.format(problem=problem, context=context, **kwargs)
         response = await self.llm.async_generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
 
@@ -650,16 +650,16 @@ class CodeReflector(Operator):
     def __init__(self, llm: BaseLLM, **kwargs):
         name = "CodeReflector"
         description = "Reflect on code solution correctness and provide updated solution based on test feedback."
-        interface = "code_reflector(question: str, previous_solution: str, traceback: str) -> dict with keys 'reasoning' (str), 'correctness' (bool) and 'answer' (str)"
+        interface = "code_reflector(problem: str, previous_solution: str, traceback: str) -> dict with keys 'reasoning' (str), 'correctness' (bool) and 'answer' (str)"
         prompt = kwargs.pop("prompt", CODE_REFLECTOR_PROMPT)
         super().__init__(name=name, description=description, interface=interface, prompt=prompt, llm=llm, outputs_format=CodeReflectorOutput, **kwargs)
 
-    def execute(self, question: str, previous_solution: str, traceback: str, **kwargs) -> dict:
-        prompt = self.prompt.format(question=question, previous_solution=previous_solution, traceback=traceback)
+    def execute(self, problem: str, previous_solution: str, traceback: str, **kwargs) -> dict:
+        prompt = self.prompt.format(problem=problem, previous_solution=previous_solution, traceback=traceback)
         response = self.llm.generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()
 
-    async def async_execute(self, question: str, previous_solution: str, traceback: str, **kwargs) -> dict:
-        prompt = self.prompt.format(question=question, previous_solution=previous_solution, traceback=traceback)
+    async def async_execute(self, problem: str, previous_solution: str, traceback: str, **kwargs) -> dict:
+        prompt = self.prompt.format(problem=problem, previous_solution=previous_solution, traceback=traceback)
         response = await self.llm.async_generate(prompt=prompt, parser=self.outputs_format, parse_mode="xml")
         return response.get_structured_data()

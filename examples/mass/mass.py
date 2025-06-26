@@ -13,7 +13,7 @@ from evoagentx.workflow.blocks.aggregate import aggregate
 from evoagentx.workflow.blocks.reflect import reflect
 from evoagentx.workflow.blocks.debate import debate
 from evoagentx.workflow.blocks.execute import execute
-
+from evoagentx.optimizers.mass_optimizer import MassOptimiser
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -34,8 +34,8 @@ class MathSplits(MATH):
         full_test_data = self._test_data
         # radnomly select 50 samples for training and 100 samples for test
         # self._train_data = [full_test_data[idx] for idx in permutation[:50]]
-        self._train_data = [full_test_data[idx] for idx in permutation[:100]]
-        self._test_data = [full_test_data[idx] for idx in permutation[100:200]]
+        self._train_data = [full_test_data[idx] for idx in permutation[:10]]
+        self._test_data = [full_test_data[idx] for idx in permutation[10:20]]
 
     # define the input keys. 
     # If defined, the corresponding input key and value will be passed to the __call__ method of the program, 
@@ -83,16 +83,17 @@ class WorkFlow():
         solutions = []
         for solution in candidate_solutions:
             if self.reflector.n > 0:
-                refined_solution = self.reflector.execute(problem=problem, text=solution, context=context)
-                solutions.append(refined_solution)
-            else:
-                refined_solution = self.executer.execute(problem=solution, context = context, entry_point = entry_point)
-                solutions.append(solution)
-        
+                if self.executer.n > 0:
+                    refined_solution = self.executer.execute(problem = problem, solution = solution, entry_point = kwargs.pop("entry_point", None), testcases = kwargs.pop("testcases", None))
+                    solutions.append(refined_solution)
+                else:
+                    refined_solution = self.reflector.execute(problem = problem, solution = solution, context = context)
+                    solutions.append(refined_solution)
+            
         # Step 4: 通过辩论选择最佳答案
         final_answer = self.debater.execute(problem, solutions, context=context)
         
-        return final_answer
+        return final_answer, {"problem":problem, "answer":final_answer}
 
     def save(self, path):
         params = {
@@ -118,7 +119,7 @@ class WorkFlow():
             "executer": {
                 "n": self.executer.n,
                 "predictor": self.executer.predictor.prompt,
-                "executer": self.executer.code_reflector.prompt,
+                "code_reflector": self.executer.code_reflector.prompt,
             }
         }
         with open(path, "w") as f:
@@ -127,105 +128,104 @@ class WorkFlow():
 def get_save_path(program):
     return f"examples/mass/{program}"
 
-def mipro_optimize(registry, program, llm, save_path, dataset):
+
+def mipro_optimize(registry, block, optimizer_llm, save_path, benchmark):
     optimizer = MiproOptimizer(
-        registry = registry,
-        program = program,
-        optimizer_llm = llm,
-        max_bootstrapped_demos= MAX_BOOTSTRAPPED_DEMOS,
-        max_labeled_demos = MAX_LABELED_DEMOS,
-        num_threads = NUM_THREADS,
-        eval_rounds= EVALUATION_ROUNDS,
-        auto = AUTO,
-        save_path = save_path
-    )
-
-    optimizer.optimize(dataset = dataset)
-
-    return optimizer
-
-def optimize_block(block, block_name, registry_tracks, benchmark, optimizer_llm, predictor_score, save_path_prefix):
-    """
-    统一的 block 优化函数
-    
-    Args:
-        block: 要优化的 block 对象
-        block_name: block 名称，用于保存路径
-        registry_tracks: registry 跟踪配置列表，每个元素为 (track_path, input_names, output_names)
-        benchmark: 基准测试数据集
-        optimizer_llm: 优化器 LLM
-        predictor_score: 基准 predictor 分数
-        save_path_prefix: 保存路径前缀
-    
-    Returns:
-        optimized_block: 优化后的 block，已设置 influence_score
-    """
-    # 创建 registry
-    registry = MiproRegistry()
-    for track_path, input_names, output_names in registry_tracks:
-        registry.track(block, track_path, input_names=input_names, output_names=output_names)
-    
-    # 优化
-    optimizer = mipro_optimize(
         registry=registry,
         program=block,
-        llm=optimizer_llm,
-        save_path=get_save_path(f"{save_path_prefix}/{block_name}"),
-        dataset=benchmark
+        optimizer_llm=optimizer_llm,
+        max_bootstrapped_demos=MAX_BOOTSTRAPPED_DEMOS,
+        max_labeled_demos=MAX_LABELED_DEMOS,
+        num_threads=NUM_THREADS,
+        eval_rounds=EVALUATION_ROUNDS,
+        auto=AUTO,
+        save_path=save_path
     )
     
-    # 评估并计算影响分数
+    optimizer.optimize(dataset=benchmark)
+    return optimizer
+
+def optimize_predictor(predictor, optimizer_llm, benchmark):
+    registry = MiproRegistry()
+    registry.track(predictor, "prompt", input_names=['problem', "context"], output_names=['answer'])
+    
+    optimizer = mipro_optimize(registry, predictor, optimizer_llm, get_save_path("predictor"), benchmark)
+    return optimizer.evaluate(dataset = benchmark), optimizer.restore_best_program()
+
+def optimize_summarizer(optimized_predictor, executor_llm, optimizer_llm, benchmark, predictor_score):
+    block = summarize(predictor=optimized_predictor, llm=executor_llm)
+    
+    registry = MiproRegistry()
+    registry.track(block, "summarizer.prompt", input_names=['problem', 'context'], output_names=['summary', 'reasoning', 'answer'])
+    registry.track(block, "predictor.prompt", input_names=['problem', 'context'], output_names=['summary', 'reasoning', 'answer'])
+    
+    optimizer = mipro_optimize(registry, block, optimizer_llm, get_save_path("mass/summarizer"), benchmark)
     score = optimizer.evaluate(dataset=benchmark, eval_mode="test")
     influence = score / predictor_score
     
-    # 恢复最佳程序并设置影响分数
     optimized_block = optimizer.restore_best_program()
     optimized_block.influence_score = influence
-    
     return optimized_block
 
-def optimize_blocks_batch(block_configs, benchmark, optimizer_llm, optimized_predictor, executor_llm, predictor_score):
-    """
-    批量优化 blocks 的配置驱动函数
+def optimize_aggregator(optimized_predictor, optimizer_llm, benchmark, predictor_score):
+    block = aggregate(predictor=optimized_predictor)
     
-    Args:
-        block_configs: block 配置列表，每个配置包含 block 的构造信息和 registry 配置
-        benchmark: 基准测试数据集
-        optimizer_llm: 优化器 LLM
-        optimized_predictor: 已优化的 predictor
-        executor_llm: 执行器 LLM
-        predictor_score: 基准分数
-        
-    Returns:
-        dict: 优化后的 blocks 字典
-    """
-    optimized_blocks = {}
+    registry = MiproRegistry()
+    registry.track(block, "predictor.prompt", input_names=['problem', 'context'], output_names=['answer'])
     
-    for config in block_configs:
-        block_name = config['name']
-        block_factory = config['factory']
-        registry_tracks = config['tracks']
-        
-        # 创建 block
-        if 'requires_llm' in config and config['requires_llm']:
-            block = block_factory(predictor=optimized_predictor, llm=executor_llm)
-        else:
-            block = block_factory(predictor=optimized_predictor)
-        
-        # 优化 block
-        optimized_block = optimize_block(
-            block=block,
-            block_name=block_name,
-            registry_tracks=registry_tracks,
-            benchmark=benchmark,
-            optimizer_llm=optimizer_llm,
-            predictor_score=predictor_score,
-            save_path_prefix="mass"
-        )
-        
-        optimized_blocks[block_name] = optimized_block
+    optimizer = mipro_optimize(registry, block, optimizer_llm, get_save_path("mass/aggregator"), benchmark)
+    score = optimizer.evaluate(dataset=benchmark, eval_mode="test")
+    influence = score / predictor_score
     
-    return optimized_blocks
+    optimized_block = optimizer.restore_best_program()
+    optimized_block.influence_score = influence
+    return optimized_block
+
+def optimize_reflector(optimized_predictor, executor_llm, optimizer_llm, benchmark, predictor_score):
+    block = reflect(predictor=optimized_predictor, llm=executor_llm)
+    
+    registry = MiproRegistry()
+    registry.track(block, "predictor.prompt", input_names=['problem', 'context'], output_names=['answer'])
+    registry.track(block, "reflector.prompt", input_names=['problem', 'context'], output_names=['answer'])
+    registry.track(block, "refiner.prompt", input_names=['problem', 'context'], output_names=['answer'])
+    
+    optimizer = mipro_optimize(registry, block, optimizer_llm, get_save_path("mass/reflector"), benchmark)
+    score = optimizer.evaluate(dataset=benchmark, eval_mode="test")
+    influence = score / predictor_score
+    
+    optimized_block = optimizer.restore_best_program()
+    optimized_block.influence_score = influence
+    return optimized_block
+
+def optimize_debater(optimized_predictor, executor_llm, optimizer_llm, benchmark, predictor_score):
+    block = debate(predictor=optimized_predictor, llm=executor_llm)
+    
+    registry = MiproRegistry()
+    registry.track(block, "debater.prompt", input_names=['problem', 'context'], output_names=['answer'])
+    registry.track(block, "predictor.prompt", input_names=['problem', 'context'], output_names=['answer'])
+    
+    optimizer = mipro_optimize(registry, block, optimizer_llm, get_save_path("mass/debater"), benchmark)
+    score = optimizer.evaluate(dataset=benchmark, eval_mode="test")
+    influence = score / predictor_score
+    
+    optimized_block = optimizer.restore_best_program()
+    optimized_block.influence_score = influence
+    return optimized_block
+
+def optimize_executer(optimized_predictor, executor_llm, optimizer_llm, benchmark, predictor_score):
+    block = execute(predictor=optimized_predictor, benchamark = benchmark, llm = executor_llm)
+    
+    registry = MiproRegistry()
+    registry.track(block, "predictor.prompt", input_names=['problem', 'entry_point', 'testcases'], output_names=['answer'])
+    registry.track(block, "code_reflector.prompt", input_names=['problem', 'entry_point', 'testcases'], output_names=['answer'])
+    
+    optimizer = mipro_optimize(registry, block, optimizer_llm, get_save_path("mass/executer"), benchmark)
+    score = optimizer.evaluate(dataset=benchmark, eval_mode="test")
+    influence = score / predictor_score
+    
+    optimized_block = optimizer.restore_best_program()
+    optimized_block.influence_score = influence
+    return optimized_block
 
 def main():
     openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=False)
@@ -235,89 +235,49 @@ def main():
 
     benchmark = MathSplits()
     
-    # Step 0: Optimize Predictor 0
+    # Step 0: 优化 Predictor
     predictor = Predictor(llm=executor_llm)
-    predictor_registry = MiproRegistry()
-    predictor_registry.track(predictor, "prompt", input_names=['problem', "context"], output_names=['answer'])
-    optimized_predictor = mipro_optimize(
-        registry=predictor_registry,
-        program=predictor,
-        llm=optimizer_llm,
-        save_path=get_save_path("predictor"),
-        dataset=benchmark
-    )
     
-    predictor_score = optimized_predictor.evaluate(dataset=benchmark, eval_mode="test")
+    # Test done
+    # predictor_score, optimized_predictor = optimize_predictor(predictor, optimizer_llm, benchmark)
 
-    # Step 1: 配置驱动的批量优化
-    block_configs = [
-        {
-            'name': 'summarizer',
-            'factory': summarize,
-            'requires_llm': True,
-            'tracks': [
-                ("summarizer.prompt", ['problem', 'context'], ['summary', 'reasoning', 'answer']),
-                ("predictor.prompt", ['problem', 'context'], ['summary', 'reasoning', 'answer'])
-            ]
-        },
-        {
-            'name': 'aggregator', 
-            'factory': aggregate,
-            'requires_llm': False,
-            'tracks': [
-                ("predictor.prompt", ['problem', 'context'], ['answer'])
-            ]
-        },
-        {
-            'name': 'reflector',
-            'factory': reflect,
-            'requires_llm': True,
-            'tracks': [
-                ("predictor.prompt", ['problem', 'context'], ['answer']),
-                ("reflector.prompt", ['problem', 'context'], ['answer']),
-                ("refiner.prompt", ['problem', 'context'], ['answer'])
-            ]
-        },
-        {
-            'name': 'debater',
-            'factory': debate,
-            'requires_llm': True,
-            'tracks': [
-                ("debater.prompt", ['problem', 'context'], ['answer']),
-                ("predictor.prompt", ['problem', 'context'], ['answer'])
-            ]
-        },
-        {
-            'name': 'executer',
-            'factory': execute,
-            'requires_llm': False,
-            'tracks': [
-                ("predictor.prompt", ['problem', 'entry_point', 'testcases'], ['answer']),
-                ("executer.prompt", ['problem', 'entry_point', 'testcases'], ['answer'])
-            ]
-        }
-    ]
+    optimized_predictor = Predictor(llm = executor_llm)
+
+    predictor_score = 62.5
+
+    # Step 1: 逐个优化每个block
+    print("优化 summarizer...")
+    optimized_summarizer = optimize_summarizer(optimized_predictor, executor_llm, optimizer_llm, benchmark, predictor_score)
     
-    # 批量优化所有 blocks
-    optimized_blocks = optimize_blocks_batch(
-        block_configs=block_configs,
-        benchmark=benchmark,
-        optimizer_llm=optimizer_llm,
-        optimized_predictor=optimized_predictor,
-        executor_llm=executor_llm,
-        predictor_score=predictor_score
-    )
+    print("优化 aggregator...")
+    optimized_aggregator = optimize_aggregator(optimized_predictor, optimizer_llm, benchmark, predictor_score)
+    
+    print("优化 reflector...")
+    optimized_reflector = optimize_reflector(optimized_predictor, executor_llm, optimizer_llm, benchmark, predictor_score)
+    
+    print("优化 debater...")
+    optimized_debater = optimize_debater(optimized_predictor, executor_llm, optimizer_llm, benchmark, predictor_score)
+    
+    print("优化 executer...")
+    optimized_executer = optimize_executer(optimized_predictor, executor_llm, optimizer_llm, benchmark, predictor_score)
 
-    return
     # 构建最终工作流
     block_workflow = WorkFlow(
-        summarizer=optimized_blocks['summarizer'],
-        aggregater=optimized_blocks['aggregator'],
-        reflector=optimized_blocks['reflector'],
-        debater=optimized_blocks['debater'],
-        executer=optimized_predictor
+        summarizer=optimized_summarizer,
+        aggregater=optimized_aggregator,
+        reflector=optimized_reflector,
+        debater=optimized_debater,
+        executer=optimized_executer
     )
 
+    mass = MassOptimiser(WorkFlow = block_workflow,
+                         optimizer_llm = optimizer_llm,
+                         max_labeled_demso = 0,
+                         auto = "light",
+                         save_path = "examples/mass/mass_optimization",
+                         num_threads = 16)
+
+    best_program = mass.optimize(benchmark = benchmark)
 
 if __name__ == "__main__":
     main()

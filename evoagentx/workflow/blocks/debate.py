@@ -32,7 +32,7 @@ class debate(block):
             index = prediction['index']
             solutions[int(index)] = prediction['answer']
 
-        return prediction
+        return prediction['answer']
     
     def save(self, path: str):
         params = {

@@ -8,14 +8,15 @@ from evoagentx.workflow.operators import Predictor, CodeReflector
 from evoagentx.utils.aflow_utils.data_utils import test_case_2_test_function
 
 class execute(block):
-    def __init__(self, llm) -> None:        
+    def __init__(self, predictor, benchamark, llm) -> None:        
         self.n = 0
-        self.predictor = Predictor(llm=llm)
+        self.benchmark = benchamark
+        self.predictor = predictor
         self.code_reflector = CodeReflector(llm=llm)
         self.search_space = [0,1]
 
     def __call__(self,problem, entry_point, testcases, **kwargs):
-        # executor + reflector
+
 
         predictor_prediction = self.predictor.execute(problem = problem, **kwargs)
 
@@ -61,3 +62,6 @@ class execute(block):
             return f"Test failed - {len(fail_cases)} case(s) failed:\n" + "\n---\n".join(fail_cases)
         else:
             return "All tests passed successfully"
+    
+    def get_registry(self):
+        return ['executer.code_reflector.prompt']
