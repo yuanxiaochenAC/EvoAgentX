@@ -1,4 +1,5 @@
 # this example shows the use case of HITLUserInputCollectorAgent, an Agent which enable a full user input in a single WorkFlow Node
+# Two Nodes are implemented, first Node is a WorkFlow Node with a HITLUserInputCollectorAgent instance inside, for collecting user's inputs. The second WorkFlow Node is a custom agent which analyse user's inputs and generate appropriate outputs
 
 import asyncio
 from dotenv import load_dotenv
@@ -81,7 +82,7 @@ async def main():
             {"name": "profile_summary", "type": "string", "description": "profile summary based on user's information"},
             {"name": "recommendations", "type": "string", "description": "Personalized recommendations based on user information"}
         ],
-        prompt="Generate profile summary and personalized recommendations based on the following user information:\nName: {user_name}\nAge: {user_age}\nEmail: {user_email}\nPreferences: {user_preferences}\n\nPlease provide profile summary and personalized recommendations. The results should be presented in json format",
+        prompt="Generate profile summary and personalized recommendations based on the following user information:\nName: {user_name}\nAge: {user_age}\nEmail: {user_email}\nPreferences: {user_preferences}\n\nPlease provide profile summary and personalized recommendations. The results should be presented in json format and have field of 'profile_summary' and 'recommendations'",
         llm_config=llm_config,
         parse_mode="json"
     )
