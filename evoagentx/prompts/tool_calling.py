@@ -38,7 +38,7 @@ Results:
 AGENT_GENERATION_TOOLS_PROMPT = """
 In the following Tools Description section, you are offered with the following tools. A short description of each functionality is also provided for each tool.
 You should assign tools to agent if you think it would be helpful for the agent to use the tool.
-A sample output for tool argument looks like this following line: 
+A sample output for tool argument looks like this following line (The example tools are not real tools): 
 tools: ["File Tool", "Browser Tool"]
 
 **Tools Description**
@@ -91,9 +91,6 @@ After using a tool, analyze its output and determine next steps.
 
 **Available Tools**
 {tools_description}
-
-**Additional Tool Calling Instructions**
-{additional_context}
 
 ** Tool Calling Key Points **
 You do not have to use the tool.

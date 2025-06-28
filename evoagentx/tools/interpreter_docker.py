@@ -6,7 +6,7 @@ import docker
 from pathlib import Path
 from typing import ClassVar, Dict, List, Optional
 from .interpreter_base import BaseInterpreter
-from .tool import Tool, ToolKit
+from .tool import Tool,Toolkit
 import os
 from pydantic import Field
 
@@ -366,10 +366,10 @@ class DockerExecuteScriptTool(Tool):
             return f"Error executing script: {str(e)}"
 
 
-class DockerInterpreterToolKit(ToolKit):
+class DockerInterpreterToolkit(Toolkit):
     def __init__(
         self,
-        name: str = "DockerInterpreterToolKit",
+        name: str = "DockerInterpreterToolkit",
         image_tag: Optional[str] = None,
         dockerfile_path: Optional[str] = None,
         require_confirm: bool = False,
@@ -408,14 +408,3 @@ class DockerInterpreterToolKit(ToolKit):
         # Store docker_interpreter as instance variable
         self.docker_interpreter = docker_interpreter
     
-    def get_tool_prompt(self) -> str:
-        """Returns a tool instruction prompt for the agent to use the Docker interpreter tools"""
-        return """** Docker Interpreter Tools **
-You are provided with Docker Interpreter Tools, which allow you to execute code in a secure Docker container environment.
-Available tools:
-- docker_execute: Execute code directly in the Docker container
-- docker_execute_script: Execute code from a script file in the Docker container
-
-The tools support Python and other languages as configured in the Docker container.
-All code is executed in an isolated Docker environment for security.
-        """

@@ -1,4 +1,4 @@
-from .tool import Tool, ToolKit
+from .tool import Tool,Toolkit
 import os
 import PyPDF2
 from typing import Dict, Any, List, Optional
@@ -6,13 +6,13 @@ from ..core.logging import logger
 from ..core.module import BaseModule
 
 
-class FileToolBase(BaseModule):
+class FileBase(BaseModule):
     """
     Base class containing shared file handling logic for different file types.
     """
     
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(**kwargs) 
         # File type handlers for special file formats
         self.file_handlers = {
             '.pdf': {
@@ -246,7 +246,7 @@ class ReadFileTool(Tool):
     }
     required: Optional[List[str]] = ["file_path"]
     
-    def __init__(self, file_base: FileToolBase = None):
+    def __init__(self, file_base: FileBase = None):
         super().__init__()
         self.file_base = file_base
     
@@ -303,7 +303,7 @@ class WriteFileTool(Tool):
     }
     required: Optional[List[str]] = ["file_path", "content"]
     
-    def __init__(self, file_base: FileToolBase = None):
+    def __init__(self, file_base: FileBase = None):
         super().__init__()
         self.file_base = file_base
     
@@ -362,7 +362,7 @@ class AppendFileTool(Tool):
     }
     required: Optional[List[str]] = ["file_path", "content"]
     
-    def __init__(self, file_base: FileToolBase = None):
+    def __init__(self, file_base: FileBase = None):
         super().__init__()
         self.file_base = file_base
     
@@ -406,10 +406,10 @@ class AppendFileTool(Tool):
             return {"success": False, "error": str(e), "file_path": file_path}
 
 
-class FileToolKit(ToolKit):
-    def __init__(self, name: str = "FileToolKit"):
+class FileToolkit(Toolkit):
+    def __init__(self, name: str = "FileToolkit"):
         # Create the shared file base instance
-        file_base = FileToolBase()
+        file_base = FileBase()
         
         # Create tools with the shared file base
         tools = [
@@ -424,16 +424,5 @@ class FileToolKit(ToolKit):
         # Store file_base as instance variable
         self.file_base = file_base
     
-    def get_tool_prompt(self) -> str:
-        """Returns a tool instruction prompt for the agent to use the file tools"""
-        return """** File Tool Instructions **
-You are provided with File Tools, which allow you to read, write, and append to files with special handling for different file formats.
-Available tools:
-- read_file: Read content from files (supports text files and PDFs)
-- write_file: Write content to files (supports text files and PDFs)
-- append_file: Append content to files (supports text files and PDFs)
-
-The tools can handle regular text files as well as PDF files with special processing.
-        """
 
 

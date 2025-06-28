@@ -16,7 +16,7 @@ from ..utils.utils import generate_dynamic_class_name, make_parent_folder
 from ..actions.customize_action import CustomizeAction
 from ..tools.tool import Tool
 from ..actions.action import ActionInput
-from ..tools.tool import ToolKit
+from ..tools.tool import Toolkit
 
 
 class CustomizeAgent(Agent):
@@ -56,7 +56,7 @@ class CustomizeAgent(Agent):
             Must accept a "content" parameter and return a dictionary.
         title_format (str, optional): Format string for title parsing mode with {title} placeholder.
             Default is "## {title}".
-        tools (list[Tool], optional): List of tools to be used by the agent.
+        tools (list[Toolkit], optional): List of tools to be used by the agent.
         max_tool_calls (int, optional): Maximum number of tool calls. Defaults to 5. 
         custom_output_format (str, optional): Specify the output format. Only used when `prompt_template` is used. 
             If not provided, the output format will be constructed from the `outputs` specification and `parse_mode`. 
@@ -144,7 +144,7 @@ class CustomizeAgent(Agent):
         self.max_tool_calls = max_tool_calls
         self.custom_output_format = custom_output_format
 
-    def _add_tools(self, tools: list[Tool]):
+    def _add_tools(self, tools: list[Toolkit]):
         self.get_action(self.customize_action_name).add_tools(tools)
 
     @property
@@ -338,12 +338,10 @@ class CustomizeAgent(Agent):
             parse_func=parse_func,
             title_format=title_format,
             custom_output_format=custom_output_format,
-            max_tool_try=max_tool_calls
+            max_tool_try=max_tool_calls,
+            tools=tools
         )
 
-        if tools:
-            customize_action.add_tools(tools)
-        
         return customize_action
     
     def _check_output_parser(self, outputs: List[dict], output_parser: Type[ActionOutput]):
@@ -439,7 +437,7 @@ class CustomizeAgent(Agent):
         return config
     
     @classmethod
-    def load_module(cls, path: str, llm_config: LLMConfig = None, tools: List[ToolKit] = None, **kwargs) -> "CustomizeAgent":
+    def load_module(cls, path: str, llm_config: LLMConfig = None, tools: List[Toolkit] = None, **kwargs) -> "CustomizeAgent":
         """
         load the agent from local storage. Must provide `llm_config` when loading the agent from local storage. 
             If tools is provided, tool_names must also be provided. 

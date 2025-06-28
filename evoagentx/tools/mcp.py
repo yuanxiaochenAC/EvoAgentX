@@ -16,7 +16,7 @@ import threading
 import asyncio
 from functools import partial
 from typing import Optional, Any, List, Dict, Callable, Union
-from evoagentx.tools.tool import Tool, ToolKit
+from evoagentx.tools.tool import Tool,Toolkit
 from evoagentx.core.logging import logger
 from contextlib import AsyncExitStack, asynccontextmanager
 
@@ -137,7 +137,7 @@ class MCPClient:
         session: Client,
         mcp_tools: List[Any],  # List of FastMCP tool objects for a single server
         config: Dict[str, Any],
-    ) -> ToolKit:
+    ) ->Toolkit:
         # Define the sync call function once
         def _sync_call_tool(name: str, **kwargs) -> Any:
             try:
@@ -211,12 +211,12 @@ class MCPClient:
             )
             all_tools.append(tool)
         
-        tool_collection = ToolKit(name=next(iter(config.get("mcpServers").keys())), tools=all_tools)
+        tool_collection =Toolkit(name=next(iter(config.get("mcpServers").keys())), tools=all_tools)
         return tool_collection
 
     
     def get_tools(self) -> List[Tool]:
-        """Return a list of ToolKits, one per server."""
+        """Return a list ofToolkits, one per server."""
         if not self.sessions:
             raise RuntimeError("Session not initialized")
 

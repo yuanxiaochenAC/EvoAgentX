@@ -5,7 +5,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from typing import Dict, Any, List, Optional, Tuple, Union
 from pydantic import Field
-from .tool import Tool, ToolKit
+from .tool import Tool,Toolkit
 from ..core.module import BaseModule
 from evoagentx.core.logging import logger
 import html2text
@@ -21,7 +21,7 @@ SELECTOR_MAP = {
     "tag": By.TAG_NAME,
 }
 
-class BrowserTool(BaseModule):
+class BrowserBase(BaseModule):
     """
     A tool for interacting with web browsers using Selenium.
     Allows agents to navigate to URLs, interact with elements, extract information,
@@ -1594,12 +1594,12 @@ class InitializeBrowserTool(Tool):
     inputs: Dict[str, Dict[str, str]] = {}
     required: Optional[List[str]] = []
     
-    def __init__(self, browser_tool: BrowserTool = None):
+    def __init__(self, browser_tool: BrowserBase = None):
         super().__init__()
         self.browser_tool = browser_tool
     
     def __call__(self, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
-        """Initialize browser using the BrowserTool instance."""
+        """Initialize browser using the BrowserBase instance."""
         if not self.browser_tool:
             raise RuntimeError("Browser tool instance not initialized")
         
@@ -1624,12 +1624,12 @@ class NavigateToUrlTool(Tool):
     }
     required: Optional[List[str]] = ["url"]
     
-    def __init__(self, browser_tool: BrowserTool = None):
+    def __init__(self, browser_tool: BrowserBase = None):
         super().__init__()
         self.browser_tool = browser_tool
     
     def __call__(self, url: str, timeout: int = None, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
-        """Navigate to URL using the BrowserTool instance."""
+        """Navigate to URL using the BrowserBase instance."""
         if not self.browser_tool:
             raise RuntimeError("Browser tool instance not initialized")
         
@@ -1666,12 +1666,12 @@ class InputTextTool(Tool):
     }
     required: Optional[List[str]] = ["element", "ref", "text"]
     
-    def __init__(self, browser_tool: BrowserTool = None):
+    def __init__(self, browser_tool: BrowserBase = None):
         super().__init__()
         self.browser_tool = browser_tool
     
     def __call__(self, element: str, ref: str, text: str, submit: bool = False, slowly: bool = True, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
-        """Input text using the BrowserTool instance."""
+        """Input text using the BrowserBase instance."""
         if not self.browser_tool:
             raise RuntimeError("Browser tool instance not initialized")
         
@@ -1696,12 +1696,12 @@ class BrowserClickTool(Tool):
     }
     required: Optional[List[str]] = []
     
-    def __init__(self, browser_tool: BrowserTool = None):
+    def __init__(self, browser_tool: BrowserBase = None):
         super().__init__()
         self.browser_tool = browser_tool
     
     def __call__(self, element: str, ref: str, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
-        """Click element using the BrowserTool instance."""
+        """Click element using the BrowserBase instance."""
         if not self.browser_tool:
             raise RuntimeError("Browser tool instance not initialized")
         
@@ -1717,12 +1717,12 @@ class BrowserSnapshotTool(Tool):
     inputs: Dict[str, Dict[str, str]] = {}
     required: Optional[List[str]] = []
     
-    def __init__(self, browser_tool: BrowserTool = None):
+    def __init__(self, browser_tool: BrowserBase = None):
         super().__init__()
         self.browser_tool = browser_tool
     
     def __call__(self, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
-        """Take browser snapshot using the BrowserTool instance."""
+        """Take browser snapshot using the BrowserBase instance."""
         if not self.browser_tool:
             raise RuntimeError("Browser tool instance not initialized")
         
@@ -1738,12 +1738,12 @@ class BrowserConsoleMessagesTool(Tool):
     inputs: Dict[str, Dict[str, str]] = {}
     required: Optional[List[str]] = []
     
-    def __init__(self, browser_tool: BrowserTool = None):
+    def __init__(self, browser_tool: BrowserBase = None):
         super().__init__()
         self.browser_tool = browser_tool
     
     def __call__(self, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
-        """Get console messages using the BrowserTool instance."""
+        """Get console messages using the BrowserBase instance."""
         if not self.browser_tool:
             raise RuntimeError("Browser tool instance not initialized")
         
@@ -1759,12 +1759,12 @@ class CloseBrowserTool(Tool):
     inputs: Dict[str, Dict[str, str]] = {}
     required: Optional[List[str]] = []
     
-    def __init__(self, browser_tool: BrowserTool = None):
+    def __init__(self, browser_tool: BrowserBase = None):
         super().__init__()
         self.browser_tool = browser_tool
     
     def __call__(self) -> Dict[str, Any]:
-        """Close browser using the BrowserTool instance."""
+        """Close browser using the BrowserBase instance."""
         if not self.browser_tool:
             raise RuntimeError("Browser tool instance not initialized")
         
@@ -1774,10 +1774,10 @@ class CloseBrowserTool(Tool):
             return {"status": "error", "message": f"Error closing browser: {str(e)}"}
 
 
-class BrowserToolKit(ToolKit):
+class BrowserToolkit(Toolkit):
     def __init__(
         self,
-        name: str = "BrowserToolKit",
+        name: str = "BrowserToolkit",
         browser_type: str = "chrome",
         headless: bool = False,
         timeout: int = 10,
@@ -1785,8 +1785,8 @@ class BrowserToolKit(ToolKit):
 
     ):
         # Create the shared browser tool instance
-        browser_tool = BrowserTool(
-            name="BrowserTool",
+        browser_tool = BrowserBase(
+            name="BrowserBase",
             browser_type=browser_type,
             headless=headless,
             timeout=timeout,
@@ -1810,21 +1810,6 @@ class BrowserToolKit(ToolKit):
         # Store browser_tool as instance variable
         self.browser_tool = browser_tool
     
-    def get_tool_prompt(self) -> str:
-        """Returns a tool instruction prompt for the agent to use the browser tools"""
-        return """** Browser Tools **
-You are provided with Browser Tools, which allow you to interact with web browsers using Selenium.
-Available tools:
-- initialize_browser: Start or restart a browser session (must be called first)
-- navigate_to_url: Navigate to a URL and capture a snapshot of all page elements
-- input_text: Type text into form fields using element references from snapshots
-- browser_click: Click on buttons, links, or other clickable elements using element references
-- browser_snapshot: Capture a fresh snapshot of the current page with element references
-- browser_console_messages: Retrieve JavaScript console messages for debugging
-- close_browser: Close the browser and free resources
-
-All interaction tools require element references from snapshots. Always call navigate_to_url or browser_snapshot first to get element references.
-        """
 
 
 

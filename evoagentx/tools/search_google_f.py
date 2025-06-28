@@ -1,5 +1,5 @@
 from .search_base import SearchBase
-from .tool import Tool, ToolKit
+from .tool import Tool,Toolkit
 from googlesearch import search as google_f_search
 from typing import Dict, Any, List, Optional
 from evoagentx.core.logging import logger
@@ -111,10 +111,10 @@ class GoogleFreeSearchTool(Tool):
             return {"results": [], "error": f"Error executing Google free search: {str(e)}"}
 
 
-class GoogleFreeSearchToolKit(ToolKit):
+class GoogleFreeSearchToolkit(Toolkit):
     def __init__(
         self,
-        name: str = "GoogleFreeSearchToolKit",
+        name: str = "GoogleFreeSearchToolkit",
         num_search_pages: Optional[int] = 5,
         max_content_words: Optional[int] = None,
         **kwargs
@@ -138,14 +138,4 @@ class GoogleFreeSearchToolKit(ToolKit):
         # Store search_google_free as instance variable
         self.search_google_free = search_google_free
     
-    def get_tool_prompt(self) -> str:
-        """Returns a tool instruction prompt for the agent to use the Google free search tools"""
-        return """** Google Free Search Tools **
-You are provided with Google Free Search Tools, which allow you to search Google without requiring API keys and retrieve content from search results.
-Available tools:
-- google_free_search: Search Google without API keys and retrieve content from search results
-
-This tool uses web scraping to get Google search results and doesn't require any API keys or configuration.
-Results include titles, content snippets, and URLs from the search results.
-        """
 

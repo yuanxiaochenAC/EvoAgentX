@@ -15,7 +15,7 @@ from ..agents.workflow_reviewer import WorkFlowReviewer
 from ..actions.task_planning import TaskPlanningOutput
 from ..actions.agent_generation import AgentGenerationOutput
 from ..workflow.workflow_graph import WorkFlowGraph, WorkFlowNode, WorkFlowEdge
-from ..tools.tool import ToolKit
+from ..tools.tool import Toolkit
 
 class WorkFlowGenerator(BaseModule):
     """
@@ -38,13 +38,9 @@ class WorkFlowGenerator(BaseModule):
     agent_generator: Optional[AgentGenerator] = Field(default=None, description="Assigns or generates the appropriate agent(s) to handle each sub-task.")
     workflow_reviewer: Optional[WorkFlowReviewer] = Field(default=None, description="Provides feedback and reflections to improve the generated workflow.")
     num_turns: Optional[PositiveInt] = Field(default=0, description="Specifies the number of refinement iterations for the generated workflow.")
-    tools: Optional[List[ToolKit]] = Field(default=None, description="A list of tools that can be used in the workflow.")
+    tools: Optional[List[Toolkit]] = Field(default=None, description="A list of tools that can be used in the workflow.")
     
     def init_module(self):
-        if self.tools is not None:
-            self.get_tool_info()
-        else:
-            self.tool_info = {}
         if self.task_planner is None:
             if self.llm is None:
                 raise ValueError("Must provide `llm` when `task_planner` is None")
@@ -53,7 +49,7 @@ class WorkFlowGenerator(BaseModule):
         if self.agent_generator is None:
             if self.llm is None:
                 raise ValueError("Must provide `llm` when `agent_generator` is None")
-            self.agent_generator = AgentGenerator(llm=self.llm, tool_info=self.tool_info)
+            self.agent_generator = AgentGenerator(llm=self.llm, tools=self.tools)
         
         # TODO add WorkFlowReviewer
         # if self.workflow_reviewer is None:

@@ -2,7 +2,7 @@ import requests
 import os
 from typing import Dict, Any, Optional, List
 from .search_base import SearchBase
-from .tool import Tool, ToolKit
+from .tool import Tool,Toolkit
 from evoagentx.core.logging import logger
 import dotenv
 dotenv.load_dotenv()
@@ -139,10 +139,10 @@ class GoogleSearchTool(Tool):
             return {"results": [], "error": f"Error executing Google search: {str(e)}"}
 
 
-class GoogleSearchToolKit(ToolKit):
+class GoogleSearchToolkit(Toolkit):
     def __init__(
         self,
-        name: str = "GoogleSearchToolKit",
+        name: str = "GoogleSearchToolkit",
         num_search_pages: Optional[int] = 5,
         max_content_words: Optional[int] = None,
         **kwargs
@@ -166,13 +166,3 @@ class GoogleSearchToolKit(ToolKit):
         # Store search_google as instance variable
         self.search_google = search_google
     
-    def get_tool_prompt(self) -> str:
-        """Returns a tool instruction prompt for the agent to use the Google search tools"""
-        return """** Google Search Tools **
-You are provided with Google Search Tools, which allow you to search Google using the Custom Search API and retrieve content from search results.
-Available tools:
-- google_search: Search Google and retrieve content from search results using the Custom Search API
-
-The tools require GOOGLE_API_KEY and GOOGLE_SEARCH_ENGINE_ID environment variables to be set.
-Results include titles, content snippets, and URLs from the search results.
-        """

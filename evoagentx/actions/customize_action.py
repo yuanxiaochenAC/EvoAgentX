@@ -8,7 +8,7 @@ from ..models.base_model import BaseLLM
 from .action import Action
 from ..core.message import Message
 from ..prompts.tool_calling import OUTPUT_EXTRACTION_PROMPT, TOOL_CALLING_TEMPLATE, TOOL_CALLING_HISTORY_PROMPT
-from ..tools.tool import Tool
+from ..tools.tool import Toolkit
 from ..core.registry import MODULE_REGISTRY
 from ..models.base_model import LLMOutputParser
 from ..core.module_utils import parse_json_from_llm_output, parse_json_from_text
@@ -20,9 +20,7 @@ class CustomizeAction(Action):
     title_format: Optional[str] = Field(default="## {title}", exclude=True, description="the format of the title. It is used when the `parse_mode` is 'title'.")
     custom_output_format: Optional[str] = Field(default=None, exclude=True, description="the format of the output. It is used when the `prompt_template` is provided.")
 
-    tools_schema: Optional[Dict[str, Any]] = Field(default=None, description="Schema definitions for available tools")
-    tools_caller: Optional[Dict[str, Callable]] = Field(default=None, description="Mapping of tool names to their callable functions")
-    tool_calling_instructions: Optional[List[str]] = Field(default=None, description="Additional instructions for tool calling")
+    tools: Optional[List[Toolkit]] = Field(default=None, description="The tools that the action can use")
     conversation: Optional[Message] = Field(default=None, description="Current conversation state")
 
     max_tool_try: int = Field(default=2, description="Maximum number of tool calling attempts allowed")
@@ -40,6 +38,9 @@ class CustomizeAction(Action):
         # Prioritize template and give warning if both are provided
         if self.prompt and self.prompt_template:
             logger.warning("Both `prompt` and `prompt_template` are provided for CustomizeAction action. Prioritizing `prompt_template` and ignoring `prompt`.")
+        if self.tools:
+            self.tools_caller = {}
+            self.add_tools(self.tools)
     
     def prepare_action_prompt(
         self, 
@@ -81,7 +82,8 @@ class CustomizeAction(Action):
         if self.prompt:
             prompt = self.prompt.format(**prompt_params_values) if prompt_params_values else self.prompt
             if self.tools:
-                prompt += "\n\n" + TOOL_CALLING_TEMPLATE.format(tools_description = self.tools_schema, additional_context = self.tool_calling_instructions)
+                tools_schemas = [tool.get_tool_schemas() for tool in self.tools]
+                prompt += "\n\n" + TOOL_CALLING_TEMPLATE.format(tools_description = tools_schemas)
             return prompt
         else:
             # Use goal-based tool calling mode
@@ -131,35 +133,22 @@ class CustomizeAction(Action):
             i += 1 
         return unique_name 
     
-    def add_tools(self, tools: List[Tool]):
-        if not self.tools_schema:
-            self.tools_schema = {}
-            self.tools_caller = {}
-            self.tool_calling_instructions = []
-            self.tools = []
+    def add_tools(self, tools: Union[Toolkit, List[Toolkit]]):
         if not tools:
             return
+        if isinstance(tools,Toolkit):
+            tools = [tools]
+        if not self.tools:
+            self.tools_caller = {}
+            self.tools = []
         self.tools += tools
-        tools_schemas = [tool.get_tool_schemas() for tool in tools]
-        tools_schemas = [j for i in tools_schemas for j in i]
         tools_callers = [tool.get_tools() for tool in tools]
         tools_callers = [j for i in tools_callers for j in i]
-        tools_names = [i["function"]["name"] for i in tools_schemas]
-        self.tool_calling_instructions += [tool.get_tool_prompt() for tool in tools]
-        for tool_schema, tool_caller, tool_name in zip(tools_schemas, tools_callers, tools_names):
-            self.tools_schema[tool_name] = tool_schema
-            self.tools_caller[tool_name] = tool_caller
+        for tool_caller in tools_callers:
+            self.tools_caller[tool_caller.name] = tool_caller
+        
     
     def _extract_tool_calls(self, llm_output: str) -> List[dict]:
-        # if match := re.search(r"```(?:ToolCalling)?\s*\n(.*?)\n```", llm_output, re.DOTALL):
-        #     json_list = parse_json_from_text(match.group(1))
-        #     return json.loads(json_list[0] if json_list else "{}")
-
-        # Improved regex pattern to match ```ToolCalling blocks more accurately
-        # This pattern handles:
-        # - Optional whitespace after ToolCalling
-        # - Content capture with proper handling of newlines
-        # - Optional whitespace before closing ```
         pattern = r"```ToolCalling\s*\n(.*?)\n\s*```"
         
         # Find all ToolCalling blocks in the output

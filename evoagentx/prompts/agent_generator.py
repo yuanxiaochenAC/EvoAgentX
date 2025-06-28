@@ -76,7 +76,7 @@ You are tasked with generating agents to complete a sub-task within a workflow. 
         ...
     ],
     "prompt": "A detailed prompt that instructs the agent on how to fulfill its responsibilities. Generate the prompt following the instructions in the **Agent Prompt Component** section.", 
-    "tools": ["optional, The tools the agent may use, selected from the tools listed in the '### Tools' section. If no tool is required, set this field to `null`, otherwise set as a list of str."]
+    "tool_names": ["optional, The tools the agent may use, selected from the tools listed in the '### Tools' section. If no tool is required, set this field to `null`, otherwise set as a list of str."]
 }}
 ```
 5.2 **Agent Prompt Component**: The `prompt` field of the agent should be a string that uses the following format:

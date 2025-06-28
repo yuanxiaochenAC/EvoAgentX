@@ -7,7 +7,7 @@ import os
 import traceback
 from typing import List, Set, Optional, Union, Dict
 from .interpreter_base import BaseInterpreter
-from .tool import Tool, ToolKit
+from .tool import Tool,Toolkit
 from pydantic import Field
 
 # Constants
@@ -418,10 +418,10 @@ class PythonExecuteScriptTool(Tool):
             return f"Error executing script: {str(e)}"
 
 
-class PythonInterpreterToolKit(ToolKit):
+class PythonInterpreterToolkit(Toolkit):
     def __init__(
         self,
-        name: str = "PythonInterpreterToolKit",
+        name: str = "PythonInterpreterToolkit",
         project_path: Optional[str] = ".",
         directory_names: Optional[List[str]] = None,
         allowed_imports: Optional[Set[str]] = None,
@@ -448,14 +448,3 @@ class PythonInterpreterToolKit(ToolKit):
         # Store python_interpreter as instance variable
         self.python_interpreter = python_interpreter
     
-    def get_tool_prompt(self) -> str:
-        """Returns a tool instruction prompt for the agent to use the Python interpreter tools"""
-        return """** Python Interpreter Tools **
-You are provided with Python Interpreter Tools, which allow you to execute Python code in a controlled environment with safety checks.
-Available tools:
-- python_execute: Execute Python code directly with import restrictions and safety checks
-- python_execute_script: Execute Python code from a file with import restrictions and safety checks
-
-The tools support project-specific module imports and can enforce allowed import restrictions for security.
-All code execution is performed with safety checks but still has security implications.
-        """

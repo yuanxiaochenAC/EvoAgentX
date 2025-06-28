@@ -1,6 +1,6 @@
 import wikipedia
 from .search_base import SearchBase
-from .tool import Tool, ToolKit
+from .tool import Tool,Toolkit
 from typing import Dict, Any, Optional, List
 from pydantic import Field
 from evoagentx.core.logging import logger
@@ -137,10 +137,10 @@ class WikipediaSearchTool(Tool):
             return {"results": [], "error": f"Error executing Wikipedia search: {str(e)}"}
 
 
-class WikipediaSearchToolKit(ToolKit):
+class WikipediaSearchToolkit(Toolkit):
     def __init__(
         self,
-        name: str = "WikipediaSearchToolKit",
+        name: str = "WikipediaSearchToolkit",
         num_search_pages: Optional[int] = 5,
         max_content_words: Optional[int] = None,
         max_summary_sentences: Optional[int] = None,
@@ -166,14 +166,4 @@ class WikipediaSearchToolKit(ToolKit):
         # Store search_wiki as instance variable
         self.search_wiki = search_wiki
     
-    def get_tool_prompt(self) -> str:
-        """Returns a tool instruction prompt for the agent to use the Wikipedia search tools"""
-        return """** Wikipedia Search Tools **
-You are provided with Wikipedia Search Tools, which allow you to search Wikipedia for relevant articles and content.
-Available tools:
-- wikipedia_search: Search Wikipedia for relevant articles with configurable content and summary limits
-
-The tools provide access to Wikipedia articles with summaries, full content, and URLs.
-Results can be limited by number of words in content and number of sentences in summaries.
-        """
 

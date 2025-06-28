@@ -80,7 +80,7 @@ class Tool(BaseModule):
     def __call__(self, **kwargs):
         raise NotImplementedError("All tools must implement __call__")
 
-class ToolKit(BaseModule):
+class Toolkit(BaseModule):
     name: str
     tools: List[Tool]
 
@@ -111,5 +111,3 @@ class ToolKit(BaseModule):
     def get_tool_schemas(self) -> List[Dict]:
         return [tool.get_tool_schema() for tool in self.tools]
     
-    def get_tool_prompt(self) -> str:
-        return ""
