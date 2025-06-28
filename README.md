@@ -68,6 +68,8 @@
 - [📚 Acknowledgements](#-acknowledgements)
 - [📄 License](#-license)
 
+
+
 ## Installation
 
 We recommend installing EvoAgentX using `pip`:
@@ -318,6 +320,16 @@ Explore how to effectively use EvoAgentX with the following resources:
 - [Discord](https://discord.gg/XWBZUJFwKe) — Chat, discuss, and collaborate in real-time.
 - [X (formerly Twitter)](https://x.com/EvoAgentX) — Follow us for news, updates, and insights.
 - [WeChat](https://github.com/EvoAgentX/EvoAgentX/blob/main/assets/wechat_info.md) — Connect with our Chinese community.
+
+### Add the meeting to your calendar
+
+📅 Click the link below to add the EvoAgentX Weekly Meeting (Sundays, 16:30–17:30 GMT+8) to your calendar:
+
+👉 [Add to your Google Calendar](https://calendar.google.com/calendar/u/0/r/eventedit?text=EvoAgentX+周会（腾讯会议）&dates=20250629T083000Z/20250629T093000Z&details=会议链接：https://meeting.tencent.com/dm/5UuNxo7Detz0&location=Online&recur=RRULE:FREQ=WEEKLY;BYDAY=SU;UNTIL=20270523T093000Z&ctz=Asia/Shanghai)
+
+👉 [Add to your Tencent Meeting](https://meeting.tencent.com/dm/5UuNxo7Detz0)
+
+👉 [Download the EvoAgentX_Weekly_Meeting.ics file](./EvoAgentX_Weekly_Meeting.ics)
 
 ### Contact Information
 
