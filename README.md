@@ -75,6 +75,7 @@
 
 👉 [添加到 Google Calendar](https://calendar.google.com/calendar/u/0/r/eventedit?text=EvoAgentX+周会（腾讯会议）&dates=20250629T083000Z/20250629T093000Z&details=会议链接：https://meeting.tencent.com/dm/5UuNxo7Detz0&location=Online&recur=RRULE:FREQ=WEEKLY;BYDAY=SU;UNTIL=20270523T093000Z&ctz=Asia/Shanghai)
 
+👉 [EvoAgentX_Weekly_Meeting.ics](./EvoAgentX_Weekly_Meeting.ics)
 ## Installation
 
 We recommend installing EvoAgentX using `pip`:
