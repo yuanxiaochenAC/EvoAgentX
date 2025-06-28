@@ -6,7 +6,7 @@ from evoagentx.core.module_utils import extract_code_blocks
 from evoagentx.workflow import SequentialWorkFlowGraph, WorkFlow 
 from evoagentx.agents import AgentManager 
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
-from evoagentx.tools import FileToolKit
+from evoagentx.tools import FileToolkit
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -51,7 +51,7 @@ def build_sequential_workflow():
             "prompt": "You are a software developer. Your task is to implement the code based on the provided problem and implementation plan.\n\nProblem: {problem}\nImplementation Plan: {plan}\n\nPlease provide the implementation code with appropriate comments.",
             "parse_mode": "custom", 
             "parse_func": custom_parse_func,
-            "tools": [FileToolKit()]
+            "tools": [FileToolkit()]
         }
     ]
     
@@ -67,7 +67,7 @@ def build_sequential_workflow():
     graph = SequentialWorkFlowGraph.from_file("debug/tool/sequential_workflow.json")
     
     # create agent instance from the workflow graph 
-    agent_manager = AgentManager(tools = [FileToolKit()])
+    agent_manager = AgentManager(tools = [FileToolkit()])
     agent_manager.add_agents_from_workflow(
         graph, 
         llm_config=llm_config, # will be used for all tasks without `llm_config`. 

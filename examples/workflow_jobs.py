@@ -4,10 +4,11 @@ import sys
 
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.workflow import WorkFlowGraph, WorkFlow
+from evoagentx.workflow.workflow_generator import WorkFlowGenerator
 from evoagentx.agents import AgentManager
 from examples.pdf_test_prompt import formulate_goal
 from evoagentx.tools.mcp import MCPToolkit
-from evoagentx.tools.file_tool import FileToolKit
+from evoagentx.tools.file_tool import FileToolkit
 load_dotenv() # Loads environment variables from .env file
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -31,14 +32,14 @@ def main(goal=None):
     # goal = making_goal(openai_config, goal)
     
     ## Get tools
-    mcp_toolkit = MCPToolkit(config_path=mcp_config_path)
-    tools = mcp_toolkit.get_tools()
-    tools.append(FileToolKit())
+    mcp_Toolkit = MCPToolkit(config_path=mcp_config_path)
+    tools = mcp_Toolkit.get_tools()
+    tools.append(FileToolkit())
     
     
     # ## _______________ Workflow Creation _______________
     # wf_generator = WorkFlowGenerator(llm=llm, tools=tools)
-    # workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal=goal, suggestion=PDF_AGENT_SUGGESTION)
+    # workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal=goal)
     # # [optional] display workflow
     # # [optional] save workflow 
     # workflow_graph.save_module(module_save_path)

@@ -13,12 +13,12 @@ openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, 
 
 def test_MCP_server():
     
-    mcp_toolkit = MCPToolkit(config_path="examples/output/tests/shares_mcp.config")
-    tools = mcp_toolkit.get_tools()
+    mcp_Toolkit = MCPToolkit(config_path="debug/tool/mcp.config")
+    tools = mcp_Toolkit.get_tools()
     
-    code_writer = CustomizeAgent(
-        name="CodeWriter",
-        description="Writes Python code based on requirements",
+    mcp_agent = CustomizeAgent(
+        name="MCPAgent",
+        description="A MCP agent that can use the tools provided by the MCP server",
         prompt_template= StringTemplate(
             instruction="Do some operations based on the user's instruction."
         ), 
@@ -31,14 +31,14 @@ def test_MCP_server():
         ],
         tools=tools
     )
-    code_writer.save_module("debug/tool/code_writer.json")
-    code_writer.load_module("debug/tool/code_writer.json", llm_config=openai_config, tools=tools)
+    mcp_agent.save_module("debug/tool/mcp_agent.json")
+    mcp_agent.load_module("debug/tool/mcp_agent.json", llm_config=openai_config, tools=tools)
 
-    message = code_writer(
-        inputs={"instruction": "lets try **get_stock_info** tool to get the stock info of **AAPL**"}
+    message = mcp_agent(
+        inputs={"instruction": "Summarize all the tools."}
     )
     
-    print(f"Response from {code_writer.name}:")
+    print(f"Response from {mcp_agent.name}:")
     print(message.content.result)
 
 if __name__ == "__main__":

@@ -94,8 +94,8 @@ def main(goal=None):
    
    
    ## Get tools
-   mcp_toolkit = MCPToolkit(config_path=mcp_config_path)
-   tools = mcp_toolkit.get_tools()
+   mcp_Toolkit = MCPToolkit(config_path=mcp_config_path)
+   tools = mcp_Toolkit.get_tools()
    
    ## _______________ Workflow Creation _______________
    wf_generator = WorkFlowGenerator(llm=llm, tools=tools)

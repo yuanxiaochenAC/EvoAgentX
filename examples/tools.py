@@ -12,14 +12,14 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from evoagentx.tools import (
-    PythonInterpreterToolKit,
-    DockerInterpreterToolKit,
-    WikipediaSearchToolKit,
-    GoogleSearchToolKit,
-    GoogleFreeSearchToolKit,
+    PythonInterpreterToolkit,
+    DockerInterpreterToolkit,
+    WikipediaSearchToolkit,
+    GoogleSearchToolkit,
+    GoogleFreeSearchToolkit,
     MCPToolkit,
-    FileToolKit,
-    BrowserToolKit
+    FileToolkit,
+    BrowserToolkit
 )
 
 
@@ -209,19 +209,19 @@ except ImportError as e:
 
 def run_search_examples():
     """
-    Run examples using the search toolkits (Wikipedia, Google, and Google Free).
+    Run examples using the search Toolkits (Wikipedia, Google, and Google Free).
     """
     print("\n===== SEARCH TOOLS EXAMPLES =====\n")
     
-    # Initialize search toolkits
-    wiki_toolkit = WikipediaSearchToolKit(max_summary_sentences=3)
-    google_toolkit = GoogleSearchToolKit(num_search_pages=3, max_content_words=200)
-    google_free_toolkit = GoogleFreeSearchToolKit()
+    # Initialize search Toolkits
+    wiki_Toolkit = WikipediaSearchToolkit(max_summary_sentences=3)
+    google_Toolkit = GoogleSearchToolkit(num_search_pages=3, max_content_words=200)
+    google_free_Toolkit = GoogleFreeSearchToolkit()
     
-    # Get the individual tools from toolkits
-    wiki_tool = wiki_toolkit.get_tool("wikipedia_search")
-    google_tool = google_toolkit.get_tool("google_search")
-    google_free_tool = google_free_toolkit.get_tool("google_free_search")
+    # Get the individual tools from Toolkits
+    wiki_tool = wiki_Toolkit.get_tool("wikipedia_search")
+    google_tool = google_Toolkit.get_tool("google_search")
+    google_free_tool = google_free_Toolkit.get_tool("google_free_search")
     
     # Example search query
     query = "artificial intelligence agent architecture"
@@ -277,19 +277,19 @@ def run_search_examples():
 
 
 def run_python_interpreter_examples():
-    """Run all examples using the Python Interpreter ToolKit"""
+    """Run all examples using the Python InterpreterToolkit"""
     print("\n===== PYTHON INTERPRETER EXAMPLES =====\n")
     
-    # Initialize the Python interpreter toolkit with the current directory as project path
+    # Initialize the Python interpreter Toolkit with the current directory as project path
     # and allow common standard library imports
-    interpreter_toolkit = PythonInterpreterToolKit(
+    interpreter_Toolkit = PythonInterpreterToolkit(
         project_path=os.getcwd(),
         directory_names=["examples", "evoagentx"],
         allowed_imports={"os", "sys", "time", "datetime", "math", "random", "platform"}
     )
     
     # Get the underlying interpreter instance for the examples
-    interpreter = interpreter_toolkit.python_interpreter
+    interpreter = interpreter_Toolkit.python_interpreter
     
     # Run the examples
     run_simple_hello_world(interpreter)
@@ -301,13 +301,13 @@ def run_python_interpreter_examples():
 
 
 def run_docker_interpreter_examples():
-    """Run all examples using the Docker Interpreter ToolKit"""
+    """Run all examples using the Docker InterpreterToolkit"""
     print("\n===== DOCKER INTERPRETER EXAMPLES =====\n")
     print("Running Docker interpreter examples...")
     
     try:
-        # Initialize the Docker interpreter toolkit with a standard Python image
-        interpreter_toolkit = DockerInterpreterToolKit(
+        # Initialize the Docker interpreter Toolkit with a standard Python image
+        interpreter_Toolkit = DockerInterpreterToolkit(
             image_tag="python:3.9-slim",  # Using official Python image
             print_stdout=True,
             print_stderr=True,
@@ -315,7 +315,7 @@ def run_docker_interpreter_examples():
         )
         
         # Get the underlying interpreter instance for the examples
-        interpreter = interpreter_toolkit.docker_interpreter
+        interpreter = interpreter_Toolkit.docker_interpreter
         
         # Run the examples
         run_simple_hello_world(interpreter)
@@ -332,10 +332,10 @@ def run_docker_interpreter_examples():
 
 def run_mcp_example():
     """
-    Run an example using the MCP toolkit to search for job information about 'data scientist'.
+    Run an example using the MCP Toolkit to search for job information about 'data scientist'.
     This uses the sample_mcp.config file to configure the MCP client.
     """
-    print("\n===== MCP TOOLKIT EXAMPLE =====\n")
+    print("\n===== MCP Toolkit EXAMPLE =====\n")
     
     # Get the path to the sample_mcp.config file
     config_path = os.path.join(os.getcwd(), "examples", "sample_mcp.config")
@@ -343,18 +343,18 @@ def run_mcp_example():
     print(f"Loading MCP configuration from: {config_path}")
     
     try:
-        # Initialize the MCP toolkit with the sample config
-        toolkit = MCPToolkit(config_path=config_path)
+        # Initialize the MCP Toolkit with the sample config
+        Toolkit = MCPToolkit(config_path=config_path)
         
-        # Get all available toolkits
-        toolkits = toolkit.get_tools()
+        # Get all available Toolkits
+        Toolkits = Toolkit.get_tools()
         
-        print(f"Available MCP toolkits: {len(toolkits)}")
+        print(f"Available MCP Toolkits: {len(Toolkits)}")
         
         # Find and use the hirebase search tool
         hirebase_tool = None
-        for toolkit_item in toolkits:
-            for tool in toolkit_item.tools:
+        for Toolkit_item in Toolkits:
+            for tool in Toolkit_item.tools:
                 print(f"Tool: {tool.name}")
                 print(f"Description: {tool.description}")
                 print("-" * 30)
@@ -386,24 +386,24 @@ def run_mcp_example():
         print(f"Error running MCP example: {str(e)}")
         print("Make sure the hirebase MCP server is properly configured with a valid API key.")
     finally:
-        if 'toolkit' in locals():
-            toolkit.disconnect()
+        if 'Toolkit' in locals():
+            Toolkit.disconnect()
 
 
 def run_file_tool_example():
     """
-    Run an example using the FileToolKit to read and write PDF files.
+    Run an example using the FileToolkit to read and write PDF files.
     """
     print("\n===== FILE TOOL EXAMPLE =====\n")
     
     try:
-        # Initialize the file toolkit
-        file_toolkit = FileToolKit()
+        # Initialize the file Toolkit
+        file_Toolkit = FileToolkit()
         
-        # Get individual tools from the toolkit
-        read_tool = file_toolkit.get_tool("read_file")
-        write_tool = file_toolkit.get_tool("write_file")
-        append_tool = file_toolkit.get_tool("append_file")
+        # Get individual tools from the Toolkit
+        read_tool = file_Toolkit.get_tool("read_file")
+        write_tool = file_Toolkit.get_tool("write_file")
+        append_tool = file_Toolkit.get_tool("append_file")
         
         # Create sample content for a PDF
         sample_content = """This is a sample PDF document created using the FileTool.
@@ -617,21 +617,21 @@ name = myapp"""
 
 def run_browser_tool_example():
     """
-    Run an example using the BrowserToolKit to initialize browser, 
+    Run an example using the BrowserToolkit to initialize browser, 
     go to Google, search for "test", and then close the browser.
     """
     print("\n===== BROWSER TOOL EXAMPLE =====\n")
     
     try:
-        # Initialize the browser toolkit (with visible browser window if headless is False)
-        browser_toolkit = BrowserToolKit(headless=True, timeout=10)
+        # Initialize the browser Toolkit (with visible browser window if headless is False)
+        browser_Toolkit = BrowserToolkit(headless=True, timeout=10)
         
-        # Get individual tools from the toolkit
-        init_tool = browser_toolkit.get_tool("initialize_browser")
-        nav_tool = browser_toolkit.get_tool("navigate_to_url")
-        input_tool = browser_toolkit.get_tool("input_text")
-        click_tool = browser_toolkit.get_tool("browser_click")
-        close_tool = browser_toolkit.get_tool("close_browser")
+        # Get individual tools from the Toolkit
+        init_tool = browser_Toolkit.get_tool("initialize_browser")
+        nav_tool = browser_Toolkit.get_tool("navigate_to_url")
+        input_tool = browser_Toolkit.get_tool("input_text")
+        click_tool = browser_Toolkit.get_tool("browser_click")
+        close_tool = browser_Toolkit.get_tool("close_browser")
         
         print("Step 1: Initializing browser...")
         init_result = init_tool()
@@ -717,8 +717,8 @@ def run_browser_tool_example():
         print(f"Error running browser tool example: {str(e)}")
         # Make sure to close browser even if there's an error
         try:
-            if 'browser_toolkit' in locals():
-                close_tool = browser_toolkit.get_tool("close_browser")
+            if 'browser_Toolkit' in locals():
+                close_tool = browser_Toolkit.get_tool("close_browser")
                 close_tool()
         except Exception as e:
             print(f"Error closing browser: {str(e)}")
@@ -734,7 +734,7 @@ def main():
     # Run browser tool example
     run_browser_tool_example()
     
-    # Run MCP toolkit example
+    # Run MCP Toolkit example
     run_mcp_example()
     
     # Run Python interpreter examples

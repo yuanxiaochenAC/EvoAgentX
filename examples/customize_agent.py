@@ -6,7 +6,7 @@ from evoagentx.agents import CustomizeAgent
 from evoagentx.prompts import StringTemplate 
 from evoagentx.core.module_utils import extract_code_blocks as util_extract_code_blocks
 from evoagentx.core.registry import register_parse_function
-from evoagentx.tools.file_tool import FileToolKit 
+from evoagentx.tools.file_tool import FileToolkit 
 from evoagentx.tools.mcp import MCPToolkit
 
 load_dotenv()
@@ -170,7 +170,7 @@ def build_customize_agent_with_tools():
         # outputs=[
         #     {"name": "code", "type": "string", "description": "The generated Python code"}
         # ],
-        tools=[FileToolKit()]
+        tools=[FileToolkit()]
     )
 
     message = code_writer(
@@ -180,8 +180,8 @@ def build_customize_agent_with_tools():
     print(message.content)
 
 def build_customize_agent_with_MCP(config_path):
-    mcp_toolkit = MCPToolkit(config_path=config_path)
-    tools = mcp_toolkit.get_tools()
+    mcp_Toolkit = MCPToolkit(config_path=config_path)
+    tools = mcp_Toolkit.get_tools()
     
     customize_agent = CustomizeAgent(
         name="MCPToolUser",
