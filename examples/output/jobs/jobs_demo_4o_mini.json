@@ -5,13 +5,71 @@
         {
             "class_name": "WorkFlowNode",
             "name": "resume_analysis",
-            "description": "Analyze the content of the PDF resume to extract key information including skills, experience, and qualifications.",
+            "description": "Extract content from the PDF resume for analysis.",
             "inputs": [
                 {
                     "class_name": "Parameter",
                     "name": "goal",
                     "type": "string",
                     "description": "The user's goal in textual format.",
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "class_name": "Parameter",
+                    "name": "resume_content",
+                    "type": "string",
+                    "description": "The extracted content from the PDF resume.",
+                    "required": true
+                }
+            ],
+            "reason": "This step is necessary to obtain the information needed to search for relevant job opportunities.",
+            "agents": [
+                {
+                    "name": "resume_extraction_agent",
+                    "description": "This agent reads the PDF resume file and extracts the relevant content required for analysis.",
+                    "inputs": [
+                        {
+                            "name": "goal",
+                            "type": "string",
+                            "description": "The user's goal in textual format.",
+                            "required": true
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "name": "resume_content",
+                            "type": "string",
+                            "description": "The extracted content from the PDF resume.",
+                            "required": true
+                        }
+                    ],
+                    "prompt": "### Objective\nExtract relevant content from the provided PDF resume based on the user's goal.\n\n### Instructions\n1. Begin by understanding the user's goal: <input>{goal}</input>.\n2. Use the FileToolkit to read the PDF resume file from the path specified in the goal.\n3. Extract the relevant information required for later analysis.\n4. Return the extracted resume content in the specified format as the output.\n\n### Output Format\nYour final output should ALWAYS in the following format:\n\n## Thought\nBriefly explain the reasoning process for extracting the resume content.\n\n## resume_content\nThe extracted content from the PDF resume.",
+                    "tool_names": [
+                        "FileToolkit"
+                    ]
+                }
+            ],
+            "status": "pending"
+        },
+        {
+            "class_name": "WorkFlowNode",
+            "name": "resume_summary",
+            "description": "Generate a short summary of the resume based on extracted content.",
+            "inputs": [
+                {
+                    "class_name": "Parameter",
+                    "name": "goal",
+                    "type": "string",
+                    "description": "The user's goal in textual format.",
+                    "required": true
+                },
+                {
+                    "class_name": "Parameter",
+                    "name": "resume_content",
+                    "type": "string",
+                    "description": "The extracted content from the PDF resume.",
                     "required": true
                 }
             ],
@@ -20,27 +78,26 @@
                     "class_name": "Parameter",
                     "name": "resume_summary",
                     "type": "string",
-                    "description": "A short summary of the resume highlighting key skills and qualifications.",
-                    "required": true
-                },
-                {
-                    "class_name": "Parameter",
-                    "name": "resume_data",
-                    "type": "object",
-                    "description": "An object containing detailed information extracted from the resume for job search purposes.",
+                    "description": "A concise summary of the resume content.",
                     "required": true
                 }
             ],
-            "reason": "This sub-task is necessary to gather relevant data from the resume which will guide the job search.",
+            "reason": "This summary will provide a concise overview of the resume to enhance the final output.",
             "agents": [
                 {
-                    "name": "resume_analysis_agent",
-                    "description": "This agent analyzes the content of a PDF resume, extracting key information such as skills, experience, and qualifications to generate a summary and detailed resume data for job searching.",
+                    "name": "resume_summary_generator",
+                    "description": "This agent generates a concise summary of the resume content based on the user's goal and the extracted resume content.",
                     "inputs": [
                         {
                             "name": "goal",
                             "type": "string",
                             "description": "The user's goal in textual format.",
+                            "required": true
+                        },
+                        {
+                            "name": "resume_content",
+                            "type": "string",
+                            "description": "The extracted content from the PDF resume.",
                             "required": true
                         }
                     ],
@@ -48,20 +105,11 @@
                         {
                             "name": "resume_summary",
                             "type": "string",
-                            "description": "A short summary of the resume highlighting key skills and qualifications.",
-                            "required": true
-                        },
-                        {
-                            "name": "resume_data",
-                            "type": "object",
-                            "description": "An object containing detailed information extracted from the resume for job search purposes.",
+                            "description": "A concise summary of the resume content.",
                             "required": true
                         }
                     ],
-                    "prompt": "### Objective\nAnalyze the content of the PDF resume to extract key information, including skills, experience, and qualifications, to produce a summary and detailed data for job searching.\n\n### Instructions\n1. Read the user's goal: <input>{goal}</input> to understand the context of the resume analysis.\n2. Utilize the File Tool to read the content of the PDF resume at the path provided in the goal.\n3. Parse the resume content to identify key skills, experiences, and qualifications.\n4. Generate a concise summary encapsulating the most critical information from the resume.\n5. Organize detailed data regarding skills, experience, education, and other relevant qualifications into a structured format for job search purposes.\n6. Ensure the outputs are generated in the specified format.\n\n### Output Format\nYour final output should ALWAYS in the following format:\n\n## Thought\nBriefly explain the reasoning process for extracting information from the resume.\n\n## resume_summary\nThe summary highlighting key skills and qualifications from the resume.\n\n## resume_data\nStructured data containing detailed information extracted from the resume.",
-                    "tool_names": [
-                        "FileToolKit"
-                    ]
+                    "prompt": "### Objective\nGenerate a short and concise summary of the resume content based on the user's goal and the extracted information from the resume.\n\n### Instructions\n1. Understand the user's goal stated as: <input>{goal}</input>\n2. Analyze the extracted content of the resume provided: <input>{resume_content}</input>\n3. Identify the key points, experiences, and skills reflected in the resume content that align with the user's goal.\n4. Create a succinct summary that captures these essential details clearly and effectively.\n5. Ensure that the summary is brief but informative for use in final reports.\n\n### Output Format\nYour final output should ALWAYS in the following format:\n\n## Thought\nBriefly explain the reasoning process for generating the summary of the resume content.\n\n## resume_summary\nProvide a concise overview of the resume content, emphasizing important points that align with the user's goal."
                 }
             ],
             "status": "pending"
@@ -69,7 +117,7 @@
         {
             "class_name": "WorkFlowNode",
             "name": "job_search",
-            "description": "Search for real job opportunities based on the extracted information from the resume.",
+            "description": "Search for real job opportunities based on the resume content.",
             "inputs": [
                 {
                     "class_name": "Parameter",
@@ -80,26 +128,26 @@
                 },
                 {
                     "class_name": "Parameter",
-                    "name": "resume_data",
-                    "type": "object",
-                    "description": "An object containing detailed information extracted from the resume for job search purposes.",
+                    "name": "resume_content",
+                    "type": "string",
+                    "description": "The extracted content from the PDF resume.",
                     "required": true
                 }
             ],
             "outputs": [
                 {
                     "class_name": "Parameter",
-                    "name": "job_listings",
+                    "name": "job_opportunities",
                     "type": "array",
-                    "description": "A list containing details of job opportunities including job title, company name, location, etc.",
+                    "description": "A list of job opportunities, each including job title, company name, location, job description, requirements, salary, and posting link.",
                     "required": true
                 }
             ],
-            "reason": "This step ensures we find job listings that align with the candidate's qualifications and experience.",
+            "reason": "This step involves looking for job postings that align with the qualifications and experiences outlined in the resume.",
             "agents": [
                 {
                     "name": "job_search_agent",
-                    "description": "This agent utilizes the hirebase tool to search for job opportunities based on the user's goal and the extracted resume data.",
+                    "description": "This agent searches for job postings that match the qualifications and experiences outlined in the user's resume using external job search APIs.",
                     "inputs": [
                         {
                             "name": "goal",
@@ -108,21 +156,21 @@
                             "required": true
                         },
                         {
-                            "name": "resume_data",
-                            "type": "object",
-                            "description": "An object containing detailed information extracted from the resume for job search purposes.",
+                            "name": "resume_content",
+                            "type": "string",
+                            "description": "The extracted content from the PDF resume.",
                             "required": true
                         }
                     ],
                     "outputs": [
                         {
-                            "name": "job_listings",
+                            "name": "job_opportunities",
                             "type": "array",
-                            "description": "A list containing details of job opportunities including job title, company name, location, etc.",
+                            "description": "A list of job opportunities, each including job title, company name, location, job description, requirements, salary, and posting link.",
                             "required": true
                         }
                     ],
-                    "prompt": "### Objective\nSearch for real job opportunities based on the user's goal and extracted resume data.\n\n### Instructions\n1. Understand the user's goal: <input>{goal}</input>.\n2. Analyze the extracted resume data: <input>{resume_data}</input> to identify relevant skills and qualifications.\n3. Use the hirebase tool to search for jobs that match the criteria derived from the resume data. Include filters where applicable such as job title, location, experience level, etc.\n4. Collect the results and format them into a comprehensive list that includes job title, company name, location, salary, and job description.\n5. Output the list of job opportunities as the job_listings array.\n\n### Output Format\nYour final output should ALWAYS in the following format:\n\n## Thought\nBriefly explain the reasoning process for searching and selecting job opportunities based on the resume data.\n\n## job_listings\nA list containing details of job opportunities including job title, company name, location, etc.",
+                    "prompt": "### Objective\nSearch for real job opportunities based on the content extracted from the user\u2019s resume.\n\n### Instructions\n1. Begin by understanding the user's goal described in <input>{goal}</input>.\n2. Analyze the extracted content from the resume provided in <input>{resume_content}</input> to identify key qualifications and skills.\n3. Utilizing the HireBase API, search for job listings that match the qualifications and experiences found in the resume content.\n4. Ensure to filter results that align with the goal and retrieved resume content.\n5. Compile the details of the job opportunities found, including job title, company name, location, detailed job description, requirements, salary, and posting link.\n6. Present the list of job opportunities as output.\n\n### Output Format\nYour final output should ALWAYS in the following format:\n\n## Thought\nBriefly explain the reasoning process for conducting the job search based on the resume content.\n\n## job_opportunities\nA list of job openings that match the user's qualifications.",
                     "tool_names": [
                         "hirebase"
                     ]
@@ -132,8 +180,8 @@
         },
         {
             "class_name": "WorkFlowNode",
-            "name": "format_output",
-            "description": "Compile the resume summary and job listings into a well-formatted output.",
+            "name": "final_report",
+            "description": "Compile the resume summary and job opportunities into a well-formatted output.",
             "inputs": [
                 {
                     "class_name": "Parameter",
@@ -146,31 +194,31 @@
                     "class_name": "Parameter",
                     "name": "resume_summary",
                     "type": "string",
-                    "description": "A short summary of the resume highlighting key skills and qualifications.",
+                    "description": "The generated summary of the resume.",
                     "required": true
                 },
                 {
                     "class_name": "Parameter",
-                    "name": "job_listings",
+                    "name": "job_opportunities",
                     "type": "array",
-                    "description": "A list containing details of job opportunities to be formatted into the final output.",
+                    "description": "The list of job opportunities found.",
                     "required": true
                 }
             ],
             "outputs": [
                 {
                     "class_name": "Parameter",
-                    "name": "formatted_output",
+                    "name": "final_output",
                     "type": "string",
-                    "description": "A well-formatted summary including the resume summary and details of job opportunities.",
+                    "description": "A well-formatted report that includes the resume summary and job opportunities.",
                     "required": true
                 }
             ],
-            "reason": "This step aggregates the information collected into a user-friendly format.",
+            "reason": "This final step creates the overall report that includes all relevant information in a structured format.",
             "agents": [
                 {
-                    "name": "output_formatter_agent",
-                    "description": "This agent aggregates the resume summary and job listings, formatting them into a user-friendly output string.",
+                    "name": "final_report_agent",
+                    "description": "This agent compiles the resume summary and job opportunities into a well-formatted report that is easy to read and comprehend.",
                     "inputs": [
                         {
                             "name": "goal",
@@ -181,25 +229,25 @@
                         {
                             "name": "resume_summary",
                             "type": "string",
-                            "description": "A short summary of the resume highlighting key skills and qualifications.",
+                            "description": "The generated summary of the resume.",
                             "required": true
                         },
                         {
-                            "name": "job_listings",
+                            "name": "job_opportunities",
                             "type": "array",
-                            "description": "A list containing details of job opportunities to be formatted into the final output.",
+                            "description": "The list of job opportunities found.",
                             "required": true
                         }
                     ],
                     "outputs": [
                         {
-                            "name": "formatted_output",
+                            "name": "final_output",
                             "type": "string",
-                            "description": "A well-formatted summary including the resume summary and details of job opportunities.",
+                            "description": "A well-formatted report that includes the resume summary and job opportunities.",
                             "required": true
                         }
                     ],
-                    "prompt": "### Objective\nFormat the given resume summary and job listings into a well-structured and comprehensive output string.\n\n### Instructions\n1. Begin by reviewing the goal: <input>{goal}</input> to ensure the output aligns with the user's expectations.\n2. Read the resume summary: <input>{resume_summary}</input> and capture the key skills and qualifications it highlights.\n3. Gather the job listings: <input>{job_listings}</input> which contain the job opportunities relevant to the resume.\n4. Structure the output in a clear format: start with the resume summary, followed by each job listing.\n5. Make sure to present each job's details, including title, company, location, and description in a friendly format.\n6. Finally, output the compiled string as the formatted output.\n\n### Output Format\nYour final output should ALWAYS in the following format:\n\n## Thought\nBriefly explain the reasoning process for formatting the input data.\n\n## formatted_output\nA well-structured string that includes the resume summary and all job listings details."
+                    "prompt": "### Objective\nCompile the resume summary and job opportunities into a well-structured and easy-to-read report.\n\n### Instructions\n1. Read the user's goal to understand the context: <input>{goal}</input>.\n2. Access the generated resume summary: <input>{resume_summary}</input>.\n3. Review the list of job opportunities: <input>{job_opportunities}</input>.\n4. Format the resume summary as an introductory paragraph in the report.\n5. Organize the job opportunities into a list, ensuring each entry includes job title, company, location, description, requirements, salary, and link.\n6. Compile the summary and job opportunities into a coherent report format.\n\n### Output Format\nYour final output should ALWAYS in the following format:\n\n## Thought\nBriefly explain the reasoning process for compiling the final report.\n\n## final_output\nA comprehensive report that effectively communicates the resume summary and detailed job opportunities."
                 }
             ],
             "status": "pending"
@@ -209,19 +257,25 @@
         {
             "class_name": "WorkFlowEdge",
             "source": "resume_analysis",
-            "target": "job_search",
+            "target": "resume_summary",
             "priority": 0
         },
         {
             "class_name": "WorkFlowEdge",
             "source": "resume_analysis",
-            "target": "format_output",
+            "target": "job_search",
+            "priority": 0
+        },
+        {
+            "class_name": "WorkFlowEdge",
+            "source": "resume_summary",
+            "target": "final_report",
             "priority": 0
         },
         {
             "class_name": "WorkFlowEdge",
             "source": "job_search",
-            "target": "format_output",
+            "target": "final_report",
             "priority": 0
         }
     ],
