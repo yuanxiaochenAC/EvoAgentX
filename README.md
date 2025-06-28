@@ -69,13 +69,15 @@
 - [📄 License](#-license)
 
 
-## 添加到日历（支持 Google, Outlook, Apple 等）
+## Add the meeting to your calendar
 
-📅 点击以下链接添加 EvoAgentX 周会（每周日 16:30 - 17:30）到你的日历：
+📅 Click the link below to add the EvoAgentX Weekly Meeting (Sundays, 16:30–17:30 GMT+8) to your calendar:
 
-👉 [添加到 Google Calendar](https://calendar.google.com/calendar/u/0/r/eventedit?text=EvoAgentX+周会（腾讯会议）&dates=20250629T083000Z/20250629T093000Z&details=会议链接：https://meeting.tencent.com/dm/5UuNxo7Detz0&location=Online&recur=RRULE:FREQ=WEEKLY;BYDAY=SU;UNTIL=20270523T093000Z&ctz=Asia/Shanghai)
+👉 [Add to your Google Calendar](https://calendar.google.com/calendar/u/0/r/eventedit?text=EvoAgentX+周会（腾讯会议）&dates=20250629T083000Z/20250629T093000Z&details=会议链接：https://meeting.tencent.com/dm/5UuNxo7Detz0&location=Online&recur=RRULE:FREQ=WEEKLY;BYDAY=SU;UNTIL=20270523T093000Z&ctz=Asia/Shanghai)
 
-👉 [EvoAgentX_Weekly_Meeting.ics](./EvoAgentX_Weekly_Meeting.ics)
+👉 [Add to your Tencent Meeting](https://meeting.tencent.com/dm/5UuNxo7Detz0)
+
+👉 [Download the EvoAgentX_Weekly_Meeting.ics file](./EvoAgentX_Weekly_Meeting.ics)
 ## Installation
 
 We recommend installing EvoAgentX using `pip`:
