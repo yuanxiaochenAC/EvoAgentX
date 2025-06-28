@@ -48,10 +48,10 @@ You can set up MCP tools by providing a configuration file path:
 from evoagentx.tools.mcp import MCPToolkit
 
 # Initialize with a configuration file
-mcp_toolkit = MCPToolkit(config_path="examples/mcp.config")
+mcp_Toolkit = MCPToolkit(config_path="examples/mcp.config")
 
 # Get all available tools
-tools = mcp_toolkit.get_tools()
+tools = mcp_Toolkit.get_tools()
 ```
 
 #### 2.1.1 Configuration File Format
@@ -125,28 +125,28 @@ config = {
 }
 
 # Initialize with the configuration dictionary
-mcp_toolkit = MCPToolkit(config=config)
+mcp_Toolkit = MCPToolkit(config=config)
 
 # Get all available tools
-tools = mcp_toolkit.get_tools()
+tools = mcp_Toolkit.get_tools()
 ```
 
 ---
 
 ## 3. Using MCP Tools
 
-Once your MCP toolkit is initialized, you can access and use the available tools.
+Once your MCP Toolkit is initialized, you can access and use the available tools.
 
 ### 3.1 Getting Available Tools
 
 The `get_tools()` method returns a list of all available tools from all connected MCP servers:
 
 ```python
-# Initialize the MCP toolkit
-mcp_toolkit = MCPToolkit(config_path="examples/mcp.config")
+# Initialize the MCP Toolkit
+mcp_Toolkit = MCPToolkit(config_path="examples/mcp.config")
 
 # Get all available tools
-tools = mcp_toolkit.get_tools()
+tools = mcp_Toolkit.get_tools()
 ```
 
 ### 3.2 Accessing Tool Information
@@ -215,11 +215,11 @@ Here's a complete example of initializing and using MCP tools:
 ```python
 from evoagentx.tools.mcp import MCPToolkit
 
-# Initialize the MCP toolkit
-mcp_toolkit = MCPToolkit(config_path="examples/mcp.config")
+# Initialize the MCP Toolkit
+mcp_Toolkit = MCPToolkit(config_path="examples/mcp.config")
 
 # Get all available tools
-tools = mcp_toolkit.get_tools()
+tools = mcp_Toolkit.get_tools()
 
 # Find a specific tool by name
 calculator_tool = next((tool for tool in tools if tool.name == "Calculator"), None)
@@ -233,27 +233,27 @@ if calculator_tool:
     print(f"Calculation result: {result}")
 
 # Clean up when done
-mcp_toolkit.disconnect()
+mcp_Toolkit.disconnect()
 ```
 
 ### 3.4 Handling MCP Server Lifecycle
 
-The MCP toolkit handles server connections automatically, but you should properly disconnect when you're done:
+The MCP Toolkit handles server connections automatically, but you should properly disconnect when you're done:
 
 ```python
-# Initialize the toolkit
-mcp_toolkit = MCPToolkit(config_path="examples/mcp.config")
+# Initialize the Toolkit
+mcp_Toolkit = MCPToolkit(config_path="examples/mcp.config")
 
 try:
     # Use MCP tools
-    tools = mcp_toolkit.get_tools()
+    tools = mcp_Toolkit.get_tools()
     # ... work with tools ...
 finally:
     # Disconnect from servers
-    mcp_toolkit.disconnect()
+    mcp_Toolkit.disconnect()
 ```
 
-You can also use the toolkit as a context manager:
+You can also use the Toolkit as a context manager:
 
 ```python
 from evoagentx.tools.mcp import MCPClient
@@ -274,12 +274,12 @@ with MCPClient(server_configs) as mcp_tools:
 
 ### 3.5 Using MCP in Practical Applications
 
-Once you've initialized your MCP toolkit and obtained the tools, you can use them directly:
+Once you've initialized your MCP Toolkit and obtained the tools, you can use them directly:
 
 ```python
-# Initialize MCP toolkit
-mcp_toolkit = MCPToolkit(config_path="mcp_config.json")
-mcp_tools = mcp_toolkit.get_tools()
+# Initialize MCP Toolkit
+mcp_Toolkit = MCPToolkit(config_path="mcp_config.json")
+mcp_tools = mcp_Toolkit.get_tools()
 
 try:
     # Find a specific tool by name
@@ -294,7 +294,7 @@ try:
         print(f"Search results: {result}")
 finally:
     # Always disconnect when done
-    mcp_toolkit.disconnect()
+    mcp_Toolkit.disconnect()
 ```
 
 ---
@@ -320,9 +320,9 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=True)
 
-# Initialize MCP toolkit and get tools
-mcp_toolkit = MCPToolkit(config_path="examples/mcp.config")
-tools = mcp_toolkit.get_tools()
+# Initialize MCP Toolkit and get tools
+mcp_Toolkit = MCPToolkit(config_path="examples/mcp.config")
+tools = mcp_Toolkit.get_tools()
 
 # Create tool mapping
 tools_mapping = {}
@@ -359,7 +359,7 @@ print(message.content.result)
 ```
 
 This example demonstrates:
-1. Setting up the MCP toolkit and getting available tools
+1. Setting up the MCP Toolkit and getting available tools
 2. Creating a mapping between tool names and tool objects
 3. Configuring a customized agent with the tool mapping
 4. Executing the agent with specific inputs
@@ -376,9 +376,9 @@ from evoagentx.agents.agent_manager import AgentManager
 from evoagentx.workflow.workflow_generator import WorkFlowGenerator
 from evoagentx.models.openai_model import OpenAILLM
 
-# Initialize MCP toolkit and add to agent manager
-mcp_toolkit = MCPToolkit(config_path="mcp_config.json")
-mcp_tools = mcp_toolkit.get_tools()
+# Initialize MCP Toolkit and add to agent manager
+mcp_Toolkit = MCPToolkit(config_path="mcp_config.json")
+mcp_tools = mcp_Toolkit.get_tools()
 
 agent_manager = AgentManager(tools=mcp_tools)
 workflow_generator = WorkFlowGenerator(llm=llm, tools=mcp_tools)

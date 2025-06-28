@@ -460,32 +460,32 @@ EvoAgentX provides tools for handling file operations, including reading and wri
 
 ### 4.1 File Tools
 
-**EvoAgentX provides comprehensive file handling capabilities through both individual file tools and a unified FileToolKit. The tools support standard file operations for text files and specialized handlers for formats like PDF using PyPDF2.**
+**EvoAgentX provides comprehensive file handling capabilities through both individual file tools and a unified FileToolkit. The tools support standard file operations for text files and specialized handlers for formats like PDF using PyPDF2.**
 
-#### 4.1.1 FileToolKit Usage (Recommended)
+#### 4.1.1 FileToolkit Usage (Recommended)
 
-The `FileToolKit` provides a convenient way to access all file-related tools:
+The `FileToolkit` provides a convenient way to access all file-related tools:
 
 ```python
-from evoagentx.tools.file_tool import FileToolKit
+from evoagentx.tools.file_tool import FileToolkit
 
-# Initialize the file toolkit
-file_toolkit = FileToolKit()
+# Initialize the file Toolkit
+file_Toolkit = FileToolkit()
 
 # Get all available tools/methods
-available_tools = file_toolkit.get_tools()
+available_tools = file_Toolkit.get_tools()
 print(f"Available methods: {[tool.name for tool in available_tools]}")
 # Output: ['read_file', 'write_file', 'append_file']
 
-# Get individual tools from the toolkit
-read_tool = file_toolkit.get_tool("read_file")
-write_tool = file_toolkit.get_tool("write_file")
-append_tool = file_toolkit.get_tool("append_file")
+# Get individual tools from the Toolkit
+read_tool = file_Toolkit.get_tool("read_file")
+write_tool = file_Toolkit.get_tool("write_file")
+append_tool = file_Toolkit.get_tool("append_file")
 ```
 
 #### 4.1.2 Available Methods
 
-The `FileToolKit` provides exactly **3 callable methods** accessible via `get_tool()`:
+The `FileToolkit` provides exactly **3 callable methods** accessible via `get_tool()`:
 
 ##### Method 1: read_file(file_path)
 
@@ -494,7 +494,7 @@ The `FileToolKit` provides exactly **3 callable methods** accessible via `get_to
 **Usage Example**:
 ```python
 # Read a text file
-read_tool = file_toolkit.get_tool("read_file")
+read_tool = file_Toolkit.get_tool("read_file")
 text_result = read_tool(file_path="examples/sample.txt")
 print(text_result)
 
@@ -527,7 +527,7 @@ print(pdf_result)
 **Usage Example**:
 ```python
 # Write to a text file
-write_tool = file_toolkit.get_tool("write_file")
+write_tool = file_Toolkit.get_tool("write_file")
 text_result = write_tool(
     file_path="examples/output.txt", 
     content="This is new content for the file."
@@ -564,7 +564,7 @@ pdf_result = write_tool(
 **Usage Example**:
 ```python
 # Append to a text file
-append_tool = file_toolkit.get_tool("append_file")
+append_tool = file_Toolkit.get_tool("append_file")
 result = append_tool(
     file_path="examples/log.txt", 
     content="\nNew log entry: Operation completed."
@@ -610,30 +610,30 @@ result = read_tool(file_path="example.txt")
 
 ## 5. Browser Tools
 
-EvoAgentX provides comprehensive browser automation capabilities through the `BrowserToolKit` class and individual browser tool classes. These tools allow agents to control web browsers, navigate pages, interact with elements, and extract information.
+EvoAgentX provides comprehensive browser automation capabilities through the `BrowserToolkit` class and individual browser tool classes. These tools allow agents to control web browsers, navigate pages, interact with elements, and extract information.
 
 ## Setup
 
-### Using BrowserToolKit (Recommended)
+### Using BrowserToolkit (Recommended)
 
 ```python
-from evoagentx.tools import BrowserToolKit
+from evoagentx.tools import BrowserToolkit
 
-# Initialize the browser toolkit
-toolkit = BrowserToolKit(
+# Initialize the browser Toolkit
+Toolkit = BrowserToolkit(
     browser_type="chrome",  # Options: "chrome", "firefox", "safari", "edge"  
     headless=False,         # Set to True for background operation
     timeout=10              # Default timeout in seconds
 )
 
 # Get specific tools
-initialize_tool = toolkit.get_tool("initialize_browser")
-navigate_tool = toolkit.get_tool("navigate_to_url")
-input_tool = toolkit.get_tool("input_text")
-click_tool = toolkit.get_tool("browser_click")
-snapshot_tool = toolkit.get_tool("browser_snapshot")
-console_tool = toolkit.get_tool("browser_console_messages")
-close_tool = toolkit.get_tool("close_browser")
+initialize_tool = Toolkit.get_tool("initialize_browser")
+navigate_tool = Toolkit.get_tool("navigate_to_url")
+input_tool = Toolkit.get_tool("input_text")
+click_tool = Toolkit.get_tool("browser_click")
+snapshot_tool = Toolkit.get_tool("browser_snapshot")
+console_tool = Toolkit.get_tool("browser_console_messages")
+close_tool = Toolkit.get_tool("close_browser")
 ```
 
 ### Using Individual Browser Tools (Alternative)
@@ -668,8 +668,8 @@ Start or restart a browser session. Must be called before any other browser oper
 
 **Usage:**
 ```python
-# Using ToolKit
-result = toolkit.get_tool("initialize_browser")()
+# UsingToolkit
+result = Toolkit.get_tool("initialize_browser")()
 
 # Using BrowserTool directly  
 result = browser.initialize_browser()
@@ -708,8 +708,8 @@ Navigate to a URL and automatically capture a snapshot of all page elements for 
 
 **Usage:**
 ```python
-# Using ToolKit
-result = toolkit.get_tool("navigate_to_url")(url="https://example.com")
+# UsingToolkit
+result = Toolkit.get_tool("navigate_to_url")(url="https://example.com")
 
 # Using BrowserTool directly
 result = browser.navigate_to_url("https://example.com")
@@ -738,8 +738,8 @@ Type text into form fields, search boxes, or other input elements using element 
 
 **Usage:**
 ```python
-# Using ToolKit
-result = toolkit.get_tool("input_text")(
+# UsingToolkit
+result = Toolkit.get_tool("input_text")(
     element="Search field",
     ref="e1", 
     text="python tutorial",
@@ -775,8 +775,8 @@ Click on buttons, links, or other clickable elements using element references fr
 
 **Usage:**
 ```python
-# Using ToolKit
-result = toolkit.get_tool("browser_click")(
+# UsingToolkit
+result = Toolkit.get_tool("browser_click")(
     element="Login button",
     ref="e3"
 )
@@ -827,8 +827,8 @@ Capture a fresh snapshot of the current page state, including all interactive el
 
 **Usage:**
 ```python
-# Using ToolKit
-result = toolkit.get_tool("browser_snapshot")()
+# UsingToolkit
+result = Toolkit.get_tool("browser_snapshot")()
 
 # Using BrowserTool directly
 result = browser.browser_snapshot()
@@ -867,8 +867,8 @@ Retrieve JavaScript console messages (logs, warnings, errors) for debugging web 
 
 **Usage:**
 ```python
-# Using ToolKit
-result = toolkit.get_tool("browser_console_messages")()
+# UsingToolkit
+result = Toolkit.get_tool("browser_console_messages")()
 
 # Using BrowserTool directly
 result = browser.browser_console_messages()
@@ -891,8 +891,8 @@ Close the browser session and free system resources. Always call this when finis
 
 **Usage:**
 ```python
-# Using ToolKit
-result = toolkit.get_tool("close_browser")()
+# UsingToolkit
+result = Toolkit.get_tool("close_browser")()
 
 # Using BrowserTool directly
 result = browser.close_browser()
@@ -934,18 +934,18 @@ The browser tools use a unique element reference system:
 ## Complete Example
 
 ```python
-from evoagentx.tools import BrowserToolKit
+from evoagentx.tools import BrowserToolkit
 
-# Initialize browser toolkit
-toolkit = BrowserToolKit(browser_type="chrome", headless=False)
+# Initialize browser Toolkit
+Toolkit = BrowserToolkit(browser_type="chrome", headless=False)
 
 try:
     # Start browser
-    result = toolkit.get_tool("initialize_browser")()
+    result = Toolkit.get_tool("initialize_browser")()
     print(f"Browser init: {result['status']}")
     
     # Navigate to page and get snapshot
-    result = toolkit.get_tool("navigate_to_url")(url="https://example.com")
+    result = Toolkit.get_tool("navigate_to_url")(url="https://example.com")
     print(f"Navigation: {result['status']}")
     print(f"Found {len(result['interactive_elements'])} interactive elements")
     
@@ -953,7 +953,7 @@ try:
     for element in result['interactive_elements']:
         if 'search' in element['purpose'].lower():
             # Input text into search field
-            search_result = toolkit.get_tool("input_text")(
+            search_result = Toolkit.get_tool("input_text")(
                 element="Search field",
                 ref=element['id'],
                 text="python tutorial",
@@ -963,17 +963,17 @@ try:
             break
     
     # Take a fresh snapshot after search
-    snapshot = toolkit.get_tool("browser_snapshot")()
+    snapshot = Toolkit.get_tool("browser_snapshot")()
     print(f"New snapshot: {len(snapshot['interactive_elements'])} elements")
     
     # Check console for any errors
-    console = toolkit.get_tool("browser_console_messages")()
+    console = Toolkit.get_tool("browser_console_messages")()
     if console['console_messages']:
         print(f"Console messages: {len(console['console_messages'])}")
         
 finally:
     # Always close browser
-    toolkit.get_tool("close_browser")()
+    Toolkit.get_tool("close_browser")()
     print("Browser closed")
 ```
 
@@ -981,7 +981,7 @@ finally:
 
 ## 6. MCP Tools
 
-**The Model Context Protocol (MCP) toolkit provides a standardized way to connect to external services through the MCP protocol. It enables agents to access specialized tools like job search services, data processing utilities, and other MCP-compatible APIs without requiring direct integration of each service.**
+**The Model Context Protocol (MCP) Toolkit provides a standardized way to connect to external services through the MCP protocol. It enables agents to access specialized tools like job search services, data processing utilities, and other MCP-compatible APIs without requiring direct integration of each service.**
 
 ### 6.1 MCPToolkit
 
@@ -991,7 +991,7 @@ finally:
 from evoagentx.tools.mcp import MCPToolkit
 
 # Initialize with a configuration file
-mcp_toolkit = MCPToolkit(config_path="examples/sample_mcp.config")
+mcp_Toolkit = MCPToolkit(config_path="examples/sample_mcp.config")
 
 # Or initialize with a configuration dictionary
 config = {
@@ -1003,7 +1003,7 @@ config = {
         }
     }
 }
-mcp_toolkit = MCPToolkit(config=config)
+mcp_Toolkit = MCPToolkit(config=config)
 ```
 
 #### 6.1.2 Available Methods
@@ -1017,7 +1017,7 @@ The `MCPToolkit` provides the following callable methods:
 **Usage Example**:
 ```python
 # Get all available MCP tools
-tools = mcp_toolkit.get_tools()
+tools = mcp_Toolkit.get_tools()
 
 # Display available tools
 for i, tool in enumerate(tools):
@@ -1041,8 +1041,8 @@ for i, tool in enumerate(tools):
 
 **Usage Example**:
 ```python
-# When done with the MCP toolkit
-mcp_toolkit.disconnect()
+# When done with the MCP Toolkit
+mcp_Toolkit.disconnect()
 ```
 
 **Return Type**: `None`
@@ -1052,8 +1052,8 @@ mcp_toolkit.disconnect()
 Once you have obtained the tools from the MCPToolkit, you can use them like any other EvoAgentX tool:
 
 ```python
-# Get all tools from the toolkit
-tools = mcp_toolkit.get_tools()
+# Get all tools from the Toolkit
+tools = mcp_Toolkit.get_tools()
 
 # Find a specific tool
 hirebase_tool = None
@@ -1095,11 +1095,11 @@ if hirebase_tool:
   - Use a try-finally block for automatic cleanup:
     ```python
     try:
-        toolkit = MCPToolkit(config_path="config.json")
-        tools = toolkit.get_tools()
+        Toolkit = MCPToolkit(config_path="config.json")
+        tools = Toolkit.get_tools()
         # Use tools here
     finally:
-        toolkit.disconnect()
+        Toolkit.disconnect()
     ```
 
 - **Error Handling**:

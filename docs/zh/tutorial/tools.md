@@ -456,36 +456,36 @@ for i, result in enumerate(results.get("results", [])):
 
 ## 4. 文件操作
 
-EvoAgentX 通过个别文件工具和统一的 FileToolKit 提供全面的文件处理功能。这些工具支持文本文件的标准文件操作，并使用 PyPDF2 为 PDF 等格式提供专门的处理器。
+EvoAgentX 通过个别文件工具和统一的 FileToolkit 提供全面的文件处理功能。这些工具支持文本文件的标准文件操作，并使用 PyPDF2 为 PDF 等格式提供专门的处理器。
 
 ### 4.1 文件工具
 
-**EvoAgentX 通过个别文件工具和统一的 FileToolKit 提供全面的文件处理功能。这些工具支持文本文件的标准文件操作，并使用 PyPDF2 为 PDF 等格式提供专门的处理器。**
+**EvoAgentX 通过个别文件工具和统一的 FileToolkit 提供全面的文件处理功能。这些工具支持文本文件的标准文件操作，并使用 PyPDF2 为 PDF 等格式提供专门的处理器。**
 
-#### 4.1.1 FileToolKit 使用（推荐）
+#### 4.1.1 FileToolkit 使用（推荐）
 
-`FileToolKit` 提供了访问所有文件相关工具的便捷方式：
+`FileToolkit` 提供了访问所有文件相关工具的便捷方式：
 
 ```python
-from evoagentx.tools.file_tool import FileToolKit
+from evoagentx.tools.file_tool import FileToolkit
 
 # 初始化文件工具包
-file_toolkit = FileToolKit()
+file_Toolkit = FileToolkit()
 
 # 获取所有可用工具/方法
-available_tools = file_toolkit.get_tools()
+available_tools = file_Toolkit.get_tools()
 print(f"可用方法: {[tool.name for tool in available_tools]}")
 # 输出: ['read_file', 'write_file', 'append_file']
 
 # 从工具包中获取单个工具
-read_tool = file_toolkit.get_tool("read_file")
-write_tool = file_toolkit.get_tool("write_file")
-append_tool = file_toolkit.get_tool("append_file")
+read_tool = file_Toolkit.get_tool("read_file")
+write_tool = file_Toolkit.get_tool("write_file")
+append_tool = file_Toolkit.get_tool("append_file")
 ```
 
 #### 4.1.2 可用方法
 
-`FileToolKit` 通过 `get_tool()` 提供**3个可调用方法**：
+`FileToolkit` 通过 `get_tool()` 提供**3个可调用方法**：
 
 ##### 方法 1: read_file(file_path)
 
@@ -494,7 +494,7 @@ append_tool = file_toolkit.get_tool("append_file")
 **使用示例**:
 ```python
 # 读取文本文件
-read_tool = file_toolkit.get_tool("read_file")
+read_tool = file_Toolkit.get_tool("read_file")
 text_result = read_tool(file_path="examples/sample.txt")
 print(text_result)
 
@@ -527,7 +527,7 @@ print(pdf_result)
 **使用示例**:
 ```python
 # 写入文本文件
-write_tool = file_toolkit.get_tool("write_file")
+write_tool = file_Toolkit.get_tool("write_file")
 text_result = write_tool(
     file_path="examples/output.txt", 
     content="这是文件的新内容。"
@@ -564,7 +564,7 @@ pdf_result = write_tool(
 **使用示例**:
 ```python
 # 追加到文本文件
-append_tool = file_toolkit.get_tool("append_file")
+append_tool = file_Toolkit.get_tool("append_file")
 result = append_tool(
     file_path="examples/log.txt", 
     content="\n新日志条目：操作已完成。"
@@ -610,37 +610,37 @@ result = read_tool(file_path="example.txt")
 
 ## 5. 浏览器自动化
 
-EvoAgentX 通过 `BrowserToolKit` 类和单独的浏览器工具类提供全面的浏览器自动化功能。这些工具允许代理控制网络浏览器、导航页面、与元素交互以及提取信息。
+EvoAgentX 通过 `BrowserToolkit` 类和单独的浏览器工具类提供全面的浏览器自动化功能。这些工具允许代理控制网络浏览器、导航页面、与元素交互以及提取信息。
 
 ### 5.1 浏览器工具
 
-**EvoAgentX 通过 `BrowserToolKit` 类和单独的浏览器工具类提供全面的浏览器自动化功能。这些工具允许代理控制网络浏览器、导航页面、与元素交互以及提取信息。**
+**EvoAgentX 通过 `BrowserToolkit` 类和单独的浏览器工具类提供全面的浏览器自动化功能。这些工具允许代理控制网络浏览器、导航页面、与元素交互以及提取信息。**
 
-#### 5.1.1 BrowserToolKit 使用（推荐）
+#### 5.1.1 BrowserToolkit 使用（推荐）
 
 ```python
-from evoagentx.tools import BrowserToolKit
+from evoagentx.tools import BrowserToolkit
 
 # 初始化浏览器工具包
-toolkit = BrowserToolKit(
+Toolkit = BrowserToolkit(
     browser_type="chrome",  # 选项："chrome"、"firefox"、"safari"、"edge"
     headless=False,         # 设置为 True 进行后台操作
     timeout=10              # 默认超时时间（秒）
 )
 
 # 获取特定工具
-initialize_tool = toolkit.get_tool("initialize_browser")
-navigate_tool = toolkit.get_tool("navigate_to_url")
-input_tool = toolkit.get_tool("input_text")
-click_tool = toolkit.get_tool("browser_click")
-snapshot_tool = toolkit.get_tool("browser_snapshot")
-console_tool = toolkit.get_tool("browser_console_messages")
-close_tool = toolkit.get_tool("close_browser")
+initialize_tool = Toolkit.get_tool("initialize_browser")
+navigate_tool = Toolkit.get_tool("navigate_to_url")
+input_tool = Toolkit.get_tool("input_text")
+click_tool = Toolkit.get_tool("browser_click")
+snapshot_tool = Toolkit.get_tool("browser_snapshot")
+console_tool = Toolkit.get_tool("browser_console_messages")
+close_tool = Toolkit.get_tool("close_browser")
 ```
 
 #### 5.1.2 可用方法
 
-`BrowserToolKit` 通过 `get_tool()` 提供**7个可调用方法**：
+`BrowserToolkit` 通过 `get_tool()` 提供**7个可调用方法**：
 
 ##### 方法 1: initialize_browser()
 
@@ -659,8 +659,8 @@ close_tool = toolkit.get_tool("close_browser")
 
 **使用方法：**
 ```python
-# 使用 ToolKit
-result = toolkit.get_tool("initialize_browser")()
+# 使用Toolkit
+result = Toolkit.get_tool("initialize_browser")()
 
 # 直接使用 BrowserTool
 result = browser.initialize_browser()
@@ -701,8 +701,8 @@ result = browser.initialize_browser()
 
 **使用方法：**
 ```python
-# 使用 ToolKit
-result = toolkit.get_tool("navigate_to_url")(url="https://example.com")
+# 使用Toolkit
+result = Toolkit.get_tool("navigate_to_url")(url="https://example.com")
 
 # 直接使用 BrowserTool
 result = browser.navigate_to_url("https://example.com")
@@ -733,8 +733,8 @@ result = browser.navigate_to_url("https://example.com")
 
 **使用方法：**
 ```python
-# 使用 ToolKit
-result = toolkit.get_tool("input_text")(
+# 使用Toolkit
+result = Toolkit.get_tool("input_text")(
     element="搜索字段",
     ref="e1", 
     text="python 教程",
@@ -772,8 +772,8 @@ result = browser.input_text(
 
 **使用方法：**
 ```python
-# 使用 ToolKit
-result = toolkit.get_tool("browser_click")(
+# 使用Toolkit
+result = Toolkit.get_tool("browser_click")(
     element="登录按钮",
     ref="e3"
 )
@@ -826,8 +826,8 @@ result = browser.browser_click(element="登录按钮", ref="e3")
 
 **使用方法：**
 ```python
-# 使用 ToolKit
-result = toolkit.get_tool("browser_snapshot")()
+# 使用Toolkit
+result = Toolkit.get_tool("browser_snapshot")()
 
 # 直接使用 BrowserTool
 result = browser.browser_snapshot()
@@ -868,8 +868,8 @@ result = browser.browser_snapshot()
 
 **使用方法：**
 ```python
-# 使用 ToolKit
-result = toolkit.get_tool("browser_console_messages")()
+# 使用Toolkit
+result = Toolkit.get_tool("browser_console_messages")()
 
 # 直接使用 BrowserTool
 result = browser.browser_console_messages()
@@ -894,8 +894,8 @@ result = browser.browser_console_messages()
 
 **使用方法：**
 ```python
-# 使用 ToolKit
-result = toolkit.get_tool("close_browser")()
+# 使用Toolkit
+result = Toolkit.get_tool("close_browser")()
 
 # 直接使用 BrowserTool
 result = browser.close_browser()
@@ -937,18 +937,18 @@ result = browser.close_browser()
 #### 5.1.5 完整示例
 
 ```python
-from evoagentx.tools import BrowserToolKit
+from evoagentx.tools import BrowserToolkit
 
 # 初始化浏览器工具包
-toolkit = BrowserToolKit(browser_type="chrome", headless=False)
+Toolkit = BrowserToolkit(browser_type="chrome", headless=False)
 
 try:
     # 启动浏览器
-    result = toolkit.get_tool("initialize_browser")()
+    result = Toolkit.get_tool("initialize_browser")()
     print(f"浏览器初始化: {result['status']}")
     
     # 导航到页面并获取快照
-    result = toolkit.get_tool("navigate_to_url")(url="https://example.com")
+    result = Toolkit.get_tool("navigate_to_url")(url="https://example.com")
     print(f"导航: {result['status']}")
     print(f"找到 {len(result['interactive_elements'])} 个交互元素")
     
@@ -956,7 +956,7 @@ try:
     for element in result['interactive_elements']:
         if 'search' in element['purpose'].lower():
             # 在搜索字段中输入文本
-            search_result = toolkit.get_tool("input_text")(
+            search_result = Toolkit.get_tool("input_text")(
                 element="搜索字段",
                 ref=element['id'],
                 text="python 教程",
@@ -966,17 +966,17 @@ try:
             break
     
     # 搜索后拍摄新快照
-    snapshot = toolkit.get_tool("browser_snapshot")()
+    snapshot = Toolkit.get_tool("browser_snapshot")()
     print(f"新快照: {len(snapshot['interactive_elements'])} 个元素")
     
     # 检查控制台是否有任何错误
-    console = toolkit.get_tool("browser_console_messages")()
+    console = Toolkit.get_tool("browser_console_messages")()
     if console['console_messages']:
         print(f"控制台消息: {len(console['console_messages'])}")
         
 finally:
     # 始终关闭浏览器
-    toolkit.get_tool("close_browser")()
+    Toolkit.get_tool("close_browser")()
     print("浏览器已关闭")
 ```
 
@@ -1021,25 +1021,25 @@ browser = BrowserTool(
 - **方法执行顺序**:
   ```python
   # 必需的工作流模式
-  browser_toolkit.get_tool("initialize_browser")()      # 1. 启动浏览器（必需首先）
-  nav_result = browser_toolkit.get_tool("navigate_to_url")(url=url)  # 2. 转到页面，获取元素
-  browser_toolkit.get_tool("input_text")(ref="e0", text="查询")     # 3. 使用快照中的元素引用
-  browser_toolkit.get_tool("browser_click")(ref="e1")               # 4. 使用元素引用点击
-  browser_toolkit.get_tool("close_browser")()                       # 5. 清理（必需最后）
+  browser_Toolkit.get_tool("initialize_browser")()      # 1. 启动浏览器（必需首先）
+  nav_result = browser_Toolkit.get_tool("navigate_to_url")(url=url)  # 2. 转到页面，获取元素
+  browser_Toolkit.get_tool("input_text")(ref="e0", text="查询")     # 3. 使用快照中的元素引用
+  browser_Toolkit.get_tool("browser_click")(ref="e1")               # 4. 使用元素引用点击
+  browser_Toolkit.get_tool("close_browser")()                       # 5. 清理（必需最后）
   ```
 
 - **错误处理最佳实践**:
   ```python
-  browser_toolkit = BrowserToolKit(headless=False)
+  browser_Toolkit = BrowserToolkit(headless=False)
   try:
       # 始终检查初始化结果
-      init_tool = browser_toolkit.get_tool("initialize_browser")
+      init_tool = browser_Toolkit.get_tool("initialize_browser")
       init_result = init_tool()
       if init_result["status"] != "success":
           raise Exception("浏览器初始化失败")
       
       # 你的浏览器操作在这里
-      nav_tool = browser_toolkit.get_tool("navigate_to_url")
+      nav_tool = browser_Toolkit.get_tool("navigate_to_url")
       nav_result = nav_tool(url="https://example.com")
       # ... 更多操作
       
@@ -1047,7 +1047,7 @@ browser = BrowserTool(
       print(f"浏览器操作失败：{e}")
   finally:
       # 关键：始终关闭浏览器以释放资源
-      close_tool = browser_toolkit.get_tool("close_browser")
+      close_tool = browser_Toolkit.get_tool("close_browser")
       close_tool()
   ```
 
@@ -1070,7 +1070,7 @@ browser = BrowserTool(
 from evoagentx.tools.mcp import MCPToolkit
 
 # 使用配置文件初始化
-mcp_toolkit = MCPToolkit(config_path="examples/sample_mcp.config")
+mcp_Toolkit = MCPToolkit(config_path="examples/sample_mcp.config")
 
 # 或使用配置字典初始化
 config = {
@@ -1082,7 +1082,7 @@ config = {
         }
     }
 }
-mcp_toolkit = MCPToolkit(config=config)
+mcp_Toolkit = MCPToolkit(config=config)
 ```
 
 #### 6.1.2 可用方法
@@ -1096,7 +1096,7 @@ mcp_toolkit = MCPToolkit(config=config)
 **使用示例**：
 ```python
 # 获取所有可用的 MCP 工具
-tools = mcp_toolkit.get_tools()
+tools = mcp_Toolkit.get_tools()
 
 # 显示可用工具
 for i, tool in enumerate(tools):
@@ -1119,7 +1119,7 @@ for i, tool in enumerate(tools):
 **使用示例**：
 ```python
 # 使用完 MCP 工具包后
-mcp_toolkit.disconnect()
+mcp_Toolkit.disconnect()
 ```
 
 **返回类型**：`None`
@@ -1130,7 +1130,7 @@ mcp_toolkit.disconnect()
 
 ```python
 # 从工具包获取所有工具
-tools = mcp_toolkit.get_tools()
+tools = mcp_Toolkit.get_tools()
 
 # 查找特定工具
 hirebase_tool = None
@@ -1172,11 +1172,11 @@ if hirebase_tool:
   - 使用 try-finally 块进行自动清理：
     ```python
     try:
-        toolkit = MCPToolkit(config_path="config.json")
-        tools = toolkit.get_tools()
+        Toolkit = MCPToolkit(config_path="config.json")
+        tools = Toolkit.get_tools()
         # 在这里使用工具
     finally:
-        toolkit.disconnect()
+        Toolkit.disconnect()
     ```
 
 - **错误处理**：
