@@ -68,6 +68,26 @@
 - [📚 Acknowledgements](#-acknowledgements)
 - [📄 License](#-license)
 
+
+<!-- 在 <head> 中引入样式和脚本 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/add-to-calendar-button@1?style=light" />
+<script src="https://cdn.jsdelivr.net/npm/add-to-calendar-button@1"></script>
+
+<!-- 添加循环会议按钮 -->
+<add-to-calendar-button
+  name="EvoAgentX 周会（腾讯会议）"
+  description="腾讯会议会议 ID：883‑6084‑5815"
+  location="https://meeting.tencent.com/dm/5UuNxo7Detz0"
+  timezone="Asia/Shanghai"
+  startDate="2025-06-29"
+  startTime="16:30"
+  endTime="17:30"
+  options="'Apple','Google','iCal','Outlook.com','Yahoo'"
+  recurrence="RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=SU;UNTIL=20270523T093000Z"
+  lightMode="light"
+>
+</add-to-calendar-button>
+
 ## Installation
 
 We recommend installing EvoAgentX using `pip`:
