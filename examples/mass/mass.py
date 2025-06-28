@@ -34,8 +34,8 @@ class MathSplits(MATH):
         full_test_data = self._test_data
         # radnomly select 50 samples for training and 100 samples for test
         # self._train_data = [full_test_data[idx] for idx in permutation[:50]]
-        self._train_data = [full_test_data[idx] for idx in permutation[:10]]
-        self._test_data = [full_test_data[idx] for idx in permutation[10:20]]
+        self._train_data = [full_test_data[idx] for idx in permutation[:100]]
+        self._test_data = [full_test_data[idx] for idx in permutation[100:200]]
 
     # define the input keys. 
     # If defined, the corresponding input key and value will be passed to the __call__ method of the program, 
@@ -65,65 +65,91 @@ class WorkFlow():
         self.blocks = [self.summarizer, self.aggregater, self.reflector, self.debater, self.executer]
     
     def __call__(self, problem: str, **kwargs):
-        entry_point = kwargs.get("entry_point", None)
         context = kwargs.get("context", None)
+        testcases = kwargs.get("testcases", None)
         # Step 1: 获取总结的上下文
-        context = self.summarizer.execute(problem, context = context)
-        
+        if self.summarizer.n > 0:
+            context = self.summarizer.execute(problem, context = context)
+
         # Step 2: 生成候选解决方案
         if self.debater.n > 0:
-            # 需要辩论，生成多个候选方案
-            candidate_solutions = self.aggregater.execute(problem, context=context)
+            candidate_solutions = self.aggregater.execute(problem, context = context)
         else:
-            # 没有辩论，使用self consistency
-            candidate_solution, _ = self.aggregater(problem, context=context)
-            candidate_solutions = [candidate_solution]
-        
+            candidate_solutions = [self.aggregater(problem)]
+
         # Step 3: 对每个候选方案进行反思优化
-        solutions = []
-        for solution in candidate_solutions:
-            if self.reflector.n > 0:
+        if self.reflector.n > 0:
+            for i in range(len(candidate_solutions)):
                 if self.executer.n > 0:
-                    refined_solution = self.executer.execute(problem = problem, solution = solution, entry_point = kwargs.pop("entry_point", None), testcases = kwargs.pop("testcases", None))
-                    solutions.append(refined_solution)
+                    self.executer.n = self.reflector.n
+                    refined_answer = self.executer.execute(problem, candidate_solutions[i], testcases = testcases)
                 else:
-                    refined_solution = self.reflector.execute(problem = problem, solution = solution, context = context)
-                    solutions.append(refined_solution)
-            
+                    refined_answer = self.reflector.execute(problem, candidate_solutions[i], context = context)
+                candidate_solutions[i] = refined_answer
+
         # Step 4: 通过辩论选择最佳答案
-        final_answer = self.debater.execute(problem, solutions, context=context)
-        
-        return final_answer, {"problem":problem, "answer":final_answer}
+        if self.debater.n > 0:
+            final_answer = self.debater.execute(problem, candidate_solutions, context = context)
+        else:
+            final_answer = candidate_solutions[0]
+
+        return final_answer, {"problem":problem, 
+                              "context":context, 
+                              "testcases": testcases,
+                              "answer":final_answer}
 
     def save(self, path):
         params = {
             "summarizer": {
-                "n": self.summarizer.n,
                 "summarizer": self.summarizer.summarizer.prompt,
                 "predictor": self.summarizer.predictor.prompt,
             },
             "aggregater":{
-                "n": self.aggregater.n,
                 "predictor": self.aggregater.predictor.prompt,
             },
             "reflector": {
-                "n": self.reflector.n,
                 "reflector": self.reflector.reflector.prompt,
                 "refiner": self.reflector.refiner.prompt,
             },
             "debater": {
-                "n": self.debater.n,
                 "debater": self.debater.debater.prompt,
                 "predictor": self.debater.predictor.prompt,
             },
             "executer": {
-                "n": self.executer.n,
                 "predictor": self.executer.predictor.prompt,
-                "code_reflector": self.executer.code_reflector.prompt,
+                "codereflector": self.executer.codereflector.prompt,
             }
         }
         with open(path, "w") as f:
             json.dump(params, f)
+
+    def load(self, path):
+        with open(path, "r") as f:
+            params = json.load(f)
+            self.summarizer.summarizer.prompt = params["summarizer"]["summarizer"]
+            self.summarizer.predictor.prompt = params["summarizer"]["predictor"]
+            self.aggregater.predictor.prompt = params["aggregater"]["predictor"]
+            self.reflector.reflector.prompt = params["reflector"]["reflector"]
+            self.reflector.refiner.prompt = params["reflector"]["refiner"]
+            self.debater.debater.prompt = params["debater"]["debater"]
+            self.debater.predictor.prompt = params["debater"]["predictor"]
+            self.executer.predictor.prompt = params["executer"]["predictor"]
+            self.executer.codereflector.prompt = params["executer"]["codereflector"]
+
+    def __repr__(self):
+        lines = [
+            "WorkFlow representation:",
+            f"summarizer.prompt: {getattr(self.summarizer, 'prompt', getattr(self.summarizer, 'summarizer', None))}",
+            f"aggregater.prompt: {getattr(self.aggregater, 'prompt', getattr(self.aggregater, 'predictor', None))}",
+            f"reflector.prompt: {getattr(self.reflector, 'prompt', getattr(self.reflector, 'reflector', None))}",
+            f"debater.prompt: {getattr(self.debater, 'prompt', getattr(self.debater, 'debater', None))}",
+            f"executer.prompt: {getattr(self.executer, 'prompt', getattr(self.executer, 'predictor', None))}",
+        ]
+        return '\n'.join(lines)
+
+    def __str__(self):
+        return self.__repr__()
+
 
 def get_save_path(program):
     return f"examples/mass/{program}"
@@ -147,17 +173,17 @@ def mipro_optimize(registry, block, optimizer_llm, save_path, benchmark):
 
 def optimize_predictor(predictor, optimizer_llm, benchmark):
     registry = MiproRegistry()
-    registry.track(predictor, "prompt", input_names=['problem', "context"], output_names=['answer'])
+    registry.track(predictor, "prompt", input_names=['problem'], output_names=['reasoning', 'answer'])
     
     optimizer = mipro_optimize(registry, predictor, optimizer_llm, get_save_path("predictor"), benchmark)
-    return optimizer.evaluate(dataset = benchmark), optimizer.restore_best_program()
+    return optimizer.evaluate(dataset = benchmark, eval_mode="test"), optimizer.restore_best_program()
 
 def optimize_summarizer(optimized_predictor, executor_llm, optimizer_llm, benchmark, predictor_score):
     block = summarize(predictor=optimized_predictor, llm=executor_llm)
     
     registry = MiproRegistry()
-    registry.track(block, "summarizer.prompt", input_names=['problem', 'context'], output_names=['summary', 'reasoning', 'answer'])
-    registry.track(block, "predictor.prompt", input_names=['problem', 'context'], output_names=['summary', 'reasoning', 'answer'])
+    registry.track(block, "summarizer.prompt", input_names=['problem'], output_names=['summary'])
+    registry.track(block, "predictor.prompt", input_names=['problem'], output_names=['reasoning', 'answer'])
     
     optimizer = mipro_optimize(registry, block, optimizer_llm, get_save_path("mass/summarizer"), benchmark)
     score = optimizer.evaluate(dataset=benchmark, eval_mode="test")
@@ -171,7 +197,7 @@ def optimize_aggregator(optimized_predictor, optimizer_llm, benchmark, predictor
     block = aggregate(predictor=optimized_predictor)
     
     registry = MiproRegistry()
-    registry.track(block, "predictor.prompt", input_names=['problem', 'context'], output_names=['answer'])
+    registry.track(block, "predictor.prompt", input_names=['problem'], output_names=['reasoning', 'answer'])
     
     optimizer = mipro_optimize(registry, block, optimizer_llm, get_save_path("mass/aggregator"), benchmark)
     score = optimizer.evaluate(dataset=benchmark, eval_mode="test")
@@ -185,9 +211,9 @@ def optimize_reflector(optimized_predictor, executor_llm, optimizer_llm, benchma
     block = reflect(predictor=optimized_predictor, llm=executor_llm)
     
     registry = MiproRegistry()
-    registry.track(block, "predictor.prompt", input_names=['problem', 'context'], output_names=['answer'])
-    registry.track(block, "reflector.prompt", input_names=['problem', 'context'], output_names=['answer'])
-    registry.track(block, "refiner.prompt", input_names=['problem', 'context'], output_names=['answer'])
+    registry.track(block, "predictor.prompt", input_names=['problem'], output_names=['predictor_reasoning', 'predictor_answer'])
+    registry.track(block, "reflector.prompt", input_names=['problem'], output_names=['reflector_reasoning', 'reflector_feedback', 'reflector_correctness'])
+    registry.track(block, "refiner.prompt", input_names=['problem'], output_names=['refiner_reasoning', 'refiner_answer'])
     
     optimizer = mipro_optimize(registry, block, optimizer_llm, get_save_path("mass/reflector"), benchmark)
     score = optimizer.evaluate(dataset=benchmark, eval_mode="test")
@@ -201,8 +227,8 @@ def optimize_debater(optimized_predictor, executor_llm, optimizer_llm, benchmark
     block = debate(predictor=optimized_predictor, llm=executor_llm)
     
     registry = MiproRegistry()
-    registry.track(block, "debater.prompt", input_names=['problem', 'context'], output_names=['answer'])
-    registry.track(block, "predictor.prompt", input_names=['problem', 'context'], output_names=['answer'])
+    registry.track(block, "debater.prompt", input_names=['problem'], output_names=['reasoning', 'answer'])
+    registry.track(block, "predictor.prompt", input_names=['problem'], output_names=['predictor_reasoning', 'predictor_answer'])
     
     optimizer = mipro_optimize(registry, block, optimizer_llm, get_save_path("mass/debater"), benchmark)
     score = optimizer.evaluate(dataset=benchmark, eval_mode="test")
@@ -213,11 +239,11 @@ def optimize_debater(optimized_predictor, executor_llm, optimizer_llm, benchmark
     return optimized_block
 
 def optimize_executer(optimized_predictor, executor_llm, optimizer_llm, benchmark, predictor_score):
-    block = execute(predictor=optimized_predictor, benchamark = benchmark, llm = executor_llm)
+    block = execute(predictor=optimized_predictor, benchmark=benchmark, llm=executor_llm)
     
     registry = MiproRegistry()
-    registry.track(block, "predictor.prompt", input_names=['problem', 'entry_point', 'testcases'], output_names=['answer'])
-    registry.track(block, "code_reflector.prompt", input_names=['problem', 'entry_point', 'testcases'], output_names=['answer'])
+    registry.track(block, "predictor.prompt", input_names=['problem'], output_names=['predictor_reasoning', 'predictor_answer'])
+    registry.track(block, "codereflector.prompt", input_names=['problem'], output_names=['reasoning', 'correctness', 'answer'])
     
     optimizer = mipro_optimize(registry, block, optimizer_llm, get_save_path("mass/executer"), benchmark)
     score = optimizer.evaluate(dataset=benchmark, eval_mode="test")
@@ -236,14 +262,11 @@ def main():
     benchmark = MathSplits()
     
     # Step 0: 优化 Predictor
-    predictor = Predictor(llm=executor_llm)
+    # predictor = Predictor(llm=executor_llm)
     
-    # Test done
     # predictor_score, optimized_predictor = optimize_predictor(predictor, optimizer_llm, benchmark)
+    predictor_score, optimized_predictor = 50.0, Predictor(llm = executor_llm)
 
-    optimized_predictor = Predictor(llm = executor_llm)
-
-    predictor_score = 62.5
 
     # Step 1: 逐个优化每个block
     print("优化 summarizer...")
@@ -270,7 +293,7 @@ def main():
         executer=optimized_executer
     )
 
-    mass = MassOptimiser(WorkFlow = block_workflow,
+    mass = MassOptimiser(workflow = block_workflow,
                          optimizer_llm = optimizer_llm,
                          max_labeled_demso = 0,
                          auto = "light",
@@ -278,6 +301,8 @@ def main():
                          num_threads = 16)
 
     best_program = mass.optimize(benchmark = benchmark)
+    block_workflow.save_config("examples/mass/best_workflow_config.json")
+    print("Best workflow config saved to examples/mass/best_workflow_config.json")
 
 if __name__ == "__main__":
     main()

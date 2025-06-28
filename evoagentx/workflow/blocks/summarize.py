@@ -8,11 +8,9 @@ class summarize(block):
             predictor,
             llm,
     ):
-        self.n = 0
         self.summarizer = Summarizer(llm=llm)
         self.predictor = predictor
         self.search_space = [0, 1, 2, 3, 4]
-        self.activate = True
 
     def __call__(self, problem, **kwargs):
         """将 summarize 作为独立模块使用，返回最终的预测答案"""
@@ -24,7 +22,10 @@ class summarize(block):
         
         prediction = self.predictor.execute(problem=problem, context=context)
         
-        return prediction['answer'], {"problem": problem, "summary":context, "reasoning":prediction['reasoning'], "answer":prediction['answer']}
+        return prediction['answer'], {"problem": problem, 
+                                      "summary":context, 
+                                      "reasoning":prediction['reasoning'], 
+                                      "answer":prediction['answer']}
 
     def execute(self, problem, **kwargs):
         """将 summarize 作为 workflow 组件使用，返回总结后的上下文"""

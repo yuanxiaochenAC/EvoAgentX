@@ -8,60 +8,60 @@ from evoagentx.workflow.operators import Predictor, CodeReflector
 from evoagentx.utils.aflow_utils.data_utils import test_case_2_test_function
 
 class execute(block):
-    def __init__(self, predictor, benchamark, llm) -> None:        
-        self.n = 0
-        self.benchmark = benchamark
+    def __init__(self, predictor, benchmark, llm) -> None:        
+        self.benchmark = benchmark
         self.predictor = predictor
-        self.code_reflector = CodeReflector(llm=llm)
+        self.codereflector = CodeReflector(llm=llm)
         self.search_space = [0,1]
 
-    def __call__(self,problem, entry_point, testcases, **kwargs):
-
+    def __call__(self, problem, **kwargs):
+        
+        test_cases = kwargs.pop("testcases", None)
 
         predictor_prediction = self.predictor.execute(problem = problem, **kwargs)
+        
+        answer = predictor_prediction['answer']
 
-        traceback = self.exec_code(solution = predictor_prediction['answer'], entry_point = entry_point, testcases = testcases)
+        traceback = "This dataset does not provide test cases"
 
-        code_reflector_prediction = self.code_reflector.execute(question = problem, previous_solution = predictor_prediction['answer'], traceback = traceback)
+        code_reflector_prediction = self.codereflector.execute(problem = problem, previous_solution = answer, traceback = traceback)
 
         return code_reflector_prediction['answer'], {"problem":problem, 
-                                                     "entry_point":entry_point, 
+                                                     "test_cases":test_cases,
                                                      "reasoning":code_reflector_prediction["reasoning"], 
                                                      "correctness":code_reflector_prediction["correctness"], 
-                                                     "answer":code_reflector_prediction["answer"]}
+                                                     "answer":code_reflector_prediction["answer"],
+                                                     "predictor_reasoning":predictor_prediction["reasoning"],
+                                                     "predictor_answer":predictor_prediction["answer"]}
 
+    def execute(self, problem, solution, **kwargs):
+        test_cases = kwargs.get('test_cases', None)
+        self.benchmark.trace_back = True
 
-    def execute(self, problem, solution, entry_point, testcases):
-    
-        for i in range(self.n):
-            traceback = self.exec_code(solution = solution, entry_point = entry_point, testcases = testcases)
-            code_reflector_prediction = self.code_reflector.execute(question = problem, previous_solution = solution, traceback = traceback)
+        for _ in range(self.n):
+            if test_cases:
+                traceback = self.benchmark.evaluate(solution, test_cases)
+            else:
+                traceback = "This dataset does not provide test cases"
+            code_reflector_prediction = self.codereflector.execute(problem = problem, previous_solution = solution, traceback = traceback)
             solution = code_reflector_prediction["answer"]
-
+            
         return solution
-
-
-    def exec_code(self, solution, entry_point, testcases):
-        if entry_point is None or testcases is None:
-            return "No test cases available to execute"
-        
-        fail_cases = []
-        for test_case in testcases:
-            test_code = test_case_2_test_function(solution, test_case, entry_point)
-            try:
-                exec(test_code, globals())
-            except AssertionError as e:
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                tb_str = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
-                error_msg = f"Test case failed: {test_case}\nAssertion Error: {str(e)}\nTraceback: {tb_str}"
-                fail_cases.append(error_msg)
-            except Exception as e:
-                return f"Code execution error: {str(e)}"
-        
-        if fail_cases:
-            return f"Test failed - {len(fail_cases)} case(s) failed:\n" + "\n---\n".join(fail_cases)
-        else:
-            return "All tests passed successfully"
     
     def get_registry(self):
-        return ['executer.code_reflector.prompt']
+        return ['executer.codereflector.prompt']
+    
+    def save(self, path: str):
+        params = {
+            "codereflector": self.codereflector.prompt,
+            "predictor": self.predictor.prompt
+        }
+        
+        with open(path, "w") as f:
+            json.dump(params, f)
+    
+    def load(self, path: str):
+        with open(path, "r") as f:
+            params = json.load(f)
+            self.code_reflector.prompt = params["codereflector"]
+            self.predictor.prompt = params["predictor"]

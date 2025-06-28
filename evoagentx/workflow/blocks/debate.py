@@ -7,28 +7,30 @@ class debate(block):
     def __init__(self,
                  predictor,
                  llm):
-        self.n = 0
         self.debater = Debater(llm=llm)
         self.predictor = predictor
         self.search_space = [0,1,2,3,4]
-        self.activate = True
 
     def __call__(self, problem, **kwargs) -> Any:
         context = kwargs.get('context', None)
         predictions = []
         for _ in range(2):
             prediction = self.predictor.execute(problem=problem, **kwargs)
-            predictions.append(prediction['answer'])
+            predictions.append(prediction)
 
-        debater_prediction = self.debater.execute(problem=problem, solutions=predictions, context=context)
+        debater_prediction = self.debater.execute(problem=problem, solutions=[prediction['answer'] for prediction in predictions], context=context)
     
-        return debater_prediction['answer'], {"problem": problem, "answer": debater_prediction['answer']}
+        return debater_prediction['answer'], {"problem": problem, 
+                                              "reasoning": debater_prediction['reasoning'],
+                                              "answer": debater_prediction['answer'],
+                                              "predictor_reasoning": predictions[0]['reasoning'],
+                                              "predictor_answer": predictions[0]['answer']}
         
 
     def execute(self, problem, solutions, **kwargs):
         context = kwargs.get('context', None)
         for i in range(self.n):
-            prediction = self.debater.execute(problem=problem, solutions=solutions, context=context, **kwargs)
+            prediction = self.debater.execute(problem=problem, solutions=solutions, context=context)
             index = prediction['index']
             solutions[int(index)] = prediction['answer']
 

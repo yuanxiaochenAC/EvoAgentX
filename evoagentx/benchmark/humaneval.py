@@ -109,6 +109,7 @@ class HumanEval(CodingBenchmark):
         prediction, label = self._check_evaluation_inputs(prediction, label)
 
         results = []
+        failed_cases = []
         for solution in prediction:
             solution_states = []
             for label_data in label:
@@ -123,34 +124,19 @@ class HumanEval(CodingBenchmark):
                     entry_point=entry_point
                 )
                 if state != self.SUCCESS:
+                    failed_cases.append(f"Message: {message}\nUnit Test: {unit_test}\nEntry Point: {entry_point}")
                     break 
                 solution_states.append(state)
             results.append(len(solution_states)==len(label) and all(state==self.SUCCESS for state in solution_states))
         
         k_list = [self.k] if isinstance(self.k, int) else self.k
         pass_at_k = self.compute_pass_at_k(results, k_list)
-        
+
+        if self.trace_back:
+            return "\n\n".join(failed_cases) if failed_cases else "All tests passed."
+
         return pass_at_k
 
-    def evluate_with_msg(self, prediction, label):
-        prediction, label = self._check_evaluation_inputs(prediction, label)
-
-        results = []
-        for solution in prediction:
-            solution_states = []
-            for label_data in label:
-                task_id = label_data["task_id"]
-                prompt = self.get_example_by_id(task_id)["prompt"]
-                unit_test = label_data["test"]
-                entry_point = label_data["entry_point"]
-                state, message = self.check_solution(
-                    task_id=task_id, 
-                    solution=prompt + solution,
-                    test=unit_test, 
-                    entry_point=entry_point
-                )
-            
-            return state, message
 
 class HumanEvaluPlus(HumanEval):
 

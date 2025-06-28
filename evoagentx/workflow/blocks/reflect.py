@@ -10,16 +10,14 @@ class reflect(block):
             llm,
 
     ):
-        self.n = 0
         self.predictor = predictor
         self.reflector = Reflector(llm=llm)
         self.refiner = Refiner(llm=llm)
         self.search_space = [0, 1, 2, 3, 4]
-        self.activate = True
 
     def __call__(self, problem, **kwargs):
         """将 reflect 作为独立模块使用，返回最终精炼后的答案"""
-        context = kwargs.get('context', None)
+        context = kwargs.pop('context', None)
         
         # 首先生成初始预测
         predictor_prediction = self.predictor.execute(problem=problem, **kwargs)
@@ -36,7 +34,15 @@ class reflect(block):
             
         answer = refiner_prediction['answer']
         
-        return answer, {"problem": problem, "answer": answer}
+        return answer, {"problem": problem, 
+                        "context": context, 
+                        "reflector_reasoning": reflector_prediction['reasoning'],
+                        "reflector_feedback": reflector_prediction['feedback'], 
+                        "reflector_correctness": reflector_prediction['correctness'],
+                        "refiner_reasoning": refiner_prediction['reasoning'], 
+                        "refiner_answer": refiner_prediction['answer'],
+                        "predictor_reasoning": predictor_prediction['reasoning'],
+                        "predictor_answer": predictor_prediction['answer']}
 
     def execute(self, problem, solution, **kwargs):
         """将 reflect 作为 workflow 组件使用，对给定的 solution 进行反思和精炼"""

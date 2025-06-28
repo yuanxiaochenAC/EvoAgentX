@@ -9,8 +9,7 @@ class aggregate(block):
     
     def __init__(self, predictor):
         self.predictor = predictor
-        self.n = 0
-        self.activate = True
+        self.search_space = [1,3,5,7,9]
     
     def __call__(self, problem, **kwargs):
         """聚合多个预测结果，返回最常见的答案"""
@@ -19,18 +18,18 @@ class aggregate(block):
         # 生成 n 个预测
         for _ in range(3):
             prediction = self.predictor.execute(problem=problem)
-            predictions.append(prediction['answer'])
+            predictions.append(prediction)
 
         # 标准化并统计
-        normalized_predictions = [self._normalize_text(answer) for answer in predictions]
+        normalized_predictions = [self._normalize_text(prediction['answer']) for prediction in predictions]
         normalized_predictions = [x for x in normalized_predictions if x is not None]
 
         # 如果没有有效预测
         if not normalized_predictions:
             if predictions:
-                return predictions[0], {"problem": problem, "answer": predictions[0]}
+                return predictions[0]['answer'], {"problem": problem, "reasoning": predictions[0].get('reasoning', None), "answer": predictions[0].get('answer', None)}
             else:
-                return "", {"problem": problem, "answer": None}
+                return "", {"problem": problem, "reasoning": "No valid predictions", "answer": None}
 
         # 找到最常见的标准化答案
         value_counts = Counter(normalized_predictions)
@@ -38,11 +37,12 @@ class aggregate(block):
 
         # 返回对应的原始答案
         for prediction in predictions:
-            if self._normalize_text(prediction) == most_common_normalized:
-                return prediction, {"problem": problem, "answer": prediction}
+            if self._normalize_text(prediction['answer']) == most_common_normalized:
+                return prediction['answer'], {"problem": problem, "reasoning": prediction.get('reasoning', None), "answer": prediction.get('answer', None)}
 
         # 默认返回第一个预测
-        return predictions[0], {"problem": problem, "answer": predictions[0]}
+        return predictions[0]['answer'], {"problem": problem, "reasoning": predictions[0].get('reasoning', None), "answer": predictions[0].get('answer', None)}
+    
     def execute(self, problem, **kwargs):
         """执行预测并返回所有结果"""
         predictions = []
@@ -88,4 +88,4 @@ class aggregate(block):
             self.predictor.prompt = params["predictor"]
         
     def get_registry(self):
-        return ["aggregator.predictor.prompt"]
+        return ["aggregater.predictor.prompt"]

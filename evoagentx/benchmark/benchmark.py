@@ -33,6 +33,7 @@ class Benchmark(ABC):
         self.name = name
         self.path = path
         self.mode = mode
+        self.trace_back = False
         self.kwargs = kwargs
 
         # 用于存储不同数据集的内部变量
