@@ -211,7 +211,7 @@ class MCPClient:
         return tool_collection
 
     
-    def get_tools(self) -> List[Tool]:
+    def get_tools(self) -> List[Toolkit]:
         """Return a list ofToolkits, one per server."""
         if not self.sessions:
             raise RuntimeError("Session not initialized")

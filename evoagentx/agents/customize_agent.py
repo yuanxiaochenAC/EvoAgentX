@@ -250,7 +250,7 @@ class CustomizeAgent(Agent):
         output_parser: Optional[ActionOutput] = None,
         title_format: Optional[str] = "## {title}",
         custom_output_format: Optional[str] = None,
-        tools: Optional[List[Tool]] = None,
+        tools: Optional[List[Toolkit]] = None,
         max_tool_calls: Optional[int] = 5
     ) -> Action:
         """Create a custom action based on the provided specifications.
