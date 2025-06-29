@@ -2,7 +2,7 @@
 
 This tutorial walks you through using EvoAgentX's powerful tool ecosystem. Tools allow agents to interact with the external world, perform computations, and access information. We'll cover:
 
-1. **Understanding the Tool Architecture**: Learn about the base Tool class and its functionality
+1. **Understanding the Tool Architecture**: Learn about the base Tool class and Toolkit system
 2. **Code Interpreters**: Execute Python code safely using Python and Docker interpreters
 3. **Search Tools**: Access information from the web using Wikipedia and Google search tools
 4. **File Operations**: Handle file reading and writing with special support for different file formats
@@ -15,46 +15,53 @@ By the end of this tutorial, you'll understand how to leverage these tools in yo
 
 ## 1. Understanding the Tool Architecture
 
-At the core of EvoAgentX's tool ecosystem is the `Tool` base class, which provides a standardized interface for all tools. 
+At the core of EvoAgentX's tool ecosystem are the `Tool` base class and the `Toolkit` system, which provide a standardized interface for all tools. 
 
 ```python
-from evoagentx.tools.tool import Tool
+from evoagentx.tools import FileToolkit, PythonInterpreterToolkit
 ```
 
-The `Tool` class implements three key methods:
+The `Tool` class implements a standardized interface with:
 
-- `get_tool_schemas()`: Returns OpenAI-compatible function schemas for the tool
-- `get_tools()`: Returns a list of callable functions that the tool provides
-- `get_tool_descriptions()`: Returns descriptions of the tool's functionality
+- `name`: The tool's unique identifier
+- `description`: What the tool does
+- `inputs`: Schema defining the tool's parameters
+- `required`: List of required parameters
+- `__call__()`: The method that executes the tool's functionality
 
-All tools in EvoAgentX extend this base class, ensuring a consistent interface for agents to use them.
+The `Toolkit` system groups related tools together, providing:
+
+- `get_tool(tool_name)`: Returns a specific tool by name
+- `get_tools()`: Returns all available tools in the toolkit
+- `get_tool_schemas()`: Returns OpenAI-compatible schemas for all tools
 
 ### Key Concepts
 
-- **Tool Integration**: Tools seamlessly integrate with agents via function calling protocols
+- **Toolkit Integration**: Tools are organized into toolkits for related functionality
+- **Tool Access**: Individual tools are accessed via `toolkit.get_tool(tool_name)`
 - **Schemas**: Each tool provides schemas that describe its functionality, parameters, and outputs
-- **Modularity**: Tools can be easily added to any agent that supports function calling
+- **Modularity**: Toolkits can be easily added to any agent that supports function calling
 
 ---
 
 ## 2. Code Interpreters
 
-EvoAgentX provides two main code interpreter tools:
+EvoAgentX provides two main code interpreter toolkits:
 
-1. **PythonInterpreter**: Executes Python code in a controlled environment
-2. **DockerInterpreter**: Executes code within isolated Docker containers
+1. **PythonInterpreterToolkit**: Executes Python code in a controlled environment
+2. **DockerInterpreterToolkit**: Executes code within isolated Docker containers
 
-### 2.1 PythonInterpreter
+### 2.1 PythonInterpreterToolkit
 
-**The PythonInterpreter provides a secure environment for executing Python code with fine-grained control over imports, directory access, and execution context. It uses a sandboxing approach to restrict potentially harmful operations.**
+**The PythonInterpreterToolkit provides a secure environment for executing Python code with fine-grained control over imports, directory access, and execution context. It uses a sandboxing approach to restrict potentially harmful operations.**
 
 #### 2.1.1 Setup
 
 ```python
-from evoagentx.tools.interpreter_python import PythonInterpreter
+from evoagentx.tools import PythonInterpreterToolkit
 
 # Initialize with specific allowed imports and directory access
-interpreter = PythonInterpreter(
+toolkit = PythonInterpreterToolkit(
     project_path=".",  # Default is current directory
     directory_names=["examples", "evoagentx"],
     allowed_imports={"os", "sys", "math", "random", "datetime"}
@@ -63,20 +70,23 @@ interpreter = PythonInterpreter(
 
 #### 2.1.2 Available Methods
 
-The `PythonInterpreter` provides the following callable methods:
+The `PythonInterpreterToolkit` provides the following tools:
 
-##### Method 1: execute(code, language)
+##### Tool 1: python_execute
 
 **Description**: Executes Python code directly in a secure environment.
 
 **Usage Example**:
 ```python
+# Get the execute tool
+execute_tool = toolkit.get_tool("python_execute")
+
 # Execute a simple code snippet
-result = interpreter.execute("""
+result = execute_tool(code="""
 print("Hello, World!")
 import math
 print(f"The value of pi is: {math.pi:.4f}")
-""", "python")
+""", language="python")
 
 print(result)
 ```
@@ -91,15 +101,17 @@ The value of pi is: 3.1416
 
 ---
 
-##### Method 2: execute_script(file_path, language)
+##### Tool 2: python_execute_script
 
 **Description**: Executes a Python script file in a secure environment.
 
 **Usage Example**:
 ```python
+# Get the execute script tool
+execute_script_tool = toolkit.get_tool("python_execute_script")
+
 # Execute a Python script file
-script_path = "examples/hello_world.py"
-script_result = interpreter.execute_script(script_path, "python")
+script_result = execute_script_tool(file_path="examples/hello_world.py", language="python")
 print(script_result)
 ```
 
@@ -124,7 +136,7 @@ Script execution completed.
 
 ```python
 # Example with restricted imports
-interpreter = PythonInterpreter(
+toolkit = PythonInterpreterToolkit(
     project_path=os.getcwd(),
     directory_names=["examples", "evoagentx", "tests"],
     allowed_imports={
@@ -134,26 +146,26 @@ interpreter = PythonInterpreter(
 )
 
 # Example with no import restrictions
-interpreter = PythonInterpreter(
+toolkit = PythonInterpreterToolkit(
     project_path=os.getcwd(),
     directory_names=["examples", "evoagentx"],
-    allowed_imports=[]  # Allows any module to be imported
+    allowed_imports=set()  # Allows any module to be imported
 )
 ```
 
 ---
 
-### 2.2 DockerInterpreter
+### 2.2 DockerInterpreterToolkit
 
-**The DockerInterpreter executes code in isolated Docker containers, providing maximum security and environment isolation. It allows safe execution of potentially risky code with custom environments, dependencies, and complete resource isolation. Docker must be installed and running on your machine to use this tool.**
+**The DockerInterpreterToolkit executes code in isolated Docker containers, providing maximum security and environment isolation. It allows safe execution of potentially risky code with custom environments, dependencies, and complete resource isolation. Docker must be installed and running on your machine to use this toolkit.**
 
 #### 2.2.1 Setup
 
 ```python
-from evoagentx.tools.interpreter_docker import DockerInterpreter
+from evoagentx.tools import DockerInterpreterToolkit
 
 # Initialize with a specific Docker image
-interpreter = DockerInterpreter(
+toolkit = DockerInterpreterToolkit(
     image_tag="fundingsocietiesdocker/python3.9-slim",
     print_stdout=True,
     print_stderr=True,
@@ -163,20 +175,23 @@ interpreter = DockerInterpreter(
 
 #### 2.2.2 Available Methods
 
-The `DockerInterpreter` provides the following callable methods:
+The `DockerInterpreterToolkit` provides the following tools:
 
-##### Method 1: execute(code, language)
+##### Tool 1: docker_execute
 
 **Description**: Executes code inside a Docker container.
 
 **Usage Example**:
 ```python
+# Get the execute tool
+execute_tool = toolkit.get_tool("docker_execute")
+
 # Execute Python code in a Docker container
-result = interpreter.execute("""
+result = execute_tool(code="""
 import platform
 print(f"Python version: {platform.python_version()}")
 print(f"Platform: {platform.system()} {platform.release()}")
-""", "python")
+""", language="python")
 
 print(result)
 ```
@@ -191,15 +206,17 @@ Platform: Linux 5.15.0-1031-azure
 
 ---
 
-##### Method 2: execute_script(file_path, language)
+##### Tool 2: docker_execute_script
 
 **Description**: Executes a script file inside a Docker container.
 
 **Usage Example**:
 ```python
+# Get the execute script tool
+execute_script_tool = toolkit.get_tool("docker_execute_script")
+
 # Execute a Python script file in Docker
-script_path = "examples/docker_test.py"
-script_result = interpreter.execute_script(script_path, "python")
+script_result = execute_script_tool(file_path="examples/docker_test.py", language="python")
 print(script_result)
 ```
 
@@ -214,12 +231,12 @@ Container execution completed.
 
 #### 2.2.3 Setup Hints
 
-- **Docker Requirements**: Ensure Docker is installed and running on your system before using this interpreter.
+- **Docker Requirements**: Ensure Docker is installed and running on your system before using this toolkit.
 
 - **Image Management**: You need to provide **either** an `image_tag` **or** a `dockerfile_path`, not both:
   - **Option 1: Using an existing image**
     ```python
-    interpreter = DockerInterpreter(
+    toolkit = DockerInterpreterToolkit(
         image_tag="python:3.9-slim",  # Uses an existing Docker Hub image
         container_directory="/app"
     )
@@ -227,7 +244,7 @@ Container execution completed.
   
   - **Option 2: Building from a Dockerfile**
     ```python
-    interpreter = DockerInterpreter(
+    toolkit = DockerInterpreterToolkit(
         dockerfile_path="path/to/Dockerfile",  # Builds a custom image
         image_tag="my-custom-image-name",      # Name for the built image
         container_directory="/app"
@@ -237,7 +254,7 @@ Container execution completed.
 - **File Access**:
   - To make local files available in the container, use the `host_directory` parameter:
   ```python
-  interpreter = DockerInterpreter(
+  toolkit = DockerInterpreterToolkit(
       image_tag="python:3.9-slim",
       host_directory="/path/to/local/files",
       container_directory="/app/data"
@@ -246,7 +263,7 @@ Container execution completed.
   - This mounts the local directory to the specified container directory, making all files accessible.
 
 - **Container Lifecycle**:
-  - The Docker container is created when you initialize the interpreter and removed when the interpreter is destroyed.
+  - The Docker container is created when you initialize the toolkit and removed when the toolkit is destroyed.
   - For long-running sessions, you can set `print_stdout` and `print_stderr` to see real-time output.
 
 - **Troubleshooting**:
@@ -257,37 +274,40 @@ Container execution completed.
 
 ## 3. Search Tools
 
-EvoAgentX provides several search tools to retrieve information from various sources:
+EvoAgentX provides several search toolkits to retrieve information from various sources:
 
-1. **SearchWiki**: Search Wikipedia for information
-2. **SearchGoogle**: Search Google using the official API
-3. **SearchGoogleFree**: Search Google without requiring an API key
+1. **WikipediaSearchToolkit**: Search Wikipedia for information
+2. **GoogleSearchToolkit**: Search Google using the official API
+3. **GoogleFreeSearchToolkit**: Search Google without requiring an API key
 
-### 3.1 SearchWiki
+### 3.1 WikipediaSearchToolkit
 
-**The SearchWiki tool retrieves information from Wikipedia articles, providing summaries, full content, and metadata. It offers a straightforward way to incorporate encyclopedic knowledge into your agents without complex API setups.**
+**The WikipediaSearchToolkit retrieves information from Wikipedia articles, providing summaries, full content, and metadata. It offers a straightforward way to incorporate encyclopedic knowledge into your agents without complex API setups.**
 
 #### 3.1.1 Setup
 
 ```python
-from evoagentx.tools.search_wiki import SearchWiki
+from evoagentx.tools import WikipediaSearchToolkit
 
 # Initialize with custom parameters
-wiki_search = SearchWiki(max_sentences=3)
+toolkit = WikipediaSearchToolkit(max_summary_sentences=3)
 ```
 
 #### 3.1.2 Available Methods
 
-The `SearchWiki` provides the following callable method:
+The `WikipediaSearchToolkit` provides the following callable tool:
 
-##### Method: search(query)
+##### Tool: wikipedia_search
 
 **Description**: Searches Wikipedia for articles matching the query.
 
 **Usage Example**:
 ```python
+# Get the search tool
+search_tool = toolkit.get_tool("wikipedia_search")
+
 # Search Wikipedia for information
-results = wiki_search.search(
+results = search_tool(
     query="artificial intelligence agent architecture"
 )
 
@@ -320,17 +340,17 @@ for i, result in enumerate(results.get("results", [])):
 
 ---
 
-### 3.2 SearchGoogle
+### 3.2 GoogleSearchToolkit
 
-**The SearchGoogle tool enables web searches through Google's official Custom Search API, providing high-quality search results with content extraction. It requires API credentials but offers more reliable and comprehensive search capabilities.**
+**The GoogleSearchToolkit enables web searches through Google's official Custom Search API, providing high-quality search results with content extraction. It requires API credentials but offers more reliable and comprehensive search capabilities.**
 
 #### 3.2.1 Setup
 
 ```python
-from evoagentx.tools.search_google import SearchGoogle
+from evoagentx.tools import GoogleSearchToolkit
 
 # Initialize with custom parameters
-google_search = SearchGoogle(
+toolkit = GoogleSearchToolkit(
     num_search_pages=3,
     max_content_words=200
 )
@@ -338,16 +358,19 @@ google_search = SearchGoogle(
 
 #### 3.2.2 Available Methods
 
-The `SearchGoogle` provides the following callable method:
+The `GoogleSearchToolkit` provides the following callable tool:
 
-##### Method: search(query)
+##### Tool: google_search
 
 **Description**: Searches Google for content matching the query.
 
 **Usage Example**:
 ```python
+# Get the search tool
+search_tool = toolkit.get_tool("google_search")
+
 # Search Google for information
-results = google_search.search(
+results = search_tool(
     query="evolutionary algorithms for neural networks"
 )
 
@@ -380,7 +403,7 @@ for i, result in enumerate(results.get("results", [])):
 
 #### 3.2.3 Setup Hints
 
-- **API Requirements**: This tool requires Google Custom Search API credentials. Set them in your environment:
+- **API Requirements**: This toolkit requires Google Custom Search API credentials. Set them in your environment:
   ```python
   # In your .env file or environment variables
   GOOGLE_API_KEY=your_google_api_key_here
@@ -395,17 +418,17 @@ for i, result in enumerate(results.get("results", [])):
 
 ---
 
-### 3.3 SearchGoogleFree
+### 3.3 GoogleFreeSearchToolkit
 
-**The SearchGoogleFree tool provides web search capability without requiring any API keys or authentication. It offers a simpler alternative to the official Google API with basic search results suitable for most general queries.**
+**The GoogleFreeSearchToolkit provides web search capability without requiring any API keys or authentication. It offers a simpler alternative to the official Google API with basic search results suitable for most general queries.**
 
 #### 3.3.1 Setup
 
 ```python
-from evoagentx.tools.search_google_f import SearchGoogleFree
+from evoagentx.tools import GoogleFreeSearchToolkit
 
-# Initialize the free Google search
-google_free = SearchGoogleFree(
+# Initialize the free Google search toolkit
+toolkit = GoogleFreeSearchToolkit(
     num_search_pages=3,
     max_content_words=500
 )
@@ -413,16 +436,19 @@ google_free = SearchGoogleFree(
 
 #### 3.3.2 Available Methods
 
-The `SearchGoogleFree` provides the following callable method:
+The `GoogleFreeSearchToolkit` provides the following callable tool:
 
-##### Method: search(query)
+##### Tool: google_free_search
 
 **Description**: Searches Google for content matching the query without requiring an API key.
 
 **Usage Example**:
 ```python
+# Get the search tool
+search_tool = toolkit.get_tool("google_free_search")
+
 # Search Google without an API key
-results = google_free.search(
+results = search_tool(
     query="reinforcement learning algorithms"
 )
 
@@ -441,12 +467,12 @@ for i, result in enumerate(results.get("results", [])):
         {
             "title": "Introduction to Reinforcement Learning Algorithms",
             "url": "https://example.com/intro-rl",
-            "snippet": "A comprehensive overview of reinforcement learning algorithms including Q-learning, SARSA, and policy gradient methods."
+            "content": "A comprehensive overview of reinforcement learning algorithms including Q-learning, SARSA, and policy gradient methods."
         },
         {
             "title": "Top 10 Reinforcement Learning Algorithms for Beginners",
             "url": "https://example.com/top-rl",
-            "snippet": "Learn about the most commonly used reinforcement learning algorithms with practical examples and implementation tips."
+            "content": "Learn about the most commonly used reinforcement learning algorithms with practical examples and implementation tips."
         }
     ]
 }
@@ -456,45 +482,45 @@ for i, result in enumerate(results.get("results", [])):
 
 ## 4. File Operations
 
-EvoAgentX provides tools for handling file operations, including reading and writing files with special support for different file formats like PDFs.
+EvoAgentX provides comprehensive file handling capabilities through the FileToolkit, including reading and writing files with special support for different file formats like PDFs.
 
-### 4.1 File Tools
+### 4.1 FileToolkit
 
-**EvoAgentX provides comprehensive file handling capabilities through both individual file tools and a unified FileToolkit. The tools support standard file operations for text files and specialized handlers for formats like PDF using PyPDF2.**
+**EvoAgentX provides comprehensive file handling capabilities through the FileToolkit. The toolkit supports standard file operations for text files and specialized handlers for formats like PDF using PyPDF2.**
 
-#### 4.1.1 FileToolkit Usage (Recommended)
+#### 4.1.1 FileToolkit Usage
 
 The `FileToolkit` provides a convenient way to access all file-related tools:
 
 ```python
-from evoagentx.tools.file_tool import FileToolkit
+from evoagentx.tools import FileToolkit
 
-# Initialize the file Toolkit
-file_Toolkit = FileToolkit()
+# Initialize the file toolkit
+toolkit = FileToolkit()
 
-# Get all available tools/methods
-available_tools = file_Toolkit.get_tools()
-print(f"Available methods: {[tool.name for tool in available_tools]}")
+# Get all available tools
+available_tools = toolkit.get_tools()
+print(f"Available tools: {[tool.name for tool in available_tools]}")
 # Output: ['read_file', 'write_file', 'append_file']
 
-# Get individual tools from the Toolkit
-read_tool = file_Toolkit.get_tool("read_file")
-write_tool = file_Toolkit.get_tool("write_file")
-append_tool = file_Toolkit.get_tool("append_file")
+# Get individual tools from the toolkit
+read_tool = toolkit.get_tool("read_file")
+write_tool = toolkit.get_tool("write_file")
+append_tool = toolkit.get_tool("append_file")
 ```
 
 #### 4.1.2 Available Methods
 
-The `FileToolkit` provides exactly **3 callable methods** accessible via `get_tool()`:
+The `FileToolkit` provides exactly **3 callable tools**:
 
-##### Method 1: read_file(file_path)
+##### Tool 1: read_file
 
 **Description**: Read content from a file with special handling for different file types like PDFs.
 
 **Usage Example**:
 ```python
 # Read a text file
-read_tool = file_Toolkit.get_tool("read_file")
+read_tool = toolkit.get_tool("read_file")
 text_result = read_tool(file_path="examples/sample.txt")
 print(text_result)
 
@@ -520,14 +546,14 @@ print(pdf_result)
 
 ---
 
-##### Method 2: write_file(file_path, content)
+##### Tool 2: write_file
 
 **Description**: Write content to a file with special handling for different file types like PDFs.
 
 **Usage Example**:
 ```python
 # Write to a text file
-write_tool = file_Toolkit.get_tool("write_file")
+write_tool = toolkit.get_tool("write_file")
 text_result = write_tool(
     file_path="examples/output.txt", 
     content="This is new content for the file."
@@ -557,14 +583,14 @@ pdf_result = write_tool(
 
 ---
 
-##### Method 3: append_file(file_path, content)
+##### Tool 3: append_file
 
 **Description**: Append content to a file with special handling for different file types like PDFs.
 
 **Usage Example**:
 ```python
 # Append to a text file
-append_tool = file_Toolkit.get_tool("append_file")
+append_tool = toolkit.get_tool("append_file")
 result = append_tool(
     file_path="examples/log.txt", 
     content="\nNew log entry: Operation completed."
@@ -587,71 +613,39 @@ print(result)
 }
 ```
 
-#### 4.1.3 Direct Tool Usage (Alternative)
-
-You can also import and use individual file tools directly:
-
-```python
-from evoagentx.tools.file_tool import ReadFileTool, WriteFileTool, AppendFileTool, FileToolBase
-
-# Create shared file base for special format handling
-file_base = FileToolBase()
-
-# Create individual tools
-read_tool = ReadFileTool(file_base=file_base)
-write_tool = WriteFileTool(file_base=file_base)
-append_tool = AppendFileTool(file_base=file_base)
-
-# Use the tools directly
-result = read_tool(file_path="example.txt")
-```
-
 ---
 
 ## 5. Browser Tools
 
-EvoAgentX provides comprehensive browser automation capabilities through the `BrowserToolkit` class and individual browser tool classes. These tools allow agents to control web browsers, navigate pages, interact with elements, and extract information.
+EvoAgentX provides comprehensive browser automation capabilities through the `BrowserToolkit` class. These tools allow agents to control web browsers, navigate pages, interact with elements, and extract information.
 
 ## Setup
 
-### Using BrowserToolkit (Recommended)
+### Using BrowserToolkit
 
 ```python
 from evoagentx.tools import BrowserToolkit
 
-# Initialize the browser Toolkit
-Toolkit = BrowserToolkit(
+# Initialize the browser toolkit
+toolkit = BrowserToolkit(
     browser_type="chrome",  # Options: "chrome", "firefox", "safari", "edge"  
     headless=False,         # Set to True for background operation
     timeout=10              # Default timeout in seconds
 )
 
 # Get specific tools
-initialize_tool = Toolkit.get_tool("initialize_browser")
-navigate_tool = Toolkit.get_tool("navigate_to_url")
-input_tool = Toolkit.get_tool("input_text")
-click_tool = Toolkit.get_tool("browser_click")
-snapshot_tool = Toolkit.get_tool("browser_snapshot")
-console_tool = Toolkit.get_tool("browser_console_messages")
-close_tool = Toolkit.get_tool("close_browser")
-```
-
-### Using Individual Browser Tools (Alternative)
-
-```python
-from evoagentx.tools import BrowserTool
-
-# Initialize the browser tool directly
-browser = BrowserTool(
-    browser_type="chrome",
-    headless=False,
-    timeout=10
-)
+initialize_tool = toolkit.get_tool("initialize_browser")
+navigate_tool = toolkit.get_tool("navigate_to_url")
+input_tool = toolkit.get_tool("input_text")
+click_tool = toolkit.get_tool("browser_click")
+snapshot_tool = toolkit.get_tool("browser_snapshot")
+console_tool = toolkit.get_tool("browser_console_messages")
+close_tool = toolkit.get_tool("close_browser")
 ```
 
 ## Available Methods
 
-### 1. initialize_browser()
+### 1. initialize_browser
 
 Start or restart a browser session. Must be called before any other browser operations.
 
@@ -668,14 +662,12 @@ Start or restart a browser session. Must be called before any other browser oper
 
 **Usage:**
 ```python
-# UsingToolkit
-result = Toolkit.get_tool("initialize_browser")()
-
-# Using BrowserTool directly  
-result = browser.initialize_browser()
+# Get and use the tool
+initialize_tool = toolkit.get_tool("initialize_browser")
+result = initialize_tool()
 ```
 
-### 2. navigate_to_url(url, timeout=None)
+### 2. navigate_to_url
 
 Navigate to a URL and automatically capture a snapshot of all page elements for interaction.
 
@@ -708,14 +700,12 @@ Navigate to a URL and automatically capture a snapshot of all page elements for 
 
 **Usage:**
 ```python
-# UsingToolkit
-result = Toolkit.get_tool("navigate_to_url")(url="https://example.com")
-
-# Using BrowserTool directly
-result = browser.navigate_to_url("https://example.com")
+# Get and use the tool
+navigate_tool = toolkit.get_tool("navigate_to_url")
+result = navigate_tool(url="https://example.com")
 ```
 
-### 3. input_text(element, ref, text, submit=False, slowly=True)
+### 3. input_text
 
 Type text into form fields, search boxes, or other input elements using element references from snapshots.
 
@@ -738,24 +728,17 @@ Type text into form fields, search boxes, or other input elements using element 
 
 **Usage:**
 ```python
-# UsingToolkit
-result = Toolkit.get_tool("input_text")(
+# Get and use the tool
+input_tool = toolkit.get_tool("input_text")
+result = input_tool(
     element="Search field",
     ref="e1", 
     text="python tutorial",
     submit=True
 )
-
-# Using BrowserTool directly
-result = browser.input_text(
-    element="Search field",
-    ref="e1",
-    text="python tutorial", 
-    submit=True
-)
 ```
 
-### 4. browser_click(element, ref)
+### 4. browser_click
 
 Click on buttons, links, or other clickable elements using element references from snapshots.
 
@@ -775,17 +758,15 @@ Click on buttons, links, or other clickable elements using element references fr
 
 **Usage:**
 ```python
-# UsingToolkit
-result = Toolkit.get_tool("browser_click")(
+# Get and use the tool
+click_tool = toolkit.get_tool("browser_click")
+result = click_tool(
     element="Login button",
     ref="e3"
 )
-
-# Using BrowserTool directly  
-result = browser.browser_click(element="Login button", ref="e3")
 ```
 
-### 5. browser_snapshot()
+### 5. browser_snapshot
 
 Capture a fresh snapshot of the current page state, including all interactive elements. Use this after page changes not caused by navigation or clicking.
 
@@ -827,14 +808,12 @@ Capture a fresh snapshot of the current page state, including all interactive el
 
 **Usage:**
 ```python
-# UsingToolkit
-result = Toolkit.get_tool("browser_snapshot")()
-
-# Using BrowserTool directly
-result = browser.browser_snapshot()
+# Get and use the tool
+snapshot_tool = toolkit.get_tool("browser_snapshot")
+result = snapshot_tool()
 ```
 
-### 6. browser_console_messages()
+### 6. browser_console_messages
 
 Retrieve JavaScript console messages (logs, warnings, errors) for debugging web applications.
 
@@ -867,14 +846,12 @@ Retrieve JavaScript console messages (logs, warnings, errors) for debugging web 
 
 **Usage:**
 ```python
-# UsingToolkit
-result = Toolkit.get_tool("browser_console_messages")()
-
-# Using BrowserTool directly
-result = browser.browser_console_messages()
+# Get and use the tool
+console_tool = toolkit.get_tool("browser_console_messages")
+result = console_tool()
 ```
 
-### 7. close_browser()
+### 7. close_browser
 
 Close the browser session and free system resources. Always call this when finished.
 
@@ -891,11 +868,9 @@ Close the browser session and free system resources. Always call this when finis
 
 **Usage:**
 ```python
-# UsingToolkit
-result = Toolkit.get_tool("close_browser")()
-
-# Using BrowserTool directly
-result = browser.close_browser()
+# Get and use the tool
+close_tool = toolkit.get_tool("close_browser")
+result = close_tool()
 ```
 
 ## Element Reference System
@@ -928,7 +903,7 @@ The browser tools use a unique element reference system:
 
 ### Resource Management
 - Always call `close_browser()` when finished
-- Only keep one browser session active per tool instance
+- Only keep one browser session active per toolkit instance
 - Consider using context managers for automatic cleanup
 
 ## Complete Example
@@ -936,24 +911,27 @@ The browser tools use a unique element reference system:
 ```python
 from evoagentx.tools import BrowserToolkit
 
-# Initialize browser Toolkit
-Toolkit = BrowserToolkit(browser_type="chrome", headless=False)
+# Initialize browser toolkit
+toolkit = BrowserToolkit(browser_type="chrome", headless=False)
 
 try:
     # Start browser
-    result = Toolkit.get_tool("initialize_browser")()
+    initialize_tool = toolkit.get_tool("initialize_browser")
+    result = initialize_tool()
     print(f"Browser init: {result['status']}")
     
     # Navigate to page and get snapshot
-    result = Toolkit.get_tool("navigate_to_url")(url="https://example.com")
+    navigate_tool = toolkit.get_tool("navigate_to_url")
+    result = navigate_tool(url="https://example.com")
     print(f"Navigation: {result['status']}")
     print(f"Found {len(result['interactive_elements'])} interactive elements")
     
     # Find and interact with elements
+    input_tool = toolkit.get_tool("input_text")
     for element in result['interactive_elements']:
         if 'search' in element['purpose'].lower():
             # Input text into search field
-            search_result = Toolkit.get_tool("input_text")(
+            search_result = input_tool(
                 element="Search field",
                 ref=element['id'],
                 text="python tutorial",
@@ -963,17 +941,20 @@ try:
             break
     
     # Take a fresh snapshot after search
-    snapshot = Toolkit.get_tool("browser_snapshot")()
+    snapshot_tool = toolkit.get_tool("browser_snapshot")
+    snapshot = snapshot_tool()
     print(f"New snapshot: {len(snapshot['interactive_elements'])} elements")
     
     # Check console for any errors
-    console = Toolkit.get_tool("browser_console_messages")()
+    console_tool = toolkit.get_tool("browser_console_messages")
+    console = console_tool()
     if console['console_messages']:
         print(f"Console messages: {len(console['console_messages'])}")
         
 finally:
     # Always close browser
-    Toolkit.get_tool("close_browser")()
+    close_tool = toolkit.get_tool("close_browser")
+    close_tool()
     print("Browser closed")
 ```
 
@@ -988,10 +969,10 @@ finally:
 #### 6.1.1 Setup
 
 ```python
-from evoagentx.tools.mcp import MCPToolkit
+from evoagentx.tools import MCPToolkit
 
 # Initialize with a configuration file
-mcp_Toolkit = MCPToolkit(config_path="examples/sample_mcp.config")
+toolkit = MCPToolkit(config_path="examples/sample_mcp.config")
 
 # Or initialize with a configuration dictionary
 config = {
@@ -1003,7 +984,7 @@ config = {
         }
     }
 }
-mcp_Toolkit = MCPToolkit(config=config)
+toolkit = MCPToolkit(config=config)
 ```
 
 #### 6.1.2 Available Methods
@@ -1017,20 +998,20 @@ The `MCPToolkit` provides the following callable methods:
 **Usage Example**:
 ```python
 # Get all available MCP tools
-tools = mcp_Toolkit.get_tools()
+tools = toolkit.get_tools()
 
 # Display available tools
 for i, tool in enumerate(tools):
     print(f"Tool {i+1}: {tool.name}")
-    print(f"Description: {tool.descriptions[0]}")
+    print(f"Description: {tool.description}")
 ```
 
 **Return Type**: `List[Tool]`
 
 **Sample Return**:
 ```
-[MCPTool(name="HirebaseSearch", descriptions=["Search for job information by providing keywords"]), 
- MCPTool(name="HirebaseAnalyze", descriptions=["Analyze job market trends for given skills"])]
+[MCPTool(name="HirebaseSearch", description="Search for job information by providing keywords"), 
+ MCPTool(name="HirebaseAnalyze", description="Analyze job market trends for given skills")]
 ```
 
 ---
@@ -1041,8 +1022,8 @@ for i, tool in enumerate(tools):
 
 **Usage Example**:
 ```python
-# When done with the MCP Toolkit
-mcp_Toolkit.disconnect()
+# When done with the MCP toolkit
+toolkit.disconnect()
 ```
 
 **Return Type**: `None`
@@ -1052,8 +1033,8 @@ mcp_Toolkit.disconnect()
 Once you have obtained the tools from the MCPToolkit, you can use them like any other EvoAgentX tool:
 
 ```python
-# Get all tools from the Toolkit
-tools = mcp_Toolkit.get_tools()
+# Get all tools from the toolkit
+tools = toolkit.get_tools()
 
 # Find a specific tool
 hirebase_tool = None
@@ -1065,7 +1046,7 @@ for tool in tools:
 if hirebase_tool:
     # Use the tool to search for information
     search_query = "data scientist"
-    result = hirebase_tool.tools[0](**{"query": search_query})
+    result = hirebase_tool(query=search_query)
     
     print(f"Search results for '{search_query}':")
     print(result)
@@ -1095,11 +1076,11 @@ if hirebase_tool:
   - Use a try-finally block for automatic cleanup:
     ```python
     try:
-        Toolkit = MCPToolkit(config_path="config.json")
-        tools = Toolkit.get_tools()
+        toolkit = MCPToolkit(config_path="config.json")
+        tools = toolkit.get_tools()
         # Use tools here
     finally:
-        Toolkit.disconnect()
+        toolkit.disconnect()
     ```
 
 - **Error Handling**:
@@ -1107,7 +1088,7 @@ if hirebase_tool:
   - It's good practice to implement error handling around tool calls:
     ```python
     try:
-        result = tool.tools[0](**{"query": "example query"})
+        result = tool(query="example query")
     except Exception as e:
         print(f"Error calling MCP tool: {str(e)}")
     ```
@@ -1122,15 +1103,15 @@ if hirebase_tool:
 
 In this tutorial, we've explored the tool ecosystem in EvoAgentX:
 
-1. **Tool Architecture**: Understood the base Tool class and its standardized interface
-2. **Code Interpreters**: Learned how to execute Python code securely using both Python and Docker interpreters
-3. **Search Tools**: Discovered how to access web information using Wikipedia and Google search tools
+1. **Tool Architecture**: Understood the base Tool class and Toolkit system providing standardized interfaces
+2. **Code Interpreters**: Learned how to execute Python code securely using both Python and Docker interpreter toolkits
+3. **Search Tools**: Discovered how to access web information using Wikipedia and Google search toolkits
 4. **File Operations**: Learned how to handle file operations with special support for different file formats
 5. **Browser Automation**: Learned how to control web browsers to interact with websites and web applications
 6. **MCP Tools**: Learned how to connect to external services using the Model Context Protocol
 
-Tools in EvoAgentX extend your agents' capabilities by providing access to external resources and computation. By combining these tools with agents and workflows, you can build powerful AI systems that can retrieve information, perform calculations, and interact with the world.
+Tools in EvoAgentX extend your agents' capabilities by providing access to external resources and computation. By combining these toolkits with agents and workflows, you can build powerful AI systems that can retrieve information, perform calculations, and interact with the world.
 
-For more advanced usage and customization options, refer to the [API documentation](../api/tools.md) and explore the examples in the repository. 
+For more advanced usage and customization options, refer to the [API documentation](../api/tools.md) and explore the examples in the repository.
 
 
