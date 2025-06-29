@@ -52,7 +52,7 @@ class RAGEngine:
             provider=self.config.embedding.provider,
             model_config=self.config.embedding.model_dump(exclude_unset=True),
         )
-        
+
         # Dynamic Check the dimensions in StorageHandler
         if (self.storage_handler.vector_store is not None) and (self.embed_model.dimensions is not None):
             if self.storage_handler.storageConfig.vectorConfig.dimensions != self.embed_model.dimensions:
@@ -146,11 +146,13 @@ class RAGEngine:
                 )
                 self.indices[corpus_id][index_type] = index
                 self.retrievers[corpus_id][index_type] = self.retriever_factory.create(
-                    retriever_type=self.config.retrieval.retrivel_type,
+                    retriever_type=index_type,
+                    llm=self.llm,
                     index=index.get_index(),
                     graph_store=index.get_index().storage_context.graph_store,
                     embed_model=self.embed_model.get_embedding_model(),
-                    query=Query(query_str="", top_k=self.config.retrieval.top_k if self.config.retrieval else 5)
+                    query=Query(query_str="", top_k=self.config.retrieval.top_k if self.config.retrieval else 5),
+                    storage_handler=self.storage_handler,
                 )
 
             nodes_to_insert = nodes.to_llama_nodes() if isinstance(nodes, Corpus) else nodes
@@ -160,7 +162,6 @@ class RAGEngine:
             logger.info(f"Added {len(nodes_to_insert)} nodes to {index_type} index for corpus {corpus_id}")
         except Exception as e:
             logger.error(f"Failed to add nodes to {index_type} index for corpus {corpus_id}: {str(e)}")
-            raise
 
     def delete(self, corpus_id: str, index_type: Optional[str] = None, 
                node_ids: Optional[Union[str, List[str]]] = None, 
@@ -490,10 +491,12 @@ class RAGEngine:
                 retriever_type = RetrieverType.GRAPH if index_type == IndexType.GRAPH else RetrieverType.VECTOR
                 self.retrievers[corpus_id][index_type] = self.retriever_factory.create(
                     retriever_type=retriever_type,
+                    llm=self.llm,
                     index=index.get_index(),
                     graph_store=index.get_index().storage_context.graph_store if index_type == IndexType.GRAPH else None,
                     embed_model=self.embed_model.get_embedding_model(),
-                    query=Query(query_str="", top_k=self.config.retrieval.top_k if self.config.retrieval else 5)
+                    query=Query(query_str="", top_k=self.config.retrieval.top_k if self.config.retrieval else 5),
+                    storage_handler=self.storage_handler
                 )
 
             nodes = corpus.to_llama_nodes()
@@ -549,6 +552,7 @@ class RAGEngine:
 
             results = []
             target_corpora = [corpus_id] if corpus_id else self.indices.keys()
+            import pdb;pdb.set_trace()
             with ThreadPoolExecutor(max_workers=self.config.num_workers or 4) as executor:
                 future_to_retriever = {}
                 for cid in target_corpora:

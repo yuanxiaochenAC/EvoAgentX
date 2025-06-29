@@ -15,13 +15,3 @@ class GraphStoreBase(ABC):
     def get_graph_store(self) -> GraphStore:
         """Return the LlamaIndex-compatible graph store."""
         pass
-    
-    @abstractmethod
-    def add_triples(self, triples: List[Dict[str, Any]]):
-        """Add triples to the graph store."""
-        pass
-    
-    @abstractmethod
-    def query(self, query: str) -> List[Any]:
-        """Query the graph store."""
-        pass

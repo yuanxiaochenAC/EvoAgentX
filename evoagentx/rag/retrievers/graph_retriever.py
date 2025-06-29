@@ -15,54 +15,8 @@ from evoagentx.core.logging import logger
 from evoagentx.rag.schema import Query, RagResult, Corpus, Chunk
 from evoagentx.prompts.rag.graph_synonym import DEFAULT_SYNONYM_EXPAND_TEMPLATE
 
-"""
-    def as_retriever(
-        self,
-        sub_retrievers: Optional[List["BasePGRetriever"]] = None,
-        include_text: bool = True,
-        **kwargs: Any,
-    ) -> BaseRetriever:
-
-        from llama_index.core.indices.property_graph.retriever import (
-            PGRetriever,
-        )
-        from llama_index.core.indices.property_graph.sub_retrievers.vector import (
-            VectorContextRetriever,
-        )
-        from llama_index.core.indices.property_graph.sub_retrievers.llm_synonym import (
-            LLMSynonymRetriever,
-        )
-
-        if sub_retrievers is None:
-            sub_retrievers = [
-                LLMSynonymRetriever(
-                    graph_store=self.property_graph_store,
-                    include_text=include_text,
-                    llm=self._llm,
-                    **kwargs,
-                ),
-            ]
-
-            if self._embed_model and (
-                self.property_graph_store.supports_vector_queries or self.vector_store
-            ):
-                sub_retrievers.append(
-                    VectorContextRetriever(
-                        graph_store=self.property_graph_store,
-                        vector_store=self.vector_store,
-                        include_text=include_text,
-                        embed_model=self._embed_model,
-                        **kwargs,
-                    )
-                )
-
-        return PGRetriever(sub_retrievers, use_async=self._use_async, **kwargs)
-"""
-
 
 class BasicLLMSynonymRetriever(BasePGRetriever):
-    """
-    """
     def __init__(
         self,
         graph_store: PropertyGraphStore,
@@ -129,44 +83,49 @@ class BasicLLMSynonymRetriever(BasePGRetriever):
     def retrieve_from_graph(
         self, query_bundle: Query, limit: Optional[int] = None
     ) -> List[NodeWithScore]:
-        response = self._llm.predict(
-            self._synonym_prompt,
-            query_str=query_bundle.query_str,
-            max_keywords=self._max_keywords,
+        
+        # format the prompt
+        synonym_prompt = self._synonym_prompt.format_map({"max_keywords": self._limit, "query_str": query_bundle.query_str})
+        response = self._llm.generate(
+            prompt=synonym_prompt,
+            parse_mode="str"
         )
-        matches = self._parse_llm_output(response)
+        matches = self._parse_llm_output(response.content)
+        logger.info(f"{self.__class__.__name__}, synonym words from llm: {matches}")
 
         return self._prepare_matches(matches, limit=limit or self._limit)
 
     async def aretrieve_from_graph(
         self, query_bundle: Query, limit: Optional[int] = None
     ) -> List[NodeWithScore]:
-        response = await self._llm.apredict(
-            self._synonym_prompt,
-            query_str=query_bundle.query_str,
-            max_keywords=self._max_keywords,
+        synonym_prompt = self._synonym_prompt.format_map({"max_keywords": self._limit, "query_str": query_bundle.query_str})
+        response = await self._llm.async_generate(
+            prompt=synonym_prompt,
+            parse_mode="str"
         )
-        matches = self._parse_llm_output(response)
-
+        matches = self._parse_llm_output(response.content)
+        
+        logger.info(f"{self.__class__.__name__}: query: {query_bundle.query_str} \nsynonym words from llm: {matches}")
         return await self._aprepare_matches(matches, limit=limit or self._limit)
 
 
 class GraphRetriever(BaseRetrieverWrapper):
     """Wrapper for graph-based retrieval."""
     
-    def __init__(self, graph_store: PropertyGraphStore, embed_model: Optional[BaseEmbedding], 
+    def __init__(self, llm: BaseLLM, graph_store: PropertyGraphStore, embed_model: Optional[BaseEmbedding], 
                  include_text: bool = True, _use_async: bool = True,
-                 vector_store: Optional[BasePydanticVectorStore] = None, top_k: int = 5):
+                 vector_store: Optional[BasePydanticVectorStore] = None,
+                 top_k:int=5):
         super().__init__()
         self.graph_store = graph_store
-        self.embed_model = embed_model
+        self._embed_model = embed_model
         self.vector_store = vector_store
-        self.top_k = top_k
+        self._llm = llm
         
         sub_retrievers = [
-            BasicLLMSynonymRetriever(),
-
+            BasicLLMSynonymRetriever(graph_store=graph_store, include_text=include_text, llm=llm),
         ]
+
         if self._embed_model and (
                 self.graph_store.supports_vector_queries or self.vector_store
         ):
@@ -176,9 +135,9 @@ class GraphRetriever(BaseRetrieverWrapper):
                         vector_store=self.vector_store,
                         include_text=include_text,
                         embed_model=self._embed_model,
+                        similarity_top_k=top_k
                     )
             )
-
 
         self.retriever = PGRetriever(
             sub_retrievers, use_async=_use_async
@@ -187,7 +146,11 @@ class GraphRetriever(BaseRetrieverWrapper):
     async def aretrieve(self, query: Query) -> RagResult:
         try:
             # config the top_k
-            self.retriever.similarity_top_k = query.top_k
+            subretriever_bool = [isinstance(sub, VectorContextRetriever) for sub in self.retriever.sub_retrievers]
+            if any(subretriever_bool):
+                ind = subretriever_bool.index(True) 
+                self.retriever.sub_retrievers[ind].similarity_top_k = query.top_k
+
             nodes = await self.retriever.aretrieve(query.query_str)
 
             corpus = Corpus()
@@ -207,16 +170,19 @@ class GraphRetriever(BaseRetrieverWrapper):
                 scores=scores,
                 metadata={"query": query.query_str, "retriever": "vector"}
             )
-            logger.info(f"Vector retrieved {len(corpus.chunks)} chunks")
+            logger.info(f"Graph retrieved {len(corpus.chunks)} chunks")
             return result
         except Exception as e:
-            logger.error(f"Vector retrieval failed: {str(e)}")
+            logger.error(f"Graph retrieval failed: {str(e)}")
             raise
 
     def retrieve(self, query: Query) -> RagResult:
         try:
             # config the top_k
-            self.retriever.similarity_top_k = query.top_k
+            subretriever_bool = [isinstance(sub, VectorContextRetriever) for sub in self.retrieve.sub_retrievers]
+            if any(subretriever_bool):
+                ind = subretriever_bool.index(True) 
+                self.retriever[ind].similarity_top_k = query.top_k
             nodes = self.retriever.retrieve(query.query_str)
             corpus = Corpus()
             scores = []

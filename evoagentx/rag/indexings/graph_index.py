@@ -25,7 +25,7 @@ class GraphIndexing(BaseIndexWrapper):
     ) -> None:
         super().__init__()
         self.index_type = IndexType.GRAPH
-        self.embed_model = embed_model
+        self._embed_model = embed_model
         self.storage_handler = storage_handler
         # create a storage_context for llama_index
         self._create_storage_context()
@@ -43,9 +43,11 @@ class GraphIndexing(BaseIndexWrapper):
             self.index = PropertyGraphIndex(
                 nodes=[],
                 kg_extractors=[kg_extractor, ImplicitPathExtractor()],  # 'ImplicitPathExtractor' for node basic relation(tree structure and so on).
-                embed_model=self.embed_model,
+                embed_model=self._embed_model,
+                vector_store=self.storage_context.vector_store,
+                property_graph_store=self.storage_context.graph_store,
                 storage_context=self.storage_context,
-                show_progress=self.index_config.get("show_progress", False),
+                show_progress=self.index_config.get("show_progress", True),
                 use_async=self.index_config.get("use_async", True),
             )
         except Exception as e:
@@ -75,8 +77,20 @@ class GraphIndexing(BaseIndexWrapper):
             nodes (List[Union[Chunk, BaseNode]]): The nodes to insert.
         """
         try:
-            filted_node = [node.to_llama_node() if isinstance(node, Chunk) else node for node in nodes]
-            nodes = self.index._insert_nodes(filted_node)
+            filted_nodes = [node.to_llama_node() if isinstance(node, Chunk) else node for node in nodes]
+
+            # Convert dict to string
+            for node in filted_nodes:
+                flattened_metadata = {}
+                for key, value in node.metadata.items():
+                    if isinstance(value, dict):
+                        flattened_metadata[key] = str(value)
+                    elif isinstance(value, (list, tuple)):
+                        flattened_metadata[key] = [str(v) for v in value if not isinstance(v, (dict, list))]
+                    else:
+                        flattened_metadata[key] = value
+                node.metadata = flattened_metadata
+            nodes = self.index._insert_nodes(filted_nodes)
             for node in nodes:
                 self.id_to_node[node.node_id] = node.model_copy()
             logger.info(f"Inserted {len(nodes)} nodes into PropertyGraphIndex")

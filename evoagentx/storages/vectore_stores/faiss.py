@@ -9,9 +9,9 @@ from .base import VectorStoreBase
 class FaissVectorStoreWrapper(VectorStoreBase):
     """Wrapper for FAISS vector store."""
     
-    def __init__(self, dimension: int = 1536, 
+    def __init__(self, dimensions: int = 1536, 
                  metrics: Union[Literal["flat_l2", "ivf_flat"]] = "flat_l2", **kwargs):
-        self.dimension = dimension
+        self.dimension = dimensions
         self.metrics = metrics
         self.faiss_index = self._create_index()
         self.vector_store = FaissMapVectorStore(faiss_index=faiss.IndexIDMap2(self.faiss_index))
@@ -28,5 +28,3 @@ class FaissVectorStoreWrapper(VectorStoreBase):
     def get_vector_store(self) -> FaissMapVectorStore:
         """Return the FAISS vector store."""
         return self.vector_store
-    
-    

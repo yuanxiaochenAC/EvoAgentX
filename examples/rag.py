@@ -67,10 +67,15 @@ embedding=EmbeddingConfig(
     )
 """
 # For ollama example
+# embedding=EmbeddingConfig(
+#         provider="openai",
+#         model_name="text-embedding-ada-002",
+#         api_key=os.environ["OPENAI_API_KEY"],
+# )
 embedding=EmbeddingConfig(
-        provider="openai",
-        model_name="text-embedding-ada-002",
-        api_key=os.environ["OPENAI_API_KEY"],
+        provider="huggingface",
+        model_name=r"D:\Docker_store\store\MyKits\Project\EvoAgentX\debug\bge-small-en-v1.5",
+        device="cuda:0"
 )
 
 rag_config = RAGConfig(
@@ -87,9 +92,9 @@ rag_config = RAGConfig(
         max_chunks=None
     ),
     embedding=embedding,
-    index=IndexConfig(index_type="vector"),
+    index=IndexConfig(index_type="graph"),
     retrieval=RetrievalConfig(
-        retrivel_type="vector",
+        retrivel_type="graph",
         postprocessor_type="simple",
         top_k=10,  # Retrieve top-10 contexts
         similarity_cutoff=0.3,
@@ -98,13 +103,24 @@ rag_config = RAGConfig(
     )
 )
 
-OPEN_ROUNTER_API_KEY = os.environ["OPEN_ROUNTER_API_KEY"]
-config = OpenRouterConfig(
-    openrouter_key=OPEN_ROUNTER_API_KEY,
-    temperature=0.5,
-    model="google/gemini-2.5-flash-lite-preview-06-17",
+# OPEN_ROUNTER_API_KEY = os.environ["OPEN_ROUNTER_API_KEY"]
+# config = OpenRouterConfig(
+#     openrouter_key=OPEN_ROUNTER_API_KEY,
+#     temperature=0.5,
+#     model="google/gemini-2.5-flash-lite-preview-06-17",
+# )
+# llm = OpenRouterLLM(config=config)
+
+from evoagentx.models import OpenAILLMConfig, OpenAILLM
+
+config = OpenAILLMConfig(
+    model="gpt-4o-mini",
+    temperature=0.7,
+    max_tokens=1000,
+    openai_key=os.environ["OPENAI_API_KEY"],
 )
-llm = OpenRouterLLM(config=config)
+
+llm = OpenAILLM(config=config)
 
 search_engine = RAGEngine(config=rag_config, storage_handler=storage_handler, llm=llm)
 
@@ -192,6 +208,7 @@ def run_evaluation(samples: List[Dict], top_k: int = 5) -> Dict[str, float]:
         
         # Query
         query = Query(query_str=question, top_k=top_k)
+        import pdb;pdb.set_trace()
         result = search_engine.query(query, corpus_id=corpus_id)
         retrieved_chunks = result.corpus.chunks
         logger.info(f"Retrieved {len(retrieved_chunks)} chunks for query")
@@ -203,7 +220,6 @@ def run_evaluation(samples: List[Dict], top_k: int = 5) -> Dict[str, float]:
         logger.info(f"Metrics for sample {corpus_id}: {sample_metrics}")
         
         # Clear index to avoid memory issues
-        import pdb;pdb.set_trace()
         search_engine.clear(corpus_id=corpus_id)
     
     # Aggregate metrics
