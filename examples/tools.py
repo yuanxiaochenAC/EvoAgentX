@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """
-Example demonstrating how to use the PythonInterpreter and DockerInterpreter tools.
-This script provides examples for running simple Python code and script files.
+Example demonstrating how to use various toolkits from EvoAgentX.
+This script provides comprehensive examples for:
+- PythonInterpreter and DockerInterpreter tools for code execution
+- BrowserToolkit with auto-initialization and auto-cleanup
+- Search toolkits (Wikipedia, Google, Google Free)
+- File operations with different file types
+- MCP toolkit integration
 """
 
 import os
@@ -209,19 +214,19 @@ except ImportError as e:
 
 def run_search_examples():
     """
-    Run examples using the search Toolkits (Wikipedia, Google, and Google Free).
+    Run examples using the search toolkits (Wikipedia, Google, and Google Free).
     """
     print("\n===== SEARCH TOOLS EXAMPLES =====\n")
     
-    # Initialize search Toolkits
-    wiki_Toolkit = WikipediaSearchToolkit(max_summary_sentences=3)
-    google_Toolkit = GoogleSearchToolkit(num_search_pages=3, max_content_words=200)
-    google_free_Toolkit = GoogleFreeSearchToolkit()
+    # Initialize search toolkits
+    wiki_toolkit = WikipediaSearchToolkit(max_summary_sentences=3)
+    google_toolkit = GoogleSearchToolkit(num_search_pages=3, max_content_words=200)
+    google_free_toolkit = GoogleFreeSearchToolkit()
     
-    # Get the individual tools from Toolkits
-    wiki_tool = wiki_Toolkit.get_tool("wikipedia_search")
-    google_tool = google_Toolkit.get_tool("google_search")
-    google_free_tool = google_free_Toolkit.get_tool("google_free_search")
+    # Get the individual tools from toolkits
+    wiki_tool = wiki_toolkit.get_tool("wikipedia_search")
+    google_tool = google_toolkit.get_tool("google_search")
+    google_free_tool = google_free_toolkit.get_tool("google_free_search")
     
     # Example search query
     query = "artificial intelligence agent architecture"
@@ -280,16 +285,16 @@ def run_python_interpreter_examples():
     """Run all examples using the Python InterpreterToolkit"""
     print("\n===== PYTHON INTERPRETER EXAMPLES =====\n")
     
-    # Initialize the Python interpreter Toolkit with the current directory as project path
+    # Initialize the Python interpreter toolkit with the current directory as project path
     # and allow common standard library imports
-    interpreter_Toolkit = PythonInterpreterToolkit(
+    interpreter_toolkit = PythonInterpreterToolkit(
         project_path=os.getcwd(),
         directory_names=["examples", "evoagentx"],
         allowed_imports={"os", "sys", "time", "datetime", "math", "random", "platform"}
     )
     
     # Get the underlying interpreter instance for the examples
-    interpreter = interpreter_Toolkit.python_interpreter
+    interpreter = interpreter_toolkit.python_interpreter
     
     # Run the examples
     run_simple_hello_world(interpreter)
@@ -306,8 +311,8 @@ def run_docker_interpreter_examples():
     print("Running Docker interpreter examples...")
     
     try:
-        # Initialize the Docker interpreter Toolkit with a standard Python image
-        interpreter_Toolkit = DockerInterpreterToolkit(
+        # Initialize the Docker interpreter toolkit with a standard Python image
+        interpreter_toolkit = DockerInterpreterToolkit(
             image_tag="python:3.9-slim",  # Using official Python image
             print_stdout=True,
             print_stderr=True,
@@ -315,7 +320,7 @@ def run_docker_interpreter_examples():
         )
         
         # Get the underlying interpreter instance for the examples
-        interpreter = interpreter_Toolkit.docker_interpreter
+        interpreter = interpreter_toolkit.docker_interpreter
         
         # Run the examples
         run_simple_hello_world(interpreter)
@@ -332,10 +337,10 @@ def run_docker_interpreter_examples():
 
 def run_mcp_example():
     """
-    Run an example using the MCP Toolkit to search for job information about 'data scientist'.
+    Run an example using the MCP toolkit to search for job information about 'data scientist'.
     This uses the sample_mcp.config file to configure the MCP client.
     """
-    print("\n===== MCP Toolkit EXAMPLE =====\n")
+    print("\n===== MCP TOOLKIT EXAMPLE =====\n")
     
     # Get the path to the sample_mcp.config file
     config_path = os.path.join(os.getcwd(), "examples", "sample_mcp.config")
@@ -343,18 +348,18 @@ def run_mcp_example():
     print(f"Loading MCP configuration from: {config_path}")
     
     try:
-        # Initialize the MCP Toolkit with the sample config
-        Toolkit = MCPToolkit(config_path=config_path)
+        # Initialize the MCP toolkit with the sample config
+        mcp_toolkit = MCPToolkit(config_path=config_path)
         
-        # Get all available Toolkits
-        Toolkits = Toolkit.get_tools()
+        # Get all available toolkits
+        toolkits = mcp_toolkit.get_tools()
         
-        print(f"Available MCP Toolkits: {len(Toolkits)}")
+        print(f"Available MCP toolkits: {len(toolkits)}")
         
         # Find and use the hirebase search tool
         hirebase_tool = None
-        for Toolkit_item in Toolkits:
-            for tool in Toolkit_item.tools:
+        for toolkit_item in toolkits:
+            for tool in toolkit_item.tools:
                 print(f"Tool: {tool.name}")
                 print(f"Description: {tool.description}")
                 print("-" * 30)
@@ -386,8 +391,8 @@ def run_mcp_example():
         print(f"Error running MCP example: {str(e)}")
         print("Make sure the hirebase MCP server is properly configured with a valid API key.")
     finally:
-        if 'Toolkit' in locals():
-            Toolkit.disconnect()
+        if 'mcp_toolkit' in locals():
+            mcp_toolkit.disconnect()
 
 
 def run_file_tool_example():
@@ -397,13 +402,13 @@ def run_file_tool_example():
     print("\n===== FILE TOOL EXAMPLE =====\n")
     
     try:
-        # Initialize the file Toolkit
-        file_Toolkit = FileToolkit()
+        # Initialize the file toolkit
+        file_toolkit = FileToolkit()
         
-        # Get individual tools from the Toolkit
-        read_tool = file_Toolkit.get_tool("read_file")
-        write_tool = file_Toolkit.get_tool("write_file")
-        append_tool = file_Toolkit.get_tool("append_file")
+        # Get individual tools from the toolkit
+        read_tool = file_toolkit.get_tool("read_file")
+        write_tool = file_toolkit.get_tool("write_file")
+        append_tool = file_toolkit.get_tool("append_file")
         
         # Create sample content for a PDF
         sample_content = """This is a sample PDF document created using the FileTool.
@@ -617,84 +622,87 @@ name = myapp"""
 
 def run_browser_tool_example():
     """
-    Run an example using the BrowserToolkit to initialize browser, 
-    go to Google, search for "test", and then close the browser.
+    Run an example using the BrowserToolkit with auto-initialization and auto-cleanup.
+    Goes to Google, searches for "test", demonstrating the simplified browser API.
     """
     print("\n===== BROWSER TOOL EXAMPLE =====\n")
     
     try:
-        # Initialize the browser Toolkit (with visible browser window if headless is False)
-        browser_Toolkit = BrowserToolkit(headless=True, timeout=10)
+        # Initialize the browser toolkit (browser auto-initializes when first used)
+        browser_toolkit = BrowserToolkit(headless=True, timeout=10)
         
-        # Get individual tools from the Toolkit
-        init_tool = browser_Toolkit.get_tool("initialize_browser")
-        nav_tool = browser_Toolkit.get_tool("navigate_to_url")
-        input_tool = browser_Toolkit.get_tool("input_text")
-        click_tool = browser_Toolkit.get_tool("browser_click")
-        close_tool = browser_Toolkit.get_tool("close_browser")
+        # Get individual tools from the toolkit
+        nav_tool = browser_toolkit.get_tool("navigate_to_url")
+        input_tool = browser_toolkit.get_tool("input_text")
+        click_tool = browser_toolkit.get_tool("browser_click")
+        snapshot_tool = browser_toolkit.get_tool("browser_snapshot")
         
-        print("Step 1: Initializing browser...")
-        init_result = init_tool()
-        print("Browser Initialization Result:")
+        print("Step 1: Navigating to Google (browser auto-initializes)...")
+        nav_result = nav_tool(url="https://www.google.com")
+        print("Navigation Result:")
         print("-" * 30)
-        print(init_result)
+        print(f"Status: {nav_result.get('status')}")
+        print(f"URL: {nav_result.get('current_url')}")
+        print(f"Title: {nav_result.get('title')}")
+        
+        # Show available interactive elements
+        if nav_result.get("snapshot") and nav_result["snapshot"].get("interactive_elements"):
+            elements = nav_result["snapshot"]["interactive_elements"]
+            print(f"Found {len(elements)} interactive elements:")
+            for elem in elements[:5]:  # Show first 5 elements
+                print(f"  - {elem['id']}: {elem.get('description', 'No description')}")
         print("-" * 30)
         
-        if init_result.get("status") == "success":
-            print("\nStep 2: Navigating to Google...")
-            nav_result = nav_tool(url="https://www.google.com")
-            print("Navigation Result:")
-            print("-" * 30)
-            print(f"Status: {nav_result.get('status')}")
-            print(f"URL: {nav_result.get('current_url')}")
-            print(f"Title: {nav_result.get('title')}")
+        if nav_result.get("status") == "success":
+            # Find the search input box and search button
+            elements = nav_result.get("snapshot", {}).get("interactive_elements", [])
+            search_input_ref = None
+            search_button_ref = None
             
-            # Show available interactive elements
-            if nav_result.get("snapshot") and nav_result["snapshot"].get("interactive_elements"):
-                elements = nav_result["snapshot"]["interactive_elements"]
-                print(f"Found {len(elements)} interactive elements:")
-                for elem in elements[:5]:  # Show first 5 elements
-                    print(f"  - {elem['id']}: {elem.get('description', 'No description')}")
-            print("-" * 30)
+            for elem in elements:
+                desc = elem.get("description", "").lower()
+                label = elem.get("label", "").lower()
+                purpose = elem.get("purpose", "").lower()
+                
+                # Look for search input field
+                if (elem.get("editable") and 
+                    ("search" in desc or "search" in label or "search" in purpose)):
+                    search_input_ref = elem["id"]
+                # Look for search button
+                elif (elem.get("interactable") and 
+                      ("search" in desc or "search" in label or "search" in purpose) and
+                      ("button" in purpose or elem.get("category") == "action")):
+                    search_button_ref = elem["id"]
             
-            if nav_result.get("status") == "success":
-                # Find the search input box and search button
-                elements = nav_result.get("snapshot", {}).get("interactive_elements", [])
-                search_input_ref = None
-                search_button_ref = None
+            if search_input_ref:
+                print(f"\nStep 2: Typing 'test' in search box (element {search_input_ref})...")
+                input_result = input_tool(
+                    element="Search box", 
+                    ref=search_input_ref, 
+                    text="test", 
+                    submit=False
+                )
+                print("Input Result:")
+                print("-" * 30)
+                print(f"Status: {input_result.get('status')}")
+                print(f"Message: {input_result.get('message')}")
+                print("-" * 30)
                 
-                for elem in elements:
-                    desc = elem.get("description", "").lower()
-                    if "search" in desc and ("input" in desc or "textbox" in desc):
-                        search_input_ref = elem["id"]
-                    elif "search" in desc and ("button" in desc or "submit" in desc):
-                        search_button_ref = elem["id"]
-                
-                if search_input_ref:
-                    print(f"\nStep 3: Typing 'test' in search box (element {search_input_ref})...")
-                    input_result = input_tool(
-                        element="Search box", 
-                        ref=search_input_ref, 
-                        text="test", 
-                        submit=False
-                    )
-                    print("Input Result:")
-                    print("-" * 30)
-                    print(input_result)
-                    print("-" * 30)
-                    
+                if input_result.get("status") == "success":
                     if search_button_ref:
-                        print(f"\nStep 4: Clicking search button (element {search_button_ref})...")
+                        print(f"\nStep 3: Clicking search button (element {search_button_ref})...")
                         click_result = click_tool(
                             element="Search button", 
                             ref=search_button_ref
                         )
                         print("Click Result:")
                         print("-" * 30)
-                        print(click_result)
+                        print(f"Status: {click_result.get('status')}")
+                        print(f"Message: {click_result.get('message')}")
+                        print(f"Current URL: {click_result.get('current_url')}")
                         print("-" * 30)
                     else:
-                        print("\nStep 4: Search button not found, submitting with Enter key...")
+                        print("\nStep 3: Search button not found, submitting with Enter key...")
                         submit_result = input_tool(
                             element="Search box", 
                             ref=search_input_ref, 
@@ -703,25 +711,27 @@ def run_browser_tool_example():
                         )
                         print("Submit Result:")
                         print("-" * 30)
-                        print(submit_result)
+                        print(f"Status: {submit_result.get('status')}")
+                        print(f"Message: {submit_result.get('message')}")
                         print("-" * 30)
+                    
+                    # Take a final snapshot to see the results page
+                    print("\nStep 4: Taking snapshot of results page...")
+                    final_snapshot = snapshot_tool()
+                    if final_snapshot.get("status") == "success":
+                        print(f"Results page title: {final_snapshot.get('title')}")
+                        print(f"Results page URL: {final_snapshot.get('url')}")
+                        interactive_elements = final_snapshot.get("interactive_elements", [])
+                        print(f"Found {len(interactive_elements)} interactive elements on results page")
+            else:
+                print("\nNo search input field found on the page")
         
-        print("Closing browser...")
-        close_result = close_tool()
-        print("Browser Close Result:")
-        print("-" * 30)
-        print(close_result)
-        print("-" * 30)
+        print("\nBrowser will automatically close when the toolkit goes out of scope...")
+        print("(No manual cleanup required)")
         
     except Exception as e:
         print(f"Error running browser tool example: {str(e)}")
-        # Make sure to close browser even if there's an error
-        try:
-            if 'browser_Toolkit' in locals():
-                close_tool = browser_Toolkit.get_tool("close_browser")
-                close_tool()
-        except Exception as e:
-            print(f"Error closing browser: {str(e)}")
+        print("Browser will still automatically cleanup on exit")
 
 
 def main():
@@ -734,7 +744,7 @@ def main():
     # Run browser tool example
     run_browser_tool_example()
     
-    # Run MCP Toolkit example
+    # Run MCP toolkit example
     run_mcp_example()
     
     # Run Python interpreter examples

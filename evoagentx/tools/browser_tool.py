@@ -26,6 +26,11 @@ class BrowserBase(BaseModule):
     A tool for interacting with web browsers using Selenium.
     Allows agents to navigate to URLs, interact with elements, extract information,
     and more from web pages.
+    
+    Key Features:
+    - Auto-initialization: Browser is automatically initialized when any method is first called
+    - Auto-cleanup: Browser is automatically closed when the instance is destroyed
+    - No manual initialization or cleanup required
     """
     
     timeout: int = Field(default=10, description="Default timeout in seconds for browser operations")
@@ -62,13 +67,16 @@ class BrowserBase(BaseModule):
     
     def _check_driver_initialized(self) -> Union[None, Dict[str, Any]]:
         """
-        Check if the browser driver is initialized.
+        Check if the browser driver is initialized. If not, initialize it automatically.
         
         Returns:
-            Union[None, Dict[str, Any]]: None if driver is initialized, error response otherwise
+            Union[None, Dict[str, Any]]: None if driver is initialized, error response if initialization fails
         """
         if not self.driver:
-            return {"status": "error", "message": "Browser not initialized"}
+            # Automatically initialize the browser
+            init_result = self.initialize_browser()
+            if init_result["status"] == "error":
+                return init_result
         return None
     
     def _get_selector_by_type(self, selector_type: str) -> Union[str, Dict[str, Any]]:
@@ -194,9 +202,12 @@ class BrowserBase(BaseModule):
     
     # Original methods with improved implementation using the helper methods
     
-    def initialize_browser(self, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
+    def initialize_browser(self, function_params: list = None) -> Dict[str, Any]:
         """
-        Start or restart a browser session. Must be called before any other browser operations.
+        Start or restart a browser session. This method is called automatically when needed.
+        
+        Note: This method is now called automatically by other browser methods when the browser
+        is not initialized. Manual initialization is no longer required.
         
         This function supports multiple parameter styles:
         1. Standard style: no parameters
@@ -205,7 +216,6 @@ class BrowserBase(BaseModule):
            
         Args:
             function_params (list, optional): Nested function parameters
-            continue_after_tool_call (bool, optional): Whether to continue after the tool call
         
         Returns:
             Dict[str, Any]: Status information about the browser initialization
@@ -256,7 +266,7 @@ class BrowserBase(BaseModule):
             return {"status": "error", "message": str(e)}
     
     def navigate_to_url(self, url: str = None, timeout: int = None, 
-                       function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
+                       function_params: list = None) -> Dict[str, Any]:
         """
         Navigate to a URL and capture a snapshot of the page. This provides element references used for interaction.
         
@@ -269,15 +279,14 @@ class BrowserBase(BaseModule):
             url (str, optional): The complete URL (with https://) to navigate to
             timeout (int, optional): Custom timeout in seconds (default: 10)
             function_params (list, optional): Nested function parameters
-            continue_after_tool_call (bool, optional): Whether to continue after the tool call
             
         Returns:
             Dict[str, Any]: Information about the navigation result and page snapshot
         """
-        if not self.driver:
-            init_result = self.initialize_browser()
-            if init_result["status"] == "error":
-                return init_result
+        # Check if browser is initialized (will auto-initialize if needed)
+        driver_check = self._check_driver_initialized()
+        if driver_check:
+            return driver_check
         
         # Handle nested function_params format
         if function_params and not url:
@@ -516,7 +525,7 @@ class BrowserBase(BaseModule):
     
     def input_text(self, element: str = None, ref: str = None, text: str = None, 
                    submit: bool = False, slowly: bool = True,
-                   function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
+                   function_params: list = None) -> Dict[str, Any]:
         """
         Type text into a form field, search box, or other input element using a reference ID from a snapshot.
         
@@ -535,7 +544,6 @@ class BrowserBase(BaseModule):
             submit (bool): Press Enter after typing to submit forms (default: false)
             slowly (bool): Type one character at a time to trigger JS events (default: true)
             function_params (list, optional): Nested function parameters
-            continue_after_tool_call (bool, optional): Whether to continue after the tool call
             
         Returns:
             Dict[str, Any]: Result of the text input operation
@@ -642,8 +650,10 @@ class BrowserBase(BaseModule):
         Returns:
             Dict[str, Any]: Information about the current page
         """
-        if not self.driver:
-            return {"status": "error", "message": "Browser not initialized"}
+        # Check if browser is initialized (will auto-initialize if needed)
+        driver_check = self._check_driver_initialized()
+        if driver_check:
+            return driver_check
             
         try:
             # Get title and URL
@@ -738,8 +748,10 @@ class BrowserBase(BaseModule):
         Returns:
             Dict[str, Any]: Result of the frame switch operation
         """
-        if not self.driver:
-            return {"status": "error", "message": "Browser not initialized"}
+        # Check if browser is initialized (will auto-initialize if needed)
+        driver_check = self._check_driver_initialized()
+        if driver_check:
+            return driver_check
             
         try:
             if reference_type == "index":
@@ -796,8 +808,10 @@ class BrowserBase(BaseModule):
         Returns:
             Dict[str, Any]: Result of the window switch operation
         """
-        if not self.driver:
-            return {"status": "error", "message": "Browser not initialized"}
+        # Check if browser is initialized (will auto-initialize if needed)
+        driver_check = self._check_driver_initialized()
+        if driver_check:
+            return driver_check
             
         try:
             window_handles = self.driver.window_handles
@@ -849,8 +863,6 @@ class BrowserBase(BaseModule):
             logger.error(f"Error switching to window {window_reference}: {str(e)}")
             return {"status": "error", "message": str(e)}
     
-
-
     def select_dropdown_option(self, select_selector: str, 
                               option_value: str,
                               select_by: str = "value",
@@ -928,7 +940,7 @@ class BrowserBase(BaseModule):
             return {"status": "error", "message": str(e)}
     
     def browser_click(self, element: str = None, ref: str = None, 
-                     function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
+                     function_params: list = None) -> Dict[str, Any]:
         """
         Click on a button, link, or other clickable element using a reference ID from a snapshot.
         
@@ -949,7 +961,6 @@ class BrowserBase(BaseModule):
             element (str, optional): Human-readable description of what you're clicking (e.g., 'Login button', 'Next page link')
             ref (str, optional): Element ID from the page snapshot (e.g., 'e0', 'e1', 'e2') - NOT a CSS selector
             function_params (list, optional): Nested function parameters
-            continue_after_tool_call (bool, optional): Whether to continue after the tool call
             
         Returns:
             Dict[str, Any]: Result of the click operation with detailed feedback
@@ -1202,7 +1213,7 @@ class BrowserBase(BaseModule):
         """
         all_elements = []
         
-        # Function to extract all elements and store references
+                # Function to extract all elements and store references
         def extract_elements(node, path="", index=0):
             if not node:
                 return index
@@ -1245,7 +1256,7 @@ class BrowserBase(BaseModule):
         
         return all_elements
 
-    def browser_snapshot(self, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
+    def browser_snapshot(self, function_params: list = None) -> Dict[str, Any]:
         """
         Capture a fresh snapshot of the current page with all interactive elements. 
         Use after page state changes not caused by navigation or clicking.
@@ -1257,7 +1268,6 @@ class BrowserBase(BaseModule):
         
         Args:
             function_params (list, optional): Nested function parameters
-            continue_after_tool_call (bool, optional): Whether to continue after the tool call
             
         Returns:
             Dict[str, Any]: The accessibility snapshot of the page with interactive elements
@@ -1447,7 +1457,7 @@ class BrowserBase(BaseModule):
             logger.error(f"Error generating accessibility snapshot: {str(e)}")
             return {"status": "error", "message": str(e)}
     
-    def browser_console_messages(self, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
+    def browser_console_messages(self, function_params: list = None) -> Dict[str, Any]:
         """
         Retrieve JavaScript console messages (logs, warnings, errors) from the browser for debugging.
         
@@ -1458,7 +1468,6 @@ class BrowserBase(BaseModule):
         
         Args:
             function_params (list, optional): Nested function parameters
-            continue_after_tool_call (bool, optional): Whether to continue after the tool call
             
         Returns:
             Dict[str, Any]: The console messages including logs, warnings and errors
@@ -1586,27 +1595,16 @@ class BrowserBase(BaseModule):
             
         return logs
 
-
-
-class InitializeBrowserTool(Tool):
-    name: str = "initialize_browser"
-    description: str = "Start or restart a browser session. Must be called before any other browser operations"
-    inputs: Dict[str, Dict[str, str]] = {}
-    required: Optional[List[str]] = []
-    
-    def __init__(self, browser_tool: BrowserBase = None):
-        super().__init__()
-        self.browser_tool = browser_tool
-    
-    def __call__(self, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
-        """Initialize browser using the BrowserBase instance."""
-        if not self.browser_tool:
-            raise RuntimeError("Browser tool instance not initialized")
-        
-        try:
-            return self.browser_tool.initialize_browser(function_params, continue_after_tool_call)
-        except Exception as e:
-            return {"status": "error", "message": f"Error initializing browser: {str(e)}"}
+    def __del__(self):
+        """
+        Destructor to automatically close the browser when the instance is destroyed.
+        """
+        if hasattr(self, 'driver') and self.driver:
+            try:
+                self.driver.quit()
+                logger.info("Browser automatically closed on cleanup")
+            except Exception as e:
+                logger.warning(f"Error during automatic browser cleanup: {str(e)}")
 
 
 class NavigateToUrlTool(Tool):
@@ -1628,13 +1626,13 @@ class NavigateToUrlTool(Tool):
         super().__init__()
         self.browser_tool = browser_tool
     
-    def __call__(self, url: str, timeout: int = None, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
+    def __call__(self, url: str, timeout: int = None, function_params: list = None) -> Dict[str, Any]:
         """Navigate to URL using the BrowserBase instance."""
         if not self.browser_tool:
             raise RuntimeError("Browser tool instance not initialized")
         
         try:
-            return self.browser_tool.navigate_to_url(url, timeout, function_params, continue_after_tool_call)
+            return self.browser_tool.navigate_to_url(url, timeout, function_params)
         except Exception as e:
             return {"status": "error", "message": f"Error navigating to URL: {str(e)}"}
 
@@ -1670,13 +1668,13 @@ class InputTextTool(Tool):
         super().__init__()
         self.browser_tool = browser_tool
     
-    def __call__(self, element: str, ref: str, text: str, submit: bool = False, slowly: bool = True, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
+    def __call__(self, element: str, ref: str, text: str, submit: bool = False, slowly: bool = True, function_params: list = None) -> Dict[str, Any]:
         """Input text using the BrowserBase instance."""
         if not self.browser_tool:
             raise RuntimeError("Browser tool instance not initialized")
         
         try:
-            return self.browser_tool.input_text(element, ref, text, submit, slowly, function_params, continue_after_tool_call)
+            return self.browser_tool.input_text(element, ref, text, submit, slowly, function_params)
         except Exception as e:
             return {"status": "error", "message": f"Error inputting text: {str(e)}"}
 
@@ -1700,13 +1698,13 @@ class BrowserClickTool(Tool):
         super().__init__()
         self.browser_tool = browser_tool
     
-    def __call__(self, element: str, ref: str, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
+    def __call__(self, element: str, ref: str, function_params: list = None) -> Dict[str, Any]:
         """Click element using the BrowserBase instance."""
         if not self.browser_tool:
             raise RuntimeError("Browser tool instance not initialized")
         
         try:
-            return self.browser_tool.browser_click(element, ref, function_params, continue_after_tool_call)
+            return self.browser_tool.browser_click(element, ref, function_params)
         except Exception as e:
             return {"status": "error", "message": f"Error clicking element: {str(e)}"}
 
@@ -1721,13 +1719,13 @@ class BrowserSnapshotTool(Tool):
         super().__init__()
         self.browser_tool = browser_tool
     
-    def __call__(self, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
+    def __call__(self, function_params: list = None) -> Dict[str, Any]:
         """Take browser snapshot using the BrowserBase instance."""
         if not self.browser_tool:
             raise RuntimeError("Browser tool instance not initialized")
         
         try:
-            return self.browser_tool.browser_snapshot(function_params, continue_after_tool_call)
+            return self.browser_tool.browser_snapshot(function_params)
         except Exception as e:
             return {"status": "error", "message": f"Error taking snapshot: {str(e)}"}
 
@@ -1742,39 +1740,25 @@ class BrowserConsoleMessagesTool(Tool):
         super().__init__()
         self.browser_tool = browser_tool
     
-    def __call__(self, function_params: list = None, continue_after_tool_call: bool = None) -> Dict[str, Any]:
+    def __call__(self, function_params: list = None) -> Dict[str, Any]:
         """Get console messages using the BrowserBase instance."""
         if not self.browser_tool:
             raise RuntimeError("Browser tool instance not initialized")
         
         try:
-            return self.browser_tool.browser_console_messages(function_params, continue_after_tool_call)
+            return self.browser_tool.browser_console_messages(function_params)
         except Exception as e:
             return {"status": "error", "message": f"Error getting console messages: {str(e)}"}
 
 
-class CloseBrowserTool(Tool):
-    name: str = "close_browser"
-    description: str = "Close the browser and end the session. Call this when you're done to free resources"
-    inputs: Dict[str, Dict[str, str]] = {}
-    required: Optional[List[str]] = []
-    
-    def __init__(self, browser_tool: BrowserBase = None):
-        super().__init__()
-        self.browser_tool = browser_tool
-    
-    def __call__(self) -> Dict[str, Any]:
-        """Close browser using the BrowserBase instance."""
-        if not self.browser_tool:
-            raise RuntimeError("Browser tool instance not initialized")
-        
-        try:
-            return self.browser_tool.close_browser()
-        except Exception as e:
-            return {"status": "error", "message": f"Error closing browser: {str(e)}"}
-
-
 class BrowserToolkit(Toolkit):
+    """
+    Browser toolkit with auto-initialization and cleanup.
+    
+    The browser is automatically initialized when any tool is first used,
+    and automatically closed when the toolkit instance is destroyed.
+    No explicit initialization or cleanup is required.
+    """
     def __init__(
         self,
         name: str = "BrowserToolkit",
@@ -1794,14 +1778,13 @@ class BrowserToolkit(Toolkit):
         )
         
         # Create tools with the shared browser tool instance
+        # Note: Browser auto-initializes when first used and auto-closes when destroyed
         tools = [
-            InitializeBrowserTool(browser_tool=browser_tool),
             NavigateToUrlTool(browser_tool=browser_tool),
             InputTextTool(browser_tool=browser_tool),
             BrowserClickTool(browser_tool=browser_tool),
             BrowserSnapshotTool(browser_tool=browser_tool),
-            BrowserConsoleMessagesTool(browser_tool=browser_tool),
-            CloseBrowserTool(browser_tool=browser_tool)
+            BrowserConsoleMessagesTool(browser_tool=browser_tool)
         ]
         
         # Initialize parent with tools
@@ -1809,8 +1792,4 @@ class BrowserToolkit(Toolkit):
         
         # Store browser_tool as instance variable
         self.browser_tool = browser_tool
-    
-
-
-
         
