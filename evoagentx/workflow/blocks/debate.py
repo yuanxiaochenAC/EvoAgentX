@@ -31,8 +31,12 @@ class debate(block):
         context = kwargs.get('context', None)
         for i in range(self.n):
             prediction = self.debater.execute(problem=problem, solutions=solutions, context=context)
-            index = prediction['index']
-            solutions[int(index)] = prediction['answer']
+            print(f"debate round {i}: {prediction}")
+            index = int(prediction['index'])
+            if not (0 <= index < len(solutions)):
+                index = len(solutions) - 1
+            solutions[index] = prediction['answer']
+            # 否则跳过
 
         return prediction['answer']
     
