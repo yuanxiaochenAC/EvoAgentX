@@ -16,7 +16,7 @@ class summarize(block):
         """将 summarize 作为独立模块使用，返回最终的预测答案"""
         context = kwargs.pop('context', None)
 
-        if not context is None:
+        if context is not None:
             summary = self.summarizer.execute(problem=problem, context=context)
             context = summary['summary']
         
@@ -30,7 +30,7 @@ class summarize(block):
     def execute(self, problem, **kwargs):
         """将 summarize 作为 workflow 组件使用，返回总结后的上下文"""
         context = kwargs.pop('context', None)
-        if not context is None:
+        if context is not None:
             for _ in range(self.n):
                 summary = self.summarizer.execute(problem=problem, context=context)
                 context = summary['summary']
