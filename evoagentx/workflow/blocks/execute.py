@@ -1,11 +1,9 @@
 import json
 import dspy
 import sys
-import traceback
 from typing import Any
 from evoagentx.workflow.blocks.block import block
-from evoagentx.workflow.operators import Predictor, CodeReflector
-from evoagentx.utils.aflow_utils.data_utils import test_case_2_test_function
+from evoagentx.workflow.operators import CodeReflector
 
 class execute(block):
     def __init__(self, predictor, benchmark, llm) -> None:        
@@ -18,11 +16,15 @@ class execute(block):
         
         test_cases = kwargs.pop("testcases", None)
 
+
         predictor_prediction = self.predictor.execute(problem = problem, **kwargs)
         
         answer = predictor_prediction['answer']
 
-        traceback = "This dataset does not provide test cases"
+        if test_cases:
+            traceback = self.benchmark.evaluate(answer, test_cases)
+        else:       
+            traceback = "This dataset does not provide test cases"
 
         code_reflector_prediction = self.codereflector.execute(problem = problem, previous_solution = answer, traceback = traceback)
 
@@ -43,6 +45,7 @@ class execute(block):
                 traceback = self.benchmark.evaluate(solution, test_cases)
             else:
                 traceback = "This dataset does not provide test cases"
+                
             code_reflector_prediction = self.codereflector.execute(problem = problem, previous_solution = solution, traceback = traceback)
             solution = code_reflector_prediction["answer"]
             

@@ -1,7 +1,6 @@
 import json
-from typing import Any
 from evoagentx.workflow.blocks.block import block
-from evoagentx.workflow.operators import Predictor, Reflector, Refiner
+from evoagentx.workflow.operators import Reflector, Refiner
 
 class reflect(block):
     def __init__(

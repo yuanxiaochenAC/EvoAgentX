@@ -1,7 +1,7 @@
 import json
 from typing import Any
 from evoagentx.workflow.blocks.block import block
-from evoagentx.workflow.operators import Debater, Predictor
+from evoagentx.workflow.operators import Debater
 
 class debate(block):
     def __init__(self,

@@ -1,9 +1,7 @@
 import numpy as np
 import random
 import copy
-import os
-from tqdm import tqdm
-from typing import List, Any, Optional, Callable
+from typing import Any, Optional
 from pydantic import Field
 
 from evoagentx.core.module import BaseModule
@@ -11,7 +9,6 @@ from evoagentx.models.base_model import BaseLLM
 from evoagentx.benchmark.benchmark import Benchmark
 from evoagentx.optimizers import MiproOptimizer
 from evoagentx.utils.mipro_utils.register_utils import MiproRegistry
-from evoagentx.workflow.operators import Predictor
 
 
 class MassOptimiser(BaseModule):
