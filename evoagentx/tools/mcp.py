@@ -28,7 +28,7 @@ import json
 class MCPTool(Tool):
     name: str = "MCPTool"
     description: str = "MCP tool wrapper"
-    inputs: Dict[str, Dict[str, str]] = {}
+    inputs: Dict[str, Dict[str, Any]] = {}
     required: Optional[List[str]] = None
     function: Callable = None
     
@@ -44,7 +44,25 @@ class MCPTool(Tool):
         if not self.function:
             raise ValueError("Function not set for MCPTool")
         return self.function(**kwargs)
+    
+    @classmethod
+    def validate_attributes(cls):
+        required_attributes = {
+            "name": str,
+            "description": str,
+            "inputs": dict
+        }
+        
+        for attr, attr_type in required_attributes.items():
+            if not hasattr(cls, attr):
+                raise ValueError(f"Attribute {attr} is required")
+            if not isinstance(getattr(cls, attr), attr_type):
+                raise ValueError(f"Attribute {attr} must be of type {attr_type}")
 
+        if cls.required:
+            for required_input in cls.required:
+                if required_input not in cls.inputs:
+                    raise ValueError(f"Required input '{required_input}' is not found in inputs")
 
 
 class MCPClient:
@@ -174,29 +192,7 @@ class MCPClient:
             # Convert MCP properties to Tool.inputs format
             # Tool.inputs expects Dict[str, Dict[str, str]] format
             
-            converted_inputs = {}
-            ## get element name and type from the schema
-            for prop_name, prop_details in properties.items():
-                # Handle different MCP schema formats
-                prop_type = "string"  # default fallback
-                prop_description = prop_details.get("title", prop_details.get("description", f"Parameter {prop_name}"))
-                
-                if "type" in prop_details:
-                    # Simple format: {'type': 'string', 'title': 'Job Id'}
-                    prop_type = prop_details["type"]
-                elif "anyOf" in prop_details:
-                    # Complex format: {'anyOf': [{'type': 'integer'}, {'type': 'null'}], 'title': 'Limit'}
-                    # Get the first non-null type from anyOf
-                    for type_option in prop_details["anyOf"]:
-                        if isinstance(type_option, dict) and "type" in type_option:
-                            if type_option["type"] != "null":
-                                prop_type = type_option["type"]
-                                break
-                
-                converted_inputs[prop_name] = {
-                    "type": prop_type,
-                    "description": prop_description
-                }
+            inputs = properties
             
             # Create the partial function and add __name__ attribute
             partial_func = partial(_sync_call_tool, mcp_tool.name)
@@ -205,7 +201,7 @@ class MCPClient:
             tool = MCPTool(
                 name=mcp_tool.name,
                 description=getattr(mcp_tool, 'description', None) or "",
-                inputs=converted_inputs,
+                inputs=inputs,
                 required=required,
                 function=partial_func
             )

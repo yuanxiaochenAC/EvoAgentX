@@ -1,7 +1,7 @@
 import json
 import inspect
 from pydantic import create_model, Field
-from typing import Union, Optional, Callable, Type, List
+from typing import Union, Optional, Callable, Type, List, Any
 
 from .agent import Agent
 from ..core.logging import logger
@@ -301,9 +301,9 @@ class CustomizeAgent(Agent):
             for field in outputs:
                 required = field.get("required", True)
                 if required:
-                    action_output_fields[field["name"]] = (Union[str, dict, list], Field(description=field["description"]))
+                    action_output_fields[field["name"]] = (Any, Field(description=field["description"]))
                 else:
-                    action_output_fields[field["name"]] = (Optional[Union[str, dict, list]], Field(default=None, description=field["description"]))
+                    action_output_fields[field["name"]] = (Optional[Any], Field(default=None, description=field["description"]))
             action_output_type = create_model(
                 self._get_unique_class_name(
                     generate_dynamic_class_name(name+" action_output")

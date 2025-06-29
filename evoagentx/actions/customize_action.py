@@ -82,7 +82,7 @@ class CustomizeAction(Action):
         if self.prompt:
             prompt = self.prompt.format(**prompt_params_values) if prompt_params_values else self.prompt
             if self.tools:
-                tools_schemas = [tool.get_tool_schemas() for tool in self.tools]
+                tools_schemas = [j["function"] for i in [tool.get_tool_schemas() for tool in self.tools] for j in i]
                 prompt += "\n\n" + TOOL_CALLING_TEMPLATE.format(tools_description = tools_schemas)
             return prompt
         else:

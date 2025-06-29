@@ -1,6 +1,6 @@
       
 import inspect
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 from ..core.module import BaseModule
 
@@ -10,7 +10,7 @@ ALLOWED_TYPES = ["string", "number", "integer", "boolean", "object", "array"]
 class Tool(BaseModule):
     name: str
     description: str
-    inputs: Dict[str, Dict[str, str]]
+    inputs: Dict[str, Dict[str, Any]]
     required: Optional[List[str]] = None
 
     """
