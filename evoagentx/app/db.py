@@ -13,6 +13,7 @@ from bson import ObjectId
 from pydantic import GetCoreSchemaHandler
 from pydantic import Field, BaseModel
 from evoagentx.app.config import settings
+from supabase import create_client, Client
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -167,18 +168,47 @@ class Database(ABC):
 class MongoDatabase(Database):
     """MongoDB implementation of the Database interface."""
     
-    def __init__(self, url: str, db_name: str):
+    def __init__(self, url: str, db_name: str, table_names: Optional[Dict[str, str]] = None):
         self.url = url
         self.db_name = db_name
         self.client: Optional[AsyncIOMotorClient] = None
         self.db = None
+        
+        # Default collection names (can be customized)
+        default_table_names = {
+            "agents": "agents",
+            "workflows": "workflows", 
+            "executions": "workflow_executions",
+            "logs": "execution_logs",
+            "users": "users"
+        }
+        
+        # Merge custom table names with defaults
+        self.table_names = {**default_table_names, **(table_names or {})}
     
-    # Collections
+    # Collections (will be set in connect method)
         self.agents = None
         self.workflows = None
         self.executions = None
         self.logs = None
         self.users = None
+    
+    def _resolve_table_name(self, collection: str) -> str:
+        """
+        Resolve the actual collection name from the logical collection name.
+        
+        Args:
+            collection: Logical collection name (e.g., 'agents', 'workflows')
+            
+        Returns:
+            Actual collection name in the database
+        """
+        # If it's a logical name, return the mapped collection name
+        if collection in self.table_names:
+            return self.table_names[collection]
+        
+        # Otherwise, return the collection name as-is (for direct collection access)
+        return collection
     
     async def connect(self) -> None:
         """Connect to MongoDB"""
@@ -186,12 +216,12 @@ class MongoDatabase(Database):
         self.client = AsyncIOMotorClient(self.url)
         self.db = self.client[self.db_name]
         
-        # Set up collections
-        self.agents = self.db.agents
-        self.workflows = self.db.workflows
-        self.executions = self.db.workflow_executions
-        self.logs = self.db.execution_logs
-        self.users = self.db.users
+        # Set up collections using configured table names
+        self.agents = self.db[self.table_names["agents"]]
+        self.workflows = self.db[self.table_names["workflows"]]
+        self.executions = self.db[self.table_names["executions"]]
+        self.logs = self.db[self.table_names["logs"]]
+        self.users = self.db[self.table_names["users"]]
         
         # Create indexes
         await self._create_indexes()
@@ -215,9 +245,12 @@ class MongoDatabase(Database):
     
     async def search(self, collection: str, query: Dict[str, Any], **kwargs) -> List[Dict[str, Any]]:
         """Search for documents in a MongoDB collection."""
+        # Try to get predefined collection object first
         collection_obj = getattr(self, collection, None)
         if collection_obj is None:
-            collection_obj = self.db[collection]
+            # Resolve the actual collection name and get collection object
+            actual_collection_name = self._resolve_table_name(collection)
+            collection_obj = self.db[actual_collection_name]
         
         limit = kwargs.get('limit', 100)
         skip = kwargs.get('skip', 0)
@@ -234,9 +267,12 @@ class MongoDatabase(Database):
     
     async def write(self, collection: str, data: Dict[str, Any]) -> str:
         """Write a document to a MongoDB collection."""
+        # Try to get predefined collection object first
         collection_obj = getattr(self, collection, None)
         if collection_obj is None:
-            collection_obj = self.db[collection]
+            # Resolve the actual collection name and get collection object
+            actual_collection_name = self._resolve_table_name(collection)
+            collection_obj = self.db[actual_collection_name]
         result = await collection_obj.insert_one(data)
         return str(result.inserted_id)
     
@@ -514,13 +550,34 @@ class PostgreSQLDatabase(Database):
     async def find_one(self, collection: str, query: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         raise NotImplementedError("PostgreSQL implementation not yet available")
 
+
 # Database Factory
 def create_database(db_type: str = "", **kwargs) -> Database:
-    """Factory function to create database instances."""
+    """
+    Factory function to create database instances.
+    
+    Supported database types:
+    - "mongodb": MongoDB database with motor async driver
+    - "supabase": Supabase database with PostgreSQL backend  
+    - "postgresql": PostgreSQL database (placeholder, not implemented)
+    - default: In-memory NoDatabase for testing
+    
+    Common parameters:
+    - table_names: Dict[str, str] - Custom table name mapping (optional)
+    
+    MongoDB specific parameters:
+    - url: str - MongoDB connection URL
+    - db_name: str - Database name
+    
+    Supabase specific parameters:
+    - url: str - Supabase project URL  
+    - key: str - Supabase API key
+    """
     if db_type.lower() == "mongodb":
         url = kwargs.get('url', settings.MONGODB_URL)
         db_name = kwargs.get('db_name', settings.MONGODB_DB_NAME)
-        return MongoDatabase(url, db_name)
+        table_names = kwargs.get('table_names', None)
+        return MongoDatabase(url, db_name, table_names)
     elif db_type.lower() == "postgresql":
         url = kwargs.get('url', '')
         return PostgreSQLDatabase(url)
