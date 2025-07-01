@@ -13,7 +13,7 @@ openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, 
 
 def test_MCP_server():
     
-    mcp_Toolkit = MCPToolkit(config_path="debug/tool/mcp.config")
+    mcp_Toolkit = MCPToolkit(config_path="examples/output/mcp_agent/mcp.config")
     tools = mcp_Toolkit.get_tools()
     
     mcp_agent = CustomizeAgent(
@@ -27,12 +27,12 @@ def test_MCP_server():
             {"name": "instruction", "type": "string", "description": "The goal you need to achieve"}
         ],
         outputs=[
-            {"name": "result", "type": "string", "description": "The tools you have"}
+            {"name": "result", "type": "string", "description": "The result of the operation"}
         ],
         tools=tools
     )
-    mcp_agent.save_module("debug/tool/mcp_agent.json")
-    mcp_agent.load_module("debug/tool/mcp_agent.json", llm_config=openai_config, tools=tools)
+    mcp_agent.save_module("examples/output/mcp_agent/mcp_agent.json")
+    mcp_agent.load_module("examples/output/mcp_agent/mcp_agent.json", llm_config=openai_config, tools=tools)
 
     message = mcp_agent(
         inputs={"instruction": "Summarize all the tools."}

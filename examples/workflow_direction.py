@@ -1,6 +1,5 @@
-## This example shows how to use the workflow to recommend jobs for a candidate based on their resume.
-## This example uses hirebase-mcp server to search the jobs. You may find the project here: https://github.com/jhgaylor/hirebase-mcp
-## 01/07/2025: CAUTION: Due to API update, the hirebase-mcp server is not working. 
+## This example shows how to use the workflow to recommend a PHD direction for a candidate based on their resume.
+## It uses the arxiv-mcp-server to search the papers. You may find the project here: https://github.com/blazickjp/arxiv-mcp-server/tree/main
 
 import os 
 from dotenv import load_dotenv 
@@ -10,16 +9,15 @@ from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.workflow import WorkFlowGraph, WorkFlow
 from evoagentx.workflow.workflow_generator import WorkFlowGenerator
 from evoagentx.agents import AgentManager
-from examples.pdf_test_prompt import formulate_goal
 from evoagentx.tools.mcp import MCPToolkit
 from evoagentx.tools.file_tool import FileToolkit
 load_dotenv() # Loads environment variables from .env file
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-output_file = "examples/output/jobs/output.md"
-mcp_config_path = "examples/output/jobs/mcp_jobs.config"
-target_directory = "examples/output/jobs/"
-module_save_path = "examples/output/jobs/jobs_demo_4o_mini.json"
+output_file = "examples/output/direction/output.md"
+mcp_config_path = "examples/output/direction/mcp_direction.config"
+target_directory = "examples/output/direction/"
+module_save_path = "examples/output/direction/direction_demo_4o_mini.json"
 
 def main(goal=None):
 
@@ -28,10 +26,15 @@ def main(goal=None):
     # Initialize the language model
     llm = OpenAILLM(config=openai_config)
     
-    if not goal:
-            goal = """
-                Read and analyze the pdf resume at examples/output/jobs/test_pdf.pdf, then find 5 real job opportunities based on the content of the resume by search the website.
-                """
+    goal = """Read and analyze the candidate's pdf resume at examples/output/jobs/test_pdf.pdf, and recommend one future PHD directions based on the resume. You should provide a list of 5 review papers about the topic for the candidate to learn more about this direction as well."""
+    helper_prompt = """The input is one parameter called "goal", and the output is a markdown report. 
+    You should firstly read the pdf resume and summarize the background and recommend one future PHD direction based on the resume.
+    Then you should find 3 trending Review Papers about the topic by searching the keyword on arxiv (by searching web instead of using your out-dated training data) and provide the link of the papers.
+    Lastly you should summarize all the information and provide a detailed markdown report.
+    If you cannot find the papers, you should say "I cannot find the papers".
+    """
+    
+    goal += helper_prompt
     
     ## Get tools
     mcp_Toolkit = MCPToolkit(config_path=mcp_config_path)
@@ -51,7 +54,7 @@ def main(goal=None):
     #[optional] load saved workflow 
     workflow_graph: WorkFlowGraph = WorkFlowGraph.from_file(module_save_path)
 
-    workflow_graph.display()
+    # workflow_graph.display()
     agent_manager = AgentManager(tools=tools)
     agent_manager.add_agents_from_workflow(workflow_graph, llm_config=openai_config)
     # from pdb import set_trace; set_trace()
