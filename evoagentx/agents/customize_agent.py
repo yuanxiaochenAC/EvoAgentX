@@ -1,7 +1,7 @@
 import json
 import inspect
 from pydantic import create_model, Field
-from typing import Union, Optional, Callable, Type, List, Any
+from typing import Optional, Callable, Type, List, Any
 
 from .agent import Agent
 from ..core.logging import logger

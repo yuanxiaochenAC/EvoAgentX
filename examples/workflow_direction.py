@@ -20,13 +20,13 @@ target_directory = "examples/output/direction/"
 module_save_path = "examples/output/direction/direction_demo_4o_mini.json"
 
 def main(goal=None):
-
     # LLM configuration
     openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=True, max_tokens=16000)
     # Initialize the language model
     llm = OpenAILLM(config=openai_config)
     
     goal = """Read and analyze the candidate's pdf resume at examples/output/jobs/test_pdf.pdf, and recommend one future PHD directions based on the resume. You should provide a list of 5 review papers about the topic for the candidate to learn more about this direction as well."""
+    # goal = making_goal(openai_config, goal)
     helper_prompt = """The input is one parameter called "goal", and the output is a markdown report. 
     You should firstly read the pdf resume and summarize the background and recommend one future PHD direction based on the resume.
     Then you should find 3 trending Review Papers about the topic by searching the keyword on arxiv (by searching web instead of using your out-dated training data) and provide the link of the papers.
@@ -45,7 +45,6 @@ def main(goal=None):
     ## _______________ Workflow Creation _______________
     wf_generator = WorkFlowGenerator(llm=llm, tools=tools)
     workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal=goal)
-    # [optional] display workflow
     # [optional] save workflow 
     workflow_graph.save_module(module_save_path)
     
@@ -54,7 +53,8 @@ def main(goal=None):
     #[optional] load saved workflow 
     workflow_graph: WorkFlowGraph = WorkFlowGraph.from_file(module_save_path)
 
-    # workflow_graph.display()
+    # [optional] display workflow
+    workflow_graph.display()
     agent_manager = AgentManager(tools=tools)
     agent_manager.add_agents_from_workflow(workflow_graph, llm_config=openai_config)
     # from pdb import set_trace; set_trace()
@@ -69,9 +69,9 @@ def main(goal=None):
         # Write to file
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(output)
-        print(f"Job recommendations have been saved to {output_file}")
+        print(f"Direction recommendations have been saved to {output_file}")
     except Exception as e:
-        print(f"Error saving job recommendations: {e}")
+        print(f"Error saving direction recommendations: {e}")
     
     # from pdb import set_trace; set_trace()
     print(output)

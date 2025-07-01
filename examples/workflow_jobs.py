@@ -10,7 +10,6 @@ from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.workflow import WorkFlowGraph, WorkFlow
 from evoagentx.workflow.workflow_generator import WorkFlowGenerator
 from evoagentx.agents import AgentManager
-from examples.pdf_test_prompt import formulate_goal
 from evoagentx.tools.mcp import MCPToolkit
 from evoagentx.tools.file_tool import FileToolkit
 load_dotenv() # Loads environment variables from .env file
