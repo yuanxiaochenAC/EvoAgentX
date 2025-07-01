@@ -13,7 +13,7 @@
 
 [![EvoAgentX 主页](https://img.shields.io/badge/EvoAgentX-主页-blue?logo=homebridge)](https://evoagentx.org/)
 [![文档](https://img.shields.io/badge/-文档-0A66C2?logo=readthedocs&logoColor=white&color=7289DA&labelColor=grey)](https://EvoAgentX.github.io/EvoAgentX/)
-[![Discord](https://img.shields.io/badge/Chat-Discord-5865F2?&logo=discord&logoColor=white)](https://discord.gg/w3x2YrCa)
+[![Discord](https://img.shields.io/badge/Chat-Discord-5865F2?&logo=discord&logoColor=white)](https://discord.gg/XWBZUJFwKe)
 [![Twitter](https://img.shields.io/badge/Follow-@EvoAgentX-e3dee5?&logo=x&logoColor=white)](https://x.com/EvoAgentX)
 [![Wechat](https://img.shields.io/badge/微信-EvoAgentX-brightgreen?logo=wechat&logoColor=white)](./assets/wechat_info.md)
 [![GitHub star chart](https://img.shields.io/github/stars/EvoAgentX/EvoAgentX?style=social)](https://star-history.com/#EvoAgentX/EvoAgentX)
@@ -63,6 +63,7 @@
 - [🙋 支持](#-支持)
   - [加入社区](#加入社区)
   - [联系信息](#联系信息)
+  - [观看往期社区会议](#观看往期社区会议)
 - [🙌 为EvoAgentX做贡献](#-为evoagentx做贡献)
 - [📚 致谢](#-致谢)
 - [📄 许可证](#-许可证)
@@ -314,9 +315,19 @@ print(output)
 📢 保持联系，成为**EvoAgentX**旅程的一部分！  
 🚩 加入我们的社区获取最新更新，分享您的想法，并与全球AI爱好者合作。
 
-- [Discord](https://discord.gg/w3x2YrCa) — 实时聊天、讨论和协作。
+- [Discord](https://discord.gg/XWBZUJFwKe) — 实时聊天、讨论和协作。
 - [X（前Twitter）](https://x.com/EvoAgentX) — 关注我们获取新闻、更新和洞见。
 - [微信](https://github.com/EvoAgentX/EvoAgentX/blob/main/assets/wechat_info.md) — 连接我们的中文社区。
+
+### 将会议添加到您的日历
+
+📅 点击下面的链接将EvoAgentX周会（周日，16:30-17:30 GMT+8）添加到您的日历：
+
+👉 [添加到您的Google日历](https://calendar.google.com/calendar/u/0/r/eventedit?text=EvoAgentX+周会（腾讯会议）&dates=20250629T083000Z/20250629T093000Z&details=会议链接：https://meeting.tencent.com/dm/5UuNxo7Detz0&location=Online&recur=RRULE:FREQ=WEEKLY;BYDAY=SU;UNTIL=20270523T093000Z&ctz=Asia/Shanghai)
+
+👉 [添加到您的腾讯会议](https://meeting.tencent.com/dm/5UuNxo7Detz0)
+
+👉 [下载EvoAgentX_Weekly_Meeting.ics文件](./EvoAgentX_Weekly_Meeting.ics)
 
 ### 联系信息
 
@@ -326,6 +337,9 @@ print(output)
 
 我们将在2-3个工作日内回复所有问题。
 
+### 观看往期社区会议
+- [Bilibili](https://space.bilibili.com/3493105294641286/favlist?fid=3584589186&ftype=create&spm_id_from=333.788.0.0)
+- [Youtube](https://studio.youtube.com/playlist/PL_kuPS05qA1hyU6cLX--bJ93Km2-md8AA/edit)
 ## 🙌 为EvoAgentX做贡献
 感谢这些优秀的贡献者
 
