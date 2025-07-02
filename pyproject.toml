@@ -60,7 +60,16 @@ dependencies = [
     "googlesearch-python",
     "wikipedia",
     "mcp",
-    "beautifulsoup4"
+    "beautifulsoup4",
+    "neo4j
+    "ollama",
+    "llama-index",
+    "llama-index-vector-stores-faiss",
+    "llama-index-graph-stores-neo4j",
+    "sentence-transformers",
+    "docx2txt",
+    "python-pptx",
+    "Pillow",
 ]
 
 [project.optional-dependencies]
