@@ -9,19 +9,19 @@ from .base import VectorStoreBase
 class FaissVectorStoreWrapper(VectorStoreBase):
     """Wrapper for FAISS vector store."""
     
-    def __init__(self, dimension: int = 1536, 
+    def __init__(self, dimensions: int = 1536, 
                  metrics: Union[Literal["flat_l2", "ivf_flat"]] = "flat_l2", **kwargs):
-        self.dimension = dimension
+        self.dimensions = dimensions
         self.metrics = metrics
         self.faiss_index = self._create_index()
         self.vector_store = FaissMapVectorStore(faiss_index=faiss.IndexIDMap2(self.faiss_index))
 
     def _create_index(self) -> faiss.Index:
         if self.metrics == "flat_l2":
-            return faiss.IndexFlatL2(self.dimension)
+            return faiss.IndexFlatL2(self.dimensions)
         elif self.metrics == "ivf_flat":
-            quantizer = faiss.IndexFlatL2(self.dimension)
-            return faiss.IndexIVFFlat(quantizer, self.dimension, 100)
+            quantizer = faiss.IndexFlatL2(self.dimensions)
+            return faiss.IndexIVFFlat(quantizer, self.dimensions, 100)
         else:
             raise ValueError(f"Unsupported FAISS index type: {self.metrics}")
         
