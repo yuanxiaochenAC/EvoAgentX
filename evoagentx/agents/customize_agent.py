@@ -1,7 +1,7 @@
 import json
 import inspect
 from pydantic import create_model, Field
-from typing import Optional, Callable, Type, List, Any
+from typing import Optional, Callable, Type, List, Any, Union
 
 from .agent import Agent
 from ..core.logging import logger
@@ -14,9 +14,8 @@ from ..prompts.template import PromptTemplate
 from ..actions.action import Action, ActionOutput
 from ..utils.utils import generate_dynamic_class_name, make_parent_folder
 from ..actions.customize_action import CustomizeAction
-from ..tools.tool import Tool
 from ..actions.action import ActionInput
-from ..tools.tool import Toolkit
+from ..tools.tool import Toolkit, Tool
 
 
 class CustomizeAgent(Agent):
@@ -75,7 +74,7 @@ class CustomizeAgent(Agent):
         parse_mode: Optional[str] = "title", 
         parse_func: Optional[Callable] = None, 
         title_format: Optional[str] = None, 
-        tools: Optional[List[Tool,]] = None,
+        tools: Optional[List[Union[Toolkit, Tool]]] = None,
         max_tool_calls: Optional[int] = 5,
         custom_output_format: Optional[str] = None, 
         **kwargs
@@ -83,6 +82,8 @@ class CustomizeAgent(Agent):
         system_prompt = system_prompt or DEFAULT_SYSTEM_PROMPT
         inputs = inputs or [] 
         outputs = outputs or [] 
+        if tools is not None:
+            tools = [tool if isinstance(tool, Toolkit) else Toolkit(name=tool.name, tools=[tool]) for tool in tools]
 
         if prompt is not None and prompt_template is not None:
             logger.warning("Both `prompt` and `prompt_template` are provided in `CustomizeAgent`. `prompt_template` will be used.")
@@ -437,7 +438,7 @@ class CustomizeAgent(Agent):
         return config
     
     @classmethod
-    def load_module(cls, path: str, llm_config: LLMConfig = None, tools: List[Toolkit] = None, **kwargs) -> "CustomizeAgent":
+    def load_module(cls, path: str, llm_config: LLMConfig = None, tools: List[Union[Toolkit, Tool]] = None, **kwargs) -> "CustomizeAgent":
         """
         load the agent from local storage. Must provide `llm_config` when loading the agent from local storage. 
             If tools is provided, tool_names must also be provided. 
@@ -452,11 +453,12 @@ class CustomizeAgent(Agent):
             CustomizeAgent: The loaded agent instance
         """
         match_dict = {}
-        if tools:
-            for tool in tools:
-                match_dict[tool.name] = tool
         agent = super().load_module(path=path, llm_config=llm_config, **kwargs)
-        agent["tools"] = [match_dict[tool_name] for tool_name in agent["tool_names"]]
+        if tools:
+            match_dict = {tool.name:tool for tool in tools}
+        if agent.get("tool_names", None):
+            added_tools = [match_dict[tool_name] for tool_name in agent["tool_names"]]
+            agent["tools"] = [tool if isinstance(tool, Toolkit) else Toolkit(name=tool.name, tools=[tool]) for tool in added_tools]
         return agent 
     
     def save_module(self, path: str, ignore: List[str] = [], **kwargs)-> str:

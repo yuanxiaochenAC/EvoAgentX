@@ -18,7 +18,7 @@ from ..agents.agent import Agent
 from ..utils.utils import generate_dynamic_class_name, make_parent_folder
 from ..prompts.workflow.sew_workflow import SEW_WORKFLOW
 from ..prompts.utils import DEFAULT_SYSTEM_PROMPT
-from ..tools.tool import Toolkit
+from ..tools.tool import Toolkit, Tool
 
 
 class WorkFlowNodeState(str, Enum):
@@ -1094,7 +1094,7 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
                 "parse_mode" (optional): str, default is "str" 
                 "parse_func" (optional): Callable,
                 "parse_title" (optional): str ,
-                "tools" (optional): List[Toolkit] or List[str]
+                "tools" (optional): List[Union[Toolkit, Tool]] or List[str]
             }
     """
 
@@ -1134,6 +1134,8 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
         if tools:
             for tool in tools:
                 if isinstance(tool,Toolkit):
+                    tool_names.append(tool.name)
+                elif isinstance(tool, Tool):
                     tool_names.append(tool.name)
                 else:
                     tool_names.append(tool)

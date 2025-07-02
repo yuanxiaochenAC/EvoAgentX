@@ -11,7 +11,7 @@ from ..core.module import BaseModule
 from ..core.decorators import atomic_method
 from ..storages.base import StorageHandler
 from ..models.model_configs import LLMConfig
-from ..tools.tool import Toolkit
+from ..tools.tool import Toolkit, Tool
 class AgentState(str, Enum):
     AVAILABLE = "available"
     RUNNING = "running"
@@ -30,7 +30,7 @@ class AgentManager(BaseModule):
     agent_states: Dict[str, AgentState] = Field(default_factory=dict) # agent_name to AgentState mapping
     storage_handler: Optional[StorageHandler] = None # used to load and save agent from storage.
     # agent_generator: Optional[AgentGenerator] = None # used to generate agents for a specific subtask
-    tools: Optional[List[Toolkit]] = None
+    tools: Optional[List[Union[Toolkit, Tool]]] = None
 
     def init_module(self):
         self._lock = threading.Lock()
@@ -224,6 +224,7 @@ class AgentManager(BaseModule):
             for tool in self.tools:
                 tools_mapping[tool.name] = tool
             agent["tools"] = [tools_mapping[tool_name] for tool_name in agent["tool_names"]]
+            agent["tools"] = [tool if isinstance(tool, Toolkit) else Toolkit(name=tool.name, tools=[tool]) for tool in agent["tools"]]
         
         agent_name = self.get_agent_name(agent=agent)
         if self.has_agent(agent_name=agent_name):
