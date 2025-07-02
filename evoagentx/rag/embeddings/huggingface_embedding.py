@@ -114,7 +114,7 @@ class HuggingFaceEmbeddingWrapper(BaseEmbeddingWrapper):
         self.device = device
         self.normalize = normalize
         self.model_kwargs = model_kwargs
-        self._embedding_model = None
+        self._embedding_model = self.get_embedding_model()
 
     def get_embedding_model(self) -> BaseEmbedding:
         """Return the LlamaIndex-compatible embedding model."""
