@@ -7,6 +7,9 @@ from .search_google_f import GoogleFreeSearchToolkit
 from .search_wiki import WikipediaSearchToolkit
 from .browser_tool import BrowserToolkit
 from .mcp import MCPToolkit
+from .request import RequestToolkit
+from .request_arxiv import ArxivToolkit
+from .browser_use import BrowserUseToolkit
 
 
 __all__ = [
@@ -19,6 +22,9 @@ __all__ = [
     "GoogleFreeSearchToolkit", 
     "WikipediaSearchToolkit",
     "BrowserToolkit",
-    "MCPToolkit"
+    "MCPToolkit",
+    "RequestToolkit",
+    "ArxivToolkit",
+    "BrowserUseToolkit"
 ]
 

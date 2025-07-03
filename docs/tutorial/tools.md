@@ -6,7 +6,7 @@ This tutorial walks you through using EvoAgentX's powerful tool ecosystem. Tools
 2. **Code Interpreters**: Execute Python code safely using Python and Docker interpreters
 3. **Search Tools**: Access information from the web using Wikipedia and Google search tools
 4. **File Operations**: Handle file reading and writing with special support for different file formats
-5. **Browser Automation**: Control web browsers to interact with websites and web applications
+5. **Browser Automation**: Control web browsers using both traditional Selenium-based automation and AI-driven natural language automation
 6. **MCP Tools**: Connect to external services using the Model Context Protocol
 
 By the end of this tutorial, you'll understand how to leverage these tools in your own agents and workflows.
@@ -18,7 +18,7 @@ By the end of this tutorial, you'll understand how to leverage these tools in yo
 At the core of EvoAgentX's tool ecosystem are the `Tool` base class and the `Toolkit` system, which provide a standardized interface for all tools. 
 
 ```python
-from evoagentx.tools import FileToolkit, PythonInterpreterToolkit
+from evoagentx.tools import FileToolkit, PythonInterpreterToolkit, BrowserToolkit, BrowserUseToolkit
 ```
 
 The `Tool` class implements a standardized interface with:
@@ -617,11 +617,16 @@ print(result)
 
 ## 5. Browser Tools
 
-EvoAgentX provides comprehensive browser automation capabilities through the `BrowserToolkit` class. These tools allow agents to control web browsers, navigate pages, interact with elements, and extract information.
+EvoAgentX provides comprehensive browser automation capabilities through two different toolkits:
+
+1. **BrowserToolkit** (Selenium-based): Provides fine-grained control over browser elements with detailed snapshots and element references
+2. **BrowserUseToolkit** (Browser-Use based): Offers natural language browser automation using AI-driven interactions
 
 ## Setup
 
-### Using BrowserToolkit
+### Option 1: BrowserToolkit (Selenium-based)
+
+Best for: Fine-grained control, detailed element inspection, complex automation workflows
 
 ```python
 from evoagentx.tools import BrowserToolkit
@@ -643,7 +648,28 @@ console_tool = toolkit.get_tool("browser_console_messages")
 close_tool = toolkit.get_tool("close_browser")
 ```
 
+### Option 2: BrowserUseToolkit (Browser-Use based)
+
+Best for: Natural language interactions, AI-driven automation, simple task descriptions
+
+```python
+from evoagentx.tools import BrowserUseToolkit
+
+# Initialize the browser-use toolkit
+toolkit = BrowserUseToolkit(
+    model="gpt-4o-mini",          # LLM model for browser control
+    api_key="your-api-key",       # OpenAI API key (or use environment variable)
+    browser_type="chromium",      # Options: "chromium", "firefox", "webkit"
+    headless=False                # Set to True for background operation
+)
+
+# Get the browser automation tool
+browser_tool = toolkit.get_tool("browser_use")
+```
+
 ## Available Methods
+
+### BrowserToolkit (Selenium-based) Methods
 
 ### 1. initialize_browser
 
@@ -873,6 +899,52 @@ close_tool = toolkit.get_tool("close_browser")
 result = close_tool()
 ```
 
+---
+
+### BrowserUseToolkit (Browser-Use based) Methods
+
+### browser_use
+
+Execute browser automation tasks using natural language descriptions. This single tool handles all browser interactions through AI-driven automation.
+
+**Parameters:**
+- `task` (str, required): Natural language description of the task to perform
+
+**Sample Return:**
+```python
+{
+    "success": True,
+    "result": "Successfully navigated to Google and searched for 'OpenAI GPT-4'. Found 10 search results on the page."
+}
+```
+
+**Usage:**
+```python
+# Get and use the tool
+browser_tool = toolkit.get_tool("browser_use")
+
+# Navigate and search
+result = browser_tool(task="Go to Google and search for 'OpenAI GPT-4'")
+print(f"Task result: {result}")
+
+# Fill out a form
+result = browser_tool(task="Fill out the contact form with name 'John Doe', email 'john@example.com', and message 'Hello world'")
+print(f"Form result: {result}")
+
+# Click on specific elements
+result = browser_tool(task="Click the 'Sign Up' button and then fill out the registration form")
+print(f"Registration result: {result}")
+```
+
+**Natural Language Task Examples:**
+- "Go to https://example.com and click the login button"
+- "Search for 'machine learning' on the current page"
+- "Fill out the form with my name and email address"
+- "Click the first result in the search results"
+- "Navigate to the pricing page and take a screenshot"
+- "Find the download button and click it"
+- "Scroll down to the bottom of the page and click 'Load More'"
+
 ## Element Reference System
 
 The browser tools use a unique element reference system:
@@ -884,29 +956,57 @@ The browser tools use a unique element reference system:
 
 ## Best Practices
 
-### Setup and Initialization
+### BrowserToolkit (Selenium-based) Best Practices
+
+#### Setup and Initialization
 - Always call `initialize_browser()` first
 - Use `headless=True` for server environments or background automation
 - Set appropriate `timeout` values for slow-loading pages
 
-### Element Interaction
+#### Element Interaction
 - Always take a snapshot with `navigate_to_url()` or `browser_snapshot()` before interacting with elements
 - Use the exact element IDs (`e0`, `e1`, etc.) returned from snapshots
 - Provide descriptive `element` parameters to make interactions clear
 - Use `submit=True` in `input_text()` for form submissions
 
-### Error Handling and Debugging
+#### Error Handling and Debugging
 - Check return status before proceeding with next operations
 - Use `browser_console_messages()` to debug JavaScript errors
 - Take fresh snapshots after page state changes
 - Handle timeout errors gracefully
 
-### Resource Management
+#### Resource Management
 - Always call `close_browser()` when finished
 - Only keep one browser session active per toolkit instance
 - Consider using context managers for automatic cleanup
 
-## Complete Example
+### BrowserUseToolkit (Browser-Use based) Best Practices
+
+#### Setup and Initialization
+- Ensure you have a valid OpenAI API key set in your environment
+- Install the browser-use package: `pip install browser-use`
+- Use `headless=True` for server environments or background automation
+- Choose the appropriate LLM model for your use case (gpt-4o-mini is cost-effective)
+
+#### Task Description
+- Write clear, specific task descriptions in natural language
+- Include complete context (e.g., "Go to https://example.com and...")
+- Break complex tasks into smaller, sequential steps
+- Be specific about what you want to achieve
+
+#### Error Handling
+- Check the `success` field in the response before proceeding
+- Handle cases where the AI may not complete the task successfully
+- Provide fallback logic for critical automation flows
+
+#### Resource Management
+- The browser session is managed automatically by the Browser-Use library
+- No manual cleanup is required
+- Use appropriate model settings to manage API costs
+
+## Complete Examples
+
+### BrowserToolkit (Selenium-based) Example
 
 ```python
 from evoagentx.tools import BrowserToolkit
@@ -957,6 +1057,111 @@ finally:
     close_tool()
     print("Browser closed")
 ```
+
+### BrowserUseToolkit (Browser-Use based) Example
+
+```python
+from evoagentx.tools import BrowserUseToolkit
+import os
+
+# Initialize browser-use toolkit
+toolkit = BrowserUseToolkit(
+    model="gpt-4o-mini",
+    api_key=os.getenv("OPENAI_API_KEY"),  # Set your OpenAI API key
+    browser_type="chromium",
+    headless=False
+)
+
+# Get the browser automation tool
+browser_tool = toolkit.get_tool("browser_use")
+
+# Example 1: Simple navigation and search
+print("=== Example 1: Search task ===")
+result = browser_tool(task="Go to https://google.com and search for 'Python programming tutorial'")
+print(f"Search result: {result}")
+
+# Example 2: Form filling
+print("\n=== Example 2: Form filling ===")
+result = browser_tool(task="Go to https://httpbin.org/forms/post and fill out the form with name 'John Doe' and email 'john@example.com', then submit it")
+print(f"Form result: {result}")
+
+# Example 3: Complex navigation
+print("\n=== Example 3: Complex navigation ===")
+result = browser_tool(task="Go to https://news.ycombinator.com, find the first article, and click on it")
+print(f"Navigation result: {result}")
+
+# Example 4: Information extraction
+print("\n=== Example 4: Information extraction ===")
+result = browser_tool(task="Go to https://example.com and tell me what the main heading says")
+print(f"Extraction result: {result}")
+
+print("\nAll browser automation tasks completed!")
+```
+
+### Choosing Between the Toolkits
+
+**Use BrowserToolkit when:**
+- You need precise control over individual elements
+- You want to inspect detailed page structure
+- You're building complex automation workflows
+- You need to debug specific browser interactions
+- You want to minimize API costs (no LLM calls for basic actions)
+- You're working with simple, single-page / few-page interactions
+
+**Use BrowserUseToolkit when:**
+- You prefer natural language task descriptions
+- You want AI-driven decision making in browser interactions
+- You're building conversational agents that need to browse the web
+- You want to quickly prototype browser automation tasks
+- You're comfortable with LLM API costs for enhanced capabilities
+- You're working with complex multi-page workflows
+
+## Important Limitations and Requirements
+
+### BrowserToolkit Limitations
+
+**⚠️ Human Verification Issues:**
+- **CAPTCHA and Security Checks**: The Selenium-based BrowserToolkit may struggle with human verification systems, CAPTCHAs, and other anti-bot measures
+
+**⚠️ Complex Multi-Page Tasks:**
+- **Limited Context**: The toolkit works best with single-page / few-page interactions and may struggle with complex workflows that span multiple pages
+- **State Management**: Maintaining application state across page navigations can be challenging
+- **Dynamic Content**: Heavily JavaScript-dependent sites with dynamic content loading may cause issues
+
+### BrowserUseToolkit Limitations
+
+**⚠️ Model Performance Dependency:**
+- **Weaker Models**: The BrowserUseToolkit may perform poorly with less powerful models like `gpt-4o-mini`
+- **Cost Consideration**: More powerful models increase API costs
+
+### Browser Driver Requirements
+
+**🔧 Browser Driver Setup:**
+
+Both toolkits require browser drivers to be installed:
+
+**For BrowserToolkit (Selenium):**
+- **Recommended**: Google Chrome with ChromeDriver
+
+**For BrowserUseToolkit (Browser-Use):**
+- **Required**: Playwright browser installation
+- **Installation**: visit https://github.com/browser-use/browser-use
+- **Recommended**: Use Chromium for best compatibility
+
+### Performance Recommendations
+
+**For BrowserToolkit:**
+- Use for simple, predictable automation tasks
+- Implement proper error handling for network issues
+- Consider using headless mode for server deployments
+- Test thoroughly with target websites before production use
+
+**For BrowserUseToolkit:**
+- Use powerful models (gpt-4o or better) for reliable performance
+- Break complex tasks into smaller, sequential steps
+- Implement fallback mechanisms for critical workflows
+- Monitor API usage and costs carefully
+- Test with representative tasks to validate model performance
 
 ---
 
@@ -1107,7 +1312,7 @@ In this tutorial, we've explored the tool ecosystem in EvoAgentX:
 2. **Code Interpreters**: Learned how to execute Python code securely using both Python and Docker interpreter toolkits
 3. **Search Tools**: Discovered how to access web information using Wikipedia and Google search toolkits
 4. **File Operations**: Learned how to handle file operations with special support for different file formats
-5. **Browser Automation**: Learned how to control web browsers to interact with websites and web applications
+5. **Browser Automation**: Learned how to control web browsers using both Selenium-based fine-grained control and AI-driven natural language automation
 6. **MCP Tools**: Learned how to connect to external services using the Model Context Protocol
 
 Tools in EvoAgentX extend your agents' capabilities by providing access to external resources and computation. By combining these toolkits with agents and workflows, you can build powerful AI systems that can retrieve information, perform calculations, and interact with the world.
