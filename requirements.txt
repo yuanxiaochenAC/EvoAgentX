@@ -69,17 +69,16 @@ python-pptx
 Pillow
 
 # tools
-docker
-googlesearch-python
-wikipedia
-fastmcp
-requests
-beautifulsoup4
-reportlab
-PyPDF2
-selenium
-webdriver-manager
-html2text
+docker>=6.0.0
+googlesearch-python>=1.2.0
+wikipedia>=1.4.0
+fastmcp>=0.1.0
+requests>=2.28.0
+reportlab>=3.6.0
+PyPDF2>=3.0.0
+selenium>=4.0.0
+webdriver-manager>=3.8.0
+html2text>=2020.1.16
 browser-use; python_version >= "3.11"
 browser-use-py310x; python_version < "3.11"
-mcp
+mcp>=0.1.0
