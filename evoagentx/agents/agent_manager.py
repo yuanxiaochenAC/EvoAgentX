@@ -155,8 +155,9 @@ class AgentManager(BaseModule):
                 agent_data["llm_config"] = agent_llm_config.to_dict()
         
         tool_mapping = {}
-        for tool in self.tools:
-            tool_mapping[tool.name] = tool
+        if self.tools is not None:
+            for tool in self.tools:
+                tool_mapping[tool.name] = tool
         if agent_data.get("tool_names", None):
             agent_data["tools"] = [tool_mapping[tool_name] for tool_name in agent_data["tool_names"]]
         return CustomizeAgent.from_dict(data=agent_data)
@@ -221,8 +222,9 @@ class AgentManager(BaseModule):
         # Check for 'tool' key and convert it to 'tools' if needed
         if isinstance(agent, dict) and "tool_names" in agent:
             tools_mapping = {}
-            for tool in self.tools:
-                tools_mapping[tool.name] = tool
+            if self.tools is not None:
+                for tool in self.tools:
+                    tools_mapping[tool.name] = tool
             agent["tools"] = [tools_mapping[tool_name] for tool_name in agent["tool_names"]]
             agent["tools"] = [tool if isinstance(tool, Toolkit) else Toolkit(name=tool.name, tools=[tool]) for tool in agent["tools"]]
         
