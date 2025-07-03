@@ -80,5 +80,6 @@ PyPDF2
 selenium
 webdriver-manager
 html2text
-browser-use
+browser-use; python_version >= "3.11"
+browser-use-py310x; python_version < "3.11"
 mcp
