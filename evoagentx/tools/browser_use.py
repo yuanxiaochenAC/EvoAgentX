@@ -41,7 +41,7 @@ class BrowserUseBase(BaseModule):
             self.ChatOpenAI = ChatOpenAI
             self.ChatAnthropic = ChatAnthropic
         except ImportError as e:
-            logger.error(f"browser-use not installed. Run: pip install browser-use")
+            logger.error("browser-use not installed. Run: pip install browser-use")
             raise ImportError(f"browser-use package required: {e}")
         
         self.model = model

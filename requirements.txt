@@ -66,3 +66,4 @@ PyPDF2
 selenium
 webdriver-manager
 html2text
+browser-use

@@ -2,7 +2,7 @@ import requests
 import json
 import os
 from typing import Dict, Any, Optional, Union
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 import html2text
 import time
