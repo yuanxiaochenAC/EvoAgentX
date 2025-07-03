@@ -1,6 +1,10 @@
 ### This Toolkit is used to interact with the browser using the Browser Use project. 
 ### You may find more about the project here: https://github.com/browser-use/browser-use
 ### Documentation: https://docs.browser-use.com/quickstart
+### 
+### Requirements:
+### - Python 3.11+: pip install browser-use
+### - Python 3.10: pip install browser-use-py310x
 
 import asyncio
 import os
@@ -35,14 +39,23 @@ class BrowserUseBase(BaseModule):
         super().__init__(**kwargs)
         
         try:
+            # Try importing from the standard browser-use package (Python 3.11+)
             from browser_use import Agent
             from browser_use.llm import ChatOpenAI, ChatAnthropic
             self.Agent = Agent
             self.ChatOpenAI = ChatOpenAI
             self.ChatAnthropic = ChatAnthropic
-        except ImportError as e:
-            logger.error("browser-use not installed. Run: pip install browser-use")
-            raise ImportError(f"browser-use package required: {e}")
+        except ImportError:
+            try:
+                # Try importing from browser-use-py310x package (Python 3.10)
+                from browser_use_py310x import Agent
+                from browser_use_py310x.llm import ChatOpenAI, ChatAnthropic
+                self.Agent = Agent
+                self.ChatOpenAI = ChatOpenAI
+                self.ChatAnthropic = ChatAnthropic
+            except ImportError as e:
+                logger.error("browser-use package not installed. For Python 3.11+: pip install browser-use, For Python 3.10: pip install browser-use-py310x")
+                raise ImportError(f"browser-use package required: {e}")
         
         self.model = model
         self.api_key = api_key
