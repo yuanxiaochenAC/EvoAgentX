@@ -43,6 +43,7 @@
 
 
 ## 🔥 Latest News
+- **[July 2025]** 🎉 **EvoAgentX** has achieved 1,000 stars!
 - **[May 2025]** 🎉 **EvoAgentX** has been officially released!
 
 ## ⚡ Get Started
