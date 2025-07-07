@@ -44,7 +44,7 @@ def main(goal=None):
     # [optional] display workflow
     # [optional] save workflow 
     workflow_graph.save_module(module_save_path)
-    
+
     
     ## _______________ Workflow Execution _______________
     #[optional] load saved workflow 
@@ -53,7 +53,6 @@ def main(goal=None):
     workflow_graph.display()
     agent_manager = AgentManager(tools=tools)
     agent_manager.add_agents_from_workflow(workflow_graph, llm_config=openai_config)
-    # from pdb import set_trace; set_trace()
 
     workflow = WorkFlow(graph=workflow_graph, agent_manager=agent_manager, llm=llm)
     workflow.init_module()

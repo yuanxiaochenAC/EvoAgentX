@@ -1094,7 +1094,7 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
                 "parse_mode" (optional): str, default is "str" 
                 "parse_func" (optional): Callable,
                 "parse_title" (optional): str ,
-                "tools" (optional): List[Union[Toolkit, Tool]] or List[str]
+                "tool_names" (optional): List[str] 
             }
     """
 
@@ -1129,16 +1129,17 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
         agent_parse_mode = task.get("parse_mode", "str")
         agent_parse_func = task.get("parse_func", None)
         agent_parse_title = task.get("parse_title", None)
-        tools = task.get("tools", [])
-        tool_names = []
-        if tools:
-            for tool in tools:
-                if isinstance(tool,Toolkit):
-                    tool_names.append(tool.name)
-                elif isinstance(tool, Tool):
-                    tool_names.append(tool.name)
-                else:
-                    tool_names.append(tool)
+        tool_names = task.get("tool_names", None)
+        # tools = task.get("tools", [])
+        # tool_names = []
+        # if tools:
+        #     for tool in tools:
+        #         if isinstance(tool,Toolkit):
+        #             tool_names.append(tool.name)
+        #         elif isinstance(tool, Tool):
+        #             tool_names.append(tool.name)
+        #         else:
+        #             tool_names.append(tool)
 
         node = WorkFlowNode.from_dict(
             {
@@ -1185,7 +1186,7 @@ class SequentialWorkFlowGraph(WorkFlowGraph):
                     "parse_mode": node.agents[0].get("parse_mode", "str"), 
                     "parse_func": node.agents[0].get("parse_func", None).__name__ if node.agents[0].get("parse_func", None) else None,
                     "parse_title": node.agents[0].get("parse_title", None),
-                    "tools": node.agents[0].get("tool_names", [])
+                    "tool_names": node.agents[0].get("tool_names", None)
                 }
                 for node in self.nodes
             ]

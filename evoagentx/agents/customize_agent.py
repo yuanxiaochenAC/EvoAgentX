@@ -461,6 +461,7 @@ class CustomizeAgent(Agent):
         if tools:
             match_dict = {tool.name:tool for tool in tools}
         if agent.get("tool_names", None):
+            assert tools is not None, "must provide `tools: List[Union[Toolkit, Tool]]` when using `load_module` or `from_file` to load the agent from local storage and `tool_names` is not None or empty"
             added_tools = [match_dict[tool_name] for tool_name in agent["tool_names"]]
             agent["tools"] = [tool if isinstance(tool, Toolkit) else Toolkit(name=tool.name, tools=[tool]) for tool in added_tools]
         return agent 

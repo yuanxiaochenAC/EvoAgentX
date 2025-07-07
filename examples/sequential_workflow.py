@@ -51,7 +51,7 @@ def build_sequential_workflow():
             "prompt": "You are a software developer. Your task is to implement the code based on the provided problem and implementation plan.\n\nProblem: {problem}\nImplementation Plan: {plan}\n\nPlease provide the implementation code with appropriate comments.",
             "parse_mode": "custom", 
             "parse_func": custom_parse_func,
-            "tools": [FileToolkit()]
+            "tool_names": ['FileToolkit']
         }
     ]
     
@@ -78,7 +78,7 @@ def build_sequential_workflow():
 
     output = workflow.execute(
         inputs = {
-            "problem": "Write a function to find the longest palindromic substring in a given string. Save the code ./debug/test.py"
+            "problem": "Write a function to find the longest palindromic substring in a given string. Save the code to local file: ./debug/test.py"
         }
     )
     

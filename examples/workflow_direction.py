@@ -60,7 +60,6 @@ def main(goal=None):
     # from pdb import set_trace; set_trace()
 
     workflow = WorkFlow(graph=workflow_graph, agent_manager=agent_manager, llm=llm)
-    workflow.init_module()
     output = workflow.execute()
     
     

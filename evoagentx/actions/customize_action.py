@@ -189,7 +189,7 @@ class CustomizeAction(Action):
                 if valid_tools_count > 0 and toolkit.name not in existing_toolkit_names:
                     self.tools.append(toolkit)
                 if valid_tools_count > 0:
-                    logger.info(f"Added toolkit '{toolkit.name}' with {valid_tools_count} valid tools: {valid_tools_names}.")
+                    logger.info(f"Added toolkit '{toolkit.name}' with {valid_tools_count} valid tools in {self.name}: {valid_tools_names}.")
             
             except Exception as e:
                 logger.error(f"Failed to load tools from toolkit '{toolkit.name}': {e}")
@@ -272,11 +272,9 @@ class CustomizeAction(Action):
             return output
     
     async def _async_extract_output(self, llm_output: Any, llm: BaseLLM = None, **kwargs):
+        
         # Get the raw output content
-        if hasattr(llm_output, 'content'):
-            llm_output_content = llm_output.content
-        else:
-            llm_output_content = str(llm_output)
+        llm_output_content = getattr(llm_output, "content", str(llm_output))
         
         # Check if there are any defined output fields
         output_attrs = self.outputs_format.get_attrs()
@@ -284,9 +282,9 @@ class CustomizeAction(Action):
         # If no output fields are defined, create a simple content-only output
         if not output_attrs:
             # Create output with just the content field
-            output = self.outputs_format(content=llm_output_content)
-            print("Created simple content output for agent with no defined outputs:")
-            print(output)
+            output = self.outputs_format.parse(content=llm_output_content)
+            # print("Created simple content output for agent with no defined outputs:")
+            # print(output)
             return output
         
         # Use the action's parse_mode and parse_func for parsing
@@ -299,13 +297,13 @@ class CustomizeAction(Action):
                 title_format=getattr(self, 'title_format', "## {title}")
             )
             
-            print("Successfully parsed output using action's parse settings:")
-            print(parsed_output)
+            # print("Successfully parsed output using action's parse settings:")
+            # print(parsed_output)
             return parsed_output
             
         except Exception as e:
-            print(f"Failed to parse with action's parse settings: {e}")
-            print("Falling back to extraction prompt...")
+            logger.info(f"Failed to parse with action's parse settings: {e}")
+            logger.info("Falling back to using LLM to extract outputs...")
             
             # Fall back to extraction prompt if direct parsing fails
             extraction_prompt = self.prepare_extraction_prompt(llm_output_content)
@@ -314,9 +312,8 @@ class CustomizeAction(Action):
             llm_extracted_data: dict = parse_json_from_llm_output(llm_extracted_output.content)
             output = self.outputs_format.from_dict(llm_extracted_data)
             
-            print("Extracted output using fallback:")
-            print(output)
-            
+            # print("Extracted output using fallback:")
+            # print(output)
             return output
     
     def _calling_tools(self, tool_call_args) -> dict:
@@ -346,8 +343,8 @@ class CustomizeAction(Action):
                 
                 try:
                     # Determine if the function is async or not
-                    logger.info("_____________________ Start Function Calling _____________________")
-                    logger.info(f"Executing function calling: {function_name} with parameters: {function_args}")
+                    print("_____________________ Start Function Calling _____________________")
+                    print(f"Executing function calling: {function_name} with parameters: {function_args}")
                     result = callable_fn(**function_args)
                 
                 except Exception as e:
