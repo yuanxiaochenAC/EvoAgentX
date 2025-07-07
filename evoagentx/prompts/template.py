@@ -67,7 +67,7 @@ class PromptTemplate(BaseModule):
     def set_constraints(self, constraints: Union[List[str], str]):
         self.set("constraints", constraints)
 
-    def set_tools(self, tools: List[str]):
+    def set_tools(self, tools: List[Toolkit]):
         self.set("tools", tools)
 
     def get_required_inputs_or_outputs(self, format: Type[LLMOutputParser]) -> List[str]:

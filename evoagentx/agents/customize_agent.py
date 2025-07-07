@@ -1,7 +1,7 @@
 import json
 import inspect
 from pydantic import create_model, Field
-from typing import Optional, Callable, Type, List, Any, Union
+from typing import Optional, Callable, Type, List, Any, Union, Dict
 
 from .agent import Agent
 from ..core.logging import logger
@@ -83,7 +83,10 @@ class CustomizeAgent(Agent):
         inputs = inputs or [] 
         outputs = outputs or [] 
         if tools is not None:
+            raw_tool_map = {tool.name: tool for tool in tools}
             tools = [tool if isinstance(tool, Toolkit) else Toolkit(name=tool.name, tools=[tool]) for tool in tools]
+        else:
+            raw_tool_map = None
 
         if prompt is not None and prompt_template is not None:
             logger.warning("Both `prompt` and `prompt_template` are provided in `CustomizeAgent`. `prompt_template` will be used.")
@@ -136,7 +139,7 @@ class CustomizeAgent(Agent):
             actions=[customize_action], 
             **kwargs
         )
-        self._store_inputs_outputs_info(inputs, outputs)
+        self._store_inputs_outputs_info(inputs, outputs, raw_tool_map)
         self.output_parser = output_parser 
         self.parse_mode = parse_mode 
         self.parse_func = parse_func 
@@ -145,7 +148,7 @@ class CustomizeAgent(Agent):
         self.max_tool_calls = max_tool_calls
         self.custom_output_format = custom_output_format
 
-    def _add_tools(self, tools: list[Toolkit]):
+    def _add_tools(self, tools: List[Toolkit]):
         self.get_action(self.customize_action_name).add_tools(tools)
 
     @property
@@ -365,7 +368,7 @@ class CustomizeAgent(Agent):
                     f"All the fields in the output parser must be present in the outputs." 
                 )
     
-    def _store_inputs_outputs_info(self, inputs: List[dict], outputs: List[dict]):
+    def _store_inputs_outputs_info(self, inputs: List[dict], outputs: List[dict], tool_map: Dict[str, Union[Toolkit, Tool]]):
 
         self._action_input_types, self._action_input_required = {}, {} 
         for field in inputs:
@@ -377,6 +380,7 @@ class CustomizeAgent(Agent):
             required = field.get("required", True)
             self._action_output_types[field["name"]] = field["type"]
             self._action_output_required[field["name"]] = required
+        self._raw_tool_map = tool_map
     
     def __call__(self, inputs: dict = None, return_msg_type: MessageType = MessageType.UNKNOWN, **kwargs) -> Message:
         """
@@ -510,5 +514,8 @@ class CustomizeAgent(Agent):
         """
         config = self.get_customize_agent_info()
         config["llm_config"] = self.llm_config.to_dict()
-        return config 
+        tool_names = config.pop("tool_names", None)
+        if tool_names:
+            config["tools"] = [self._raw_tool_map[name] for name in tool_names]
+        return config
     

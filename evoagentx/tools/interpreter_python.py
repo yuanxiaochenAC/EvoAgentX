@@ -362,12 +362,12 @@ class PythonExecuteTool(Tool):
     name: str = "python_execute"
     description: str = "Execute Python code in a controlled environment with safety checks"
     inputs: Dict[str, Dict[str, str]] = {
-                        "code": {
-                            "type": "string",
-                            "description": "The Python code to execute"
-                        },
-                        "language": {
-                            "type": "string",
+        "code": {
+            "type": "string",
+            "description": "The Python code to execute"
+        },
+        "language": {
+            "type": "string",
             "description": "The programming language of the code (only 'python' is supported)"
         }
     }
@@ -392,12 +392,12 @@ class PythonExecuteScriptTool(Tool):
     name: str = "python_execute_script"
     description: str = "Execute Python code from a file in a controlled environment with safety checks"
     inputs: Dict[str, Dict[str, str]] = {
-                        "file_path": {
-                            "type": "string",
-                            "description": "The path to the Python file to be executed"
-                        },
-                        "language": {
-                            "type": "string",
+        "file_path": {
+            "type": "string",
+            "description": "The path to the Python file to be executed"
+        },
+        "language": {
+            "type": "string",
             "description": "The programming language of the code (only 'python' is supported)"
         }
     }

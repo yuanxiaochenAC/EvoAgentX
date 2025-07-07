@@ -278,7 +278,7 @@ class MCPToolkit:
         for server in self.servers:
             server._disconnect()
         
-    def get_tools(self):
+    def get_tools(self) -> List[Toolkit]:
         """Return a flattened list of all tools across all servers"""
         all_tools = []
         for server in self.servers:

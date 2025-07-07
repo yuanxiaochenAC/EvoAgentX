@@ -310,12 +310,12 @@ class DockerExecuteTool(Tool):
     name: str = "docker_execute"
     description: str = "Execute code in a secure Docker container environment"
     inputs: Dict[str, Dict[str, str]] = {
-                            "code": {
-                                "type": "string",
-                                "description": "The code to execute"
-                            },
-                            "language": {
-                                "type": "string",
+        "code": {
+            "type": "string",
+            "description": "The code to execute"
+        },
+        "language": {
+            "type": "string",
             "description": "The programming language of the code (e.g., python, py, python3)"
         }
     }
@@ -340,12 +340,12 @@ class DockerExecuteScriptTool(Tool):
     name: str = "docker_execute_script"
     description: str = "Execute code from a script file in a secure Docker container environment"
     inputs: Dict[str, Dict[str, str]] = {
-                            "file_path": {
-                                "type": "string",
-                                "description": "The path to the script file to execute"
-                            },
-                            "language": {
-                                "type": "string",
+        "file_path": {
+            "type": "string",
+            "description": "The path to the script file to execute"
+        },
+        "language": {
+            "type": "string",
             "description": "The programming language of the code. If not provided, will be determined from file extension"
         }
     }

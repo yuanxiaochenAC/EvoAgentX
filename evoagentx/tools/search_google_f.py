@@ -81,18 +81,18 @@ class GoogleFreeSearchTool(Tool):
     name: str = "google_free_search"
     description: str = "Search Google without requiring an API key and retrieve content from search results"
     inputs: Dict[str, Dict[str, str]] = {
-                    "query": {
-                        "type": "string",
-                        "description": "The search query to execute on Google"
-                    },
-                    "num_search_pages": {
-                        "type": "integer",
-                        "description": "Number of search results to retrieve. Default: 5"
-                    },
-                    "max_content_words": {
-                        "type": "integer",
-                        "description": "Maximum number of words to include in content per result. None means no limit. Default: None"
-                    }
+        "query": {
+            "type": "string",
+            "description": "The search query to execute on Google"
+        },
+        "num_search_pages": {
+            "type": "integer",
+            "description": "Number of search results to retrieve. Default: 5"
+        },
+        "max_content_words": {
+            "type": "integer",
+            "description": "Maximum number of words to include in content per result. None means no limit. Default: None"
+        }
     }
     required: Optional[List[str]] = ["query"]
     

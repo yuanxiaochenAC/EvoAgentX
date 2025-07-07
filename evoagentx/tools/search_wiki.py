@@ -3,7 +3,7 @@ from .search_base import SearchBase
 from .tool import Tool,Toolkit
 from typing import Dict, Any, Optional, List
 from pydantic import Field
-from evoagentx.core.logging import logger
+from ..core.logging import logger
 
 
 class SearchWiki(SearchBase):
@@ -103,22 +103,22 @@ class WikipediaSearchTool(Tool):
     name: str = "wikipedia_search"
     description: str = "Search Wikipedia for relevant articles and content"
     inputs: Dict[str, Dict[str, str]] = {
-                        "query": {
-                            "type": "string",
-                            "description": "The search query to look up on Wikipedia"
-                        },
-                        "num_search_pages": {
-                            "type": "integer",
-                            "description": "Number of search results to retrieve. Default: 5"
-                        },
-                        "max_content_words": {
-                            "type": "integer",
-                            "description": "Maximum number of words to include in content per result. None means no limit. Default: None"
-                        },
-                        "max_summary_sentences": {
-                            "type": "integer",
-                            "description": "Maximum number of sentences in the summary. None means no limit. Default: None"
-                        }
+        "query": {
+            "type": "string",
+            "description": "The search query to look up on Wikipedia"
+        },
+        "num_search_pages": {
+            "type": "integer",
+            "description": "Number of search results to retrieve. Default: 5"
+        },
+        "max_content_words": {
+            "type": "integer",
+            "description": "Maximum number of words to include in content per result. None means no limit. Default: None"
+        },
+        "max_summary_sentences": {
+            "type": "integer",
+            "description": "Maximum number of sentences in the summary. None means no limit. Default: None"
+        }
     }
     required: Optional[List[str]] = ["query"]
     

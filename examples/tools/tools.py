@@ -112,7 +112,7 @@ def run_script_execution(interpreter):
         interpreter: An instance of a code interpreter
     """
     # Get the path to the hello_world.py script
-    script_path = os.path.join(os.getcwd(), "examples", "output", "tools", "hello_world.py")
+    script_path = os.path.join(os.getcwd(), "examples", "tools", "hello_world.py")
     
     # Make sure the file exists
     if not os.path.exists(script_path):
@@ -195,10 +195,10 @@ try:
     plt.grid(True)
     
     # Save the plot (would work if matplotlib was available)
-    plt.savefig("sine_wave.png")
+    plt.savefig("examples/output/sine_wave.png")
     plt.close()
     
-    print("Visualization created and saved as 'sine_wave.png'")
+    print("Visualization created and saved as 'examples/output/sine_wave.png'")
 except ImportError as e:
     print(f"Import error: {e}")
     print("Note: This example requires matplotlib to be in the allowed_imports.")
@@ -290,7 +290,7 @@ def run_python_interpreter_examples():
     interpreter_toolkit = PythonInterpreterToolkit(
         project_path=os.getcwd(),
         directory_names=["examples", "evoagentx"],
-        allowed_imports={"os", "sys", "time", "datetime", "math", "random", "platform"}
+        allowed_imports={"os", "sys", "time", "datetime", "math", "random", "platform", "matplotlib.pyplot", "numpy"}
     )
     
     # Get the underlying interpreter instance for the examples
@@ -328,7 +328,7 @@ def run_docker_interpreter_examples():
         run_platform_info(interpreter)
         run_script_execution(interpreter)
         run_dynamic_code_generation(interpreter)
-        run_visualization_example(interpreter)
+        # run_visualization_example(interpreter)
     except Exception as e:
         print(f"Error running Docker interpreter examples: {str(e)}")
         print("Make sure Docker is installed and running on your system.")
@@ -343,7 +343,7 @@ def run_mcp_example():
     print("\n===== MCP TOOLKIT EXAMPLE =====\n")
     
     # Get the path to the sample_mcp.config file
-    config_path = os.path.join(os.getcwd(), "examples", "sample_mcp.config")
+    config_path = os.path.join(os.getcwd(), "examples", "tools", "sample_mcp.config")
     
     print(f"Loading MCP configuration from: {config_path}")
     

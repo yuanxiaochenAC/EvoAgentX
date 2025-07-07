@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from typing import Tuple, Optional
 from ..core.module import BaseModule
+from ..core.logging import logger
 from pydantic import Field
 
 class SearchBase(BaseModule):
@@ -32,7 +33,7 @@ class SearchBase(BaseModule):
         # Pass to parent class initialization
         super().__init__(name=name, num_search_pages=num_search_pages, max_content_words=max_content_words, **kwargs)
     
-    def _truncate_content(self, content: str, max_words: Optional[int]) -> str:
+    def _truncate_content(self, content: str, max_words: Optional[int] = None) -> str:
         """
         Truncates content to a maximum number of words while preserving original spacing.
         
@@ -77,6 +78,7 @@ class SearchBase(BaseModule):
         response = requests.get(url, headers=headers, timeout=5)
 
         if response.status_code != 200:
+            logger.warning(f"Failed to scrape page {url}, status code: {response.status_code} ({response.reason}), response: {response.text[:200]}...")
             return None, None
 
         soup = BeautifulSoup(response.text, "html.parser")

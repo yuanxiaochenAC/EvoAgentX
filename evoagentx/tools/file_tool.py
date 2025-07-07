@@ -239,10 +239,10 @@ class ReadFileTool(Tool):
     name: str = "read_file"
     description: str = "Read content from a file with special handling for different file types like PDFs"
     inputs: Dict[str, Dict[str, str]] = {
-                            "file_path": {
-                                "type": "string",
+        "file_path": {
+            "type": "string",
             "description": "Path to the file to read"
-                            }
+        }
     }
     required: Optional[List[str]] = ["file_path"]
     
@@ -292,12 +292,12 @@ class WriteFileTool(Tool):
     name: str = "write_file"
     description: str = "Write content to a file with special handling for different file types like PDFs"
     inputs: Dict[str, Dict[str, str]] = {
-                            "file_path": {
-                                "type": "string",
+        "file_path": {
+            "type": "string",
             "description": "Path to the file to write"
-                            },
-                            "content": {
-                                "type": "string",
+        },
+        "content": {
+            "type": "string",
             "description": "Content to write to the file"
         }
     }
@@ -351,14 +351,14 @@ class AppendFileTool(Tool):
     name: str = "append_file"
     description: str = "Append content to a file with special handling for different file types like PDFs"
     inputs: Dict[str, Dict[str, str]] = {
-                            "file_path": {
-                                "type": "string",
+        "file_path": {
+            "type": "string",
             "description": "Path to the file to append to"
-                            },
-                            "content": {
-                                "type": "string",
+        },
+        "content": {
+            "type": "string",
             "description": "Content to append to the file"
-                            }
+        }
     }
     required: Optional[List[str]] = ["file_path", "content"]
     
