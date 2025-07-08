@@ -328,7 +328,7 @@ class WorkFlow(BaseModule):
         
         for node in self.graph.nodes:
             for agent in node.agents:
-                if hasattr(agent, "forbidden_in_workflow") and (getattr(agent, "forbidden_in_workflow") == True):
+                if hasattr(agent, "forbidden_in_workflow") and (agent.forbidden_in_workflow):
                     raise ValueError(f"The Agent of class {agent.__class__} is forbidden to be used in the workflow.")
 
     def _prepare_single_hitl_agent(self, agent: Agent, node: WorkFlowNode):

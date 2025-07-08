@@ -1,7 +1,7 @@
 from typing import Dict, Any, Optional
 import json
 import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox   
+from tkinter import ttk
 
 class WorkFlowJSONEditorGUI:
     """GUI JSON Editor GUI based on tkinter"""
@@ -15,7 +15,7 @@ class WorkFlowJSONEditorGUI:
         """start the json editor and return the modified data"""
         try:
             import tkinter as tk
-            from tkinter import ttk, scrolledtext, messagebox
+            from tkinter import ttk, scrolledtext
         except ImportError:
             print("⚠️  tkinter is not available, use the text editor")
             return self._edit_json_text()
@@ -338,7 +338,4 @@ class WorkFlowJSONEditorGUI:
             return None
         finally:
             # clean up the temporary file
-            try:
-                os.unlink(temp_file)
-            except:
-                pass
+            os.unlink(temp_file)
