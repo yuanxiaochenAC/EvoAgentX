@@ -1,25 +1,23 @@
 import json
 import asyncio
 import sys
-from typing import Dict, Any, Optional, Tuple, Union
+from typing import Dict, Any, Tuple
 from ..actions.action import Action
-from ..workflow.workflow import WorkFlow  
-from ..workflow.workflow_graph import WorkFlowGraph
 from ..models.base_model import BaseLLM
 from ..core.logging import logger
 from .approval_manager import HITLManager
-from .hitl import HITLInteractionType, HITLDecision
+from .hitl import HITLDecision
 from .interceptor_agent import HITLBaseAgent
 from .hitl_gui import WorkFlowJSONEditorGUI
 
 
 class HITLOutsideConversationAction(Action):
-    """HITL Outside Conversation Action - 支持多轮对话来修改WorkFlow的JSON结构"""
+    """HITL Outside Conversation Action - support the conversation loop to modify the workflow json structure"""
 
     def __init__(
         self,
         name: str = "HITLOutsideConversationAction",
-        description: str = "支持多轮对话来修改WorkFlow的JSON结构",
+        description: str = "support the conversation loop to modify the workflow json structure",
         **kwargs
     ):
         super().__init__(
@@ -42,7 +40,23 @@ class HITLOutsideConversationAction(Action):
             return asyncio.run(self.async_execute(llm, inputs, hitl_manager, sys_msg=sys_msg, **kwargs))
 
     async def async_execute(self, llm: BaseLLM, inputs: dict, hitl_manager: HITLManager, sys_msg: str = None, **kwargs) -> Tuple[dict, str]:
-        """WorkFlow asynchronously execute the conversation loop to modify the workflow json structure"""
+        """
+        WorkFlow asynchronously execute the conversation loop to modify the workflow json structure
+        Parameters:
+            llm: the LLM model
+            inputs: the input parameters
+            hitl_manager: the HITLManager instance
+            sys_msg: the system message
+            **kwargs: the additional parameters
+        Returns:
+            result: the result of the conversation loop, with structure:
+                {
+                    "final_workflow": the final workflow instance,
+                    "workflow_json": the final workflow json structure,
+                    "hitl_decision": the HITLDecision of the conversation loop
+                }
+            prompt: the prompt of the conversation loop
+        """
         
         # get the input parameters
         workflow_json_path = inputs.get('workflow_json_path')
@@ -64,7 +78,7 @@ class HITLOutsideConversationAction(Action):
         workflow_json = await self._conversation_loop(llm, workflow_json, hitl_manager, **kwargs)
         
         # try to instantiate the workflow
-        final_workflow = self._instantiate_workflow(workflow_json)
+        final_workflow = self._instantiate_workflow(workflow_json, llm)
         
         result = {
             "final_workflow": final_workflow,
@@ -84,9 +98,12 @@ class HITLOutsideConversationAction(Action):
             logger.error(f"load the workflow info from the json file failed: {e}")
             raise
 
-    def _convert_workflow_to_json(self, workflow: WorkFlow) -> Any:
+    def _convert_workflow_to_json(self, workflow) -> Any:
         """convert the workflow to json"""
         try:
+            from ..workflow.workflow import WorkFlow
+            if not isinstance(workflow, WorkFlow):
+                raise TypeError("Expected WorkFlow instance")
             return workflow.graph.to_dict()
         except Exception as e:
             logger.error(f"convert the workflow to json failed: {e}")
@@ -95,24 +112,28 @@ class HITLOutsideConversationAction(Action):
 
     async def _conversation_loop(self, llm: BaseLLM, workflow_json: Dict[str, Any], hitl_manager: HITLManager, **kwargs) -> Dict[str, Any]:
         """simplified conversation loop - use GUI editor"""
-        
+        if not hitl_manager.is_active:
+            raise ValueError("HITLManager is not active, please activate the HITLManager first")
         print("\n🎯 WorkFlow JSON editor")
         print("=" * 50)
+
+        original_workflow_json = workflow_json
         
         while True:
             try:
                 # try to validate the workflow structure
                 workflow_instance = self._instantiate_workflow(workflow_json, llm)
-
+                del workflow_instance
                 print("✅ WorkFlow structure validation successful!")
                 
                 # ask the user how to handle
                 print("\nplease choose the operation:")
-                print("1. 📝 open the GUI editor")
+                print("1. 📝 open the GUI editor(still in development)")
                 print("2. 🤖 use the LLM to optimize")
                 print("3. 📋 view the current JSON")
                 print("4. ✅ finish the edit")
                 print("5. ❌ exit")
+                print("6. 🔄 reload the original JSON")
                 
                 choice = input("\nplease choose (1-5): ").strip()
                 
@@ -130,7 +151,9 @@ class HITLOutsideConversationAction(Action):
                         
                 elif choice == '2':
                     # LLM optimization
-                    user_advice = input("please input the optimization advice (optional): ").strip()
+                    user_advice = input("please input the optimization advice (type q to cancel): ").strip()
+                    if user_advice == "q":
+                        continue
                     workflow_json = await self._llm_optimize_workflow(llm, workflow_json, user_advice if user_advice else None)
                     
                 elif choice == '3':
@@ -147,6 +170,11 @@ class HITLOutsideConversationAction(Action):
                     # exit
                     print("❌ exit the edit")
                     sys.exit()
+                    
+                elif choice == '6':
+                    # reload the original JSON
+                    workflow_json = original_workflow_json
+                    print("✅ reload the original data")
                     
                 else:
                     print("❌ invalid choice, please try again")
@@ -170,7 +198,8 @@ class HITLOutsideConversationAction(Action):
                         workflow_json = edited_json
                 elif fix_choice == '2':
                     # reload the original JSON
-                    print("⚠️ cannot reload the original data")
+                    workflow_json = original_workflow_json
+                    print("⚠️ reload the original data")
                 elif fix_choice == '3':
                     sys.exit()
                     
@@ -203,7 +232,7 @@ class HITLOutsideConversationAction(Action):
         ]
         try:
             response = await llm.single_generate_async(messages=messages, response_format={"type": "json_object"})
-            # 尝试解析LLM返回的JSON
+            # try to parse the LLM response
             optimized_json = json.loads(response)
             print("✅ LLM optimization finished")
             return optimized_json
@@ -211,15 +240,18 @@ class HITLOutsideConversationAction(Action):
             print(f"❌ LLM optimization failed: {e}")
             return workflow_json
 
-    def _instantiate_workflow(self, workflow_json: Dict[str, Any], llm:BaseLLM) -> WorkFlow:
+    def _instantiate_workflow(self, workflow_json: Dict[str, Any], llm) -> Any:
         """try to instantiate the workflow"""
         try:
+            from ..workflow.workflow import WorkFlow
+            from ..workflow.workflow_graph import WorkFlowGraph
+            
             # create the workflow graph from the json
             graph = WorkFlowGraph.from_dict(workflow_json)
-            
+
             # create the workflow instance
             workflow = WorkFlow(graph=graph, llm=llm)
-            
+
             return workflow
         except Exception as e:
             logger.error(f"WorkFlow instantiation failed: {e}")
