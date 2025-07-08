@@ -97,10 +97,10 @@ class BasicGraphExtractLLM(TransformComponent):
             # Parse entity results into a JSON string
             json_string = llm_response.content.strip()
             # Create a mapping of entity names to their types
-            # entity_label_mapping = {
-            #     entity_dict["name"]: entity_dict["type"]
-            #     for entity_dict in LLMOutputParser._parse_json_content(json_string)["entities"]
-            # }
+            entity_label_mapping = {
+                entity_dict["name"]: entity_dict["type"]
+                for entity_dict in LLMOutputParser._parse_json_content(json_string)["entities"]
+            }
 
             # Step 2: Extract relations between entities
             relation_extract_prompt = self.relation_extract_prompt.replace("{text}", text).replace(
@@ -116,7 +116,7 @@ class BasicGraphExtractLLM(TransformComponent):
 
         except ValueError as e:
             logger.warning(f"Failed to parse LLM output for node {node.node_id}: {str(e)}. Returning empty triples.")
-            # entity_label_mapping = {}
+            entity_label_mapping = {}
             triples = []
 
         logger.info(f"Extracted triples from chunk: {triples}")
@@ -135,13 +135,11 @@ class BasicGraphExtractLLM(TransformComponent):
 
             subj_node = EntityNode(
                 name=subj,
-                properties=metadata,
-                # label=entity_label_mapping.get(subj, "entity"),
+                label=entity_label_mapping.get(subj, "entity"),
             )
             obj_node = EntityNode(
                 name=obj,
-                properties=metadata,
-                # label=entity_label_mapping.get(obj, "entity"),
+                label=entity_label_mapping.get(obj, "entity"),
             )
             # Create relation between entities
             rel_node = Relation(

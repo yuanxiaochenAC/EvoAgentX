@@ -1,3 +1,4 @@
+import json
 from typing import Any, Callable, Optional, List
 
 
@@ -160,7 +161,11 @@ class GraphRetriever(BaseRetrieverWrapper):
                 return RagResult(corpus=corpus, scores=scores, metadata={"query": query.query_str, "retriever": "vector"})
             
             for score_node in nodes:
-                chunk = Chunk.from_llama_node(score_node.node)
+                # parsed the metadata
+                node = score_node.node
+                node.metadata = json.loads(node.metadata["metadata"])
+
+                chunk = Chunk.from_llama_node(node)
                 chunk.metadata.similarity_score = score_node.score or 0.0
                 corpus.add_chunk(chunk)
                 scores.extend([score_node.score or 0.0])
@@ -191,6 +196,13 @@ class GraphRetriever(BaseRetrieverWrapper):
                 return RagResult(corpus=corpus, scores=scores, metadata={"query": query.query_str, "retriever": "vector"})
             
             for score_node in nodes:
+                # parsed the metadata
+                node = score_node.node
+                flattened_metadata = {}
+                for key, value in node.metadata.items():
+                        flattened_metadata[key] = json.loads(value)
+                node.metadata = flattened_metadata
+                
                 chunk = Chunk.from_llama_node(score_node.node)
                 chunk.metadata.similarity_score = score_node.score or 0.0
                 corpus.add_chunk(chunk)

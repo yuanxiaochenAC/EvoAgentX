@@ -145,7 +145,7 @@ def create_corpus_from_context(context: List[List], corpus_id: str) -> Corpus:
             )
             chunk.metadata.title = title    # initilize a new attribute
             chunks.append(chunk)
-    return Corpus(chunks=chunks, corpus_id=corpus_id)
+    return Corpus(chunks=chunks[:4], corpus_id=corpus_id)
 
 def evaluate_retrieval(retrieved_chunks: List[Chunk], supporting_facts: List[List], top_k: int) -> Dict[str, float]:
     """Evaluate retrieved chunks against supporting facts."""
@@ -208,20 +208,36 @@ def run_evaluation(samples: List[Dict], top_k: int = 5) -> Dict[str, float]:
         
         # Query
         query = Query(query_str=question, top_k=top_k)
-        import pdb;pdb.set_trace()
         result = search_engine.query(query, corpus_id=corpus_id)
         retrieved_chunks = result.corpus.chunks
         logger.info(f"Retrieved {len(retrieved_chunks)} chunks for query")
-        
+        logger.info(f"content:\n{retrieved_chunks}")
+    
         # Evaluate
         sample_metrics = evaluate_retrieval(retrieved_chunks, supporting_facts, top_k)
         for metric_name, value in sample_metrics.items():
             metrics[metric_name].append(value)
         logger.info(f"Metrics for sample {corpus_id}: {sample_metrics}")
         
+        
+        search_engine.save(output_path="./debug/cache/test_cache", graph_exported=True)
         # Clear index to avoid memory issues
         search_engine.clear(corpus_id=corpus_id)
+
+        search_engine1 = RAGEngine(config=rag_config, storage_handler=storage_handler, llm=llm)
+        search_engine1.load(source="./debug/cache/test_cache", index_type="graph")
+
+        # Query
+        query = Query(query_str=question, top_k=top_k)
+        result = search_engine1.query(query, corpus_id=corpus_id)
+        retrieved_chunks = result.corpus.chunks
+        logger.info(f"Retrieved {len(retrieved_chunks)} chunks for query")
+        logger.info(f"content:\n{retrieved_chunks}")
     
+        # Evaluate
+        sample_metrics = evaluate_retrieval(retrieved_chunks, supporting_facts, top_k)
+        import pdb;pdb.set_trace()
+
     # Aggregate metrics
     avg_metrics = {name: sum(values) / len(values) for name, values in metrics.items()}
     return avg_metrics

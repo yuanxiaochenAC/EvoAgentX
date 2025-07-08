@@ -8,6 +8,24 @@ Ensure the entities are distinct and relevant to the text's main topics.
 Text:
 {text}
 
+----------------
+EXAMPLE:
+Text: Tim Cook, CEO of Apple Inc., announced the new Apple Watch that monitors heart health. 
+"UC Berkeley researchers studied the benefits of apples.\n"
+
+Output:
+```json
+{"entities":[
+    {'name': 'Tim Cook', 'type': 'PERSON',},
+    {'name': 'Apple Inc.', 'type': 'COMPANY'},
+    {'name': 'Apple Watch', 'type': 'PRODUCT'},
+    {'name': 'heart health', 'type': 'HEALTH_METRIC'},
+    {'name': 'UC Berkeley', 'type': 'UNIVERSITY'},
+    {'name': 'benefits of apples', 'type': 'RESEARCH_TOPIC'}]
+}
+```
+----------------
+
 Output JSON:
 ```json
 {"entities": [{"name": "entity_name", "type": "entity_type"}, ...]}

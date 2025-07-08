@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Any, Dict
+from typing import Dict
 from abc import ABC, abstractmethod
 
 from llama_index.core.graph_stores.simple import GraphStore
@@ -14,4 +14,23 @@ class GraphStoreBase(ABC):
     @abstractmethod
     def get_graph_store(self) -> GraphStore:
         """Return the LlamaIndex-compatible graph store."""
+        pass
+
+    @property
+    def supports_vector_queries(self):
+        NotImplementedError()
+
+    @abstractmethod
+    def clear(self) -> None:
+        """Clear the node and relation in the graph database."""
+        pass
+
+    @abstractmethod
+    def aload(self) -> None:
+        """Asynchronously load a single node into the graph database."""
+        pass
+
+    @abstractmethod
+    def build_kv_store(self) -> Dict:
+        """Exported all the nodes and relations from graph database into python Dict for saving to file or database."""
         pass
