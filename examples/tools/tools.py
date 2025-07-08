@@ -880,7 +880,7 @@ def main():
     # Run file tool example
     run_file_tool_example()
     
-    Run browser tool example
+    # Run browser tool example
     run_browser_tool_example()
     
     # Run MCP toolkit example
