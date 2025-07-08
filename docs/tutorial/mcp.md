@@ -51,7 +51,7 @@ from evoagentx.tools import MCPToolkit
 toolkit = MCPToolkit(config_path="examples/mcp.config")
 
 # Get all available tools
-tools = toolkit.get_tools()
+tools = toolkit.get_toolkits()
 ```
 
 #### 2.1.1 Configuration File Format
@@ -128,7 +128,7 @@ config = {
 toolkit = MCPToolkit(config=config)
 
 # Get all available tools
-tools = toolkit.get_tools()
+tools = toolkit.get_toolkits()
 ```
 
 ---
@@ -146,7 +146,7 @@ The `get_tools()` method returns a list of all available tools from all connecte
 toolkit = MCPToolkit(config_path="examples/mcp.config")
 
 # Get all available tools
-tools = toolkit.get_tools()
+tools = toolkit.get_toolkits()
 ```
 
 ### 3.2 Accessing Tool Information
@@ -240,7 +240,7 @@ from evoagentx.tools import MCPToolkit
 toolkit = MCPToolkit(config_path="examples/mcp.config")
 
 # Get all available tools
-tools = toolkit.get_tools()
+tools = toolkit.get_toolkits()
 
 # Find a specific tool by name
 hirebase_tool = next((tool for tool in tools if "hirebase" in tool.name.lower() or "search" in tool.name.lower()), None)
@@ -270,7 +270,7 @@ toolkit = MCPToolkit(config_path="examples/mcp.config")
 
 try:
     # Use MCP tools
-    tools = toolkit.get_tools()
+    tools = toolkit.get_toolkits()
     # ... work with tools ...
 finally:
     # Disconnect from servers
@@ -303,7 +303,7 @@ Once you've initialized your MCP toolkit and obtained the tools, you can use the
 ```python
 # Initialize MCP toolkit
 toolkit = MCPToolkit(config_path="mcp_config.json")
-mcp_tools = toolkit.get_tools()
+mcp_tools = toolkit.get_toolkits()
 
 try:
     # Find a specific tool by name
@@ -351,7 +351,7 @@ openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, 
 
 # Initialize MCP toolkit and get tools
 toolkit = MCPToolkit(config_path="examples/mcp.config")
-tools = toolkit.get_tools()
+tools = toolkit.get_toolkits()
 
 # Create a customized agent with the tools
 mcp_agent = CustomizeAgent(
@@ -405,7 +405,7 @@ from evoagentx.models.openai_model import OpenAILLM
 
 # Initialize MCP toolkit and add to agent manager
 toolkit = MCPToolkit(config_path="mcp_config.json")
-mcp_tools = toolkit.get_tools()
+mcp_tools = toolkit.get_toolkits()
 
 agent_manager = AgentManager(tools=mcp_tools)
 workflow_generator = WorkFlowGenerator(llm=llm, tools=mcp_tools)

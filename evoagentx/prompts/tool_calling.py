@@ -59,6 +59,7 @@ By checking the history, IF you get the information, you should **NOT** call any
 Do not generate any tool calling instructions if you have the information. 
 Distinguish tool calls and tool calling arguments, only include "```ToolCalling" when you are calling the tool, otherwise you should pass arguments with out this catch phrase.
 The tools in the Example Output does not really exist, you should use the tools in the Available Tools section.
+Every tool call should contain the function name and function arguments. The function name should be the name of the tool you are calling. The function arguments in the next example are fake arguments, you should use the real arguments for the tool you are calling.
 
 ** Example Output **
 Base on the goal, I found out that I need to use the following tools:

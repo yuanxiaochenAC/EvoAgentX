@@ -10,6 +10,9 @@ from .mcp import MCPToolkit
 from .request import RequestToolkit
 from .request_arxiv import ArxivToolkit
 from .browser_use import BrowserUseToolkit
+from .cmd_toolkit import CMDToolkit
+from .storage_file import StorageToolkit
+from .database_toolkit import DatabaseToolkit
 
 
 __all__ = [
@@ -25,6 +28,9 @@ __all__ = [
     "MCPToolkit",
     "RequestToolkit",
     "ArxivToolkit",
-    "BrowserUseToolkit"
+    "BrowserUseToolkit",
+    "CMDToolkit",
+    "StorageToolkit",
+    "DatabaseToolkit"
 ]
 

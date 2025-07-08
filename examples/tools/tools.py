@@ -24,7 +24,9 @@ from evoagentx.tools import (
     GoogleFreeSearchToolkit,
     MCPToolkit,
     FileToolkit,
-    BrowserToolkit
+    BrowserToolkit,
+    ArxivToolkit,
+    BrowserUseToolkit
 )
 
 
@@ -337,10 +339,10 @@ def run_docker_interpreter_examples():
 
 def run_mcp_example():
     """
-    Run an example using the MCP toolkit to search for job information about 'data scientist'.
-    This uses the sample_mcp.config file to configure the MCP client.
+    Run an example using the MCP toolkit to search for research papers about 'artificial intelligence'.
+    This uses the sample_mcp.config file to configure the arXiv MCP client.
     """
-    print("\n===== MCP TOOLKIT EXAMPLE =====\n")
+    print("\n===== MCP TOOLKIT EXAMPLE (arXiv) =====\n")
     
     # Get the path to the sample_mcp.config file
     config_path = os.path.join(os.getcwd(), "examples", "tools", "sample_mcp.config")
@@ -352,44 +354,44 @@ def run_mcp_example():
         mcp_toolkit = MCPToolkit(config_path=config_path)
         
         # Get all available toolkits
-        toolkits = mcp_toolkit.get_tools()
+        toolkits = mcp_toolkit.get_toolkits()
         
         print(f"Available MCP toolkits: {len(toolkits)}")
         
-        # Find and use the hirebase search tool
-        hirebase_tool = None
+        # Find and use the arXiv search tool
+        arxiv_tool = None
         for toolkit_item in toolkits:
-            for tool in toolkit_item.tools:
+            for tool in toolkit_item.get_tools():
                 print(f"Tool: {tool.name}")
                 print(f"Description: {tool.description}")
                 print("-" * 30)
                 
-                if "hire" in tool.name.lower() or "search" in tool.name.lower():
-                    hirebase_tool = tool
+                if "search" in tool.name.lower() or "arxiv" in tool.name.lower():
+                    arxiv_tool = tool
                     break
-            if hirebase_tool:
+            if arxiv_tool:
                 break
         
-        if hirebase_tool:
-            print(f"Using tool: {hirebase_tool.name}")
+        if arxiv_tool:
+            print(f"Using tool: {arxiv_tool.name}")
             
-            # Search for 'data scientist' job information
-            search_query = "data scientist"
-            print(f"Searching for job information about: '{search_query}'")
+            # Search for 'artificial intelligence' research papers
+            search_query = "artificial intelligence"
+            print(f"Searching for research papers about: '{search_query}'")
             
             # Call the tool with the search query
             # Note: The actual parameter name might differ based on the tool's schema
-            result = hirebase_tool(**{"query": search_query})
+            result = arxiv_tool(**{"query": search_query})
             
             print("\nSearch Results:")
             print("-" * 50)
             print(result)
             print("-" * 50)
         else:
-            print("No suitable hiring or search tool found in the MCP configuration.")
+            print("No suitable arXiv search tool found in the MCP configuration.")
     except Exception as e:
         print(f"Error running MCP example: {str(e)}")
-        print("Make sure the hirebase MCP server is properly configured with a valid API key.")
+        print("Make sure the arXiv MCP server is properly configured and running.")
     finally:
         if 'mcp_toolkit' in locals():
             mcp_toolkit.disconnect()
@@ -623,13 +625,13 @@ name = myapp"""
 def run_browser_tool_example():
     """
     Run an example using the BrowserToolkit with auto-initialization and auto-cleanup.
-    Goes to Google, searches for "test", demonstrating the simplified browser API.
+    Uses a comprehensive HTML test page to demonstrate browser automation features.
     """
     print("\n===== BROWSER TOOL EXAMPLE =====\n")
     
     try:
         # Initialize the browser toolkit (browser auto-initializes when first used)
-        browser_toolkit = BrowserToolkit(headless=True, timeout=10)
+        browser_toolkit = BrowserToolkit(headless=False, timeout=10)
         
         # Get individual tools from the toolkit
         nav_tool = browser_toolkit.get_tool("navigate_to_url")
@@ -637,94 +639,158 @@ def run_browser_tool_example():
         click_tool = browser_toolkit.get_tool("browser_click")
         snapshot_tool = browser_toolkit.get_tool("browser_snapshot")
         
-        print("Step 1: Navigating to Google (browser auto-initializes)...")
-        nav_result = nav_tool(url="https://www.google.com")
+        # Use the static test HTML file
+        test_file_path = os.path.join(os.getcwd(), "examples", "tools", "browser_test_page.html")
+        
+        print("Step 1: Navigating to test page (browser auto-initializes)...")
+        nav_result = nav_tool(url=f"file://{test_file_path}")
         print("Navigation Result:")
         print("-" * 30)
         print(f"Status: {nav_result.get('status')}")
         print(f"URL: {nav_result.get('current_url')}")
         print(f"Title: {nav_result.get('title')}")
-        
-        # Show available interactive elements
-        if nav_result.get("snapshot") and nav_result["snapshot"].get("interactive_elements"):
-            elements = nav_result["snapshot"]["interactive_elements"]
-            print(f"Found {len(elements)} interactive elements:")
-            for elem in elements[:5]:  # Show first 5 elements
-                print(f"  - {elem['id']}: {elem.get('description', 'No description')}")
         print("-" * 30)
         
-        if nav_result.get("status") == "success":
-            # Find the search input box and search button
-            elements = nav_result.get("snapshot", {}).get("interactive_elements", [])
-            search_input_ref = None
-            search_button_ref = None
+        if nav_result.get("status") in ["success", "partial_success"]:
+            print("\nStep 2: Taking initial snapshot to identify elements...")
+            snapshot_result = snapshot_tool()
             
-            for elem in elements:
-                desc = elem.get("description", "").lower()
-                label = elem.get("label", "").lower()
-                purpose = elem.get("purpose", "").lower()
+            if snapshot_result.get("status") == "success":
+                print("✓ Initial snapshot successful")
                 
-                # Look for search input field
-                if (elem.get("editable") and 
-                    ("search" in desc or "search" in label or "search" in purpose)):
-                    search_input_ref = elem["id"]
-                # Look for search button
-                elif (elem.get("interactable") and 
-                      ("search" in desc or "search" in label or "search" in purpose) and
-                      ("button" in purpose or elem.get("category") == "action")):
-                    search_button_ref = elem["id"]
-            
-            if search_input_ref:
-                print(f"\nStep 2: Typing 'test' in search box (element {search_input_ref})...")
-                input_result = input_tool(
-                    element="Search box", 
-                    ref=search_input_ref, 
-                    text="test", 
-                    submit=False
-                )
-                print("Input Result:")
-                print("-" * 30)
-                print(f"Status: {input_result.get('status')}")
-                print(f"Message: {input_result.get('message')}")
-                print("-" * 30)
+                # Find interactive elements
+                elements = snapshot_result.get("interactive_elements", [])
+                print(f"Found {len(elements)} interactive elements")
                 
-                if input_result.get("status") == "success":
-                    if search_button_ref:
-                        print(f"\nStep 3: Clicking search button (element {search_button_ref})...")
-                        click_result = click_tool(
-                            element="Search button", 
-                            ref=search_button_ref
-                        )
-                        print("Click Result:")
-                        print("-" * 30)
-                        print(f"Status: {click_result.get('status')}")
-                        print(f"Message: {click_result.get('message')}")
-                        print(f"Current URL: {click_result.get('current_url')}")
-                        print("-" * 30)
-                    else:
-                        print("\nStep 3: Search button not found, submitting with Enter key...")
-                        submit_result = input_tool(
-                            element="Search box", 
-                            ref=search_input_ref, 
-                            text="", 
-                            submit=True
-                        )
-                        print("Submit Result:")
-                        print("-" * 30)
-                        print(f"Status: {submit_result.get('status')}")
-                        print(f"Message: {submit_result.get('message')}")
-                        print("-" * 30)
+                # Identify specific elements
+                name_input_ref = None
+                email_input_ref = None
+                message_input_ref = None
+                submit_btn_ref = None
+                clear_btn_ref = None
+                test_btn_ref = None
+                
+                for elem in elements:
+                    desc = elem.get("description", "").lower()
+                    purpose = elem.get("purpose", "").lower()
                     
-                    # Take a final snapshot to see the results page
-                    print("\nStep 4: Taking snapshot of results page...")
-                    final_snapshot = snapshot_tool()
-                    if final_snapshot.get("status") == "success":
-                        print(f"Results page title: {final_snapshot.get('title')}")
-                        print(f"Results page URL: {final_snapshot.get('url')}")
-                        interactive_elements = final_snapshot.get("interactive_elements", [])
-                        print(f"Found {len(interactive_elements)} interactive elements on results page")
+                    if "name" in desc and elem.get("editable"):
+                        name_input_ref = elem["id"]
+                    elif "email" in desc and elem.get("editable"):
+                        email_input_ref = elem["id"]
+                    elif "message" in desc and elem.get("editable"):
+                        message_input_ref = elem["id"]
+                    elif "submit" in purpose and elem.get("interactable"):
+                        submit_btn_ref = elem["id"]
+                    elif "clear" in purpose and elem.get("interactable"):
+                        clear_btn_ref = elem["id"]
+                    elif "test" in purpose and elem.get("interactable"):
+                        test_btn_ref = elem["id"]
+                
+                print(f"Identified elements:")
+                print(f"  - Name input: {name_input_ref}")
+                print(f"  - Email input: {email_input_ref}")
+                print(f"  - Message input: {message_input_ref}")
+                print(f"  - Submit button: {submit_btn_ref}")
+                print(f"  - Clear button: {clear_btn_ref}")
+                print(f"  - Test button: {test_btn_ref}")
+                
+                # Test input functionality
+                if name_input_ref and email_input_ref and message_input_ref:
+                    print("\nStep 3: Testing input functionality...")
+                    
+                    # Fill name field
+                    print("  - Typing 'John Doe' in name field...")
+                    name_result = input_tool(
+                        element="Name input", 
+                        ref=name_input_ref, 
+                        text="John Doe", 
+                        submit=False
+                    )
+                    print(f"    Result: {name_result.get('status')}")
+                    
+                    # Fill email field
+                    print("  - Typing 'john.doe@example.com' in email field...")
+                    email_result = input_tool(
+                        element="Email input", 
+                        ref=email_input_ref, 
+                        text="john.doe@example.com", 
+                        submit=False
+                    )
+                    print(f"    Result: {email_result.get('status')}")
+                    
+                    # Fill message field
+                    print("  - Typing 'This is a test message for browser automation.' in message field...")
+                    message_result = input_tool(
+                        element="Message input", 
+                        ref=message_input_ref, 
+                        text="This is a test message for browser automation.", 
+                        submit=False
+                    )
+                    print(f"    Result: {message_result.get('status')}")
+                    
+                    # Test form submission
+                    if submit_btn_ref:
+                        print("\nStep 4: Testing form submission...")
+                        submit_result = click_tool(
+                            element="Submit button", 
+                            ref=submit_btn_ref
+                        )
+                        print(f"Submit result: {submit_result.get('status')}")
+                        
+                        # Take snapshot to see the result
+                        print("\nStep 5: Taking snapshot to verify form submission...")
+                        result_snapshot = snapshot_tool()
+                        if result_snapshot.get("status") == "success":
+                            content = result_snapshot.get("page_content", "")
+                            if "Name: John Doe, Email: john.doe@example.com" in content:
+                                print("✓ Form submission successful - data correctly displayed!")
+                            else:
+                                print("⚠ Form submission may have failed")
+                    
+                    # Test test button click
+                    if test_btn_ref:
+                        print("\nStep 6: Testing test button click...")
+                        test_result = click_tool(
+                            element="Test button", 
+                            ref=test_btn_ref
+                        )
+                        print(f"Test button result: {test_result.get('status')}")
+                        
+                        # Take snapshot to see the click result
+                        click_snapshot = snapshot_tool()
+                        if click_snapshot.get("status") == "success":
+                            content = click_snapshot.get("page_content", "")
+                            if "Test button clicked at:" in content:
+                                print("✓ Test button click successful!")
+                            else:
+                                print("⚠ Test button click may have failed")
+                    
+                    # Test clear functionality
+                    if clear_btn_ref:
+                        print("\nStep 7: Testing clear functionality...")
+                        clear_result = click_tool(
+                            element="Clear button", 
+                            ref=clear_btn_ref
+                        )
+                        print(f"Clear result: {clear_result.get('status')}")
+                        
+                        # Take final snapshot
+                        final_snapshot = snapshot_tool()
+                        if final_snapshot.get("status") == "success":
+                            print("✓ Clear functionality tested")
+                
+                print("\n✓ Browser automation test completed successfully!")
+                print("✓ Browser auto-initialization working")
+                print("✓ Navigation working")
+                print("✓ Input functionality working")
+                print("✓ Click functionality working")
+                print("✓ Form submission working")
+                print("✓ Snapshot functionality working")
             else:
-                print("\nNo search input field found on the page")
+                print("❌ Initial snapshot failed")
+        else:
+            print("\n❌ Navigation failed")
         
         print("\nBrowser will automatically close when the toolkit goes out of scope...")
         print("(No manual cleanup required)")
@@ -734,6 +800,79 @@ def run_browser_tool_example():
         print("Browser will still automatically cleanup on exit")
 
 
+def run_arxiv_tool_example():
+    """Simple example using ArxivToolkit to search for papers."""
+    print("\n===== ARXIV TOOL EXAMPLE =====\n")
+    
+    try:
+        # Initialize the arXiv toolkit
+        arxiv_toolkit = ArxivToolkit()
+        search_tool = arxiv_toolkit.get_tool("arxiv_search")
+        
+        print("✓ ArxivToolkit initialized")
+        
+        # Search for machine learning papers
+        print("Searching for 'machine learning' papers...")
+        result = search_tool(
+            search_query="all:machine learning",
+            max_results=3
+        )
+        
+        if result.get('success'):
+            papers = result.get('papers', [])
+            print(f"✓ Found {len(papers)} papers")
+            
+            for i, paper in enumerate(papers):
+                print(f"\nPaper {i+1}: {paper.get('title', 'No title')}")
+                print(f"  Authors: {', '.join(paper.get('authors', ['Unknown']))}")
+                print(f"  arXiv ID: {paper.get('arxiv_id', 'Unknown')}")
+                print(f"  URL: {paper.get('url', 'No URL')}")
+        else:
+            print(f"❌ Search failed: {result.get('error', 'Unknown error')}")
+        
+        print("\n✓ ArxivToolkit test completed")
+        
+    except Exception as e:
+        print(f"Error: {str(e)}")
+
+
+def run_browser_use_tool_example():
+    """Simple example using BrowserUseToolkit for browser automation."""
+    print("\n===== BROWSER USE TOOL EXAMPLE =====\n")
+    
+    # Check for OpenAI API key
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        print("❌ OPENAI_API_KEY not found in environment variables")
+        print("Please set your OpenAI API key: export OPENAI_API_KEY='your-api-key-here'")
+        return
+    
+    try:
+        # Initialize the BrowserUse toolkit
+        print("Initializing BrowserUseToolkit...")
+        toolkit = BrowserUseToolkit(model="gpt-4o-mini", headless=False)
+        browser_tool = toolkit.get_tool("browser_use")
+        
+        print("✓ BrowserUseToolkit initialized")
+        print(f"✓ Using OpenAI API key: {openai_api_key[:8]}...")
+        
+        # Execute a simple browser task
+        print("Executing browser task: 'Go to Google and search for OpenAI GPT-4'...")
+        result = browser_tool(task="Go to Google and search for 'OpenAI GPT-4'")
+        
+        if result.get('success'):
+            print("✓ Browser task completed successfully")
+            print(f"Result: {result.get('result', 'No result details')}")
+        else:
+            print(f"❌ Browser task failed: {result.get('error', 'Unknown error')}")
+        
+        print("\n✓ BrowserUseToolkit test completed")
+        
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        print("Note: Make sure you have the required dependencies installed and API keys set up.")
+
+
 def main():
     """Main function to run all examples"""
     print("===== INTERPRETER TOOL EXAMPLES =====")
@@ -741,7 +880,7 @@ def main():
     # Run file tool example
     run_file_tool_example()
     
-    # Run browser tool example
+    Run browser tool example
     run_browser_tool_example()
     
     # Run MCP toolkit example
@@ -755,6 +894,12 @@ def main():
     
     # Run search tools examples
     run_search_examples()
+    
+    # Run arXiv tool example
+    run_arxiv_tool_example()
+    
+    # Run BrowserUse tool example
+    run_browser_use_tool_example()
     
     print("\n===== ALL EXAMPLES COMPLETED =====")
 

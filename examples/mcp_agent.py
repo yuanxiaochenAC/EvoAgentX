@@ -14,7 +14,7 @@ openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, 
 def test_MCP_server():
     
     mcp_Toolkit = MCPToolkit(config_path="examples/output/mcp_agent/mcp.config")
-    tools = mcp_Toolkit.get_tools()
+    tools = mcp_Toolkit.get_toolkits()
     
     mcp_agent = CustomizeAgent(
         name="MCPAgent",

@@ -43,7 +43,58 @@ class MCPTool(Tool):
     def __call__(self, **kwargs):
         if not self.function:
             raise ValueError("Function not set for MCPTool")
-        return self.function(**kwargs)
+        result = self.function(**kwargs)
+        return self._convert_result(result)
+    
+    def _convert_result(self, result: Any) -> Any:
+        """
+        Convert MCP tool results to JSON-serializable format.
+        Handles complex objects like Anthropic's TextContent, ImageContent, etc.
+        """
+        if result is None:
+            return None
+        
+        # Handle primitive types
+        if isinstance(result, (str, int, float, bool)):
+            return result
+        
+        # Handle lists
+        if isinstance(result, list):
+            return [self._convert_result(item) for item in result]
+        
+        # Handle dictionaries
+        if isinstance(result, dict):
+            return {key: self._convert_result(value) for key, value in result.items()}
+        
+        # Handle Anthropic content types by name (avoid import dependencies)
+        obj_type = type(result).__name__
+        if obj_type == "TextContent":
+            if hasattr(result, 'text'):
+                return result.text
+            elif hasattr(result, 'content'):
+                return result.content
+            else:
+                return str(result)
+        
+        elif obj_type in ["ImageContent", "ToolUseContent", "ToolResultContent"]:
+            # For these types, return a structured representation
+            if hasattr(result, '__dict__'):
+                return self._convert_result(result.__dict__)
+            else:
+                return str(result)
+        
+        # Handle other objects with text/content attributes
+        if hasattr(result, 'text'):
+            return result.text
+        elif hasattr(result, 'content'):
+            return result.content
+        
+        # Handle objects with __dict__ (convert to dictionary)
+        if hasattr(result, '__dict__'):
+            return self._convert_result(result.__dict__)
+        
+        # Fallback to string representation
+        return str(result)
     
     @classmethod
     def validate_attributes(cls):
@@ -104,7 +155,7 @@ class MCPClient:
     
     def __enter__(self):
         self._connect()
-        return self.get_tools()
+        return self.get_toolkits()
     
     def __del__(self):
         self._disconnect()
@@ -211,7 +262,7 @@ class MCPClient:
         return tool_collection
 
     
-    def get_tools(self) -> List[Toolkit]:
+    def get_toolkits(self) -> List[Toolkit]:
         """Return a list ofToolkits, one per server."""
         if not self.sessions:
             raise RuntimeError("Session not initialized")
@@ -229,9 +280,18 @@ class MCPToolkit:
         if config:
             parameters += self._from_config(config)
         
-        self.servers = [MCPClient(parameters)]
+        # Initialize servers list
+        self.servers = []
+        
+        # Only create MCPClient if we have parameters
+        if parameters:
+            self.servers.append(MCPClient(parameters))
+        
+        # Add additional servers if provided
         if servers:
-            self.servers += servers
+            self.servers.extend(servers)
+        
+        # Connect to all servers
         for server in self.servers:
             try:
                 server._connect()
@@ -278,12 +338,16 @@ class MCPToolkit:
         for server in self.servers:
             server._disconnect()
         
-    def get_tools(self) -> List[Toolkit]:
+    def get_toolkits(self) -> List[Toolkit]:
         """Return a flattened list of all tools across all servers"""
         all_tools = []
+        if not self.servers:
+            logger.info("No MCP servers configured, returning empty toolkit list")
+            return all_tools
+            
         for server in self.servers:
             try:
-                tools = server.get_tools()
+                tools = server.get_toolkits()
                 all_tools.extend(tools)
                 logger.info(f"Added {len(tools)} tools from MCP server")
             except Exception as e:

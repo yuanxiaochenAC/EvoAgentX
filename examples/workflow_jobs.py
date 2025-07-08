@@ -34,7 +34,7 @@ def main(goal=None):
     
     ## Get tools
     mcp_Toolkit = MCPToolkit(config_path=mcp_config_path)
-    tools = mcp_Toolkit.get_tools()
+    tools = mcp_Toolkit.get_toolkits()
     tools.append(FileToolkit())
     
     

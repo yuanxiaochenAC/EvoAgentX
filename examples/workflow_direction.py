@@ -25,7 +25,7 @@ def main(goal=None):
     # Initialize the language model
     llm = OpenAILLM(config=openai_config)
     
-    goal = """Read and analyze the candidate's pdf resume at examples/output/jobs/test_pdf.pdf, and recommend one future PHD directions based on the resume. You should provide a list of 5 review papers about the topic for the candidate to learn more about this direction as well."""
+    goal = """Read and analyze the candidate's pdf resume at examples/output/direction/test_pdf.pdf, and recommend one future PHD directions based on the resume. You should provide a list of 5 review papers about the topic for the candidate to learn more about this direction as well."""
     # goal = making_goal(openai_config, goal)
     helper_prompt = """The input is one parameter called "goal", and the output is a markdown report. 
     You should firstly read the pdf resume and summarize the background and recommend one future PHD direction based on the resume.
@@ -38,15 +38,15 @@ def main(goal=None):
     
     ## Get tools
     mcp_Toolkit = MCPToolkit(config_path=mcp_config_path)
-    tools = mcp_Toolkit.get_tools()
+    tools = mcp_Toolkit.get_toolkits()
     tools.append(FileToolkit())
     
     
-    ## _______________ Workflow Creation _______________
-    wf_generator = WorkFlowGenerator(llm=llm, tools=tools)
-    workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal=goal)
-    # [optional] save workflow 
-    workflow_graph.save_module(module_save_path)
+    # ## _______________ Workflow Creation _______________
+    # wf_generator = WorkFlowGenerator(llm=llm, tools=tools)
+    # workflow_graph: WorkFlowGraph = wf_generator.generate_workflow(goal=goal)
+    # # [optional] save workflow 
+    # workflow_graph.save_module(module_save_path)
     
     
     ## _______________ Workflow Execution _______________
@@ -54,7 +54,7 @@ def main(goal=None):
     workflow_graph: WorkFlowGraph = WorkFlowGraph.from_file(module_save_path)
 
     # [optional] display workflow
-    workflow_graph.display()
+    # workflow_graph.display()
     agent_manager = AgentManager(tools=tools)
     agent_manager.add_agents_from_workflow(workflow_graph, llm_config=openai_config)
     # from pdb import set_trace; set_trace()

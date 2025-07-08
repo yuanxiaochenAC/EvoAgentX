@@ -181,6 +181,21 @@ class ArxivBase(RequestBase):
         paper['journal_ref'] = self._get_text(entry, 'arxiv:journal_ref', namespaces)
         paper['doi'] = self._get_text(entry, 'arxiv:doi', namespaces)
         
+        # Map field names for better API
+        # Use the HTML link as the main URL, fallback to constructing from arxiv_id
+        if paper.get('links', {}).get('html'):
+            paper['url'] = paper['links']['html']
+        elif paper.get('arxiv_id'):
+            paper['url'] = f"https://arxiv.org/abs/{paper['arxiv_id']}"
+        else:
+            paper['url'] = ''
+        
+        paper['published_date'] = paper.pop('published', '')
+        paper['updated_date'] = paper.pop('updated', '')
+        
+        # Remove the old id field since we're replacing it with url
+        paper.pop('id', None)
+        
         return paper
     
     def _get_text(self, element, xpath, namespaces, clean=False) -> str:

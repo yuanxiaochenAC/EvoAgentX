@@ -263,7 +263,7 @@ class CustomizeAction(Action):
             # Fall back to extraction prompt if direct parsing fails
             extraction_prompt = self.prepare_extraction_prompt(llm_output_content)
                 
-            llm_extracted_output: LLMOutputParser = llm.generate(prompt=extraction_prompt, history=kwargs.get("history", []) + [llm_output_content])
+            llm_extracted_output: LLMOutputParser = llm.generate(prompt=extraction_prompt)
             llm_extracted_data: dict = parse_json_from_llm_output(llm_extracted_output.content)
             output = self.outputs_format.from_dict(llm_extracted_data)
             
@@ -308,7 +308,7 @@ class CustomizeAction(Action):
             # Fall back to extraction prompt if direct parsing fails
             extraction_prompt = self.prepare_extraction_prompt(llm_output_content)
                 
-            llm_extracted_output = await llm.async_generate(prompt=extraction_prompt, history=kwargs.get("history", []) + [llm_output_content])
+            llm_extracted_output = await llm.async_generate(prompt=extraction_prompt)
             llm_extracted_data: dict = parse_json_from_llm_output(llm_extracted_output.content)
             output = self.outputs_format.from_dict(llm_extracted_data)
             

@@ -1096,7 +1096,7 @@ mcp_Toolkit = MCPToolkit(config=config)
 **使用示例**：
 ```python
 # 获取所有可用的 MCP 工具
-tools = mcp_Toolkit.get_tools()
+tools = mcp_Toolkit.get_toolkits()
 
 # 显示可用工具
 for i, tool in enumerate(tools):
@@ -1130,7 +1130,7 @@ mcp_Toolkit.disconnect()
 
 ```python
 # 从工具包获取所有工具
-tools = mcp_Toolkit.get_tools()
+tools = mcp_Toolkit.get_toolkits()
 
 # 查找特定工具
 hirebase_tool = None
@@ -1173,7 +1173,7 @@ if hirebase_tool:
     ```python
     try:
         Toolkit = MCPToolkit(config_path="config.json")
-        tools = Toolkit.get_tools()
+        tools = Toolkit.get_toolkits()
         # 在这里使用工具
     finally:
         Toolkit.disconnect()

@@ -221,23 +221,3 @@ class BrowserUseToolkit(Toolkit):
         
         # Store browser_base as instance variable
         self.browser_base = browser_base
-
-
-# Example usage function for testing
-async def example_usage():
-    """Example of how to use the BrowserUse toolkit."""
-    
-    # Create toolkit
-    toolkit = BrowserUseToolkit(model="gpt-4o-mini", headless=False)
-    
-    # Execute a task
-    tool = toolkit.get_tool("browser_use")
-    result = tool(task="Go to Google and search for 'OpenAI GPT-4'")
-    print("Task Result:", result)
-
-
-if __name__ == "__main__":
-    # Run example if this file is executed directly
-    asyncio.run(example_usage())
-
-

@@ -195,7 +195,7 @@ def build_customize_agent_with_tools():
 
 def build_customize_agent_with_MCP(config_path):
     mcp_Toolkit = MCPToolkit(config_path=config_path)
-    tools = mcp_Toolkit.get_tools()
+    tools = mcp_Toolkit.get_toolkits()
     
     customize_agent = CustomizeAgent(
         name="MCPToolUser",
@@ -517,7 +517,7 @@ if __name__ == "__main__":
     build_customize_agent_with_tools()
     
     # Test MCP prompt
-    config_path = "examples/tools/arxiv_mcp.config"
+    config_path = "examples/tools/sample_mcp.config"
     if os.path.exists(config_path):
         build_customize_agent_with_MCP(config_path=config_path)
     else:

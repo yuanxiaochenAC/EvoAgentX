@@ -1203,7 +1203,7 @@ The `MCPToolkit` provides the following callable methods:
 **Usage Example**:
 ```python
 # Get all available MCP tools
-tools = toolkit.get_tools()
+tools = toolkit.get_toolkits()
 
 # Display available tools
 for i, tool in enumerate(tools):
@@ -1239,7 +1239,7 @@ Once you have obtained the tools from the MCPToolkit, you can use them like any 
 
 ```python
 # Get all tools from the toolkit
-tools = toolkit.get_tools()
+tools = toolkit.get_toolkits()
 
 # Find a specific tool
 hirebase_tool = None
@@ -1282,7 +1282,7 @@ if hirebase_tool:
     ```python
     try:
         toolkit = MCPToolkit(config_path="config.json")
-        tools = toolkit.get_tools()
+        tools = toolkit.get_toolkits()
         # Use tools here
     finally:
         toolkit.disconnect()
