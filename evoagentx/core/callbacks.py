@@ -3,7 +3,7 @@ import sys
 from overdue import timeout_set_to 
 import threading
 import contextvars
-from typing import Optional, Union
+from typing import Union
 from contextlib import contextmanager
 from .logging import logger, get_log_file
 
