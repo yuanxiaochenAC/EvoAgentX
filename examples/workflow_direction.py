@@ -7,14 +7,14 @@ import sys
 
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.workflow import WorkFlowGraph, WorkFlow
-from evoagentx.workflow.workflow_generator import WorkFlowGenerator
+# from evoagentx.workflow.workflow_generator import WorkFlowGenerator
 from evoagentx.agents import AgentManager
 from evoagentx.tools.mcp import MCPToolkit
 from evoagentx.tools.file_tool import FileToolkit
 load_dotenv() # Loads environment variables from .env file
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-output_file = "examples/output/direction/output.md"
+output_file = "debug/output/direction/output.md"
 mcp_config_path = "examples/output/direction/mcp_direction.config"
 target_directory = "examples/output/direction/"
 module_save_path = "examples/output/direction/direction_demo_4o_mini.json"
