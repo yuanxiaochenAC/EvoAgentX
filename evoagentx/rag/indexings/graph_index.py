@@ -155,8 +155,8 @@ class GraphIndexing(BaseIndexWrapper):
 
             tasks = []
             for node in filtered_nodes:
-                # Load into kv cache
-                self.id_to_node[node.id] = node.model_copy()
+                if isinstance(node, BaseNode):
+                    node.metadata = {"metadata": json.dumps(node.metadata)}
 
                 # load into vector database
                 if (self.storage_handler.vector_store is not None) and \

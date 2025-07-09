@@ -1,7 +1,7 @@
 import json
 from typing import Any, List, Sequence, Union
 
-from llama_index.core.schema import BaseNode
+from llama_index.core.schema import BaseNode, TextNode
 from llama_index.graph_stores.neo4j import Neo4jPropertyGraphStore
 from llama_index.core.graph_stores.types import (
     PropertyGraphStore,
@@ -180,31 +180,18 @@ class Neo4jGraphStoreWrapper(GraphStoreBase):
         """
         try:
 
-            if not isinstance(node, (EntityNode, ChunkNode, Relation)):
-                raise ValueError(f"Unsupported node type: {type(node)}. Must be EntityNode or ChunkNode.")
-
-            # Check if node already exists in Neo4j by ID
-            exists_query = f"""
-                MATCH (n:{BASE_NODE_LABEL} {{id: $node_id}})
-                RETURN count(n) AS count
-            """
-            result = self.graph_store.structured_query(
-                exists_query,
-                param_map={"node_id": node.id}
-            )
-            node_exists = result[0]["count"] > 0
-
-            if node_exists:
-                logger.info(f"Node with ID {node.id} already exists in Neo4j, skipping insertion.")
-                return
+            if not isinstance(node, (BaseNode, EntityNode, ChunkNode, Relation)):
+                raise ValueError(f"Unsupported node type: {type(node)}. Must be BaseNode, EntityNode, ChunkNode, Relation.")
             
             if isinstance(node, (EntityNode, ChunkNode)):
-                # import pdb;pdb.set_trace()
                 self.graph_store.upsert_nodes([node])
             elif isinstance(node, BaseNode):
                 self.graph_store.upsert_llama_nodes([node])
             elif isinstance(node, Relation):
                 self.graph_store.upsert_relations([node])
+
+            if self.graph_store.supports_structured_queries:
+                self.graph_store.get_schema(refresh=True)  
 
         except Exception as e:
             logger.error(f"Failed to load node with ID {node.id} into Neo4j: {str(e)}")
@@ -225,8 +212,7 @@ class Neo4jGraphStoreWrapper(GraphStoreBase):
             # Query all nodes with their labels, properties, and embeddings
             nodes_query = f"""
                 MATCH (n:{BASE_NODE_LABEL})
-                RETURN n.id AS name,
-                       labels(n) AS labels,
+                RETURN n.id AS name, labels(n) AS labels,
                        n.text AS text,
                        n.embedding AS embedding,
                        properties(n) AS properties
@@ -244,26 +230,23 @@ class Neo4jGraphStoreWrapper(GraphStoreBase):
                 }
                 if "Chunk" in labels:
                     # Handle ChunkNode attributes
-                    node_dict["text"] = record["text"] or ""
-                    node = ChunkNode(
-                        text=node_dict['text'],
-                        properties=json.loads(node_dict['properties']['metadata']),
-                        id_=node_dict['properties']['id'],
-                        embedding=node_dict['embedding']
-                    )
+                    # Use the BaseNode to handle this
+                    if node_dict['properties']['_node_type'] == 'TextNode':
+                        content = json.loads(node_dict['properties']['_node_content'])
+                        content['metadata'] = json.loads(content['metadata']['metadata'])
+                        node = TextNode(**content)
+
                     nodes.append(node)
+
                 elif BASE_ENTITY_LABEL in labels:
                     # Handle EntityNode attributes
                     node_dict["name"] = record["name"] or record["id"]
                     node_dict["label"] = [l for l in labels if l not in [BASE_NODE_LABEL, BASE_ENTITY_LABEL]][0] if any(l not in [BASE_NODE_LABEL, BASE_ENTITY_LABEL] for l in labels) else "entity"
-                    node_dict["properties"] = {
-                        k: v for k, v in record["properties"].items()
-                        if k in ["triplet_source_id"]
-                    }
                     node = EntityNode(
                         name=node_dict["name"],
                         label=node_dict["label"],
-                        embedding=node_dict["embedding"]
+                        embedding=node_dict["embedding"],
+                        properties={"triplet_source_id": node_dict["properties"]["triplet_source_id"]}
                     )
                     nodes.append(node)
                 else:
@@ -271,26 +254,14 @@ class Neo4jGraphStoreWrapper(GraphStoreBase):
                     continue
 
             # Query all relations
-            relations_query = f"""
-                MATCH ()-[r]->()
-                RETURN type(r) AS label,
-                       startNode(r).id AS source_id,
-                       endNode(r).id AS target_id,
-                       properties(r) AS properties
-            """
-            # relations_query = """
-            # CALL apoc.meta.relTypeProperties()
-            # YIELD relType, propertyName, propertyTypes
-            # RETURN relType, COLLECT({property: propertyName, types: propertyTypes}) AS properties
-            # """
+            relations_query = """MATCH ()-[r]->() RETURN type(r) AS label, startNode(r).id AS source_id, endNode(r).id AS target_id, properties(r) AS properties"""
             relations_result = self.graph_store.structured_query(relations_query)
-
             relations = [
                 Relation(
                     label=record["label"],
                     source_id=record["source_id"],
                     target_id=record["target_id"],
-                    properties=record["properties"].get("metadata", {}),
+                    properties=json.loads(record["properties"].get("metadata", {})) if isinstance(record["properties"].get("metadata", {}), str) else record["properties"].get("metadata", {}),
                 )
                 for record in relations_result
             ]

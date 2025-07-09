@@ -509,7 +509,7 @@ class RAGEngine:
                     retriever_type=retriever_type,
                     llm=self.llm,
                     index=index.get_index(),
-                    graph_store=index.get_index().storage_context.graph_store if index_type == IndexType.GRAPH else None,
+                    graph_store=index.get_index().storage_context.graph_store,
                     embed_model=self.embed_model.get_embedding_model(),
                     query=Query(query_str="", top_k=self.config.retrieval.top_k if self.config.retrieval else 5),
                     storage_handler=self.storage_handler

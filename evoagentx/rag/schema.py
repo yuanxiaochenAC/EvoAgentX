@@ -42,12 +42,19 @@ class DocumentMetadata(BaseModule):
 
 class GraphNodeData(BaseModule):
     # graph support
-    node_class_name: Optional[str] = Field(default=None, description="The class name of the source llama_index node.")
+    # Basic
     label: Optional[str] = Field(default="entity", description="The label name of the 'LabelNode', 'EntityNode', 'Relation' in llama_index node.")
-    properties: Optional[Dict] = Field(default_factory=dict, description="Represents all metadata information from the original BaseNode before graph conversion.")
+    
+    # Relation
+    node_class_name: Optional[str] = Field(default=None, description="The class name of the source llama_index node.")
+    properties: Optional[Dict] = Field(default_factory=dict, description="Represents all information from the Node.")
+    
+    # Entity Node
     node_name: Optional[str] = Field(default=None, description="Entity name of each node.")
     source_id: Optional[str] = Field(default=None, description="Source node ID.")
     target_id: Optional[str] = Field(default=None, description="Target node ID.")
+
+    # Chunk Node
     text: Optional[str] = Field(default=None, description="The text stored in the ChunkNode.")
     id_: Optional[str] = Field(default=None, description="ChunkNode id.")
 
@@ -251,28 +258,29 @@ class Chunk(BaseModule):
                     label=self.metadata.graph_node.label,
                     source_id=self.metadata.graph_node.source_id,
                     target_id=self.metadata.graph_node.target_id,
-                    properties=self.metadata.graph_node.properties,
+                    properties={"metadata": json.dumps(self.metadata.graph_node.properties["metadata"])},
                 )
+            
             elif class_name == "entity":
                 cls = EntityNode(
                     label=self.metadata.graph_node.label,
                     embedding=self.embedding,
-                    name=self.metadata.graph_node.node_name
+                    name=self.metadata.graph_node.node_name,
+                    properties={"triplet_source_id": self.metadata.graph_node.properties["triplet_source_id"]}
                 )
-            elif class_name == "chunk":
-                cls = ChunkNode(
-                    text=self.metadata.graph_node.text,
-                    properties={"metadata": json.dumps(self.metadata.graph_node.properties)},
-                    id_=self.metadata.graph_node.id_,
-                    embedding=self.embedding,
-                )
+                # cls.triplet_source_id
+
             else:
                 NotImplementedError()
             return cls
         else:
+            metadata = self.metadata.model_dump()
+            if "class_name" in metadata:
+                metadata.pop("class_name")
+    
             return cls(
                 text=self.text,
-                metadata=self.metadata.model_dump(),
+                metadata=metadata,
                 id_=self.chunk_id,
                 embedding=self.embedding,
                 start_char_idx=self.start_char_idx,
@@ -288,11 +296,10 @@ class Chunk(BaseModule):
         """Create Chunk from LlamaIndex Node."""
         
         if isinstance(node, TextNode):
-            metadata = ChunkMetadata.model_validate(node.metadata)
             return cls(
                 chunk_id=node.id_,
                 text=node.text,
-                metadata=metadata,
+                metadata=ChunkMetadata.model_validate(node.metadata),
                 embedding=node.embedding,
                 start_char_idx=getattr(node, "start_char_idx", None),
                 end_char_idx=getattr(node, "end_char_idx", None),
@@ -303,12 +310,15 @@ class Chunk(BaseModule):
             )
         
         elif isinstance(node, Relation):
+            if 'class_name' in node.properties:
+                node.properties.pop('class_name')
+            properties = node.properties if isinstance(node.properties, dict) else node.properties.model_dump()
             graph_node = GraphNodeData(
                 node_class_name="relation",
                 label=node.label,
                 source_id=node.source_id,
                 target_id=node.target_id,
-                properties=node.properties
+                properties={"metadata": properties}
             )
             metadata= {"graph_node": graph_node}
             return cls(
@@ -320,6 +330,8 @@ class Chunk(BaseModule):
                 node_class_name="entity",
                 label=node.label,
                 node_name=node.name,
+                properties={"triplet_source_id": node.properties["triplet_source_id"]}
+                # triplet_source_id=node.triplet_source_id
             )
             metadata= {"graph_node": graph_node}
             return cls(
@@ -331,7 +343,7 @@ class Chunk(BaseModule):
             graph_node = GraphNodeData(
                 node_class_name="chunk",
                 text=node.text,
-                properties={k:v for k,v in node.properties.items() if k !='class_name'},
+                properties=node.properties,
                 id_=node.id_,
             )
             metadata= {"graph_node": graph_node}

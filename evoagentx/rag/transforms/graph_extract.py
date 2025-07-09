@@ -129,9 +129,9 @@ class BasicGraphExtractLLM(TransformComponent):
         for triple in triples:
             subj, rel, obj = triple["source"], triple["relation"], triple["target"]
             # Normalize entity and relation names to lowercase and replace spaces with underscores
-            subj = subj.lower().replace(" ", "_")
+            subj = subj.capitalize().replace(" ", "_")
             rel = rel.lower().replace(" ", "_")
-            obj = obj.lower().replace(" ", "_")
+            obj = obj.capitalize().replace(" ", "_")
 
             subj_node = EntityNode(
                 name=subj,

@@ -53,7 +53,7 @@ class BasicLLMSynonymRetriever(BasePGRetriever):
             matches = output.strip().split("^")
 
         # capitalize to normalize with ingestion
-        return [x.strip().capitalize() for x in matches if x.strip()]
+        return [x.strip().capitalize().replace(" ", "_") for x in matches if x.strip()]
 
     def _prepare_matches(
         self, matches: List[str], limit: Optional[int] = None
@@ -86,7 +86,7 @@ class BasicLLMSynonymRetriever(BasePGRetriever):
     ) -> List[NodeWithScore]:
         
         # format the prompt
-        synonym_prompt = self._synonym_prompt.format_map({"max_keywords": self._limit, "query_str": query_bundle.query_str})
+        synonym_prompt = self._synonym_prompt.format_map({"max_keywords": self._max_keywords, "query_str": query_bundle.query_str})
         response = self._llm.generate(
             prompt=synonym_prompt,
             parse_mode="str"
@@ -150,7 +150,7 @@ class GraphRetriever(BaseRetrieverWrapper):
             subretriever_bool = [isinstance(sub, VectorContextRetriever) for sub in self.retriever.sub_retrievers]
             if any(subretriever_bool):
                 ind = subretriever_bool.index(True) 
-                self.retriever.sub_retrievers[ind].similarity_top_k = query.top_k
+                self.retriever.sub_retrievers[ind]._similarity_top_k = query.top_k
 
             nodes = await self.retriever.aretrieve(query.query_str)
 
@@ -158,12 +158,12 @@ class GraphRetriever(BaseRetrieverWrapper):
             scores = []
             
             if nodes is None:
-                return RagResult(corpus=corpus, scores=scores, metadata={"query": query.query_str, "retriever": "vector"})
+                return RagResult(corpus=corpus, scores=scores, metadata={"query": query.query_str, "retriever": "graph"})
             
             for score_node in nodes:
                 # parsed the metadata
                 node = score_node.node
-                node.metadata = json.loads(node.metadata["metadata"])
+                node.metadata = json.loads(node.metadata.get('metadata', '{}'))
 
                 chunk = Chunk.from_llama_node(node)
                 chunk.metadata.similarity_score = score_node.score or 0.0
@@ -173,11 +173,12 @@ class GraphRetriever(BaseRetrieverWrapper):
             result = RagResult(
                 corpus=corpus,
                 scores=scores,
-                metadata={"query": query.query_str, "retriever": "vector"}
+                metadata={"query": query.query_str, "retriever": "graph"}
             )
             logger.info(f"Graph retrieved {len(corpus.chunks)} chunks")
             return result
         except Exception as e:
+            import pdb;pdb.set_trace()
             logger.error(f"Graph retrieval failed: {str(e)}")
             raise
 
@@ -193,7 +194,7 @@ class GraphRetriever(BaseRetrieverWrapper):
             scores = []
 
             if nodes is None:
-                return RagResult(corpus=corpus, scores=scores, metadata={"query": query.query_str, "retriever": "vector"})
+                return RagResult(corpus=corpus, scores=scores, metadata={"query": query.query_str, "retriever": "graph"})
             
             for score_node in nodes:
                 # parsed the metadata
@@ -211,7 +212,7 @@ class GraphRetriever(BaseRetrieverWrapper):
             result = RagResult(
                 corpus=corpus,
                 scores=scores,
-                metadata={"query": query.query_str, "retriever": "vector"}
+                metadata={"query": query.query_str, "retriever": "graph"}
             )
             logger.info(f"Vector retrieved {len(corpus.chunks)} chunks")
             return result
