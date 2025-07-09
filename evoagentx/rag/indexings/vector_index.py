@@ -172,6 +172,7 @@ class VectorIndexing(BaseIndexWrapper):
             node_ids = list(self.id_to_node.keys())
             self.index.delete_nodes(node_ids, delete_from_docstore=False)
             self.id_to_node.clear()
+            self.index.storage_context.docstore._kvstore._collections_mappings.clear()
             logger.info("Cleared all nodes from VectorStoreIndex")
         except Exception as e:
             logger.error(f"Failed to clear index: {str(e)}")
