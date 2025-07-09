@@ -106,14 +106,6 @@ class OllamaEmbedding(BaseEmbedding):
         """Asynchronous query embedding (falls back to sync)."""
         return self._get_query_embedding(query)
 
-    async def _aget_text_embedding(self, text: str) -> List[float]:
-        """Asynchronous text embedding (falls back to sync)."""
-        return self._get_text_embedding(text)
-
-    async def _aget_text_embeddings(self, texts: List[str]) -> List[List[float]]:
-        """Asynchronous batch text embedding (falls back to sync)."""
-        return self._get_text_embeddings(texts)
-
     @property
     def dimension(self) -> int:
         """Return the embedding dimension."""
