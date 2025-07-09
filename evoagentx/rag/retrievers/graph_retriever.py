@@ -178,7 +178,6 @@ class GraphRetriever(BaseRetrieverWrapper):
             logger.info(f"Graph retrieved {len(corpus.chunks)} chunks")
             return result
         except Exception as e:
-            import pdb;pdb.set_trace()
             logger.error(f"Graph retrieval failed: {str(e)}")
             raise
 

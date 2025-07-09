@@ -138,7 +138,8 @@ class VectorIndexing(BaseIndexWrapper):
 
             tasks = []
             for node in filtered_nodes:
-                self.id_to_node[node.id] = node.model_copy()
+                node_id = node.id if hasattr(node, "id") else node.id_
+                self.id_to_node[node_id] = node.model_copy()
 
                 if self.storage_handler.vector_store is not None:
                     tasks.append(self.storage_handler.vector_store.aload(node))
@@ -169,7 +170,7 @@ class VectorIndexing(BaseIndexWrapper):
         try:
 
             node_ids = list(self.id_to_node.keys())
-            self.index.delete_nodes(node_ids, delete_from_docstore=True)
+            self.index.delete_nodes(node_ids, delete_from_docstore=False)
             self.id_to_node.clear()
             logger.info("Cleared all nodes from VectorStoreIndex")
         except Exception as e:

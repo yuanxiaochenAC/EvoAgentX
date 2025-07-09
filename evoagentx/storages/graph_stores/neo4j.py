@@ -241,7 +241,7 @@ class Neo4jGraphStoreWrapper(GraphStoreBase):
                 elif BASE_ENTITY_LABEL in labels:
                     # Handle EntityNode attributes
                     node_dict["name"] = record["name"] or record["id"]
-                    node_dict["label"] = [l for l in labels if l not in [BASE_NODE_LABEL, BASE_ENTITY_LABEL]][0] if any(l not in [BASE_NODE_LABEL, BASE_ENTITY_LABEL] for l in labels) else "entity"
+                    node_dict["label"] = [label for label in labels if label not in [BASE_NODE_LABEL, BASE_ENTITY_LABEL]][0] if any(label not in [BASE_NODE_LABEL, BASE_ENTITY_LABEL] for label in labels) else "entity"
                     node = EntityNode(
                         name=node_dict["name"],
                         label=node_dict["label"],

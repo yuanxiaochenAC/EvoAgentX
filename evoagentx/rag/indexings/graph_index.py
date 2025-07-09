@@ -43,7 +43,7 @@ class GraphIndexing(BaseIndexWrapper):
 
         self.index_config = index_config or {}
         # initlize the kg_extractor
-        assert isinstance(llm, BaseLLM), f"The LLM model should be an instance class."
+        assert isinstance(llm, BaseLLM), "The LLM model should be an instance class."
         kg_extractor = BasicGraphExtractLLM(
             llm=llm, 
             num_workers=self.index_config.get("num_workers", 4),

@@ -1,4 +1,3 @@
-# evoagentx/rag/transforms/query/hyde.py
 from string import Template
 from typing import Dict, Union, Optional
 

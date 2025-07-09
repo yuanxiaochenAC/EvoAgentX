@@ -1,5 +1,3 @@
-# evoagentx/rag/transforms/graph_extract.py
-import json
 import asyncio
 from typing import Any, Optional, Sequence
 
@@ -218,7 +216,7 @@ if __name__ == "__main__":
     dotenv.load_dotenv()
 
     from llama_index.core.schema import TextNode
-    from evoagentx.models import OpenRouterConfig, OpenRouterLLM
+    # from evoagentx.models import OpenRouterConfig, OpenRouterLLM
 
     # OPEN_ROUNTER_API_KEY = os.environ["OPEN_ROUNTER_API_KEY"]
     # config = OpenRouterConfig(
