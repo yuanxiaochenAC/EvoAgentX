@@ -10,7 +10,6 @@ from .mcp import MCPToolkit
 from .request import RequestToolkit
 from .request_arxiv import ArxivToolkit
 from .browser_use import BrowserUseToolkit
-from .database_toolkit import DatabaseToolkit
 from .database_mongodb import MongoDBToolkit
 
 
@@ -28,7 +27,6 @@ __all__ = [
     "RequestToolkit",
     "ArxivToolkit",
     "BrowserUseToolkit",
-    "DatabaseToolkit",
     "MongoDBToolkit"
 ]
 
