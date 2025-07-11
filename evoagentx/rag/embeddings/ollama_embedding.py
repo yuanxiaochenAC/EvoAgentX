@@ -124,7 +124,7 @@ class OllamaEmbeddingWrapper(BaseEmbeddingWrapper):
     ):
         self.model_name = model_name
         self.base_url = base_url
-        self._dimensions = dimensions or MODEL_DIMENSIONS.get(model_name, None)
+        self._dimensions = MODEL_DIMENSIONS.get(model_name, None) or dimensions 
         self.kwargs = kwargs
         self._embedding_model = None
         self._embedding_model = self.get_embedding_model()

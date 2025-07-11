@@ -43,7 +43,6 @@
 
 
 ## 🔥 Latest News
-- **[July 2025]** 🎉 **EvoAgentX** has achieved 1,000 stars!
 - **[May 2025]** 🎉 **EvoAgentX** has been officially released!
 
 ## ⚡ Get Started
@@ -88,7 +87,7 @@ For local development or detailed setup (e.g., using conda), refer to the [Insta
 git clone https://github.com/EvoAgentX/EvoAgentX.git
 cd EvoAgentX
 # Create a new conda environment
-conda create -n evoagentx python=3.10
+conda create -n evoagentx python=3.11
 
 # Activate the environment
 conda activate evoagentx

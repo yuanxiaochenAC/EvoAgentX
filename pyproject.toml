@@ -18,7 +18,7 @@ classifiers = [
 
 dependencies = [
     "sympy",
-    "stopit",
+    "overdue",
     "scipy",
     "setuptools",
     "tree_sitter",

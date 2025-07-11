@@ -60,7 +60,7 @@ class OpenAIEmbedding(BaseEmbedding):
         if dimensions is not None and model_name not in SUPPORTED_DIMENSIONS:
             logger.warning(
                 f"Dimensions parameter is not supported for model {model_name}. "
-                f"Only '{[k for k in SUPPORTED_DIMENSIONS.keys()]}' support custom dimensions. Ignoring dimensions parameter."
+                f"Only '{SUPPORTED_DIMENSIONS}' support custom dimensions. Ignoring dimensions parameter."
             )
             self.dimensions = None
         elif dimensions is None and model_name in SUPPORTED_DIMENSIONS:
@@ -136,7 +136,7 @@ class OpenAIEmbeddingWrapper(BaseEmbeddingWrapper):
     ):
         self.model_name = model_name
         self.api_key = api_key
-        self._dimensions = dimensions
+        self._dimensions = MODEL_DIMENSIONS.get(self.model_name, None) or dimensions
         self.base_url = base_url
         self.kwargs = kwargs
         self._embedding_model = None
@@ -144,7 +144,8 @@ class OpenAIEmbeddingWrapper(BaseEmbeddingWrapper):
 
     def get_embedding_model(self) -> BaseEmbedding:
         """Return the LlamaIndex-compatible embedding model."""
-        if self._embedding_model is None:
+        # if self._embedding_model is None:
+        if getattr(self, "_embedding_model", None) is None:
             try:
                 self._embedding_model = OpenAIEmbedding(
                     model_name=self.model_name,
@@ -162,4 +163,5 @@ class OpenAIEmbeddingWrapper(BaseEmbeddingWrapper):
     @property
     def dimensions(self) -> int:
         """Return the embedding dimensions."""
-        return self._embedding_model or MODEL_DIMENSIONS.get(self.model_name, None)
+        # return self._embedding_model or MODEL_DIMENSIONS.get(self.model_name, None)
+        return self._dimensions
