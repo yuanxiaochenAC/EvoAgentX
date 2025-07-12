@@ -11,6 +11,9 @@ from .request import RequestToolkit
 from .request_arxiv import ArxivToolkit
 from .browser_use import BrowserUseToolkit
 from .database_mongodb import MongoDBToolkit
+from .database_postgresql import PostgreSQLToolkit
+from .storage_file import StorageToolkit
+from .cmd_toolkit import CMDToolkit
 
 
 __all__ = [
@@ -27,6 +30,9 @@ __all__ = [
     "RequestToolkit",
     "ArxivToolkit",
     "BrowserUseToolkit",
-    "MongoDBToolkit"
+    "MongoDBToolkit",
+    "PostgreSQLToolkit",
+    "StorageToolkit",
+    "CMDToolkit"
 ]
 
