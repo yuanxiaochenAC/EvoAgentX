@@ -173,12 +173,11 @@ class OpenRouterLLM(BaseLLM):
         url = self.config.openrouter_model_base
         response = requests.get(url)
         data = response.json()
-        
-        for model in data['data']:
-            if model['id'] == self.config.model:
-                pricing = model.get('pricing',{})
-                input_cost = pricing.get('input_cost', 0)
-                output_cost = pricing.get('output_cost', 0)
-                return input_cost, output_cost
-            
+        model = data['data']
+        endpoints = model.get('endpoints', [])
+        if endpoints:
+            pricing = endpoints[0].get('pricing', {})
+            input_cost = pricing.get('prompt', 0)
+            output_cost = pricing.get('completion', 0)
+            return input_cost, output_cost
         return 0, 0
