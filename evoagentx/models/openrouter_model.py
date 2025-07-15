@@ -182,4 +182,3 @@ class OpenRouterLLM(BaseLLM):
             output_cost = pricing.get('completion', 0)
             return input_cost, output_cost
         return 0, 0
-x
