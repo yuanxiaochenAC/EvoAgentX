@@ -12,6 +12,7 @@ from .request_arxiv import ArxivToolkit
 from .browser_use import BrowserUseToolkit
 from .database_mongodb import MongoDBToolkit
 from .database_postgresql import PostgreSQLToolkit
+from .database_faiss import FaissToolkit
 from .storage_file import StorageToolkit
 from .cmd_toolkit import CMDToolkit
 
@@ -32,6 +33,7 @@ __all__ = [
     "BrowserUseToolkit",
     "MongoDBToolkit",
     "PostgreSQLToolkit",
+    "FaissToolkit",
     "StorageToolkit",
     "CMDToolkit"
 ]
