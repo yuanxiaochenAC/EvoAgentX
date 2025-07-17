@@ -1,7 +1,7 @@
 import json
 import asyncio
 from uuid import uuid4
-from typing import Dict, Any, Union, List, Optional
+from typing import Dict, Any, Union, List, Sequence, Optional
 
 from llama_index.core.schema import BaseNode
 from llama_index.core.storage import StorageContext
@@ -140,7 +140,7 @@ class GraphIndexing(BaseIndexWrapper):
             logger.error(f"Failed to delete nodes: {str(e)}")
             raise
 
-    async def aload(self, nodes: List[Union[Chunk, BaseNode, LabelledNode, Relation, EntityNode, ChunkNode]]) -> None:
+    async def aload(self, nodes: List[Union[Chunk, BaseNode, LabelledNode, Relation, EntityNode, ChunkNode]]) -> Sequence[str]:
         """
         Asynchronously load nodes into the graph index and its backend stores.
 
@@ -152,9 +152,11 @@ class GraphIndexing(BaseIndexWrapper):
         """
         try:
             filtered_nodes = [node.to_llama_node() if isinstance(node, Chunk) else node for node in nodes]
+            chunk_ids = []
 
             tasks = []
             for node in filtered_nodes:
+                node_id = node.id if hasattr(node, "id") else node.id_
                 if isinstance(node, BaseNode):
                     node.metadata = {"metadata": json.dumps(node.metadata)}
 
@@ -168,15 +170,17 @@ class GraphIndexing(BaseIndexWrapper):
 
                 # load into graph database
                 tasks.extend([self.storage_handler.graph_store.aload(node)])
+                chunk_ids.append(node_id)
 
             # Async load
             await asyncio.gather(*tasks, return_exceptions=True)
             logger.info(f"Loaded {len(filtered_nodes)} nodes into cache and graph store.")
 
+            return chunk_ids
         except Exception as e:
             logger.error(f"Failed to load nodes: {str(e)}")
 
-    def load(self, nodes: List[Union[Chunk, BaseNode]]) -> None:
+    def load(self, nodes: List[Union[Chunk, BaseNode]]) -> Sequence[str]:
         """
         Synchronously load nodes into the graph index.
 
@@ -186,7 +190,7 @@ class GraphIndexing(BaseIndexWrapper):
             nodes (List[Union[Chunk, BaseNode]]): List of nodes to load, either Chunk or BaseNode.
 
         """
-        asyncio.run(self.aload(nodes))
+        return asyncio.run(self.aload(nodes))
 
     def build_kv_store(self) -> None:
         """
