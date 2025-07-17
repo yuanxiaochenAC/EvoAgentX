@@ -30,7 +30,7 @@ class ImageAnalysisTool(Tool):
     }
     required: Optional[List[str]] = ["prompt"]
 
-    def __init__(self, api_key, model="openai/gpt-4o-mini"):
+    def __init__(self, api_key, model="openai/gpt-4o"):
         super().__init__()
         self.api_key = api_key
         self.model = model

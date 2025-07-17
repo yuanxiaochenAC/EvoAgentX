@@ -10,6 +10,7 @@ from evoagentx.tools.image_analysis import ImageAnalysisTool
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_ORGANIZATION_ID = os.getenv("OPENAI_ORGANIZATION_ID")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=True)
 
@@ -75,6 +76,40 @@ def test_image_analysis_tool():
     )
     print(f"Response from {mcp_agent.name}:")
     print(message.content.content)
+
+def test_image_generation_tool():
+    from evoagentx.tools.image_generation import ImageGenerationTool
+    tools = []
+    tools.append(ImageGenerationTool(api_key=OPENAI_API_KEY, organization_id=OPENAI_ORGANIZATION_ID, model="gpt-4o", save_path="./imgs"))
+
+    mcp_agent = CustomizeAgent(
+        name="MCPAgent",
+        description="A MCP agent that can use the tools provided by the MCP server",
+        prompt_template= StringTemplate(
+            instruction="Do some operations based on the user's instruction."
+        ), 
+        llm_config=openai_config,
+        inputs=[
+            {"name": "prompt", "type": "string", "description": "The prompt for image generation."},
+        ],
+        outputs=[
+            {"name": "file_path", "type": "object", "description": "The generated image (PIL.Image)."}
+        ],
+        tools=tools
+    )
+    mcp_agent.save_module("examples/output/mcp_agent/mcp_agent.json")
+    mcp_agent.load_module("examples/output/mcp_agent/mcp_agent.json", llm_config=openai_config, tools=tools)
+
+    message = mcp_agent(
+        inputs={
+            "prompt": "画一只像素风格的灰色虎斑猫抱着水獭",
+        }
+    )
+    from PIL import Image
+    img = Image.open(message.content.file_path)
+    img.show()
+
 if __name__ == "__main__":
-    test_MCP_server()
-    test_image_analysis_tool()
+    # test_MCP_server()
+    # test_image_analysis_tool()
+    test_image_generation_tool()
