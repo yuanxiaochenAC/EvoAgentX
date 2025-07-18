@@ -43,6 +43,8 @@
 
 
 ## 🔥 Latest News
+- **[July 2025]** 🎉 **EvoAgentX** is on [arxiv](https://arxiv.org/abs/2507.03616)!
+- **[July 2025]** 🎉 **EvoAgentX** has achieved 1,000 stars!
 - **[May 2025]** 🎉 **EvoAgentX** has been officially released!
 
 ## ⚡ Get Started
