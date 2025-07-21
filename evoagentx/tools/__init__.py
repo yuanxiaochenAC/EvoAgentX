@@ -15,6 +15,7 @@ from .database_postgresql import PostgreSQLToolkit
 from .database_faiss import FaissToolkit
 from .storage_file import StorageToolkit
 from .cmd_toolkit import CMDToolkit
+from .rss_feed import RSSToolkit
 
 
 __all__ = [
@@ -35,6 +36,7 @@ __all__ = [
     "PostgreSQLToolkit",
     "FaissToolkit",
     "StorageToolkit",
-    "CMDToolkit"
+    "CMDToolkit",
+    "RSSToolkit"
 ]
 
