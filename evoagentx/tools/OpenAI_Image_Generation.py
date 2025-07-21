@@ -1,7 +1,7 @@
 from typing import Dict, Optional, List
 from .tool import Tool
 
-class ImageGenerationTool(Tool):
+class OpenAI_ImageGenerationTool(Tool):
     name: str = "image_generation"
     description: str = "Generate images from text prompts using an image model."
 
