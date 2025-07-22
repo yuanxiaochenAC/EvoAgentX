@@ -43,7 +43,8 @@ from evoagentx.tools import (
     BrowserUseToolkit,
     FaissToolkit,
     PostgreSQLToolkit,
-    MongoDBToolkit
+    MongoDBToolkit,
+    RSSToolkit
 )
 
 
@@ -1140,6 +1141,83 @@ def run_mongodb_tool_example():
         print(f"Error: {str(e)}")
 
 
+def run_rss_tool_example():
+    """Powerful example using RSSToolkit for RSS feed operations."""
+    print("\n===== RSS TOOL EXAMPLE =====\n")
+    
+    try:
+        # Initialize RSS toolkit
+        toolkit = RSSToolkit(name="DemoRSSToolkit")
+        
+        print("✓ RSSToolkit initialized")
+        
+        # Get tools
+        fetch_tool = toolkit.get_tool("rss_fetch")
+        validate_tool = toolkit.get_tool("rss_validate")
+        monitor_tool = toolkit.get_tool("rss_monitor")
+        
+        # Test RSS feed URLs
+        test_feeds = [
+            "https://feeds.bbci.co.uk/news/rss.xml",  # BBC News
+            "https://rss.cnn.com/rss/edition.rss",    # CNN
+            "https://feeds.feedburner.com/TechCrunch" # TechCrunch
+        ]
+        
+        for feed_url in test_feeds:
+            print(f"\n--- Testing RSS Feed: {feed_url} ---")
+            
+            # Validate the feed
+            print("1. Validating RSS feed...")
+            validate_result = validate_tool(url=feed_url)
+            
+            if validate_result.get("success") and validate_result.get("is_valid"):
+                print(f"✓ Valid {validate_result.get('feed_type')} feed: {validate_result.get('title', 'Unknown')}")
+                
+                # Fetch the feed
+                print("2. Fetching RSS feed...")
+                fetch_result = fetch_tool(feed_url=feed_url, max_entries=3)
+                
+                if fetch_result.get("success"):
+                    entries = fetch_result.get("entries", [])
+                    print(f"✓ Fetched {len(entries)} entries from '{fetch_result.get('title')}'")
+                    
+                    # Display first few entries
+                    for i, entry in enumerate(entries[:2], 1):
+                        print(f"  Entry {i}: {entry.get('title', 'No title')}")
+                        print(f"    Published: {entry.get('published', 'Unknown')}")
+                        print(f"    Link: {entry.get('link', 'No link')}")
+                        print(f"    Author: {entry.get('author', 'Unknown')}")
+                        print()
+                
+                # Test monitoring for recent entries
+                print("3. Testing feed monitoring...")
+                from datetime import datetime, timedelta
+                yesterday = (datetime.now() - timedelta(days=1)).isoformat()
+                
+                monitor_result = monitor_tool(
+                    feed_url=feed_url,
+                    since_date=yesterday,
+                    max_entries=5
+                )
+                
+                if monitor_result.get("success"):
+                    new_entries = monitor_result.get("new_entries", [])
+                    print(f"✓ Found {len(new_entries)} new entries since yesterday")
+                    
+                    if new_entries:
+                        print("  Recent entries:")
+                        for entry in new_entries[:2]:
+                            print(f"    - {entry.get('title', 'No title')}")
+            else:
+                print(f"❌ Invalid or inaccessible feed: {validate_result.get('error', 'Unknown error')}")
+        
+        print("\n✓ RSSToolkit test completed")
+        
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        print("Note: RSS feed availability may vary. Some feeds may be temporarily unavailable.")
+
+
 def main():
     """Main function to run all examples"""
     print("===== INTERPRETER TOOL EXAMPLES =====")
@@ -1176,6 +1254,9 @@ def main():
     
     # Run MongoDB tool example
     run_mongodb_tool_example()
+    
+    # Run RSS tool example
+    run_rss_tool_example()
     
     print("\n===== ALL EXAMPLES COMPLETED =====")
 
