@@ -14,6 +14,8 @@ Key Features:
 - Robust error handling for invalid paths
 - Default configuration with sensible defaults
 - Seamless integration with the RAG pipeline
+- Automatic file path detection and content processing
+- Support for multiple file formats (PDF, text, Markdown, etc.)
 
 Usage:
     # Using default configuration with automatic path handling
@@ -23,6 +25,15 @@ Usage:
     toolkit = FaissToolkit(
         storage_config=custom_storage_config,
         rag_config=custom_rag_config
+    )
+    
+    # Insert documents including file paths
+    toolkit.get_tool("faiss_insert")(
+        documents=[
+            "This is some text content",
+            "./documents/report.pdf",  # Will be automatically read and processed
+            "./data/notes.txt"         # Will be automatically read and processed
+        ]
     )
 """
 
@@ -288,6 +299,85 @@ class FaissDatabase(BaseModule):
             logger.error(f"Query failed: {str(e)}")
             return {"success": False, "error": str(e)}
     
+    def _is_file_path(self, text: str) -> bool:
+        """
+        Check if a string appears to be a file path.
+        
+        Args:
+            text (str): The string to check
+            
+        Returns:
+            bool: True if the string looks like a file path
+        """
+        # Check if it contains path separators or file extensions
+        path_indicators = ['/', '\\', '.txt', '.pdf', '.md', '.doc', '.docx', '.csv', '.json', '.xml', '.html', '.htm']
+        return any(indicator in text for indicator in path_indicators) and os.path.exists(text)
+    
+    def _process_file_path(self, file_path: str, doc_index: int, metadata: Optional[Dict[str, Any]] = None) -> List[Document]:
+        """
+        Process a file path and return Document objects.
+        
+        Args:
+            file_path (str): Path to the file
+            doc_index (int): Index of the document in the batch
+            metadata (Dict[str, Any], optional): Additional metadata
+            
+        Returns:
+            List[Document]: List of Document objects created from the file
+        """
+        try:
+            # Use RAG engine's read method to process the file
+            temp_corpus_id = f"temp_file_{uuid4().hex[:8]}"
+            corpus = self.rag_engine.read(
+                file_paths=file_path,
+                corpus_id=temp_corpus_id
+            )
+            
+            # Convert chunks back to documents
+            documents = []
+            for chunk in corpus.chunks:
+                doc_metadata = metadata.copy() if metadata else {}
+                doc_metadata.update({
+                    "doc_index": doc_index,
+                    "insertion_time": datetime.now().isoformat(),
+                    "source_file": file_path,
+                    "original_chunk_id": chunk.chunk_id
+                })
+                
+                # Create DocumentMetadata object
+                document_metadata = DocumentMetadata(**doc_metadata)
+                
+                # Create Document object
+                documents.append(Document(
+                    text=chunk.text,
+                    metadata=document_metadata,
+                    doc_id=chunk.chunk_id
+                ))
+            
+            # Clean up temporary corpus
+            self.rag_engine.clear(corpus_id=temp_corpus_id)
+            
+            logger.info(f"Processed file {file_path} into {len(documents)} chunks")
+            return documents
+            
+        except Exception as e:
+            logger.error(f"Failed to process file {file_path}: {str(e)}")
+            # Return a single document with error information
+            doc_metadata = metadata.copy() if metadata else {}
+            doc_metadata.update({
+                "doc_index": doc_index,
+                "insertion_time": datetime.now().isoformat(),
+                "source_file": file_path,
+                "error": str(e)
+            })
+            
+            document_metadata = DocumentMetadata(**doc_metadata)
+            return [Document(
+                text=f"Error reading file {file_path}: {str(e)}",
+                metadata=document_metadata,
+                doc_id=str(uuid4())
+            )]
+    
     def insert(
         self,
         documents: list,
@@ -299,7 +389,8 @@ class FaissDatabase(BaseModule):
         Insert documents into the vector database.
         
         Args:
-            documents (Union[List[str], List[Dict[str, Any]]]): Documents to insert
+            documents (Union[List[str], List[Dict[str, Any]]]): Documents to insert. 
+                Strings can be either text content or file paths (if they look like paths and exist)
             corpus_id (str, optional): Corpus ID to insert into
             metadata (Dict[str, Any], optional): Additional metadata for all documents
             batch_size (int): Batch size for processing
@@ -312,21 +403,31 @@ class FaissDatabase(BaseModule):
             
             # Process documents and create proper Document objects
             processed_docs = []
+            file_paths_processed = []
+            
             for i, doc in enumerate(documents):
                 if isinstance(doc, str):
-                    doc_metadata = metadata.copy() if metadata else {}
-                    doc_metadata.update({
-                        "doc_index": i,
-                        "insertion_time": datetime.now().isoformat()
-                    })
-                    # Create DocumentMetadata object
-                    document_metadata = DocumentMetadata(**doc_metadata)
-                    # Create Document object
-                    processed_docs.append(Document(
-                        text=doc,
-                        metadata=document_metadata,
-                        doc_id=str(uuid4())
-                    ))
+                    # Check if this string looks like a file path
+                    if self._is_file_path(doc):
+                        logger.info(f"Detected file path: {doc}")
+                        file_docs = self._process_file_path(doc, i, metadata)
+                        processed_docs.extend(file_docs)
+                        file_paths_processed.append(doc)
+                    else:
+                        # Treat as regular text content
+                        doc_metadata = metadata.copy() if metadata else {}
+                        doc_metadata.update({
+                            "doc_index": i,
+                            "insertion_time": datetime.now().isoformat()
+                        })
+                        # Create DocumentMetadata object
+                        document_metadata = DocumentMetadata(**doc_metadata)
+                        # Create Document object
+                        processed_docs.append(Document(
+                            text=doc,
+                            metadata=document_metadata,
+                            doc_id=str(uuid4())
+                        ))
                 elif isinstance(doc, dict):
                     doc_metadata = metadata.copy() if metadata else {}
                     doc_metadata.update(doc.get("metadata", {}))
@@ -371,10 +472,13 @@ class FaissDatabase(BaseModule):
                 "corpus_id": corpus_id,
                 "documents_inserted": len(documents),
                 "chunks_created": len(corpus.chunks),
-                "total_processed": total_processed
+                "total_processed": total_processed,
+                "file_paths_processed": file_paths_processed
             }
             
             logger.info(f"Successfully inserted {len(documents)} documents into corpus {corpus_id}")
+            if file_paths_processed:
+                logger.info(f"Processed {len(file_paths_processed)} file paths: {file_paths_processed}")
             return {"success": True, "data": result}
             
         except Exception as e:
@@ -577,11 +681,11 @@ class FaissInsertTool(Tool):
     """Tool for inserting documents into the FAISS vector database."""
     
     name: str = "faiss_insert"
-    description: str = "Insert documents into the FAISS vector database with automatic chunking and embedding"
+    description: str = "Insert documents into the FAISS vector database with automatic chunking and embedding. Supports both text content and file paths - if a string looks like a file path and exists, it will automatically read and process the file content."
     inputs: Dict[str, Dict[str, Any]] = {
         "documents": {
             "type": "array",
-            "description": "Array of documents to insert. Can be strings or objects with 'text', 'metadata', and 'doc_id' fields"
+            "description": "Array of documents to insert. Can be strings (text content or file paths), or objects with 'text', 'metadata', and 'doc_id' fields. If a string contains path separators or file extensions and the file exists, it will be treated as a file path and its content will be read and processed."
         },
         "corpus_id": {
             "type": "string",

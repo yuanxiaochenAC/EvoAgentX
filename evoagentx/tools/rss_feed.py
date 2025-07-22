@@ -28,13 +28,13 @@ class RSSBase(RequestBase):
         """
         super().__init__(timeout=timeout, max_retries=max_retries, delay_between_requests=delay_between_requests)
     
-    def fetch_rss_feed(self, feed_url: str, max_entries: Optional[int] = None, fetch_webpage_content: bool = True) -> Dict[str, Any]:
+    def fetch_rss_feed(self, feed_url: str, max_entries: Optional[int] = 10, fetch_webpage_content: bool = True) -> Dict[str, Any]:
         """
         Fetch and parse an RSS feed from a URL.
         
         Args:
             feed_url: URL of the RSS feed
-            max_entries: Maximum number of entries to return (None for all)
+            max_entries: Maximum number of entries to return (default: 10, None for all)
             fetch_webpage_content: Whether to fetch and extract content from article webpages (default: True)
             
         Returns:
@@ -283,7 +283,7 @@ class RSSFetchTool(Tool):
     """Tool for fetching and parsing RSS feeds."""
     
     name: str = "rss_fetch"
-    description: str = "Fetch and parse RSS feeds from URLs to get latest articles and updates"
+    description: str = "Fetch and parse RSS feeds from URLs to get latest articles and updates. Use reasonable limits (10-20 entries) unless you specifically need more for comprehensive analysis."
     inputs: Dict[str, Dict[str, str]] = {
         "feed_url": {
             "type": "string",
@@ -291,11 +291,11 @@ class RSSFetchTool(Tool):
         },
         "max_entries": {
             "type": "integer",
-            "description": "Maximum number of entries to return (default: all entries)"
+            "description": "Maximum number of entries to return. Recommended: 10-20 for most use cases, higher only if comprehensive analysis is needed (default: 10)"
         },
         "fetch_webpage_content": {
             "type": "boolean",
-            "description": "Whether to fetch and extract content from article webpages (default: true)"
+            "description": "Whether to fetch and extract content from article webpages. Note: This significantly increases processing time (default: true)"
         }
     }
     required: Optional[List[str]] = ["feed_url"]
@@ -304,13 +304,13 @@ class RSSFetchTool(Tool):
         super().__init__()
         self.rss_base = rss_base or RSSBase()
     
-    def __call__(self, feed_url: str, max_entries: int = None, fetch_webpage_content: bool = True) -> Dict[str, Any]:
+    def __call__(self, feed_url: str, max_entries: int = 10, fetch_webpage_content: bool = True) -> Dict[str, Any]:
         """
         Fetch and parse an RSS feed.
         
         Args:
             feed_url: URL of the RSS feed
-            max_entries: Maximum number of entries to return
+            max_entries: Maximum number of entries to return (default: 10)
             fetch_webpage_content: Whether to fetch and extract content from article webpages
             
         Returns:
@@ -347,13 +347,6 @@ class RSSValidateTool(Tool):
             Dictionary with validation results
         """
         return self.rss_base.validate_rss_url(url)
-
-
-
-
-
-
-
 
 class RSSToolkit(Toolkit):
     """Toolkit for RSS feed operations."""

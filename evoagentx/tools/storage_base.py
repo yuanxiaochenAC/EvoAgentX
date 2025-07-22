@@ -41,12 +41,12 @@ class StorageBase(BaseModule):
     Designed with scalability in mind for future database integration.
     """
     
-    def __init__(self, base_path: str = "./workplace", **kwargs):
+    def __init__(self, base_path: str = ".", **kwargs):
         """
         Initialize the StorageBase with configuration options.
         
         Args:
-            base_path (str): Base directory for storage operations (default: ./workplace)
+            base_path (str): Base directory for storage operations (default: current directory)
             **kwargs: Additional keyword arguments for parent class initialization
         """
         super().__init__(**kwargs)
