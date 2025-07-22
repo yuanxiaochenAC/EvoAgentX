@@ -163,6 +163,7 @@ class OpenRouterLLM(BaseLLM):
         input_cost_per_token, output_cost_per_token = self._get_cost()
         input_cost = input_tokens * input_cost_per_token
         output_cost = output_tokens * output_cost_per_token
+        
         cost = Cost(input_tokens=input_tokens, output_tokens=output_tokens, input_cost=input_cost, output_cost=output_cost)
         return cost
     
@@ -174,11 +175,12 @@ class OpenRouterLLM(BaseLLM):
         url = self.config.openrouter_model_base
         response = requests.get(url)
         data = response.json()
-        model = data['data']
-        endpoints = model.get('endpoints', [])
-        if endpoints:
-            pricing = endpoints[0].get('pricing', {})
-            input_cost = pricing.get('prompt', 0)
-            output_cost = pricing.get('completion', 0)
-            return input_cost, output_cost
+        
+        for model in data['data']:
+            if model['id'] == self.config.model:
+                pricing = model.get('pricing',{})
+                input_cost = float(pricing.get('prompt', 0))
+                output_cost = float(pricing.get('completion', 0))
+                return input_cost, output_cost
+            
         return 0, 0
