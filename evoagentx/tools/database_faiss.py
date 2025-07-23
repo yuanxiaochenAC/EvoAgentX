@@ -39,6 +39,8 @@ Usage:
 
 import os
 import json
+import asyncio
+import concurrent.futures
 from typing import Dict, Any, List, Optional, Union
 from uuid import uuid4
 from datetime import datetime
@@ -326,6 +328,50 @@ class FaissDatabase(BaseModule):
             List[Document]: List of Document objects created from the file
         """
         try:
+            # Check if we're already in an event loop
+            try:
+                loop = asyncio.get_running_loop()
+                # We're in an event loop, use thread executor to avoid asyncio.run() conflict
+                logger.info(f"Detected running event loop, using thread executor for {file_path}")
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(self._process_file_path_sync, file_path, doc_index, metadata)
+                    return future.result()
+            except RuntimeError:
+                # No event loop running, safe to use asyncio.run() in the RAG engine
+                logger.info(f"No event loop detected, using direct processing for {file_path}")
+                return self._process_file_path_sync(file_path, doc_index, metadata)
+                
+        except Exception as e:
+            logger.error(f"Failed to process file {file_path}: {str(e)}")
+            # Return a single document with error information
+            doc_metadata = metadata.copy() if metadata else {}
+            doc_metadata.update({
+                "doc_index": doc_index,
+                "insertion_time": datetime.now().isoformat(),
+                "source_file": file_path,
+                "error": str(e)
+            })
+            
+            document_metadata = DocumentMetadata(**doc_metadata)
+            return [Document(
+                text=f"Error reading file {file_path}: {str(e)}",
+                metadata=document_metadata,
+                doc_id=str(uuid4())
+            )]
+
+    def _process_file_path_sync(self, file_path: str, doc_index: int, metadata: Optional[Dict[str, Any]] = None) -> List[Document]:
+        """
+        Synchronous version of file processing that can be safely called from a thread.
+        
+        Args:
+            file_path (str): Path to the file
+            doc_index (int): Index of the document in the batch
+            metadata (Dict[str, Any], optional): Additional metadata
+            
+        Returns:
+            List[Document]: List of Document objects created from the file
+        """
+        try:
             # Use RAG engine's read method to process the file
             temp_corpus_id = f"temp_file_{uuid4().hex[:8]}"
             corpus = self.rag_engine.read(
@@ -361,7 +407,7 @@ class FaissDatabase(BaseModule):
             return documents
             
         except Exception as e:
-            logger.error(f"Failed to process file {file_path}: {str(e)}")
+            logger.error(f"Failed to process file {file_path} in sync mode: {str(e)}")
             # Return a single document with error information
             doc_metadata = metadata.copy() if metadata else {}
             doc_metadata.update({
