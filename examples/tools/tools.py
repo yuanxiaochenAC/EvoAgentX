@@ -36,6 +36,7 @@ from evoagentx.tools import (
     WikipediaSearchToolkit,
     GoogleSearchToolkit,
     GoogleFreeSearchToolkit,
+    DDGSSearchToolkit,
     MCPToolkit,
     FileToolkit,
     BrowserToolkit,
@@ -242,11 +243,13 @@ def run_search_examples():
     wiki_toolkit = WikipediaSearchToolkit(max_summary_sentences=3)
     google_toolkit = GoogleSearchToolkit(num_search_pages=3, max_content_words=200)
     google_free_toolkit = GoogleFreeSearchToolkit()
+    ddgs_toolkit = DDGSSearchToolkit(num_search_pages=3, max_content_words=200, backend="auto", region="us-en")
     
     # Get the individual tools from toolkits
     wiki_tool = wiki_toolkit.get_tool("wikipedia_search")
     google_tool = google_toolkit.get_tool("google_search")
     google_free_tool = google_free_toolkit.get_tool("google_free_search")
+    ddgs_tool = ddgs_toolkit.get_tool("ddgs_search")
     
     # Example search query
     query = "artificial intelligence agent architecture"
@@ -299,6 +302,23 @@ def run_search_examples():
                 print("-" * 30)
     except Exception as e:
         print(f"Error running free Google search: {str(e)}")
+    
+    # Run DDGS search example
+    try:
+        print("\nDDGS Search Example:")
+        print("-" * 50)
+        ddgs_results = ddgs_tool(query=query, num_search_pages=2, backend="duckduckgo")
+        
+        if ddgs_results.get("error"):
+            print(f"Error: {ddgs_results['error']}")
+        else:
+            for i, result in enumerate(ddgs_results.get("results", [])):
+                print(f"Result {i+1}: {result['title']}")
+                print(f"Result full: \n{result}")
+                print(f"URL: {result['url']}")
+                print("-" * 30)
+    except Exception as e:
+        print(f"Error running DDGS search: {str(e)}")
 
 
 def run_python_interpreter_examples():
@@ -1237,8 +1257,8 @@ def main():
     # # Run Docker interpreter examples
     # run_docker_interpreter_examples()
     
-    # # Run search tools examples
-    # run_search_examples()
+    # Run search tools examples
+    run_search_examples()
     
     # # Run arXiv tool example
     # run_arxiv_tool_example()
@@ -1246,17 +1266,17 @@ def main():
     # # Run BrowserUse tool example
     # run_browser_use_tool_example()
     
-    # Run FAISS tool example
-    run_faiss_tool_example()
+    # # Run FAISS tool example
+    # run_faiss_tool_example()
     
-    # Run PostgreSQL tool example
-    run_postgresql_tool_example()
+    # # Run PostgreSQL tool example
+    # run_postgresql_tool_example()
     
-    # Run MongoDB tool example
-    run_mongodb_tool_example()
+    # # Run MongoDB tool example
+    # run_mongodb_tool_example()
     
-    # Run RSS tool example
-    run_rss_tool_example()
+    # # Run RSS tool example
+    # run_rss_tool_example()
     
     print("\n===== ALL EXAMPLES COMPLETED =====")
 
