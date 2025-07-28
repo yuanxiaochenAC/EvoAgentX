@@ -14,12 +14,16 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")    
 
 def default_llm_config():
-    llm_config = OpenAILLMConfig(
-        model="gpt-4o", 
-        openai_key=OPENAI_API_KEY, 
-        stream=True, 
-        output_response=True
-    )
+    try:
+        llm_config = OpenAILLMConfig(
+            model="gpt-4o", 
+            openai_key=OPENAI_API_KEY, 
+            stream=True, 
+            output_response=True
+        )
+    except Exception as e:
+        # online pytest mode
+        return None
     return OpenAILLM(llm_config)
 
 class WorkFlowEditorReturn(BaseModel):
@@ -53,7 +57,7 @@ class WorkFlowEditor(BaseModule):
         max_retries (int): The maximum number of retries to edit the workflow json file.
     """
     save_dir: str
-    llm: Optional[BaseLLM] = Field(default=default_llm_config())
+    llm: Optional[BaseLLM|None] = Field(default=default_llm_config())
     max_retries: Optional[int] = Field(default=3)
 
     def init_module(self):
