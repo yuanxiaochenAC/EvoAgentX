@@ -212,3 +212,31 @@ class GraphIndexing(BaseIndexWrapper):
         except Exception as e:
             logger.error(f"Failed to clear index: {str(e)}")
             raise
+
+    async def _get(self, node_id: str) -> Optional[Chunk]:
+        """Get a node by node_id from cache or vector store."""
+        try:
+            # Check cache first
+            
+            node = self.storage_handler.graph_store.get(ids=[node_id])
+            if node:
+                if isinstance(node, Chunk):
+                    return node.model_copy()
+                return Chunk.from_llama_node(node)
+
+            logger.warning(f"Node with ID {node_id} not found in cache or vector store")
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get node {node_id}: {str(e)}")
+            return None
+
+    async def get(self, node_ids: Sequence[str]) -> List[Chunk]:
+        """Get nodes by node_ids from cache or vector store."""
+        try:
+            nodes = await asyncio.gather(*[self._get(node) for node in node_ids])
+            nodes = [node for node in nodes if node is not None]
+            logger.info(f"Retrieved {len(nodes)} nodes for node_ids: {node_ids}")
+            return nodes
+        except Exception as e:
+            logger.error(f"Failed to get nodes: {str(e)}")
+            return []

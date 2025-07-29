@@ -65,13 +65,7 @@ class VectorIndexing(BaseIndexWrapper):
 
         """
         try:
-            filtered_nodes = []
-            # only add the unique node
-            for node in nodes:
-                converted = node.to_llama_node() if isinstance(node, Chunk) else node
-                if converted.id_ in self.id_to_node:
-                    continue
-                filtered_nodes.extend([converted])
+            filtered_nodes = [node.to_llama_node() if isinstance(node, Chunk) else node for node in nodes]
 
             # TODO: find a better way to manage the node
             # Caching the node 
@@ -102,7 +96,9 @@ class VectorIndexing(BaseIndexWrapper):
             if node_ids:
                 for node_id in node_ids:
                     if node_id in self.id_to_node:
-                        self.index.delete_nodes([node_id], delete_from_docstore=True)
+                        self.index.delete_nodes([node_id], delete_from_docstore=False)
+                        if self.index.storage_context.docstore._kvstore._collections_mappings.get(node_id, None) is not None:
+                            self.index.storage_context.docstore._kvstore._collections_mappings.pop(node_id)
                         self.id_to_node.pop(node_id)
                         logger.info(f"Deleted node {node_id} from VectorStoreIndex")
 
@@ -182,3 +178,30 @@ class VectorIndexing(BaseIndexWrapper):
         except Exception as e:
             logger.error(f"Failed to clear index: {str(e)}")
             raise
+
+    async def _get(self, node_id: str) -> Optional[Chunk]:
+        """Get a node by node_id from cache or vector store."""
+        try:
+            # Check cache first
+            node = self.id_to_node.get(node_id, None)
+            if node:
+                if isinstance(node, Chunk):
+                    return node.model_copy()
+                return Chunk.from_llama_node(node)
+
+            logger.warning(f"Node with ID {node_id} not found in cache or vector store")
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get node {node_id}: {str(e)}")
+            return None
+
+    async def get(self, node_ids: Sequence[str]) -> List[Chunk]:
+        """Get nodes by node_ids from cache or vector store."""
+        try:
+            nodes = await asyncio.gather(*[self._get(node) for node in node_ids])
+            nodes = [node for node in nodes if node is not None]
+            logger.info(f"Retrieved {len(nodes)} nodes for node_ids: {node_ids}")
+            return nodes
+        except Exception as e:
+            logger.error(f"Failed to get nodes: {str(e)}")
+            return []

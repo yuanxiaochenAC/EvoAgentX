@@ -530,6 +530,16 @@ class RAGEngine:
             logger.error(f"Failed to load index for corpus {corpus_id}, index_type {index_type}: {str(e)}")
             raise
 
+    async def aget(self, corpus_id: str, index_type: str, node_ids: List[str]) -> List[Chunk]:
+        """Retrieve chunks by node_ids from the index."""
+        try:
+            chunks = await self.indices[corpus_id][index_type].get(node_ids=node_ids)
+            logger.info(f"Retrieved {len(chunks)} chunks for node_ids: {node_ids}")
+            return chunks
+        except Exception as e:
+            logger.error(f"Failed to get chunks: {str(e)}")
+            return []
+
     async def query_async(self, query: Union[str, Query], corpus_id: Optional[str] = None,
                         query_transforms: Optional[List] = None) -> RagResult:
         """Execute a query across indices and return processed results asynchronously.
