@@ -1,8 +1,7 @@
 import asyncio
-import inspect
 import json
 from pydantic import create_model, Field
-from typing import Optional, Callable, Type, List, Any, Union, Dict
+from typing import Optional, Callable, Type, List, Any
 
 from .agent import Agent
 from ..core.logging import logger
