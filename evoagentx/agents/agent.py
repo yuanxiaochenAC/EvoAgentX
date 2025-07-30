@@ -284,12 +284,14 @@ class Agent(BaseModule):
         """
         Initialize the language model for the agent.
         """
-        assert self.llm_config or self.llm, "must provide either 'llm_config' or 'llm' when is_human=False"
-        if self.llm_config and not self.llm:
-            llm_cls = MODEL_REGISTRY.get_model(self.llm_config.llm_type)
-            self.llm = llm_cls(config=self.llm_config)
-        if self.llm:
-            self.llm_config = self.llm.config
+        # Only initialize LLM if not human and LLM is provided
+        if not self.is_human and (self.llm_config or self.llm):
+            if self.llm_config and not self.llm:
+                llm_cls = MODEL_REGISTRY.get_model(self.llm_config.llm_type)
+                self.llm = llm_cls(config=self.llm_config)
+            if self.llm:
+                self.llm_config = self.llm.config
+        # If is_human=True or no LLM provided, self.llm remains None
 
     def init_long_term_memory(self):
         """
@@ -375,6 +377,10 @@ class Agent(BaseModule):
         Returns:
             Dictionary of extracted input data, or None if extraction fails
         """
+        # If no LLM available, return None (no context extraction possible)
+        if self.llm is None:
+            return None
+        
         # return the input data of an action.
         context = self.short_term_memory.get(n=self.n)
         cext_action = self.get_action(self.cext_action_name)
@@ -510,9 +516,9 @@ class Agent(BaseModule):
         Returns:
             Agent: The loaded agent instance
         """
-        assert llm_config is not None, "must provide `llm_config` when using `load_module` or `from_file` to load the agent from local storage"
         agent = super().load_module(path=path, **kwargs)
-        agent["llm_config"] = llm_config.to_dict()
+        if llm_config is not None:
+            agent["llm_config"] = llm_config.to_dict()
         return agent 
     
     def get_config(self) -> dict:

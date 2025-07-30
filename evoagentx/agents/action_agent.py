@@ -4,15 +4,16 @@ import json
 from pydantic import create_model, Field
 from typing import Optional, Callable, Type, List, Any, Union, Dict
 
-from .customize_agent import CustomizeAgent
+from .agent import Agent
 from ..core.logging import logger
 from ..core.registry import MODULE_REGISTRY, ACTION_FUNCTION_REGISTRY
 from ..models.model_configs import LLMConfig 
 from ..actions.action import Action, ActionOutput, ActionInput
 from ..utils.utils import generate_dynamic_class_name, make_parent_folder
+from ..core.message import Message, MessageType
 
 
-class ActionAgent(CustomizeAgent):
+class ActionAgent(Agent):
     """
     ActionAgent is a specialized agent that executes a provided function directly without LLM.
     It creates an action that uses the provided function as the execution backbone.
@@ -55,40 +56,41 @@ class ActionAgent(CustomizeAgent):
         if async_execute_func is not None and not callable(async_execute_func):
             raise ValueError("async_execute_func must be callable")
         
-        # Store function references temporarily
-        self._temp_execute_func = execute_func
-        self._temp_async_execute_func = async_execute_func
-        if llm_config is None:
-            is_human = True
-        else:
-            is_human = False
+        # Validate inputs and outputs
+        self._validate_inputs_outputs(inputs, outputs)
         
-        # Initialize parent with minimal configuration
+        # Set is_human based on LLM availability
+        is_human = llm_config is None
+        
+        # Initialize parent directly
         super().__init__(
             name=name,
             description=description,
             llm_config=llm_config,
-            inputs=inputs,
-            outputs=outputs,
             is_human=is_human,
             **kwargs
         )
         
-        # Now that parent is initialized, set the actual attributes
+        # Store function references and metadata
         self.execute_func = execute_func
         self.async_execute_func = async_execute_func
         self.inputs = inputs
         self.outputs = outputs
-    
-    def validate_data(self, prompt: str, prompt_template, inputs: List[dict], outputs: List[dict], output_parser, parse_mode: str, parse_func: Callable, title_format: str):
-        """Override to bypass prompt requirement for ActionAgent and validate inputs/outputs."""
-        # For ActionAgent, we don't need prompts, so we skip the parent validation
-        # We only validate our own requirements
-        if not inputs:
-            raise ValueError("`inputs` is required when creating an ActionAgent.")
         
-        if not outputs:
-            raise ValueError("`outputs` is required when creating an ActionAgent.")
+        # Create and add the function-based action
+        action = self._create_function_action_with_params(
+            name, execute_func, async_execute_func, inputs, outputs
+        )
+        self.add_action(action)
+    
+    def _validate_inputs_outputs(self, inputs: List[dict], outputs: List[dict]):
+        """Validate the structure of inputs and outputs."""
+        # Allow empty inputs for functions that don't require any inputs
+        if inputs is None:
+            inputs = []
+        
+        if outputs is None:
+            outputs = []
         
         # Validate inputs structure
         for i, input_field in enumerate(inputs):
@@ -137,37 +139,6 @@ class ActionAgent(CustomizeAgent):
             output_names = [field["name"] for field in outputs]
             if len(output_names) != len(set(output_names)):
                 raise ValueError(f"Duplicate output names found: {[name for name in output_names if output_names.count(name) > 1]}")
-    
-    def create_customize_action(
-        self, 
-        name: str, 
-        desc: str, 
-        prompt: str, 
-        prompt_template, 
-        inputs: List[dict], 
-        outputs: List[dict], 
-        parse_mode: str, 
-        parse_func: Optional[Callable] = None,
-        output_parser: Optional[ActionOutput] = None,
-        title_format: Optional[str] = "## {title}",
-        custom_output_format: Optional[str] = None,
-        tools: Optional[List] = None,
-        max_tool_calls: Optional[int] = 5
-    ) -> Action:
-        """Override to create function-based action instead of LLM-based action."""
-        # Use temporary attributes if they exist, otherwise use stored attributes
-        if hasattr(self, '_temp_execute_func'):
-            execute_func = self._temp_execute_func
-            async_execute_func = self._temp_async_execute_func
-            inputs = inputs
-            outputs = outputs
-        else:
-            execute_func = self.execute_func
-            async_execute_func = self.async_execute_func
-            inputs = inputs
-            outputs = outputs
-        
-        return self._create_function_action_with_params(name, execute_func, async_execute_func, inputs, outputs)
     
     def _create_function_action_input_type(self, name: str, inputs: List[dict]) -> Type[ActionInput]:
         """Create ActionInput type from input specifications."""
@@ -221,13 +192,16 @@ class ActionAgent(CustomizeAgent):
                 raise ValueError(f"Missing required inputs: {missing_inputs}")
             
             # Validate input types (basic validation)
+            filtered_inputs = {}
             for input_name, input_value in inputs.items():
-                if input_name not in [field["name"] for field in self.inputs]:
+                if input_name in [field["name"] for field in self.inputs]:
+                    filtered_inputs[input_name] = input_value
+                else:
                     logger.warning(f"Unexpected input '{input_name}' provided")
             
             # Execute function
             try:
-                result = execute_func(**inputs)
+                result = execute_func(**filtered_inputs)
             except Exception as e:
                 # Create error output - try to use error field if it exists, otherwise use first available field
                 try:
@@ -252,19 +226,18 @@ class ActionAgent(CustomizeAgent):
             
             # Create success output using the parse method
             if isinstance(result, dict):
-                # For dict results, use JSON parsing
-                import json
-                content = json.dumps(result, indent=2)
-                parse_mode = "json"
+                # For dict results, create output directly
+                output = action_self.outputs_format(**result)
             else:
-                # For simple values, use string parsing
-                content = str(result)
-                parse_mode = "str"
+                # For simple values, create output with the first field
+                output_fields = action_self.outputs_format.get_attrs()
+                if len(output_fields) > 0:
+                    first_field = output_fields[0]
+                    output = action_self.outputs_format(**{first_field: result})
+                else:
+                    # Fallback to creating empty output
+                    output = action_self.outputs_format()
             
-            output = action_self.outputs_format.parse(
-                content=content,
-                parse_mode=parse_mode
-            )
             return output, "Function execution"
         
         return execute_method
@@ -283,18 +256,21 @@ class ActionAgent(CustomizeAgent):
                 raise ValueError(f"Missing required inputs: {missing_inputs}")
             
             # Validate input types (basic validation)
+            filtered_inputs = {}
             for input_name, input_value in inputs.items():
-                if input_name not in [field["name"] for field in self.inputs]:
+                if input_name in [field["name"] for field in self.inputs]:
+                    filtered_inputs[input_name] = input_value
+                else:
                     logger.warning(f"Unexpected input '{input_name}' provided")
             
             # Execute async function
             try:
                 if async_execute_func is not None:
-                    result = await async_execute_func(**inputs)
+                    result = await async_execute_func(**filtered_inputs)
                 else:
                     # Use sync function in async context
                     loop = asyncio.get_event_loop()
-                    result = await loop.run_in_executor(None, lambda: execute_func(**inputs))
+                    result = await loop.run_in_executor(None, lambda: execute_func(**filtered_inputs))
             except Exception as e:
                 # Create error output - try to use error field if it exists, otherwise use first available field
                 try:
@@ -319,19 +295,18 @@ class ActionAgent(CustomizeAgent):
             
             # Create success output using the parse method
             if isinstance(result, dict):
-                # For dict results, use JSON parsing
-                import json
-                content = json.dumps(result, indent=2)
-                parse_mode = "json"
+                # For dict results, create output directly
+                output = action_self.outputs_format(**result)
             else:
-                # For simple values, use string parsing
-                content = str(result)
-                parse_mode = "str"
+                # For simple values, create output with the first field
+                output_fields = action_self.outputs_format.get_attrs()
+                if len(output_fields) > 0:
+                    first_field = output_fields[0]
+                    output = action_self.outputs_format(**{first_field: result})
+                else:
+                    # Fallback to creating empty output
+                    output = action_self.outputs_format()
             
-            output = action_self.outputs_format.parse(
-                content=content,
-                parse_mode=parse_mode
-            )
             return output, "Async function execution"
         
         return async_execute_method
@@ -383,18 +358,13 @@ class ActionAgent(CustomizeAgent):
         )
     
     def get_config(self) -> dict:
-        """Override to include function information and handle None llm_config."""
-        # Get base config but handle None llm_config
-        config = self.get_customize_agent_info()
-        
-        # Handle llm_config safely
-        if self.llm_config is not None:
-            config["llm_config"] = self.llm_config.to_dict()
-        else:
-            config["llm_config"] = None
+        """Get configuration for the ActionAgent."""
+        # Get base config from Agent
+        config = super().get_config()
         
         # Add ActionAgent-specific information
         config.update({
+            "class_name": "ActionAgent",
             "execute_func_name": self.execute_func.__name__ if self.execute_func else None,
             "async_execute_func_name": self.async_execute_func.__name__ if self.async_execute_func else None,
             "inputs": self.inputs,
@@ -441,7 +411,7 @@ class ActionAgent(CustomizeAgent):
         
         Args:
             path: The path of the file
-            llm_config: The LLMConfig instance
+            llm_config: The LLMConfig instance (optional)
             **kwargs: Additional keyword arguments
             
         Returns:
@@ -485,3 +455,46 @@ class ActionAgent(CustomizeAgent):
         )
         
         return agent
+    
+    def __call__(self, inputs: dict = None, return_msg_type: MessageType = MessageType.UNKNOWN, **kwargs) -> Message:
+        """
+        Call the main function action.
+
+        Args:
+            inputs (dict): The inputs to the function action.
+            return_msg_type (MessageType): The type of message to return.
+            **kwargs (Any): Additional keyword arguments.
+
+        Returns:
+            Message: The output of the function action.
+        """
+        inputs = inputs or {} 
+        return super().__call__(action_name=self.main_action_name, action_input_data=inputs, return_msg_type=return_msg_type, **kwargs)
+    
+    @property
+    def main_action_name(self) -> str:
+        """
+        Get the name of the main function action for this agent.
+        
+        Returns:
+            The name of the main function action
+        """
+        for action in self.actions:
+            if action.name != self.cext_action_name:
+                return action.name
+        raise ValueError("Couldn't find the main action name!")
+    
+    def _get_unique_class_name(self, candidate_name: str) -> str:
+        """
+        Get a unique class name by checking if it already exists in the registry.
+        If it does, append "Vx" to make it unique.
+        """
+        if not MODULE_REGISTRY.has_module(candidate_name):
+            return candidate_name
+        
+        counter = 1
+        while True:
+            new_name = f"{candidate_name}V{counter}"
+            if not MODULE_REGISTRY.has_module(new_name):
+                return new_name
+            counter += 1

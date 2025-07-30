@@ -1,6 +1,8 @@
 import os 
 import asyncio
 import json
+import time
+from typing import Dict, List, Any, Optional, Union
 from dotenv import load_dotenv
 from evoagentx.core import Message 
 from evoagentx.models import OpenAILLMConfig
@@ -13,7 +15,7 @@ model_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, s
 
 
 # ============================================================================
-# REGISTERED FUNCTIONS
+# REGISTERED FUNCTIONS - Key Cases Only
 # ============================================================================
 
 @register_action_function
@@ -34,35 +36,6 @@ def divide_numbers(a: int, b: int) -> float:
     if b == 0:
         raise ValueError("Cannot divide by zero")
     return a / b
-
-
-@register_action_function
-def calculate_area(length: float, width: float) -> dict:
-    """Calculate the area and perimeter of a rectangle."""
-    return {
-        "area": length * width,
-        "perimeter": 2 * (length + width),
-        "shape": "rectangle"
-    }
-
-
-@register_action_function
-def process_text(text: str, operation: str = "uppercase") -> dict:
-    """Process text with various operations."""
-    result = {"original_text": text, "operation": operation}
-    
-    if operation == "uppercase":
-        result["processed_text"] = text.upper()
-    elif operation == "lowercase":
-        result["processed_text"] = text.lower()
-    elif operation == "count_words":
-        result["word_count"] = len(text.split())
-    elif operation == "reverse":
-        result["processed_text"] = text[::-1]
-    else:
-        raise ValueError(f"Unknown operation: {operation}")
-    
-    return result
 
 
 @register_action_function
@@ -87,8 +60,34 @@ async def fetch_data_async(url: str) -> str:
     return f"Data from {url}"
 
 
+@register_action_function
+def error_prone_function(input_data: Any) -> Dict[str, Any]:
+    """Function that can fail in various ways for testing error handling."""
+    if input_data is None:
+        raise ValueError("Input data cannot be None")
+    
+    if isinstance(input_data, str):
+        if input_data.lower() == "crash":
+            raise RuntimeError("Simulated crash")
+        elif input_data.lower() == "timeout":
+            time.sleep(10)  # Simulate timeout
+    
+    if isinstance(input_data, int):
+        if input_data < 0:
+            raise ValueError("Negative numbers not allowed")
+        if input_data > 1000:
+            raise OverflowError("Number too large")
+    
+    return {
+        "input_type": type(input_data).__name__,
+        "input_value": input_data,
+        "processed": True,
+        "timestamp": time.time()
+    }
+
+
 # ============================================================================
-# EXAMPLE FUNCTIONS
+# KEY EXAMPLE FUNCTIONS
 # ============================================================================
 
 def demo_basic_functionality():
@@ -137,46 +136,9 @@ def demo_async_functionality():
     asyncio.run(run_async_demo())
 
 
-def demo_complex_outputs():
-    """Demonstrate ActionAgent with complex input/output structure."""
-    print("\n3. Complex Outputs:")
-    
-    # Text processing agent
-    text_agent = ActionAgent(
-        name="TextProcessor",
-        description="Processes text with various operations",
-        inputs=[
-            {"name": "text", "type": "str", "description": "Text to process", "required": True},
-            {"name": "operation", "type": "str", "description": "Operation to perform", "required": False}
-        ],
-        outputs=[
-            {"name": "processed_text", "type": "str", "description": "Processed text result", "required": False},
-            {"name": "word_count", "type": "int", "description": "Number of words", "required": False},
-            {"name": "operation", "type": "str", "description": "Operation performed", "required": True},
-            {"name": "original_text", "type": "str", "description": "Original input text", "required": True}
-        ],
-        execute_func=process_text
-    )
-    
-    # Test different operations
-    test_cases = [
-        {"text": "Hello World", "operation": "uppercase"},
-        {"text": "This is a test", "operation": "count_words"},
-        {"text": "Reverse me", "operation": "reverse"}
-    ]
-    
-    for i, test_case in enumerate(test_cases, 1):
-        result = text_agent(inputs=test_case)
-        print(f"   Test {i} ({test_case['operation']}): {result.content.original_text} → ", end="")
-        if hasattr(result.content, 'processed_text'):
-            print(f"'{result.content.processed_text}'")
-        elif hasattr(result.content, 'word_count'):
-            print(f"{result.content.word_count} words")
-
-
 def demo_error_handling():
     """Demonstrate ActionAgent error handling."""
-    print("\n4. Error Handling:")
+    print("\n3. Error Handling:")
     
     divide_agent = ActionAgent(
         name="DivideAgent",
@@ -203,7 +165,7 @@ def demo_error_handling():
 
 def demo_validation():
     """Demonstrate ActionAgent for data validation."""
-    print("\n5. Data Validation:")
+    print("\n4. Data Validation:")
     
     email_agent = ActionAgent(
         name="EmailValidator",
@@ -228,39 +190,9 @@ def demo_validation():
         print(f"   {status} {result.content.email} → {result.content.validation_message}")
 
 
-def demo_geometry_calculations():
-    """Demonstrate ActionAgent for geometric calculations."""
-    print("\n6. Geometry Calculations:")
-    
-    geometry_agent = ActionAgent(
-        name="GeometryCalculator",
-        description="Calculates geometric properties",
-        inputs=[
-            {"name": "length", "type": "float", "description": "Length of rectangle", "required": True},
-            {"name": "width", "type": "float", "description": "Width of rectangle", "required": True}
-        ],
-        outputs=[
-            {"name": "area", "type": "float", "description": "Area of rectangle", "required": True},
-            {"name": "perimeter", "type": "float", "description": "Perimeter of rectangle", "required": True},
-            {"name": "shape", "type": "str", "description": "Type of shape", "required": True}
-        ],
-        execute_func=calculate_area
-    )
-    
-    test_cases = [
-        {"length": 5.0, "width": 3.0},
-        {"length": 2.0, "width": 2.0}  # Square
-    ]
-    
-    for i, test_case in enumerate(test_cases, 1):
-        result = geometry_agent(inputs=test_case)
-        print(f"   Rectangle {i}: {test_case['length']}×{test_case['width']} → "
-              f"Area: {result.content.area}, Perimeter: {result.content.perimeter}")
-
-
 def demo_auto_async_wrapper():
     """Demonstrate ActionAgent with auto-generated async wrapper."""
-    print("\n7. Auto Async Wrapper:")
+    print("\n5. Auto Async Wrapper:")
     
     def multiply_numbers(x: int, y: int) -> int:
         """Multiply two numbers."""
@@ -289,7 +221,7 @@ def demo_auto_async_wrapper():
 
 def demo_save_load_functionality():
     """Demonstrate ActionAgent save/load functionality."""
-    print("\n8. Save/Load Functionality:")
+    print("\n6. Save/Load Functionality:")
     
     # Create and save agent
     math_agent = ActionAgent(
@@ -323,7 +255,7 @@ def demo_save_load_functionality():
 
 def demo_input_validation():
     """Demonstrate ActionAgent input validation."""
-    print("\n9. Input Validation:")
+    print("\n7. Input Validation:")
     
     def add_numbers(a: int, b: int) -> int:
         """Add two numbers together."""
@@ -359,7 +291,7 @@ def demo_input_validation():
 
 def demo_function_registry():
     """Demonstrate ActionAgent function registry functionality."""
-    print("\n10. Function Registry:")
+    print("\n8. Function Registry:")
     
     # Show registered functions
     print("   Registered action functions:")
@@ -375,25 +307,101 @@ def demo_function_registry():
         print(f"   ❌ Failed to retrieve registered function: {e}")
 
 
+def demo_advanced_error_handling():
+    """Demonstrate ActionAgent with advanced error handling scenarios."""
+    print("\n9. Advanced Error Handling:")
+    
+    error_agent = ActionAgent(
+        name="ErrorProneAgent",
+        description="Tests various error scenarios",
+        inputs=[
+            {"name": "input_data", "type": "any", "description": "Input data that may cause errors", "required": True}
+        ],
+        outputs=[
+            {"name": "input_type", "type": "str", "description": "Type of input data", "required": False},
+            {"name": "input_value", "type": "any", "description": "Input value", "required": False},
+            {"name": "processed", "type": "bool", "description": "Whether processing succeeded", "required": False},
+            {"name": "timestamp", "type": "float", "description": "Processing timestamp", "required": False},
+            {"name": "error", "type": "str", "description": "Error message if any", "required": False}
+        ],
+        execute_func=error_prone_function
+    )
+    
+    test_cases = [
+        {"input_data": "normal"},
+        {"input_data": "crash"},
+        {"input_data": None},
+        {"input_data": -5},
+        {"input_data": 2000}
+    ]
+    
+    for i, test_case in enumerate(test_cases, 1):
+        try:
+            result = error_agent(inputs=test_case)
+            if hasattr(result.content, 'error'):
+                print(f"   Test {i} error: {result.content.error}")
+            else:
+                print(f"   Test {i} success: {result.content.input_type} = {result.content.input_value}")
+        except Exception as e:
+            print(f"   Test {i} exception: {e}")
+
+
+def demo_edge_cases():
+    """Demonstrate ActionAgent edge cases."""
+    print("\n10. Edge Cases:")
+    
+    # Test with no inputs
+    no_input_agent = ActionAgent(
+        name="NoInputAgent",
+        description="Agent with no inputs",
+        inputs=[],
+        outputs=[
+            {"name": "message", "type": "str", "description": "Simple message", "required": True}
+        ],
+        execute_func=lambda: "Hello from no-input agent"
+    )
+    
+    result = no_input_agent(inputs={})
+    print(f"   No-input agent: {result.content.message}")
+    
+    # Test with unexpected inputs
+    unexpected_agent = ActionAgent(
+        name="UnexpectedInputAgent",
+        description="Agent that handles unexpected inputs",
+        inputs=[
+            {"name": "a", "type": "int", "description": "First number", "required": True},
+            {"name": "b", "type": "int", "description": "Second number", "required": True}
+        ],
+        outputs=[
+            {"name": "result", "type": "int", "description": "Sum", "required": True}
+        ],
+        execute_func=add_numbers
+    )
+    
+    result = unexpected_agent(inputs={"a": 5, "b": 3, "c": 10, "d": "extra"})
+    print(f"   Unexpected inputs agent: {result.content.result}")
+
+
 # ============================================================================
 # MAIN EXECUTION
 # ============================================================================
 
 if __name__ == "__main__":
-    print("ActionAgent Examples")
+    print("ActionAgent Examples - Key Cases Only")
     print("=" * 50)
     
-    # Run all demonstrations
+    # Run key demonstrations
     demo_basic_functionality()
     demo_async_functionality()
-    demo_complex_outputs()
     demo_error_handling()
     demo_validation()
-    demo_geometry_calculations()
     demo_auto_async_wrapper()
     demo_save_load_functionality()
     demo_input_validation()
     demo_function_registry()
+    demo_advanced_error_handling()
+    demo_edge_cases()
     
     print("\n" + "=" * 50)
-    print("All ActionAgent examples completed!") 
+    print("All ActionAgent examples completed!")
+    print(f"Total registered functions: {len(ACTION_FUNCTION_REGISTRY.functions)}") 
