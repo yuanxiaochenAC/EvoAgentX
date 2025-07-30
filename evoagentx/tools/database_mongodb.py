@@ -82,6 +82,7 @@ class MongoDBDatabase(DatabaseBase):
                  database_name: str = None,
                  local_path: str = None,
                  auto_save: bool = True,
+                 read_only: bool = False,
                  **kwargs):
         """
         Initialize MongoDB database with automatic detection and setup.
@@ -91,6 +92,7 @@ class MongoDBDatabase(DatabaseBase):
             database_name: Name of the database
             local_path: Path for local file-based database
             auto_save: Automatically save changes to local files
+            read_only: If True, only read operations are allowed (no insert, update, delete)
             **kwargs: Additional connection parameters
         """
         # Prepare initialization parameters
@@ -105,6 +107,7 @@ class MongoDBDatabase(DatabaseBase):
         # Now set instance variables after parent initialization
         self.local_path = Path(local_path) if local_path else None
         self.auto_save = auto_save
+        self.read_only = read_only
         self.connection_params = kwargs
         
         # Initialize database-specific attributes
@@ -367,6 +370,15 @@ class MongoDBDatabase(DatabaseBase):
             if not query_type:
                 query_type = self._infer_query_type(query)
             
+            # Check read-only mode for write operations
+            if self.read_only and query_type in [QueryType.INSERT, QueryType.UPDATE, QueryType.DELETE, QueryType.CREATE, QueryType.DROP]:
+                return self.format_error_result(
+                    f"Write operation '{query_type.value}' is not allowed in read-only mode. "
+                    "Only SELECT and AGGREGATE operations are permitted.",
+                    query_type,
+                    execution_time=time.time() - start_time
+                )
+            
             # Execute based on query type
             if query_type == QueryType.SELECT:
                 result = self._execute_find(collection, query, **kwargs)
@@ -400,30 +412,51 @@ class MongoDBDatabase(DatabaseBase):
         if isinstance(query, list):
             return QueryType.AGGREGATE
         elif isinstance(query, dict):
-            if "insert" in query or "insertOne" in query or "insertMany" in query:
-                return QueryType.INSERT
-            elif "update" in query or "updateOne" in query or "updateMany" in query:
-                return QueryType.UPDATE
-            elif "delete" in query or "deleteOne" in query or "deleteMany" in query:
-                return QueryType.DELETE
-            elif "create" in query or "createCollection" in query:
-                return QueryType.CREATE
-            elif "drop" in query or "dropCollection" in query:
-                return QueryType.DROP
+            # In read-only mode, only allow SELECT and AGGREGATE
+            if self.read_only:
+                if "insert" in query or "insertOne" in query or "insertMany" in query:
+                    return QueryType.SELECT  # Treat as find query
+                elif "update" in query or "updateOne" in query or "updateMany" in query:
+                    return QueryType.SELECT  # Treat as find query
+                elif "delete" in query or "deleteOne" in query or "deleteMany" in query:
+                    return QueryType.SELECT  # Treat as find query
+                elif "create" in query or "createCollection" in query:
+                    return QueryType.SELECT  # Treat as find query
+                elif "drop" in query or "dropCollection" in query:
+                    return QueryType.SELECT  # Treat as find query
+                else:
+                    return QueryType.SELECT
             else:
-                return QueryType.SELECT
+                # Full functionality for write mode
+                if "insert" in query or "insertOne" in query or "insertMany" in query:
+                    return QueryType.INSERT
+                elif "update" in query or "updateOne" in query or "updateMany" in query:
+                    return QueryType.UPDATE
+                elif "delete" in query or "deleteOne" in query or "deleteMany" in query:
+                    return QueryType.DELETE
+                elif "create" in query or "createCollection" in query:
+                    return QueryType.CREATE
+                elif "drop" in query or "dropCollection" in query:
+                    return QueryType.DROP
+                else:
+                    return QueryType.SELECT
         elif isinstance(query, str):
             query_lower = query.lower().strip()
-            if query_lower.startswith(("insert", "create")):
-                return QueryType.INSERT
-            elif query_lower.startswith("update"):
-                return QueryType.UPDATE
-            elif query_lower.startswith("delete"):
-                return QueryType.DELETE
-            elif query_lower.startswith("drop"):
-                return QueryType.DROP
-            else:
+            if self.read_only:
+                # In read-only mode, treat all string queries as SELECT
                 return QueryType.SELECT
+            else:
+                # Full functionality for write mode
+                if query_lower.startswith(("insert", "create")):
+                    return QueryType.INSERT
+                elif query_lower.startswith("update"):
+                    return QueryType.UPDATE
+                elif query_lower.startswith("delete"):
+                    return QueryType.DELETE
+                elif query_lower.startswith("drop"):
+                    return QueryType.DROP
+                else:
+                    return QueryType.SELECT
         
         return QueryType.SELECT
     
@@ -737,16 +770,22 @@ class MongoDBDatabase(DatabaseBase):
     
     def get_supported_query_types(self) -> List[QueryType]:
         """Get MongoDB-specific supported query types"""
-        return [
-            QueryType.SELECT,
-            QueryType.INSERT,
-            QueryType.UPDATE,
-            QueryType.DELETE,
-            QueryType.CREATE,
-            QueryType.DROP,
-            QueryType.AGGREGATE,
-            QueryType.INDEX
-        ]
+        if self.read_only:
+            return [
+                QueryType.SELECT,
+                QueryType.AGGREGATE
+            ]
+        else:
+            return [
+                QueryType.SELECT,
+                QueryType.INSERT,
+                QueryType.UPDATE,
+                QueryType.DELETE,
+                QueryType.CREATE,
+                QueryType.DROP,
+                QueryType.AGGREGATE,
+                QueryType.INDEX
+            ]
     
     def get_capabilities(self) -> Dict[str, Any]:
         """Get MongoDB-specific capabilities"""
@@ -759,22 +798,24 @@ class MongoDBDatabase(DatabaseBase):
             "supports_transactions": True,
             "supports_indexing": True,
             "document_oriented": True,
-            "schema_flexible": True
+            "schema_flexible": True,
+            "read_only": self.read_only,
+            "write_operations_allowed": not self.read_only
         })
         return base_capabilities 
 
 
 class MongoDBExecuteQueryTool(Tool):
     name: str = "mongodb_execute_query"
-    description: str = "Execute MongoDB queries including find, insert, update, delete, and aggregation pipelines"
+    description: str = "Execute MongoDB queries including find and aggregation pipelines (read-only operations)"
     inputs: Dict[str, Dict[str, str]] = {
         "query": {
             "type": "string",
-            "description": "MongoDB query (JSON string for find/update/delete, array for aggregation pipeline, or document for insert)"
+            "description": "MongoDB query (JSON string for find, array for aggregation pipeline)"
         },
         "query_type": {
             "type": "string",
-            "description": "Type of query (select, insert, update, delete, aggregate) - auto-detected if not provided"
+            "description": "Type of query (select, aggregate) - auto-detected if not provided"
         },
         "collection_name": {
             "type": "string",
@@ -803,6 +844,8 @@ class MongoDBExecuteQueryTool(Tool):
                     query_type_enum = QueryType(query_type.lower())
                 except ValueError:
                     return {"success": False, "error": f"Invalid query type: {query_type}", "data": None}
+            
+
             
             # Execute the query
             result = self.database.execute_query(
@@ -1102,6 +1145,7 @@ class MongoDBToolkit(Toolkit):
                  database_name: str = None,
                  local_path: str = None,
                  auto_save: bool = True,
+                 read_only: bool = False,
                  **kwargs):
         """
         Initialize the MongoDB toolkit.
@@ -1112,6 +1156,7 @@ class MongoDBToolkit(Toolkit):
             database_name: Name of the database to use
             local_path: Path for local file-based database
             auto_save: Automatically save changes to local files
+            read_only: If True, only read operations are allowed (no insert, update, delete)
             **kwargs: Additional connection parameters
         """
         # Initialize database with automatic detection
@@ -1120,17 +1165,27 @@ class MongoDBToolkit(Toolkit):
             database_name=database_name,
             local_path=local_path,
             auto_save=auto_save,
+            read_only=read_only,
             **kwargs
         )
         
-        # Initialize only the required tools
-        tools = [
-            MongoDBExecuteQueryTool(database=database),
-            MongoDBFindTool(database=database),
-            MongoDBUpdateTool(database=database),
-            MongoDBDeleteTool(database=database),
-            MongoDBInfoTool(database=database)
-        ]
+        # Initialize tools based on read-only mode
+        if read_only:
+            # Only include read-only tools
+            tools = [
+                MongoDBExecuteQueryTool(database=database),
+                MongoDBFindTool(database=database),
+                MongoDBInfoTool(database=database)
+            ]
+        else:
+            # Include all tools for write mode
+            tools = [
+                MongoDBExecuteQueryTool(database=database),
+                MongoDBFindTool(database=database),
+                MongoDBUpdateTool(database=database),
+                MongoDBDeleteTool(database=database),
+                MongoDBInfoTool(database=database)
+            ]
         
         # Initialize parent with tools
         super().__init__(name=name, tools=tools)
@@ -1169,7 +1224,8 @@ class MongoDBToolkit(Toolkit):
             capabilities.update({
                 "is_local_database": self.database.is_local_database,
                 "local_path": str(self.database.local_path) if self.database.local_path else None,
-                "auto_save": self.database.auto_save
+                "auto_save": self.database.auto_save,
+                "read_only": self.database.read_only
             })
             return capabilities
         return {"error": "MongoDB database not initialized"}
@@ -1196,6 +1252,7 @@ class MongoDBToolkit(Toolkit):
             "is_local_database": self.database.is_local_database,
             "local_path": str(self.database.local_path) if self.database.local_path else None,
             "auto_save": self.database.auto_save,
+            "read_only": self.database.read_only,
             "database_name": self.database_name,
             "connection_string": self.connection_string
         } if self.database else {"error": "Database not initialized"}
