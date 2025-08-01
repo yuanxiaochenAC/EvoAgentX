@@ -82,6 +82,9 @@ class ActionAgent(Agent):
         )
         self.add_action(action)
     
+    def init_llm(self):
+        pass
+    
     def _validate_inputs_outputs(self, inputs: List[dict], outputs: List[dict]):
         """Validate the structure of inputs and outputs."""
         # Allow empty inputs for functions that don't require any inputs

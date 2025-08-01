@@ -285,6 +285,8 @@ class Agent(BaseModule):
         Initialize the language model for the agent.
         """
         # Only initialize LLM if not human and LLM is provided
+        if not self.is_human and (not self.llm_config and not self.llm):
+            raise ValueError("must provide `llm_config` or `llm` when `is_human` is False")
         if not self.is_human and (self.llm_config or self.llm):
             if self.llm_config and not self.llm:
                 llm_cls = MODEL_REGISTRY.get_model(self.llm_config.llm_type)
@@ -377,10 +379,6 @@ class Agent(BaseModule):
         Returns:
             Dictionary of extracted input data, or None if extraction fails
         """
-        # If no LLM available, return None (no context extraction possible)
-        if self.llm is None:
-            return None
-        
         # return the input data of an action.
         context = self.short_term_memory.get(n=self.n)
         cext_action = self.get_action(self.cext_action_name)
