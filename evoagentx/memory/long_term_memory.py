@@ -22,13 +22,15 @@ class LongTermMemory(BaseMemory):
     rag_config: RAGConfig = Field(..., description="Configuration for RAG engine")
     rag_engine: RAGEngine = Field(default=None, description="RAG engine for indexing and retrieval")
     memory_table: str = Field(default="memory", description="Database table for storing memories")
-    default_corpus_id: str = Field(default_factory=lambda: str(uuid4()), description="Default corpus ID for memory indexing")
+    default_corpus_id: Optional[str] = Field(default=None, description="Default corpus ID for memory indexing")
 
     def init_module(self):
         """Initialize the RAG engine and memory indices."""
         super().init_module()
         if self.rag_engine is None:
             self.rag_engine = RAGEngine(config=self.rag_config, storage_handler=self.storage_handler)
+        if self.default_corpus_id is None:
+            self.default_corpus_id = str(uuid4())
         logger.info(f"Initialized LongTermMemory with corpus_id {self.default_corpus_id}")
 
     def _create_memory_chunk(self, message: Message, memory_id: str) -> Chunk:
@@ -47,7 +49,6 @@ class LongTermMemory(BaseMemory):
             wf_task_desc=message.wf_task_desc,
             message_id=message.message_id,
             content=json.dumps(message.content),
-            conversation_id=message.conversation_id
         )
         return Chunk(
             chunk_id=memory_id,
@@ -71,7 +72,6 @@ class LongTermMemory(BaseMemory):
             wf_task=chunk.metadata.wf_task,
             wf_task_desc=chunk.metadata.wf_task_desc,
             message_id=chunk.metadata.message_id,
-            conversation_id=chunk.metadata.conversation_id
         )
 
     def add(self, messages: Union[Message, str, List[Union[Message, str]]]) -> List[str]:
@@ -153,7 +153,7 @@ class LongTermMemory(BaseMemory):
             logger.error(f"Failed to get memories: {str(e)}")
             return []
 
-    def delete(self, memory_ids: Union[str, List[str]], delete_from_db: bool = True) -> List[bool]:
+    def delete(self, memory_ids: Union[str, List[str]]) -> List[bool]:
         """Delete memories by memory_ids, returning success status for each."""
         if not isinstance(memory_ids, list):
             memory_ids = [memory_ids]
@@ -164,22 +164,17 @@ class LongTermMemory(BaseMemory):
 
         successes = [False] * len(memory_ids)
         valid_memory_ids = []
-        valid_messages = []
 
         existing_chunks = asyncio.run(self.get(memory_ids, return_chunk=True))
         for idx, (chunk, mid) in enumerate(existing_chunks):
             if chunk:
                 valid_memory_ids.append(mid)
-                valid_messages.append(self._chunk_to_message(chunk))
+                super().remove_message(self._chunk_to_message(chunk))
                 successes[idx] = True
 
         if not valid_memory_ids:
             logger.info("No memories found for deletion")
             return successes
-
-        # Remove from in-memory messages
-        for msg in valid_messages:
-            super().remove_message(msg)
 
         # Remove from RAG index
         self.rag_engine.delete(
@@ -188,15 +183,9 @@ class LongTermMemory(BaseMemory):
             node_ids=valid_memory_ids
         )
 
-        # Remove from database
-        if delete_from_db:
-            for mid in valid_memory_ids:
-                self.storage_handler.storageDB.delete(mid, store_type="memory", table=self.memory_table)
-            logger.info(f"Deleted {len(valid_memory_ids)} memories from database and RAG index")
-
         return successes
 
-    def update(self, updates: Union[Tuple[str, Union[Message, str]], List[Tuple[str, Union[Message, str]]]], save_to_db: bool = True) -> List[bool]:
+    def update(self, updates: Union[Tuple[str, Union[Message, str]], List[Tuple[str, Union[Message, str]]]]) -> List[bool]:
         """Update memories with new content, returning success status for each."""
         if not isinstance(updates, list):
             updates = [updates]
@@ -208,7 +197,7 @@ class LongTermMemory(BaseMemory):
             return []
 
         memory_ids = list(updates_dict.keys())
-        existing_memories = asyncio.run(self.get(memory_ids))
+        existing_memories = asyncio.run(self.get(memory_ids, return_chunk=False))
         existing_dict = {mid: msg for msg, mid in existing_memories}
 
         successes = [False] * len(updates)
@@ -241,7 +230,7 @@ class LongTermMemory(BaseMemory):
         return successes
 
     async def search_async(self, query: Union[str, Query], n: Optional[int] = None,
-                          metadata_filters: Optional[Dict] = None) -> List[Tuple[Message, str]]:
+                          metadata_filters: Optional[Dict] = None, return_chunk=False) -> List[Tuple[Message, str]]:
         """Retrieve messages from RAG index asynchronously based on a query, returning messages and memory_ids."""
         if isinstance(query, str):
             query_obj = Query(
@@ -257,7 +246,10 @@ class LongTermMemory(BaseMemory):
 
         try:
             result: RagResult = await self.rag_engine.query_async(query_obj, corpus_id=self.default_corpus_id)
-            messages = [(self._chunk_to_message(chunk), chunk.metadata.memory_id) for chunk in result.corpus.chunks]
+            if return_chunk:
+                return [(chunk, chunk.metadata.memory_id) for chunk in result.corpus.chunks]
+            else:
+                messages = [(self._chunk_to_message(chunk), chunk.metadata.memory_id) for chunk in result.corpus.chunks]
             logger.info(f"Retrieved {len(messages)} memories for query: {query_obj.query_str}")
             return messages[:n] if n else messages
         except Exception as e:

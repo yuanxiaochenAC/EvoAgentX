@@ -65,7 +65,16 @@ class VectorIndexing(BaseIndexWrapper):
 
         """
         try:
-            filtered_nodes = [node.to_llama_node() if isinstance(node, Chunk) else node for node in nodes]
+            filtered_nodes = []
+            for node in nodes:
+                llama_node = node.to_llama_node() if isinstance(node, Chunk) else node 
+                node_id = llama_node.id if hasattr(llama_node, "id") else llama_node.id_
+                if node_id in self.id_to_node:
+                    # Delete the node
+                    self.delete_nodes([node_id])
+                    logger.info(f"Find the same node in vector database: {node_id}. Update it.")
+
+                filtered_nodes.extend([llama_node])
 
             # TODO: find a better way to manage the node
             # Caching the node 

@@ -29,13 +29,9 @@ class MemoryManager(BaseModule):
     llm: Optional[BaseLLM] = Field(default=None, description="LLM for deciding memory operations")
     use_llm_management: bool = Field(default=True, description="Toggle LLM-based memory management")
 
-    def __init__(self, memory: LongTermMemory, llm: Optional[BaseLLM] = None, use_llm_management: bool = True, **kwargs):
-        super().__init__(**kwargs)
-        self.memory = memory
-        self.llm = llm
-        self.use_llm_management = use_llm_management
-        logger.info("Initialized MemoryManager with LongTermMemory")
-
+    def init_module(self):
+        pass
+    
     async def _prompt_llm_for_memory_operation(self, input_data: Dict[str, Any], relevant_data: List[Tuple[Message, str]] = None) -> Dict[str, Any]:
         """Prompt the LLM to decide memory operation (add, update, delete) and return structured JSON."""
         if not self.llm or not self.use_llm_management:
@@ -64,7 +60,6 @@ class MemoryManager(BaseModule):
         action: str,
         user_prompt: Optional[Union[str, Message, Query]] = None,
         data: Optional[Union[Message, str, List[Union[Message, str]], Dict, List[Tuple[str, Union[Message, str]]]]] = None,
-        conversation_id: Optional[str] = None,
         top_k: Optional[int] = None,
         metadata_filters: Optional[Dict] = None
     ) -> Union[List[str], List[Tuple[Message, str]], List[bool], Message, None]:
@@ -75,7 +70,6 @@ class MemoryManager(BaseModule):
             action (str): The memory operation ("add", "search", "get", "update", "delete", "clear", "save", "load", "create_message").
             user_prompt (Optional[Union[str, Message, Query]]): The user prompt or query to process with memory data.
             data (Optional): Input data for the operation (e.g., messages, memory IDs, updates).
-            conversation_id (Optional[str]): ID to tag messages for conversation tracking.
             top_k (Optional[int]): Number of results to retrieve for search operations.
             metadata_filters (Optional[Dict]): Filters for memory retrieval.
 
@@ -96,9 +90,8 @@ class MemoryManager(BaseModule):
                 Message(
                     content=msg if isinstance(msg, str) else msg.content,
                     msg_type=MessageType.REQUEST if isinstance(msg, str) else msg.msg_type,
-                    timestamp=datetime.now().isoformat(),
+                    timestamp=datetime.now().isoformat() if isinstance(msg, str) else msg.timestamp,
                     agent="user" if isinstance(msg, str) else msg.agent,
-                    conversation_id=conversation_id or str(uuid4()),
                     message_id=str(uuid4()) if isinstance(msg, str) or not msg.message_id else msg.message_id
                 ) for msg in data
             ]
@@ -146,7 +139,6 @@ class MemoryManager(BaseModule):
                     msg_type=MessageType.REQUEST if isinstance(msg, str) else msg.msg_type,
                     timestamp=datetime.now().isoformat(),
                     agent="user" if isinstance(msg, str) else msg.agent,
-                    conversation_id=conversation_id or str(uuid4()),
                     message_id=str(uuid4()) if isinstance(msg, str) or not msg.message_id else msg.message_id
                 )) for mid, msg in (data if isinstance(data, list) else [data])
             ]
@@ -210,7 +202,6 @@ class MemoryManager(BaseModule):
                 msg_type=MessageType.REQUEST,
                 timestamp=datetime.now().isoformat(),
                 agent="user",
-                conversation_id=conversation_id or str(uuid4()),
                 memory_ids=memory_ids
             )
 
@@ -237,32 +228,23 @@ class MemoryManager(BaseModule):
             user_prompt = user_prompt.content
 
         # Retrieve conversation history
-        history_filter = {"conversation_id": conversation_id}
+        history_filter = {"corpus_id": conversation_id}
         if metadata_filters:
             history_filter.update(metadata_filters)
         history_results = await self.memory.search_async(
-            query=user_prompt, top_k=top_k or 10, metadata_filters=history_filter
+            query=user_prompt, n=top_k or 10, metadata_filters=history_filter
         )
-        history = "\n".join([f"{'User' if msg.msg_type == MessageType.REQUEST else 'Assistant'}: {msg.content}" for msg, _ in history_results])
-
-        # Retrieve relevant memories (excluding current conversation)
-        memory_results = await self.memory.search_async(
-            query=user_prompt, top_k=top_k, metadata_filters=metadata_filters
-        )
-        context = "\n".join([msg.content for msg, _ in memory_results if msg.conversation_id != conversation_id])
-        memory_ids = [mid for _, mid in memory_results]
+        history = "\n".join([f"{msg.content}" for msg, _ in history_results])
 
         # Combine prompt, history, and context
         combined_content = (
-            f"User Prompt: {user_prompt}\n"
-            f"Conversation History: {history or 'No history available'}\n"
-            f"Relevant Memories: {context or 'No additional context available'}"
+            f"User Prompt: \n{user_prompt}\n"
+            f"Conversation History: \n\n{history or 'No history available'}\n"
         )
         return Message(
             content=combined_content,
             msg_type=MessageType.REQUEST,
             timestamp=datetime.now().isoformat(),
             agent="user",
-            conversation_id=conversation_id,
-            memory_ids=memory_ids
+            memory_ids=user_prompt.message_id if isinstance(user_prompt, Message) else str(uuid4())
         )

@@ -72,7 +72,7 @@ class AddMemories(Action):
             )
             for msg in action_input_data["messages"]
         ]
-        memory_ids = memory.add(messages, save_to_db=False)
+        memory_ids = memory.add(messages)
         output = AddMemoriesOutput(memory_ids=memory_ids)
         if return_prompt:
             prompt = self.prompt.format(messages=[msg.model_dump() for msg in messages])
@@ -119,7 +119,7 @@ class DeleteMemories(Action):
             raise ValueError("LongTermMemory instance required")
         action_input_attrs = self.inputs_format.get_attrs()
         action_input_data = {attr: inputs.get(attr, []) for attr in action_input_attrs}
-        successes = memory.delete(action_input_data["memory_ids"], delete_from_db=True)
+        successes = memory.delete(action_input_data["memory_ids"])
         output = DeleteMemoriesOutput(successes=successes)
         if return_prompt:
             prompt = self.prompt.format(memory_ids=action_input_data["memory_ids"])
@@ -185,7 +185,7 @@ class UpdateMemories(Action):
             )
             for update in action_input_data["updates"]
         ]
-        successes = memory.update(updates, save_to_db=True)
+        successes = memory.update(updates)
         output = UpdateMemoriesOutput(successes=successes)
         if return_prompt:
             prompt = self.prompt.format(updates=[{"memory_id": mid, "message": msg.model_dump()} for mid, msg in updates])
@@ -278,8 +278,8 @@ def main():
 
     embedding=EmbeddingConfig(
             provider="huggingface",
-            model_name=r"debug/weights/bge-small-en-v1.5",
-            device="cuda:0"
+            model_name=r"debug/bge-small-en-v1.5",
+            device="cpu"
     )
 
     rag_config = RAGConfig(
@@ -310,10 +310,7 @@ def main():
     memory = LongTermMemory(
         storage_handler=storage_handler,
         rag_config=rag_config,
-        llm=llm,
-        use_llm_management=False
     )
-    memory.init_module()
 
     # Define the agent
     memory_agent = Agent(
@@ -362,7 +359,6 @@ def main():
     )
     print("\nAdded memories:")
     print(f"Memory IDs: {add_result.content.memory_ids}")
-    import pdb;pdb.set_trace()
 
     # Search memories
     search_result = memory_agent.execute(
@@ -376,12 +372,12 @@ def main():
     )
     print("\nSearch results:")
     for result in search_result.content.results:
-        print(f"- Memory ID: {result['memory_id']}, Message: {result['message']['content']}")
+        print(f"- Memory ID: {result['memory_id']}, Message: {result['message'].content}")
 
     # Update memories
     updates = [
         {
-            "memory_id": add_result.content.memory_ids[0] if add_result.content.memory_ids else "invalid_id",
+            "memory_id": add_result.content.memory_ids[0],
             "content": "Reschedule meeting with Alice to Tuesday",
             "action": "reschedule",
             "wf_goal": "plan_meeting",
@@ -408,6 +404,20 @@ def main():
     )
     print("\nDelete results:")
     print(f"Successes: {delete_result.content.successes}")
+
+    # Verify the delete operation
+    new_search_result = memory_agent.execute(
+        action_name="SearchMemories",
+        action_input_data={
+            "query": "meeting",
+            "top_k": 2,
+            "metadata_filters": {"agent": "user"}
+        },
+        memory=memory
+    )
+    print("\nSearch results:")
+    for result in new_search_result.content.results:
+        print(f"- Memory ID: {result['memory_id']}, Message: {result['message'].content}")
 
 if __name__ == "__main__":
     main()
