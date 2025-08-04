@@ -208,6 +208,33 @@ You can also:
 
 > 📂 For a complete working example, check out the [`workflow_demo.py`](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/workflow_demo.py)
 
+💡 Enhanced Example: Tool-Enabled Workflows:
+
+In more advanced scenarios, your workflow agents may need to use external tools. EvoAgentX allows Automatic tool integration: Provide a list of toolkits to WorkFlowGenerator. The generator will consider these and include them in the agents if appropriate.
+
+For instance, to enable a command-line toolkit for file system operations:
+```python
+python
+from evoagentx.tools import CMDToolkit
+
+# Initialize a command-line toolkit for file operations
+cmd_toolkit = CMDToolkit()
+
+# Generate a workflow with the toolkit available to agents
+wf_generator = WorkFlowGenerator(llm=llm, tools=[cmd_toolkit])
+workflow_graph = wf_generator.generate_workflow(goal="Create a folder structure for a Python project and show the file tree")
+
+# Instantiate agents with access to the toolkit
+agent_manager = AgentManager(tools=[cmd_toolkit])
+agent_manager.add_agents_from_workflow(workflow_graph, llm_config=openai_config)
+
+workflow = WorkFlow(graph=workflow_graph, agent_manager=agent_manager, llm=llm)
+output = workflow.execute()
+print(output)
+```
+
+In this setup, the workflow generator may assign the CMDToolkit to relevant agents, enabling them to execute shell commands as part of the workflow (e.g. creating directories and files)
+
 
 ## Demo Video
 
