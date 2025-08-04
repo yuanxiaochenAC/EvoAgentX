@@ -269,15 +269,22 @@ class HTMLGenerator:
             return ""
     
     def generate_report(self, md_file_path: str, technical_chart_path: str, 
-                       price_volume_chart_path: str) -> str:
+                       price_volume_chart_path: str, professional_analysis_path: str = None) -> str:
         """Generate the complete HTML report with base64 encoded images."""
         
-        # Read and parse markdown content
+        # Read and parse trading report markdown content
         with open(md_file_path, 'r', encoding='utf-8') as f:
             md_content = f.read()
         
         parser = MarkdownParser(md_content)
         metadata = parser.get_metadata()
+        
+        # Read and parse professional analysis if provided
+        professional_parser = None
+        if professional_analysis_path and os.path.exists(professional_analysis_path):
+            with open(professional_analysis_path, 'r', encoding='utf-8') as f:
+                professional_content = f.read()
+            professional_parser = MarkdownParser(professional_content)
         
         # Encode images to base64
         technical_chart_base64 = self.encode_image_to_base64(technical_chart_path)
@@ -288,7 +295,8 @@ class HTMLGenerator:
             parser, 
             metadata, 
             technical_chart_base64, 
-            price_volume_chart_base64
+            price_volume_chart_base64,
+            professional_parser
         )
         
         # Write HTML file
@@ -298,7 +306,8 @@ class HTMLGenerator:
         return str(self.output_path)
     
     def _generate_html_structure(self, parser: MarkdownParser, metadata: Dict[str, str],
-                                 technical_chart_base64: str, price_volume_chart_base64: str) -> str:
+                                 technical_chart_base64: str, price_volume_chart_base64: str,
+                                 professional_parser: MarkdownParser = None) -> str:
         """Generate the complete HTML structure with neomorphism design."""
         
         # Get header
@@ -310,8 +319,13 @@ class HTMLGenerator:
         # Generate dashboard overview
         dashboard_html = self._generate_dashboard_overview(parser.sections, metadata)
         
-        # Generate detailed sections
-        sections_html = self._generate_detailed_sections(parser.sections)
+        # Generate detailed sections (trading report)
+        sections_html = self._generate_detailed_sections(parser.sections, "交易报告")
+        
+        # Generate professional analysis sections if available
+        professional_html = ""
+        if professional_parser:
+            professional_html = self._generate_detailed_sections(professional_parser.sections, "专业分析")
         
         # Get footer
         footer_html = self._generate_footer(metadata)
@@ -334,6 +348,7 @@ class HTMLGenerator:
                 {dashboard_html}
                 {charts_html}
                 {sections_html}
+                {professional_html}
                 {footer_html}
             </div>
             
@@ -736,6 +751,34 @@ class HTMLGenerator:
             box-shadow: 20px 20px 40px #bebebe, -20px -20px 40px #ffffff;
         }
         
+        /* Report Section Headers */
+        .report-section-header {
+            text-align: center;
+            margin: 50px 0 30px 0;
+            padding: 30px;
+            background: #e0e5ec;
+            border-radius: 25px;
+            box-shadow: 20px 20px 60px #bebebe, -20px -20px 60px #ffffff;
+        }
+        
+        .report-section-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 15px;
+        }
+        
+        .report-section-divider {
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            margin: 0 auto;
+            border-radius: 2px;
+        }
+        
         .section-header {
             display: flex;
             align-items: center;
@@ -1037,26 +1080,34 @@ class HTMLGenerator:
         
         return ''.join(charts_html)
     
-    def _generate_detailed_sections(self, sections) -> str:
+    def _generate_detailed_sections(self, sections, section_title: str = "详细分析") -> str:
         """Generate detailed analysis sections with optimized layout."""
         sections_html = []
         
+        # Add section title header
+        sections_html.append(f"""
+            <div class="report-section-header">
+                <h1 class="report-section-title">{section_title}</h1>
+                <div class="report-section-divider"></div>
+            </div>
+        """)
+        
         # Priority order for sections
         section_order = [
-            '1. 交易操作决策',
-            '2. 市场环境分析', 
-            '3. 技术分析',
-            '4. 基本面分析（资讯动向）',
-            '5. 风险评估',
-            '6. 历史表现回顾',
-            '7. 投资建议'
+            '一、交易操作决策',
+            '二、市场环境分析', 
+            '三、技术分析',
+            '四、基本面分析',
+            '五、综合多维度分析',
+            '六、风险评估',
+            '七、投资建议'
         ]
         
         # Generate sections in priority order
         for section_key in section_order:
             if section_key in sections:
                 section_data = sections[section_key]
-                section_name = section_key.split('. ', 1)[1] if '. ' in section_key else section_key
+                section_name = section_key.split('、', 1)[1] if '、' in section_key else section_key
                 section_html = f"""
                     <div class="detail-section">
                         <div class="section-header">
@@ -1073,7 +1124,7 @@ class HTMLGenerator:
         # Add any remaining sections not in the priority list
         for section_key, section_data in sections.items():
             if section_key not in section_order:
-                section_name = section_key.split('. ', 1)[1] if '. ' in section_key else section_key
+                section_name = section_key.split('、', 1)[1] if '、' in section_key else section_key
                 section_html = f"""
                     <div class="detail-section">
                         <div class="section-header">
