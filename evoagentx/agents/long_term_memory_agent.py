@@ -336,7 +336,6 @@ class MemoryAgent(Agent):
 # Test Helper
 async def add_memory_history(memory_agent):
     from datetime import datetime, timedelta
-    conversation_id = "conv_python_123"
     messages = [
         Message(
             content="Python is great for scripting and automation tasks.",
