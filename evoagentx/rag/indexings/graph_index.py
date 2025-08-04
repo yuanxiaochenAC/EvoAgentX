@@ -151,31 +151,7 @@ class GraphIndexing(BaseIndexWrapper):
             nodes (List[Union[Chunk, BaseNode]]): List of nodes to load, either Chunk or BaseNode.
         """
         try:
-            filtered_nodes = [node.to_llama_node() if isinstance(node, Chunk) else node for node in nodes]
-            chunk_ids = []
-
-            tasks = []
-            for node in filtered_nodes:
-                node_id = node.id if hasattr(node, "id") else node.id_
-                if isinstance(node, BaseNode):
-                    node.metadata = {"metadata": json.dumps(node.metadata)}
-
-                # load into vector database
-                if (self.storage_handler.vector_store is not None) and \
-                    (not self.storage_handler.graph_store.supports_vector_queries):
-
-                    tasks.append(
-                        self.storage_handler.vector_store.aload(node)
-                    )
-
-                # load into graph database
-                tasks.extend([self.storage_handler.graph_store.aload(node)])
-                chunk_ids.append(node_id)
-
-            # Async load
-            await asyncio.gather(*tasks, return_exceptions=True)
-            logger.info(f"Loaded {len(filtered_nodes)} nodes into cache and graph store.")
-
+            chunk_ids = self.insert_nodes(nodes)
             return chunk_ids
         except Exception as e:
             logger.error(f"Failed to load nodes: {str(e)}")

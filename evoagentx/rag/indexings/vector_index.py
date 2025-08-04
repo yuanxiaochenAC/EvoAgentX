@@ -142,22 +142,9 @@ class VectorIndexing(BaseIndexWrapper):
             chunk_ids (List[str]): The id of loaded chunk.
         """
         try:
-            filtered_nodes = [node.to_llama_node() if isinstance(node, Chunk) else node for node in nodes]
+            node_ids = self.insert_nodes(nodes)
 
-            tasks = []
-            chunk_ids = []
-            for node in filtered_nodes:
-                node_id = node.id if hasattr(node, "id") else node.id_
-                self.id_to_node[node_id] = node.model_copy()
-
-                chunk_ids.append(node_id)
-                if self.storage_handler.vector_store is not None:
-                    tasks.append(self.storage_handler.vector_store.aload(node))
-
-            # Execute all vector store loading tasks concurrently
-            await asyncio.gather(*tasks, return_exceptions=True)
-            logger.info(f"Loaded {len(filtered_nodes)} nodes into cache and vector store.")
-            return chunk_ids
+            return node_ids
         except Exception as e:
             logger.error(f"Failed to load nodes into VectorStoreIndex: {str(e)}")
             raise
