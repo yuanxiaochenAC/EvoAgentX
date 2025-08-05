@@ -208,13 +208,12 @@ You can also:
 
 > 📂 For a complete working example, check out the [`workflow_demo.py`](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/workflow_demo.py)
 
-💡 Enhanced Example: Tool-Enabled Workflows:
+## Enhanced Example: Tool-Enabled Workflows:
 
 In more advanced scenarios, your workflow agents may need to use external tools. EvoAgentX allows Automatic tool integration: Provide a list of toolkits to WorkFlowGenerator. The generator will consider these and include them in the agents if appropriate.
 
 For instance, to enable a command-line toolkit for file system operations:
 ```python
-python
 from evoagentx.tools import CMDToolkit
 
 # Initialize a command-line toolkit for file operations
