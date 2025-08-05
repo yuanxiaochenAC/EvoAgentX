@@ -55,6 +55,7 @@
   - [API Key Configuration](#api-key-configuration)
   - [Configure and Use the LLM](#configure-and-use-the-llm)
 - [Automatic WorkFlow Generation](#automatic-workflow-generation)
+- [Tool-Enabled Workflows Generation](#Tool-Enabled-Workflows-Generation)
 - [Demo Video](#demo-video)
   - [✨ Final Results](#-final-results)
 - [Evolution Algorithms](#evolution-algorithms)
@@ -208,7 +209,7 @@ You can also:
 
 > 📂 For a complete working example, check out the [`workflow_demo.py`](https://github.com/EvoAgentX/EvoAgentX/blob/main/examples/workflow_demo.py)
 
-## Enhanced Example: Tool-Enabled Workflows:
+## Tool-Enabled Workflows Generation:
 
 In more advanced scenarios, your workflow agents may need to use external tools. EvoAgentX allows Automatic tool integration: Provide a list of toolkits to WorkFlowGenerator. The generator will consider these and include them in the agents if appropriate.
 
