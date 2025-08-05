@@ -269,22 +269,15 @@ class HTMLGenerator:
             return ""
     
     def generate_report(self, md_file_path: str, technical_chart_path: str, 
-                       price_volume_chart_path: str, professional_analysis_path: str = None) -> str:
-        """Generate the complete HTML report with base64 encoded images."""
+                       price_volume_chart_path: str) -> str:
+        """Generate the complete HTML report with base64 encoded images from a single comprehensive report."""
         
-        # Read and parse trading report markdown content
+        # Read and parse comprehensive report markdown content
         with open(md_file_path, 'r', encoding='utf-8') as f:
             md_content = f.read()
         
         parser = MarkdownParser(md_content)
         metadata = parser.get_metadata()
-        
-        # Read and parse professional analysis if provided
-        professional_parser = None
-        if professional_analysis_path and os.path.exists(professional_analysis_path):
-            with open(professional_analysis_path, 'r', encoding='utf-8') as f:
-                professional_content = f.read()
-            professional_parser = MarkdownParser(professional_content)
         
         # Encode images to base64
         technical_chart_base64 = self.encode_image_to_base64(technical_chart_path)
@@ -295,8 +288,7 @@ class HTMLGenerator:
             parser, 
             metadata, 
             technical_chart_base64, 
-            price_volume_chart_base64,
-            professional_parser
+            price_volume_chart_base64
         )
         
         # Write HTML file
@@ -306,9 +298,8 @@ class HTMLGenerator:
         return str(self.output_path)
     
     def _generate_html_structure(self, parser: MarkdownParser, metadata: Dict[str, str],
-                                 technical_chart_base64: str, price_volume_chart_base64: str,
-                                 professional_parser: MarkdownParser = None) -> str:
-        """Generate the complete HTML structure with neomorphism design."""
+                                 technical_chart_base64: str, price_volume_chart_base64: str) -> str:
+        """Generate the complete HTML structure with neomorphism design from a single comprehensive report."""
         
         # Get header
         header_html = self._generate_neomorphism_header(metadata, parser.sections)
@@ -319,13 +310,8 @@ class HTMLGenerator:
         # Generate dashboard overview
         dashboard_html = self._generate_dashboard_overview(parser.sections, metadata)
         
-        # Generate detailed sections (trading report)
-        sections_html = self._generate_detailed_sections(parser.sections, "交易报告")
-        
-        # Generate professional analysis sections if available
-        professional_html = ""
-        if professional_parser:
-            professional_html = self._generate_detailed_sections(professional_parser.sections, "专业分析")
+        # Generate detailed sections (comprehensive report including all sections)
+        sections_html = self._generate_detailed_sections(parser.sections, "综合分析报告")
         
         # Get footer
         footer_html = self._generate_footer(metadata)
@@ -348,7 +334,6 @@ class HTMLGenerator:
                 {dashboard_html}
                 {charts_html}
                 {sections_html}
-                {professional_html}
                 {footer_html}
             </div>
             
@@ -1042,6 +1027,8 @@ class HTMLGenerator:
             return '📊'
         elif '投资' in section_lower or '建议' in section_lower:
             return '💡'
+        elif '专业' in section_lower or '方法论' in section_lower or '决策过程' in section_lower:
+            return '🔬'
         else:
             return '📄'
     
@@ -1100,7 +1087,8 @@ class HTMLGenerator:
             '四、基本面分析',
             '五、综合多维度分析',
             '六、风险评估',
-            '七、投资建议'
+            '七、投资建议',
+            '八、专业分析方法论与决策过程'
         ]
         
         # Generate sections in priority order

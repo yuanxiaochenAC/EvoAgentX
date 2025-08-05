@@ -162,9 +162,8 @@ def execute_workflow(stock_code, data_dir, report_dir, timestamp):
         workflow.init_module()
 
         # Construct the goal string
-        trading_report_file = report_dir / f"trading_report_{stock_code}_{timestamp}.md"
-        professional_analysis_file = report_dir / f"professional_analysis_{stock_code}_{timestamp}.md"
-        past_report = report_dir / f"trading_report_{stock_code}_{timestamp}_previous.md"
+        comprehensive_report_file = report_dir / f"comprehensive_report_{stock_code}_{timestamp}.md"
+        past_report = report_dir / f"comprehensive_report_{stock_code}_{timestamp}_previous.md"
         
         goal = f"""I need a daily trading decision for stock {stock_code}.
 Available funds: {available_funds} RMB
@@ -179,29 +178,23 @@ Please read ALL files in the data folder and generate a comprehensive trading de
 
         output = workflow.execute({"goal": goal})
         
-        # Handle the two outputs from the workflow
+        # Handle the single comprehensive report output from the workflow
         try:
-            # Check if output is a dictionary with both keys
-            if isinstance(output, dict) and 'trading_report' in output and 'professional_analysis' in output:
-                # Save trading report
-                with open(trading_report_file, "w", encoding="utf-8") as f:
-                    f.write(output['trading_report'])
-                print(f"✅ Trading report saved to: {trading_report_file}")
-                
-                # Save professional analysis
-                with open(professional_analysis_file, "w", encoding="utf-8") as f:
-                    f.write(output['professional_analysis'])
-                print(f"✅ Professional analysis saved to: {professional_analysis_file}")
+            # Check if output is a dictionary with comprehensive_report key
+            if isinstance(output, dict) and 'comprehensive_report' in output:
+                # Save comprehensive report
+                with open(comprehensive_report_file, "w", encoding="utf-8") as f:
+                    f.write(output['comprehensive_report'])
+                print(f"✅ Comprehensive report saved to: {comprehensive_report_file}")
                 
             else:
                 # Fallback: treat as single output (backward compatibility)
-                with open(trading_report_file, "w", encoding="utf-8") as f:
+                with open(comprehensive_report_file, "w", encoding="utf-8") as f:
                     f.write(str(output))
-                print(f"✅ Trading report saved to: {trading_report_file}")
-                print(f"⚠️  Professional analysis not available (single output mode)")
+                print(f"✅ Comprehensive report saved to: {comprehensive_report_file}")
                 
         except Exception as e:
-            print(f"Error saving reports: {e}")
+            print(f"Error saving comprehensive report: {e}")
             import traceback
             traceback.print_exc()
             
@@ -212,34 +205,23 @@ Please read ALL files in the data folder and generate a comprehensive trading de
 
 
 def generate_html_report(stock_code, base_dir, report_dir, graphs_dir, timestamp):
-    """Generate HTML report from markdown and charts"""
+    """Generate HTML report from comprehensive markdown and charts"""
     try:
         # Import the HTML generator
         from html_report_generator import HTMLGenerator
         
-        # Define file paths - use trading report as primary, professional analysis as secondary
-        trading_report_file = report_dir / f"trading_report_{stock_code}_{timestamp}.md"
-        professional_analysis_file = report_dir / f"professional_analysis_{stock_code}_{timestamp}.md"
+        # Define file paths - use comprehensive report as primary
+        comprehensive_report_file = report_dir / f"comprehensive_report_{stock_code}_{timestamp}.md"
         html_output = base_dir/ datetime.now().strftime('%Y%m%d') / "html_report" / f"report_{stock_code}_{timestamp}.html"
         
         # Find chart files
         technical_chart = graphs_dir / f"{stock_code}_technical_charts.png"
         price_volume_chart = graphs_dir / f"{stock_code}_candlestick_chart.png"
         
-        # Check if trading report exists (primary file)
-        if not trading_report_file.exists():
-            print(f"❌ Trading report file not found: {trading_report_file}")
+        # Check if comprehensive report exists (primary file)
+        if not comprehensive_report_file.exists():
+            print(f"❌ Comprehensive report file not found: {comprehensive_report_file}")
             return False
-        
-        # Check if professional analysis exists (optional)
-        if professional_analysis_file.exists():
-            print(f"✅ Professional analysis found: {professional_analysis_file}")
-            # For now, we'll use the trading report as the primary content
-            # In the future, we could combine both reports or create separate HTML files
-            md_file = trading_report_file
-        else:
-            print(f"⚠️  Professional analysis not found: {professional_analysis_file}")
-            md_file = trading_report_file
         
         # Check if charts exist
         if not technical_chart.exists():
@@ -250,14 +232,13 @@ def generate_html_report(stock_code, base_dir, report_dir, graphs_dir, timestamp
             print(f"⚠️  Price/volume chart not found: {price_volume_chart}")
             price_volume_chart = ""
         
-        # Generate HTML report with both trading report and professional analysis
+        # Generate HTML report with comprehensive report
         print(f"[4] 生成HTML报告: {html_output}")
         generator = HTMLGenerator(str(html_output))
         output_file = generator.generate_report(
-            str(md_file), 
+            str(comprehensive_report_file), 
             str(technical_chart) if technical_chart else "", 
-            str(price_volume_chart) if price_volume_chart else "",
-            str(professional_analysis_file) if professional_analysis_file.exists() else None
+            str(price_volume_chart) if price_volume_chart else ""
         )
         
         print(f"✅ HTML报告生成成功: {output_file}")
@@ -274,25 +255,18 @@ def generate_html_report(stock_code, base_dir, report_dir, graphs_dir, timestamp
 
 
 def check_reports_exist(stock_code, report_dir, timestamp):
-    """Check if both trading report and professional analysis exist"""
-    trading_report_file = report_dir / f"trading_report_{stock_code}_{timestamp}.md"
-    professional_analysis_file = report_dir / f"professional_analysis_{stock_code}_{timestamp}.md"
+    """Check if comprehensive report exists"""
+    comprehensive_report_file = report_dir / f"comprehensive_report_{stock_code}_{timestamp}.md"
     
-    trading_exists = trading_report_file.exists()
-    professional_exists = professional_analysis_file.exists()
+    comprehensive_exists = comprehensive_report_file.exists()
     
     print(f"📊 报告生成状态:")
-    if trading_exists:
-        print(f"   ✅ 交易报告: {trading_report_file}")
+    if comprehensive_exists:
+        print(f"   ✅ 综合分析报告: {comprehensive_report_file}")
     else:
-        print(f"   ❌ 交易报告: {trading_report_file}")
+        print(f"   ❌ 综合分析报告: {comprehensive_report_file}")
     
-    if professional_exists:
-        print(f"   ✅ 专业分析: {professional_analysis_file}")
-    else:
-        print(f"   ❌ 专业分析: {professional_analysis_file}")
-    
-    return trading_exists, professional_exists
+    return comprehensive_exists
 
 
 def generate_html_from_existing_files(stock_code, timestamp=None):
@@ -315,19 +289,13 @@ def generate_html_from_existing_files(stock_code, timestamp=None):
         print(f"⚠️  图表目录不存在: {graphs_dir}")
         graphs_dir = None
     
-    # Check for both report types
-    trading_report_file = report_dir / f"trading_report_{stock_code}_{timestamp}.md"
-    professional_analysis_file = report_dir / f"professional_analysis_{stock_code}_{timestamp}.md"
+    # Check for comprehensive report
+    comprehensive_report_file = report_dir / f"comprehensive_report_{stock_code}_{timestamp}.md"
     
-    if trading_report_file.exists():
-        print(f"✅ 找到交易报告: {trading_report_file}")
+    if comprehensive_report_file.exists():
+        print(f"✅ 找到综合分析报告: {comprehensive_report_file}")
     else:
-        print(f"❌ 未找到交易报告: {trading_report_file}")
-    
-    if professional_analysis_file.exists():
-        print(f"✅ 找到专业分析: {professional_analysis_file}")
-    else:
-        print(f"⚠️  未找到专业分析: {professional_analysis_file}")
+        print(f"❌ 未找到综合分析报告: {comprehensive_report_file}")
     
     return generate_html_report(stock_code, base_dir, report_dir, graphs_dir, timestamp)
 
@@ -364,14 +332,13 @@ def main():
     
     # === Workflow logic from workflow_invest.py ===
     print(f"[3] 生成报告到: {report_dir}")
-    print(f"   将生成两个文件:")
-    print(f"   - trading_report_{stock_code}_{timestamp}.md (交易报告)")
-    print(f"   - professional_analysis_{stock_code}_{timestamp}.md (专业分析)")
+    print(f"   将生成一个文件:")
+    print(f"   - comprehensive_report_{stock_code}_{timestamp}.md (综合分析报告)")
     # generate_workflow(llm, tools)
     execute_workflow(stock_code, data_dir, report_dir, timestamp)
     
-    # Check if both reports were generated successfully
-    trading_exists, professional_exists = check_reports_exist(stock_code, report_dir, timestamp)
+    # Check if comprehensive report was generated successfully
+    comprehensive_exists = check_reports_exist(stock_code, report_dir, timestamp)
     
     # === Generate HTML report ===
     print(f"\n[4] 生成HTML报告")
@@ -380,15 +347,12 @@ def main():
     if html_success:
         print("\n✅ 全部流程完成！包括HTML报告生成")
         print(f"📁 报告文件位置:")
-        print(f"   - 交易报告: {report_dir}/trading_report_{stock_code}_{timestamp}.md")
-        print(f"   - 专业分析: {report_dir}/professional_analysis_{stock_code}_{timestamp}.md")
+        print(f"   - 综合分析报告: {report_dir}/comprehensive_report_{stock_code}_{timestamp}.md")
         print(f"   - HTML报告: {base_dir}/{timestamp}/html_report/report_{stock_code}_{timestamp}.html")
-        print(f"   - 专业分析HTML: {base_dir}/{timestamp}/html_report/professional_analysis_{stock_code}_{timestamp}.html")
     else:
         print("\n✅ 主要流程完成！(HTML报告生成失败)")
         print(f"📁 报告文件位置:")
-        print(f"   - 交易报告: {report_dir}/trading_report_{stock_code}_{timestamp}.md")
-        print(f"   - 专业分析: {report_dir}/professional_analysis_{stock_code}_{timestamp}.md")
+        print(f"   - 综合分析报告: {report_dir}/comprehensive_report_{stock_code}_{timestamp}.md")
 
 if __name__ == "__main__":
     main()

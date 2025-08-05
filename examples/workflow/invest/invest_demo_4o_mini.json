@@ -375,6 +375,15 @@
                 {
                     "name": "analysis_writer_agent",
                     "description": "This agent copies the trading report and adds comprehensive professional analysis directly into it, creating a single detailed report with both data display and detailed analysis.",
+                    "llm_config": {
+                        "llm_type": "OpenAILLM",
+                        "model": "gpt-4o",
+                        "openai_key": "${OPENAI_API_KEY}",
+                        "temperature": 0.7,
+                        "max_tokens": 16000,
+                        "stream": true,
+                        "output_response": true
+                    },
                     "inputs": [
                         {
                             "name": "trading_report",
