@@ -215,17 +215,17 @@ In more advanced scenarios, your workflow agents may need to use external tools.
 
 For instance, to enable a command-line toolkit for file system operations:
 ```python
-from evoagentx.tools import CMDToolkit
+from evoagentx.tools import ArxivToolkit
 
 # Initialize a command-line toolkit for file operations
-cmd_toolkit = CMDToolkit()
+arxiv_toolkit = ArxivToolkit()
 
 # Generate a workflow with the toolkit available to agents
-wf_generator = WorkFlowGenerator(llm=llm, tools=[cmd_toolkit])
-workflow_graph = wf_generator.generate_workflow(goal="Create a folder structure for a Python project and show the file tree")
+wf_generator = WorkFlowGenerator(llm=llm, tools=[arxiv_toolkit])
+workflow_graph = wf_generator.generate_workflow(goal="Find and summarize the latest research on AI in the field of finance on arXiv")
 
 # Instantiate agents with access to the toolkit
-agent_manager = AgentManager(tools=[cmd_toolkit])
+agent_manager = AgentManager(tools=[arxiv_toolkit])
 agent_manager.add_agents_from_workflow(workflow_graph, llm_config=openai_config)
 
 workflow = WorkFlow(graph=workflow_graph, agent_manager=agent_manager, llm=llm)
