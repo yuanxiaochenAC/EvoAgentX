@@ -242,6 +242,45 @@ class FaissDatabase(BaseModule):
             Dict[str, Any]: Search results with chunks and scores
         """
         try:
+            # Check if we're already in an event loop
+            try:
+                loop = asyncio.get_running_loop()
+                # We're in an event loop, use thread executor to avoid asyncio.run() conflict
+                logger.info(f"Detected running event loop, using thread executor for query")
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(self._query_sync, query, corpus_id, top_k, similarity_threshold, metadata_filters)
+                    return future.result()
+            except RuntimeError:
+                # No event loop running, safe to use asyncio.run() in the RAG engine
+                logger.info(f"No event loop detected, using direct query processing")
+                return self._query_sync(query, corpus_id, top_k, similarity_threshold, metadata_filters)
+                
+        except Exception as e:
+            logger.error(f"Query failed: {str(e)}")
+            return {"success": False, "error": str(e)}
+    
+    def _query_sync(
+        self,
+        query: str,
+        corpus_id: Optional[str] = None,
+        top_k: int = 5,
+        similarity_threshold: float = 0.0,
+        metadata_filters: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Synchronous version of query that can be safely called from a thread.
+        
+        Args:
+            query (str): The query string to search for
+            corpus_id (str, optional): Corpus ID to search in
+            top_k (int): Number of top results to return
+            similarity_threshold (float): Minimum similarity threshold
+            metadata_filters (Dict[str, Any], optional): Metadata filters for search
+            
+        Returns:
+            Dict[str, Any]: Search results with chunks and scores
+        """
+        try:
             corpus_id = corpus_id or self.default_corpus_id
             
             # Check if corpus exists
