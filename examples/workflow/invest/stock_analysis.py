@@ -157,6 +157,15 @@ def execute_workflow(stock_code, data_dir, report_dir, timestamp):
         # Load workflow graph
         workflow_graph: WorkFlowGraph = WorkFlowGraph.from_file(module_save_path)
         agent_manager = AgentManager(tools=tools)
+        
+        # Override any placeholder LLM configs in the workflow with our actual config
+        for node in workflow_graph.nodes:
+            if node.agents:
+                for agent in node.agents:
+                    if isinstance(agent, dict) and "llm_config" in agent:
+                        # Replace any placeholder API keys with our actual config
+                        agent["llm_config"] = llm.config.to_dict()
+        
         agent_manager.add_agents_from_workflow(workflow_graph, llm_config=llm.config)
         workflow = WorkFlow(graph=workflow_graph, agent_manager=agent_manager, llm=llm)
         workflow.init_module()
@@ -176,22 +185,87 @@ Past report folder: {past_report}
 Please read ALL files in the data folder and generate a comprehensive trading decision report in Chinese based on real data. Return the complete content.
 """
 
-        output = workflow.execute({"goal": goal})
+        # Execute the workflow
+        workflow.execute({"goal": goal})
         
-        # Handle the single comprehensive report output from the workflow
+        # Get the raw output from the workflow environment instead of using output extraction
         try:
-            # Check if output is a dictionary with comprehensive_report key
-            if isinstance(output, dict) and 'comprehensive_report' in output:
-                # Save comprehensive report
-                with open(comprehensive_report_file, "w", encoding="utf-8") as f:
-                    f.write(output['comprehensive_report'])
-                print(f"✅ Comprehensive report saved to: {comprehensive_report_file}")
+            # Get the final task's messages from the environment
+            end_tasks = workflow.graph.find_end_nodes()
+            if end_tasks:
+                final_task = end_tasks[0]  # Get the first end task
+                final_messages = workflow.environment.get_task_messages(tasks=final_task, n=1)
                 
+                if final_messages:
+                    # Get the raw content from the final message
+                    raw_output = str(final_messages[0].content)
+                    
+                    # Check if the output is JSON and extract the markdown content
+                    if raw_output.strip().startswith('{'):
+                        try:
+                            import json
+                            json_data = json.loads(raw_output)
+                            if 'comprehensive_report' in json_data:
+                                # Extract the markdown content from JSON
+                                markdown_content = json_data['comprehensive_report']
+                                # Save the clean markdown content
+                                with open(comprehensive_report_file, "w", encoding="utf-8") as f:
+                                    f.write(markdown_content)
+                                print(f"✅ Comprehensive report saved to: {comprehensive_report_file}")
+                            else:
+                                # Fallback: save the raw content
+                                with open(comprehensive_report_file, "w", encoding="utf-8") as f:
+                                    f.write(raw_output)
+                                print(f"✅ Comprehensive report saved to: {comprehensive_report_file}")
+                        except json.JSONDecodeError:
+                            # If JSON parsing fails, save the raw content
+                            with open(comprehensive_report_file, "w", encoding="utf-8") as f:
+                                f.write(raw_output)
+                            print(f"✅ Comprehensive report saved to: {comprehensive_report_file}")
+                    else:
+                        # If it's not JSON, save the raw content directly
+                        with open(comprehensive_report_file, "w", encoding="utf-8") as f:
+                            f.write(raw_output)
+                        print(f"✅ Comprehensive report saved to: {comprehensive_report_file}")
+                    
+                else:
+                    # Fallback: get all messages and use the last one
+                    all_messages = workflow.environment.get()
+                    if all_messages:
+                        raw_output = str(all_messages[-1].content)
+                        
+                        # Check if the output is JSON and extract the markdown content
+                        if raw_output.strip().startswith('{'):
+                            try:
+                                import json
+                                json_data = json.loads(raw_output)
+                                if 'comprehensive_report' in json_data:
+                                    # Extract the markdown content from JSON
+                                    markdown_content = json_data['comprehensive_report']
+                                    # Save the clean markdown content
+                                    with open(comprehensive_report_file, "w", encoding="utf-8") as f:
+                                        f.write(markdown_content)
+                                    print(f"✅ Comprehensive report saved to: {comprehensive_report_file}")
+                                else:
+                                    # Fallback: save the raw content
+                                    with open(comprehensive_report_file, "w", encoding="utf-8") as f:
+                                        f.write(raw_output)
+                                    print(f"✅ Comprehensive report saved to: {comprehensive_report_file}")
+                            except json.JSONDecodeError:
+                                # If JSON parsing fails, save the raw content
+                                with open(comprehensive_report_file, "w", encoding="utf-8") as f:
+                                    f.write(raw_output)
+                                print(f"✅ Comprehensive report saved to: {comprehensive_report_file}")
+                        else:
+                            # If it's not JSON, save the raw content directly
+                            with open(comprehensive_report_file, "w", encoding="utf-8") as f:
+                                f.write(raw_output)
+                            print(f"✅ Comprehensive report saved to: {comprehensive_report_file}")
+                    else:
+                        print("❌ No messages found in workflow environment")
+                        
             else:
-                # Fallback: treat as single output (backward compatibility)
-                with open(comprehensive_report_file, "w", encoding="utf-8") as f:
-                    f.write(str(output))
-                print(f"✅ Comprehensive report saved to: {comprehensive_report_file}")
+                print("❌ No end tasks found in workflow")
                 
         except Exception as e:
             print(f"Error saving comprehensive report: {e}")
