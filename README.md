@@ -213,7 +213,7 @@ You can also:
 
 In more advanced scenarios, your workflow agents may need to use external tools. EvoAgentX allows Automatic tool integration: Provide a list of toolkits to WorkFlowGenerator. The generator will consider these and include them in the agents if appropriate.
 
-For instance, to enable a command-line toolkit for file system operations:
+For instance, to enable an Arxiv toolkit:
 ```python
 from evoagentx.tools import ArxivToolkit
 
