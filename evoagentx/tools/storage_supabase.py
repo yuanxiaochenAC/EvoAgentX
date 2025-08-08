@@ -16,26 +16,26 @@ class SupabaseStorageHandler(StorageBase):
     Provides file operations via Supabase Storage API with environment-based configuration.
     """
     
-    def __init__(self, bucket_name: str = "default", base_path: str = "/", **kwargs):
+    def __init__(self, bucket_name: str = None, base_path: str = "/", **kwargs):
         """
         Initialize Supabase storage handler.
         
         Args:
-            bucket_name: Supabase storage bucket name (default: "default")
+            bucket_name: Supabase storage bucket name (default: from environment or "default")
             base_path: Base path for storage operations (default: "/")
             **kwargs: Additional keyword arguments for parent class initialization
         """
         super().__init__(base_path=base_path, **kwargs)
-        self.bucket_name = bucket_name
         
-        # Get Supabase configuration from environment variables
+        # Get bucket name from environment or use default
+        self.bucket_name = bucket_name or os.getenv("SUPABASE_BUCKET") or "default"
         self.supabase_url = os.getenv("SUPABASE_URL")
-        self.supabase_key = os.getenv("SUPABASE_KEY")  # Changed from SUPABASE_ANON_KEY
+        self.supabase_key = os.getenv("SUPABASE_KEY")
         
         if not self.supabase_url or not self.supabase_key:
             raise ValueError(
                 "Supabase configuration not found in environment variables. "
-                "Please set SUPABASE_URL and SUPABASE_KEY environment variables."
+                "Please set SUPABASE_URL/SUPABASE_KEY environment variables."
             )
         
         # Initialize Supabase client
@@ -67,9 +67,18 @@ class SupabaseStorageHandler(StorageBase):
     def _resolve_path(self, file_path: str) -> str:
         """Resolve file path for remote storage"""
         # For Supabase, we use the base_path as a prefix
-        if not file_path.startswith('/'):
-            return f"{self.base_path}/{file_path}".replace('//', '/')
-        return file_path
+        # Remove any leading slash from file_path
+        clean_file_path = file_path.lstrip('/')
+        
+        # If base_path is just "/", don't add it
+        if self.base_path == "/":
+            return clean_file_path
+        
+        # Otherwise, combine base_path and file_path
+        if not clean_file_path.startswith(self.base_path):
+            return f"{self.base_path}/{clean_file_path}".replace('//', '/')
+        else:
+            return clean_file_path
     
     def _read_raw(self, path: str, **kwargs) -> bytes:
         """Read raw file content from Supabase Storage"""
@@ -214,6 +223,98 @@ class SupabaseStorageHandler(StorageBase):
         except Exception as e:
             logger.error(f"Error creating directory {path} in Supabase: {str(e)}")
             return False
+    
+    def _save_text(self, file_path: str, content: Any, encoding: str = 'utf-8', **kwargs) -> Dict[str, Any]:
+        """Save text content to Supabase Storage"""
+        try:
+            # Convert content to bytes with specified encoding
+            if isinstance(content, str):
+                content_bytes = content.encode(encoding)
+            else:
+                content_bytes = str(content).encode(encoding)
+            
+            # Use the raw write method
+            success = self._write_raw(file_path, content_bytes, **kwargs)
+            
+            if success:
+                return {
+                    "success": True,
+                    "message": f"Text file saved to Supabase: {file_path}",
+                    "file_path": file_path,
+                    "content_length": len(content_bytes)
+                }
+            else:
+                return {"success": False, "error": "Failed to upload to Supabase", "file_path": file_path}
+                
+        except Exception as e:
+            logger.error(f"Error saving text file {file_path} to Supabase: {str(e)}")
+            return {"success": False, "error": str(e), "file_path": file_path}
+    
+    def _read_text(self, file_path: str, encoding: str = 'utf-8', **kwargs) -> Dict[str, Any]:
+        """Read text content from Supabase Storage"""
+        try:
+            # Use the raw read method
+            content_bytes = self._read_raw(file_path, **kwargs)
+            content = content_bytes.decode(encoding)
+            
+            return {
+                "success": True,
+                "content": content,
+                "file_path": file_path,
+                "content_length": len(content)
+            }
+        except Exception as e:
+            logger.error(f"Error reading text file {file_path} from Supabase: {str(e)}")
+            return {"success": False, "error": str(e), "file_path": file_path}
+    
+    def _save_json(self, file_path: str, content: Any, indent: int = 2, **kwargs) -> Dict[str, Any]:
+        """Save JSON content to Supabase Storage"""
+        try:
+            # Convert content to JSON string
+            if isinstance(content, str):
+                # If it's already a string, try to parse it to validate JSON
+                json.loads(content)
+                json_content = content
+            else:
+                json_content = json.dumps(content, indent=indent, ensure_ascii=False)
+            
+            # Convert to bytes
+            content_bytes = json_content.encode('utf-8')
+            
+            # Use the raw write method
+            success = self._write_raw(file_path, content_bytes, **kwargs)
+            
+            if success:
+                return {
+                    "success": True,
+                    "message": f"JSON file saved to Supabase: {file_path}",
+                    "file_path": file_path
+                }
+            else:
+                return {"success": False, "error": "Failed to upload to Supabase", "file_path": file_path}
+                
+        except Exception as e:
+            logger.error(f"Error saving JSON file {file_path} to Supabase: {str(e)}")
+            return {"success": False, "error": str(e), "file_path": file_path}
+    
+    def _read_json(self, file_path: str, **kwargs) -> Dict[str, Any]:
+        """Read JSON content from Supabase Storage"""
+        try:
+            # Use the raw read method
+            content_bytes = self._read_raw(file_path, **kwargs)
+            content_str = content_bytes.decode('utf-8')
+            
+            # Parse JSON
+            content = json.loads(content_str)
+            
+            return {
+                "success": True,
+                "content": content,
+                "file_path": file_path
+            }
+        except Exception as e:
+            logger.error(f"Error reading JSON file {file_path} from Supabase: {str(e)}")
+            return {"success": False, "error": str(e), "file_path": file_path}
     
     def get_file_info(self, file_path: str) -> Dict[str, Any]:
         """Get comprehensive information about a file in Supabase Storage"""
