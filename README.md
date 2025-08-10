@@ -235,8 +235,39 @@ output = workflow.execute()
 print(output)
 ```
 
-In this setup, the workflow generator may assign the CMDToolkit to relevant agents, enabling them to execute shell commands as part of the workflow (e.g. creating directories and files)
+In this setup, the workflow generator may assign the `ArxivToolkit` to relevant agents, enabling them to execute shell commands as part of the workflow (e.g. creating directories and files)
 
+## Human-in-the-Loop (HITL) Support:
+
+In advanced scenarios, EvoAgentX supports integrating human-in-the-loop interactions within your agent workflows. This means you can pause an agent’s execution for manual approval or inject user-provided input at key steps, ensuring critical decisions are vetted by a human when needed.
+
+All human interactions are managed through a central `HITLManager` instance. The HITL module includes specialized agents like `HITLInterceptorAgent` for approval gating and `HITLUserInputCollectorAgent` for collecting user data.
+
+For instance, to require human approval before an email-sending agent executes its action:
+```python
+from evoagentx.hitl import HITLManager, HITLInterceptorAgent, HITLInteractionType, HITLMode
+
+hitl_manager = HITLManager()
+hitl_manager.activate()  # Enable HITL (disabled by default)
+
+# Interceptor agent to approve/reject the DummyEmailSendAction of DataSendingAgent
+interceptor = HITLInterceptorAgent(
+    target_agent_name="DataSendingAgent",
+    target_action_name="DummyEmailSendAction",
+    interaction_type=HITLInteractionType.APPROVE_REJECT,
+    mode=HITLMode.PRE_EXECUTION    # ask before action runs
+)
+# Map the interceptor’s output field back to the workflow’s input field for continuity
+hitl_manager.hitl_input_output_mapping = {"human_verified_data": "extracted_data"}
+
+# Add the interceptor to the AgentManager and include HITL in the workflow execution
+agent_manager.add_agent(interceptor)
+workflow = WorkFlow(graph=workflow_graph, agent_manager=agent_manager, llm=llm, hitl_manager=hitl_manager)
+```
+When this interceptor triggers, the workflow will pause and prompt in the console for `[a]pprove` or `[r]eject` before continuing. If approved, the flow proceeds using the human-verified data; if rejected, the action is skipped or handled accordingly.
+
+> 📂 For a complete working example, check out the [`tutorial
+/hitl.md`](https://github.com/EvoAgentX/EvoAgentX/blob/615b06d29264f47e58a6780bd24f0e73cbf7deee/docs/tutorial/hitl.md)
 
 ## Demo Video
 
