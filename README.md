@@ -429,6 +429,13 @@ Please consider citing our work if you find EvoAgentX helpful:
   journal={arXiv preprint arXiv:2507.03616},
   year={2025}
 }
+@article{fang202survey,
+      title={A Comprehensive Survey of Self-Evolving AI Agents: A New Paradigm Bridging Foundation Models and Lifelong Agentic Systems}, 
+      author={Jinyuan Fang and Yanwen Peng and Xi Zhang and Yingxu Wang and Xinhao Yi and Guibin Zhang and Yi Xu and Bin Wu and Siwei Liu and Zihao Li and Zhaochun Ren and Nikos Aletras and Xi Wang and Han Zhou and Zaiqiao Meng},
+      year={2025},
+      journal={arXiv preprint arXiv:2508.07407},
+      url={https://arxiv.org/abs/2508.07407}, 
+}
 ```
 
 ## 📚 Acknowledgements 
