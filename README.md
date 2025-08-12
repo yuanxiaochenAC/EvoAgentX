@@ -420,7 +420,8 @@ We appreciate your interest in contributing to our open-source initiative. We pr
 
 Please consider citing our work if you find EvoAgentX helpful:
 
-📄 [arXiv:2507.03616](https://arxiv.org/abs/2507.03616)
+📄 [EvoAgentX](https://arxiv.org/abs/2507.03616)
+📄 [Survey Paper](https://arxiv.org/abs/2508.07407)
 
 ```bibtex
 @article{wang2025evoagentx,
