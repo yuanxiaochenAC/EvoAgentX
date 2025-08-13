@@ -3,7 +3,7 @@ import subprocess
 from typing import Dict, Any, List, Optional
 
 from .tool import Tool, Toolkit
-from .storage_base import StorageBase
+from .storage_handler import FileStorageHandler
 from ..core.logging import logger
 
 
@@ -12,7 +12,7 @@ class CMDBase:
     Base class for command execution with permission checking and cross-platform support.
     """
     
-    def __init__(self, default_shell: str = None, storage_handler: StorageBase = None):
+    def __init__(self, default_shell: str = None, storage_handler: FileStorageHandler = None):
         """
         Initialize CMDBase with system detection and shell configuration.
         
@@ -312,7 +312,7 @@ class CMDToolkit(Toolkit):
     and cross-platform support. Supports Linux, macOS, and Windows.
     """
     
-    def __init__(self, name: str = "CMDToolkit", default_shell: str = None, storage_handler: StorageBase = None):
+    def __init__(self, name: str = "CMDToolkit", default_shell: str = None, storage_handler: FileStorageHandler = None):
         """
         Initialize the CMDToolkit with a shared command base instance.
         

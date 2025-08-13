@@ -8,7 +8,7 @@ import traceback
 from typing import List, Set, Optional, Union, Dict
 from .interpreter_base import BaseInterpreter
 from .tool import Tool,Toolkit
-from .storage_base import StorageBase
+from .storage_handler import FileStorageHandler
 from pydantic import Field
 
 # Constants
@@ -26,7 +26,7 @@ class PythonInterpreter(BaseInterpreter):
         project_path:Optional[str] = ".",
         directory_names:Optional[List[str]] = [],
         allowed_imports:Optional[Set[str]] = None,
-        storage_handler: StorageBase = None,
+        storage_handler: FileStorageHandler = None,
         **kwargs
     ):
         """
@@ -429,7 +429,7 @@ class PythonInterpreterToolkit(Toolkit):
         project_path: Optional[str] = ".",
         directory_names: Optional[List[str]] = None,
         allowed_imports: Optional[Set[str]] = None,
-        storage_handler: StorageBase = None,
+        storage_handler: FileStorageHandler = None,
         **kwargs
     ):
         # Initialize storage handler if not provided

@@ -3,7 +3,7 @@ from typing import Dict, Any, Optional, List
 import re
 
 from .tool import Tool, Toolkit
-from .storage_base import StorageBase
+from .storage_handler import FileStorageHandler
 from .request_base import RequestBase
 
 
@@ -221,7 +221,7 @@ class ArxivBase(RequestBase):
             return text
         return ''
     
-    def download_pdf(self, pdf_url: str, save_path: str, storage_handler: StorageBase = None) -> Dict[str, Any]:
+    def download_pdf(self, pdf_url: str, save_path: str, storage_handler: FileStorageHandler = None) -> Dict[str, Any]:
         """
         Download a PDF from arXiv.
         
@@ -339,7 +339,7 @@ class ArxivDownloadTool(Tool):
     }
     required: Optional[List[str]] = ["pdf_url", "save_path"]
     
-    def __init__(self, arxiv_base: ArxivBase = None, storage_handler: StorageBase = None):
+    def __init__(self, arxiv_base: ArxivBase = None, storage_handler: FileStorageHandler = None):
         super().__init__()
         self.arxiv_base = arxiv_base
         self.storage_handler = storage_handler
@@ -359,7 +359,7 @@ class ArxivDownloadTool(Tool):
 
 
 class ArxivToolkit(Toolkit):
-    def __init__(self, name: str = "ArxivToolkit", storage_handler: StorageBase = None):
+    def __init__(self, name: str = "ArxivToolkit", storage_handler: FileStorageHandler = None):
         # Initialize storage handler if not provided
         if storage_handler is None:
             from .storage_file import LocalStorageHandler

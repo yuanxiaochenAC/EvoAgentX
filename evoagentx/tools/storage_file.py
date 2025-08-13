@@ -1,5 +1,5 @@
 from .tool import Tool, Toolkit
-from .storage_base import StorageBase
+from .storage_handler import FileStorageHandler, LocalStorageHandler
 from typing import Dict, Any, List, Optional
 from ..core.logging import logger
 import os
@@ -8,170 +8,6 @@ from pathlib import Path
 from datetime import datetime
 
 
-class LocalStorageHandler(StorageBase):
-    """
-    Local filesystem storage implementation.
-    Provides all file operations for local storage with default working directory.
-    """
-    
-    def __init__(self, base_path: str = ".", **kwargs):
-        """
-        Initialize local storage handler.
-        
-        Args:
-            base_path (str): Base directory for storage operations (default: current directory)
-            **kwargs: Additional keyword arguments for parent class initialization
-        """
-        super().__init__(base_path=base_path, **kwargs)
-    
-    def _initialize_storage(self):
-        """Initialize local storage - create base directory if it doesn't exist"""
-        # Convert base_path to Path for local filesystem operations
-        base_path = Path(self.base_path)
-        # Ensure base directory exists
-        base_path.mkdir(parents=True, exist_ok=True)
-    
-    def _resolve_path(self, file_path: str) -> str:
-        """Resolve file path for local filesystem"""
-        path = Path(file_path)
-        if not path.is_absolute():
-            # If it's a relative path, prepend the base path
-            path = Path(self.base_path) / path
-        return str(path)
-    
-    def _read_raw(self, path: str, **kwargs) -> bytes:
-        """Read raw file content from local filesystem"""
-        try:
-            with open(path, 'rb') as f:
-                return f.read()
-        except Exception as e:
-            logger.error(f"Error reading file {path}: {str(e)}")
-            raise
-    
-    def _write_raw(self, path: str, content: bytes, **kwargs) -> bool:
-        """Write raw file content to local filesystem"""
-        try:
-            # Ensure directory exists
-            Path(path).parent.mkdir(parents=True, exist_ok=True)
-            with open(path, 'wb') as f:
-                f.write(content)
-            return True
-        except Exception as e:
-            logger.error(f"Error writing file {path}: {str(e)}")
-            return False
-    
-    def _delete_raw(self, path: str) -> bool:
-        """Delete file or directory from local filesystem"""
-        try:
-            path_obj = Path(path)
-            if path_obj.is_file():
-                path_obj.unlink()
-            elif path_obj.is_dir():
-                shutil.rmtree(path_obj)
-            else:
-                return False
-            return True
-        except Exception as e:
-            logger.error(f"Error deleting {path}: {str(e)}")
-            return False
-    
-    def _list_raw(self, path: str = None, max_depth: int = 3, include_hidden: bool = False) -> List[Dict[str, Any]]:
-        """List files and directories in local filesystem"""
-        try:
-            if path is None:
-                path = str(self.base_path)
-            
-            path_obj = Path(path)
-            if not path_obj.exists() or not path_obj.is_dir():
-                return []
-            
-            items = []
-            
-            def scan_directory(current_path: Path, current_depth: int):
-                if current_depth > max_depth:
-                    return
-                
-                try:
-                    for item in current_path.iterdir():
-                        # Skip hidden files if not included
-                        if not include_hidden and item.name.startswith('.'):
-                            continue
-                        
-                        try:
-                            stat = item.stat()
-                            item_info = {
-                                "name": item.name,
-                                "path": str(item),
-                                "type": "directory" if item.is_dir() else "file",
-                                "size_bytes": stat.st_size if item.is_file() else 0,
-                                "size_mb": round(stat.st_size / (1024 * 1024), 2) if item.is_file() else 0,
-                                "modified_time": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                                "extension": item.suffix.lower() if item.is_file() else "",
-                                "is_hidden": item.name.startswith('.')
-                            }
-                            
-                            items.append(item_info)
-                            
-                            # Recursively scan subdirectories
-                            if item.is_dir() and current_depth < max_depth:
-                                scan_directory(item, current_depth + 1)
-                                
-                        except (PermissionError, OSError):
-                            # Skip files we can't access
-                            continue
-                            
-                except (PermissionError, OSError) as e:
-                    logger.warning(f"Error scanning directory {current_path}: {str(e)}")
-            
-            scan_directory(path_obj, 0)
-            return items
-            
-        except Exception as e:
-            logger.error(f"Error listing directory {path}: {str(e)}")
-            return []
-    
-    def _exists_raw(self, path: str) -> bool:
-        """Check if path exists in local filesystem"""
-        return Path(path).exists()
-    
-    def _create_directory_raw(self, path: str) -> bool:
-        """Create directory in local filesystem"""
-        try:
-            Path(path).mkdir(parents=True, exist_ok=True)
-            return True
-        except Exception as e:
-            logger.error(f"Error creating directory {path}: {str(e)}")
-            return False
-    
-    def get_file_info(self, file_path: str) -> Dict[str, Any]:
-        """Get comprehensive information about a file"""
-        try:
-            resolved_path = self._resolve_path(file_path)
-            path_obj = Path(resolved_path)
-            
-            if not path_obj.exists():
-                return {"success": False, "error": f"File {file_path} does not exist"}
-            
-            stat = path_obj.stat()
-            return {
-                "success": True,
-                "file_path": resolved_path,
-                "file_name": path_obj.name,
-                "file_extension": path_obj.suffix.lower(),
-                "mime_type": self.get_mime_type(resolved_path),
-                "size_bytes": stat.st_size,
-                "size_mb": round(stat.st_size / (1024 * 1024), 2),
-                "created_time": datetime.fromtimestamp(stat.st_ctime).isoformat(),
-                "modified_time": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                "is_file": path_obj.is_file(),
-                "is_directory": path_obj.is_dir(),
-                "is_readable": os.access(path_obj, os.R_OK),
-                "is_writable": os.access(path_obj, os.W_OK),
-                "exists": True
-            }
-        except Exception as e:
-            logger.error(f"Error getting file info for {file_path}: {str(e)}")
-            return {"success": False, "error": str(e), "file_path": file_path}
 
 
 class SaveTool(Tool):
@@ -205,7 +41,7 @@ class SaveTool(Tool):
     }
     required: Optional[List[str]] = ["file_path", "content"]
 
-    def __init__(self, storage_handler: StorageBase = None):
+    def __init__(self, storage_handler: FileStorageHandler = None):
         super().__init__()
         self.storage_handler = storage_handler or LocalStorageHandler()
 
@@ -298,7 +134,7 @@ class ReadTool(Tool):
     }
     required: Optional[List[str]] = ["file_path"]
 
-    def __init__(self, storage_handler: StorageBase = None):
+    def __init__(self, storage_handler: FileStorageHandler = None):
         super().__init__()
         self.storage_handler = storage_handler or LocalStorageHandler()
 
@@ -354,7 +190,7 @@ class AppendTool(Tool):
     }
     required: Optional[List[str]] = ["file_path", "content"]
 
-    def __init__(self, storage_handler: StorageBase = None):
+    def __init__(self, storage_handler: FileStorageHandler = None):
         super().__init__()
         self.storage_handler = storage_handler or LocalStorageHandler()
 
@@ -430,7 +266,7 @@ class DeleteTool(Tool):
     }
     required: Optional[List[str]] = ["path"]
 
-    def __init__(self, storage_handler: StorageBase = None):
+    def __init__(self, storage_handler: FileStorageHandler = None):
         super().__init__()
         self.storage_handler = storage_handler or LocalStorageHandler()
 
@@ -468,7 +304,7 @@ class MoveTool(Tool):
     }
     required: Optional[List[str]] = ["source", "destination"]
 
-    def __init__(self, storage_handler: StorageBase = None):
+    def __init__(self, storage_handler: FileStorageHandler = None):
         super().__init__()
         self.storage_handler = storage_handler or LocalStorageHandler()
 
@@ -507,7 +343,7 @@ class CopyTool(Tool):
     }
     required: Optional[List[str]] = ["source", "destination"]
 
-    def __init__(self, storage_handler: StorageBase = None):
+    def __init__(self, storage_handler: FileStorageHandler = None):
         super().__init__()
         self.storage_handler = storage_handler or LocalStorageHandler()
 
@@ -542,7 +378,7 @@ class CreateDirectoryTool(Tool):
     }
     required: Optional[List[str]] = ["path"]
 
-    def __init__(self, storage_handler: StorageBase = None):
+    def __init__(self, storage_handler: FileStorageHandler = None):
         super().__init__()
         self.storage_handler = storage_handler or LocalStorageHandler()
 
@@ -584,7 +420,7 @@ class ListFileTool(Tool):
     }
     required: Optional[List[str]] = []
 
-    def __init__(self, storage_handler: StorageBase = None):
+    def __init__(self, storage_handler: FileStorageHandler = None):
         super().__init__()
         self.storage_handler = storage_handler or LocalStorageHandler()
 
@@ -620,7 +456,7 @@ class ExistsTool(Tool):
     }
     required: Optional[List[str]] = ["path"]
 
-    def __init__(self, storage_handler: StorageBase = None):
+    def __init__(self, storage_handler: FileStorageHandler = None):
         super().__init__()
         self.storage_handler = storage_handler or LocalStorageHandler()
 
@@ -653,7 +489,7 @@ class ListSupportedFormatsTool(Tool):
     inputs: Dict[str, Dict[str, str]] = {}
     required: Optional[List[str]] = []
 
-    def __init__(self, storage_handler: StorageBase = None):
+    def __init__(self, storage_handler: FileStorageHandler = None):
         super().__init__()
         self.storage_handler = storage_handler or LocalStorageHandler()
 
@@ -680,7 +516,7 @@ class StorageToolkit(Toolkit):
     creating directories, and listing files with support for various file formats.
     """
     
-    def __init__(self, name: str = "StorageToolkit", base_path: str = "./workplace/storage", storage_handler: StorageBase = None):
+    def __init__(self, name: str = "StorageToolkit", base_path: str = "./workplace/storage", storage_handler: FileStorageHandler = None):
         """
         Initialize the storage toolkit.
         

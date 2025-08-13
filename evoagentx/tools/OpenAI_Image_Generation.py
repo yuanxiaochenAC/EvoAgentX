@@ -1,6 +1,6 @@
 from typing import Dict, Optional, List
 from .tool import Tool, Toolkit
-from .storage_base import StorageBase
+from .storage_handler import FileStorageHandler
 
 class OpenAI_ImageGenerationTool(Tool):
     name: str = "image_generation"
@@ -38,7 +38,7 @@ class OpenAI_ImageGenerationTool(Tool):
     }
     required: Optional[List[str]] = ["prompt"]
 
-    def __init__(self, api_key: str, organization_id: str, model: str = "gpt-4o", save_path: str = "./", storage_handler: StorageBase = None):
+    def __init__(self, api_key: str, organization_id: str, model: str = "gpt-4o", save_path: str = "./", storage_handler: FileStorageHandler = None):
         super().__init__()
         self.api_key = api_key
         self.organization_id = organization_id
@@ -115,7 +115,7 @@ class OpenAIImageGenerationToolkit(Toolkit):
     Toolkit for OpenAI image generation with storage handler integration.
     """
     
-    def __init__(self, name: str = "OpenAIImageGenerationToolkit", api_key: str = None, organization_id: str = None, model: str = "gpt-4o", save_path: str = "./", storage_handler: StorageBase = None):
+    def __init__(self, name: str = "OpenAIImageGenerationToolkit", api_key: str = None, organization_id: str = None, model: str = "gpt-4o", save_path: str = "./", storage_handler: FileStorageHandler = None):
         """
         Initialize the OpenAI image generation toolkit.
         

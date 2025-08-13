@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import ClassVar, Dict, List, Optional
 from .interpreter_base import BaseInterpreter
 from .tool import Tool,Toolkit
-from .storage_base import StorageBase
+from .storage_handler import FileStorageHandler
 import os
 from pydantic import Field
 
@@ -52,7 +52,7 @@ class DockerInterpreter(BaseInterpreter):
         container_directory:str = "/home/app/",
         container_command:str = "tail -f /dev/null",
         tmp_directory:str = "/tmp",
-        storage_handler: StorageBase = None,
+        storage_handler: FileStorageHandler = None,
         **data
     ):
         """
@@ -375,7 +375,7 @@ class DockerInterpreterToolkit(Toolkit):
         container_directory: str = "/home/app/",
         container_command: str = "tail -f /dev/null",
         tmp_directory: str = "/tmp",
-        storage_handler: StorageBase = None,
+        storage_handler: FileStorageHandler = None,
         **kwargs
     ):
         # Initialize storage handler if not provided

@@ -1,6 +1,6 @@
 from typing import Dict, Optional, List
 from .tool import Tool, Toolkit
-from .storage_base import StorageBase
+from .storage_handler import FileStorageHandler
 import requests
 import os
 import base64
@@ -21,7 +21,7 @@ class FluxImageGenerationTool(Tool):
     }
     required: List[str] = ["prompt"]
 
-    def __init__(self, api_key: str, save_path: str = "./imgs", storage_handler: StorageBase = None):
+    def __init__(self, api_key: str, save_path: str = "./imgs", storage_handler: FileStorageHandler = None):
         super().__init__()
         self.api_key = api_key
         self.save_path = save_path
@@ -99,7 +99,7 @@ class FluxImageGenerationToolkit(Toolkit):
     Toolkit for Flux image generation with storage handler integration.
     """
     
-    def __init__(self, name: str = "FluxImageGenerationToolkit", api_key: str = None, save_path: str = "./imgs", storage_handler: StorageBase = None):
+    def __init__(self, name: str = "FluxImageGenerationToolkit", api_key: str = None, save_path: str = "./imgs", storage_handler: FileStorageHandler = None):
         """
         Initialize the Flux image generation toolkit.
         

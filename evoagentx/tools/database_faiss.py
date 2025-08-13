@@ -47,7 +47,6 @@ from datetime import datetime
 from pathlib import Path
 
 from .tool import Tool, Toolkit
-from .storage_base import StorageBase
 from .storage_file import LocalStorageHandler
 from ..core.module import BaseModule
 from ..core.logging import logger
@@ -56,6 +55,7 @@ from ..rag.rag_config import RAGConfig
 from ..rag.schema import Query, Document, Chunk, Corpus, DocumentMetadata
 from ..storages.base import StorageHandler
 from ..storages.storages_config import StoreConfig
+from .storage_handler import FileStorageHandler
 
 
 def _ensure_database_path(db_path: str) -> str:
@@ -196,7 +196,8 @@ class FaissDatabase(BaseModule):
         rag_config: RAGConfig,
         default_corpus_id: str = "default",
         default_index_type: str = "vector",
-        storage_handler: StorageBase = None,
+        storage_handler: StorageHandler = None,
+        file_handler: FileStorageHandler = None,
         **kwargs
     ):
         """
@@ -207,7 +208,7 @@ class FaissDatabase(BaseModule):
             rag_config (RAGConfig): Configuration for RAG pipeline
             default_corpus_id (str): Default corpus ID for operations
             default_index_type (str): Default index type for vector operations
-            storage_handler (StorageBase, optional): Storage handler for file operations
+            storage_handler (StorageHandler, optional): Storage handler for file operations
             **kwargs: Additional arguments for BaseModule
         """
         super().__init__(**kwargs)
@@ -421,7 +422,7 @@ class FaissDatabase(BaseModule):
             List[Document]: List of Document objects created from the file
         """
         try:
-            # Use StorageBase to read the file if available
+            # Use StorageHandler to read the file if available
             if self.file_storage_handler:
                 result = self.file_storage_handler.read(file_path)
                 if result["success"]:
@@ -945,7 +946,8 @@ class FaissToolkit(Toolkit):
         default_corpus_id: str = "default",
         default_index_type: str = "vector",
         db_path: Optional[str] = None,
-        storage_handler: StorageBase = None,
+        storage_handler: StorageHandler = None,
+        file_handler: FileStorageHandler = None,
         **kwargs
     ):
         """
@@ -958,7 +960,8 @@ class FaissToolkit(Toolkit):
             default_corpus_id (str): Default corpus ID for operations
             default_index_type (str): Default index type for vector operations
             db_path (str, optional): Custom database path. If provided, will check for existing database or create new one
-            storage_handler (StorageBase, optional): Storage handler for file operations
+            storage_handler (StorageHandler, optional): Storage handler for file operations
+            file_handler (FileStorageHandler, optional): File handler for file operations
             **kwargs: Additional arguments
         """
         # Use default configurations if not provided
@@ -974,7 +977,8 @@ class FaissToolkit(Toolkit):
             rag_config=rag_config,
             default_corpus_id=default_corpus_id,
             default_index_type=default_index_type,
-            storage_handler=storage_handler
+            storage_handler=storage_handler,
+            file_handler=file_handler
         )
         
         # Create tools with the shared database instance

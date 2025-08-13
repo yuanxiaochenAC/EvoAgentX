@@ -13,9 +13,8 @@ from .browser_use import BrowserUseToolkit
 from .database_mongodb import MongoDBToolkit
 from .database_postgresql import PostgreSQLToolkit
 from .database_faiss import FaissToolkit
-from .storage_base import StorageBase
-from .storage_file import StorageToolkit, LocalStorageHandler
-from .storage_supabase import StorageSupabaseToolkit, SupabaseStorageHandler
+from .storage_handler import FileStorageHandler, LocalStorageHandler, SupabaseStorageHandler
+from .storage_file import StorageToolkit
 from .flux_image_generation import FluxImageGenerationToolkit
 from .OpenAI_Image_Generation import OpenAIImageGenerationToolkit
 from .image_analysis import ImageAnalysisToolkit
@@ -41,11 +40,10 @@ __all__ = [
     "MongoDBToolkit",
     "PostgreSQLToolkit",
     "FaissToolkit",
-    "StorageBase",
-    "StorageToolkit",
+    "FileStorageHandler",
     "LocalStorageHandler",
-    "StorageSupabaseToolkit",
     "SupabaseStorageHandler",
+    "StorageToolkit",
     "FluxImageGenerationToolkit",
     "OpenAIImageGenerationToolkit",
     "ImageAnalysisToolkit",

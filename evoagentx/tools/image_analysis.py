@@ -2,7 +2,7 @@ import requests
 import base64
 from typing import Dict, Optional, List
 from .tool import Tool, Toolkit
-from .storage_base import StorageBase
+from .storage_handler import FileStorageHandler
 
 class ImageAnalysisTool(Tool):
     name: str = "image_analysis"
@@ -31,7 +31,7 @@ class ImageAnalysisTool(Tool):
     }
     required: Optional[List[str]] = ["prompt"]
 
-    def __init__(self, api_key, model="openai/gpt-4o", storage_handler: StorageBase = None):
+    def __init__(self, api_key, model="openai/gpt-4o", storage_handler: FileStorageHandler = None):
         super().__init__()
         self.api_key = api_key
         self.model = model
@@ -123,7 +123,7 @@ class ImageAnalysisToolkit(Toolkit):
     Toolkit for image analysis with storage handler integration.
     """
     
-    def __init__(self, name: str = "ImageAnalysisToolkit", api_key: str = None, model: str = "openai/gpt-4o", storage_handler: StorageBase = None):
+    def __init__(self, name: str = "ImageAnalysisToolkit", api_key: str = None, model: str = "openai/gpt-4o", storage_handler: FileStorageHandler = None):
         """
         Initialize the image analysis toolkit.
         
