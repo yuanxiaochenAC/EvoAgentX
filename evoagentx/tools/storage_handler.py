@@ -26,6 +26,64 @@ class FileStorageHandler(StorageBase):
         """
         super().__init__(base_path=base_path, **kwargs)
     
+    def translate_in(self, file_path: str) -> str:
+        """
+        Translate input file path by combining it with base_path.
+        This method takes a user-provided path and converts it to the full system path.
+        
+        Args:
+            file_path (str): User-provided file path (can be relative or absolute)
+            
+        Returns:
+            str: Full system path combining base_path and file_path
+        """
+        # If the path is already absolute, return as is
+        if os.path.isabs(file_path):
+            return file_path
+        
+        # If base_path is just "." or empty, return the file_path as is
+        if self.base_path in [".", "", None]:
+            return file_path
+        
+        # Combine base_path with file_path, ensuring proper path separators
+        combined_path = os.path.join(self.base_path, file_path)
+        
+        # Normalize the path to handle any double separators or relative components
+        normalized_path = os.path.normpath(combined_path)
+        
+        return normalized_path
+    
+    def translate_out(self, full_path: str) -> str:
+        """
+        Translate output full path by removing the base_path prefix.
+        This method takes a full system path and converts it back to the user-relative path.
+        
+        Args:
+            full_path (str): Full system path
+            
+        Returns:
+            str: User-relative path with base_path removed
+        """
+        # If base_path is just "." or empty, return the full_path as is
+        if self.base_path in [".", "", None]:
+            return full_path
+        
+        # Convert both paths to absolute paths for comparison
+        base_abs = os.path.abspath(self.base_path)
+        full_abs = os.path.abspath(full_path)
+        
+        # Check if the full_path starts with base_path
+        if full_abs.startswith(base_abs):
+            # Remove the base_path prefix
+            relative_path = full_abs[len(base_abs):]
+            # Remove leading separator if present
+            if relative_path.startswith(os.sep):
+                relative_path = relative_path[1:]
+            return relative_path
+        
+        # If the path doesn't start with base_path, return as is
+        return full_path
+    
     def create_file(self, file_path: str, content: Any, **kwargs) -> Dict[str, Any]:
         """
         Create a new file with the specified content.
