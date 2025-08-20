@@ -1,3 +1,5 @@
+# Main function to run
+
 import sys
 import os
 from datetime import datetime
