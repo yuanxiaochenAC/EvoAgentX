@@ -102,7 +102,7 @@ class SearchDDGS(SearchBase):
                             "url": url,
                         })
                         
-                except Exception as e:
+                except Exception:
                     continue  # Skip results that cannot be processed
 
             return {"results": results, "error": None}

@@ -58,9 +58,6 @@ class OpenAI_ImageGenerationTool(Tool):
     ):
         from openai import OpenAI
         import base64        
-        from PIL import Image
-        import os
-        import io
 
         tool_dict = {
             "type": "image_generation"

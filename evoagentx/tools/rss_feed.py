@@ -1,10 +1,9 @@
 import feedparser
-import requests
-from typing import Dict, Any, Optional, List, Union
+from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
 import xml.etree.ElementTree as ET
 import re
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urljoin
 
 from .tool import Tool, Toolkit
 from .request_base import RequestBase

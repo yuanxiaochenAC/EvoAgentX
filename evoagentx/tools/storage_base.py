@@ -1,15 +1,13 @@
-import os
 import json
 import pickle
 import csv
 import yaml
 import xml.etree.ElementTree as ET
 import shutil
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from pathlib import Path
 import mimetypes
 import hashlib
-from datetime import datetime
 from abc import ABC, abstractmethod
 
 # For handling various file types
@@ -26,7 +24,6 @@ except ImportError:
     PILLOW_AVAILABLE = False
 
 try:
-    import openpyxl
     from openpyxl import Workbook, load_workbook
     EXCEL_AVAILABLE = True
 except ImportError:

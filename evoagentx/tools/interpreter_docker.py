@@ -8,7 +8,6 @@ from typing import ClassVar, Dict, List, Optional
 from .interpreter_base import BaseInterpreter
 from .tool import Tool,Toolkit
 from .storage_handler import FileStorageHandler
-import os
 from pydantic import Field
 
 class DockerInterpreter(BaseInterpreter):

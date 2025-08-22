@@ -37,6 +37,8 @@ from evoagentx.tools import (
     GoogleSearchToolkit,
     GoogleFreeSearchToolkit,
     DDGSSearchToolkit,
+    SerpAPIToolkit,  # Added SerpAPI toolkit
+    SerperAPIToolkit,  # Added SerperAPI toolkit
     MCPToolkit,
     StorageToolkit,  # Updated to use new StorageToolkit
     BrowserToolkit,
@@ -46,8 +48,8 @@ from evoagentx.tools import (
     PostgreSQLToolkit,
     MongoDBToolkit,
     RSSToolkit,
-    SerperAPIToolkit,
-    SerpAPIToolkit
+    CMDToolkit,
+    RequestToolkit
 )
 
 
@@ -237,7 +239,7 @@ except ImportError as e:
 
 def run_search_examples():
     """
-    Run examples using the search toolkits (Wikipedia, Google, and Google Free).
+    Run examples using the search toolkits (Wikipedia, Google, Google Free, DDGS, SerpAPI, and SerperAPI).
     """
     print("\n===== SEARCH TOOLS EXAMPLES =====\n")
     
@@ -246,12 +248,6 @@ def run_search_examples():
     google_toolkit = GoogleSearchToolkit(num_search_pages=3, max_content_words=200)
     google_free_toolkit = GoogleFreeSearchToolkit()
     ddgs_toolkit = DDGSSearchToolkit(num_search_pages=3, max_content_words=200, backend="auto", region="us-en")
-    
-    # Get the individual tools from toolkits
-    wiki_tool = wiki_toolkit.get_tool("wikipedia_search")
-    google_tool = google_toolkit.get_tool("google_search")
-    google_free_tool = google_free_toolkit.get_tool("google_free_search")
-    ddgs_tool = ddgs_toolkit.get_tool("ddgs_search")
     
     # Initialize SerpAPI toolkit (will check for API key)
     serpapi_toolkit = SerpAPIToolkit(
@@ -267,57 +263,65 @@ def run_search_examples():
         enable_content_scraping=True
     )
     
-    # Example search query
+    # Get the individual tools from toolkits
+    wiki_tool = wiki_toolkit.get_tool("wikipedia_search")
+    google_tool = google_toolkit.get_tool("google_search")
+    google_free_tool = google_free_toolkit.get_tool("google_free_search")
+    ddgs_tool = ddgs_toolkit.get_tool("ddgs_search")
+    serpapi_tool = serpapi_toolkit.get_tool("serpapi_search")
+    serperapi_tool = serperapi_toolkit.get_tool("serperapi_search")
+    
+    # # Example search query
     query = "artificial intelligence agent architecture"
     
-    # Run Wikipedia search example
-    try:
-        print("\nWikipedia Search Example:")
-        print("-" * 50)
-        wiki_results = wiki_tool(query=query, num_search_pages=2)
+    # # Run Wikipedia search example
+    # try:
+    #     print("\nWikipedia Search Example:")
+    #     print("-" * 50)
+    #     wiki_results = wiki_tool(query=query, num_search_pages=2)
         
-        if wiki_results.get("error"):
-            print(f"Error: {wiki_results['error']}")
-        else:
-            for i, result in enumerate(wiki_results.get("results", [])):
-                print(f"Result {i+1}: {result['title']}")
-                print(f"Summary: {result['summary'][:150]}...")
-                print(f"URL: {result['url']}")
-                print("-" * 30)
-    except Exception as e:
-        print(f"Error running Wikipedia search: {str(e)}")
+    #     if wiki_results.get("error"):
+    #         print(f"Error: {wiki_results['error']}")
+    #     else:
+    #         for i, result in enumerate(wiki_results.get("results", [])):
+    #             print(f"Result {i+1}: {result['title']}")
+    #             print(f"Summary: {result['summary'][:150]}...")
+    #             print(f"URL: {result['url']}")
+    #             print("-" * 30)
+    # except Exception as e:
+    #     print(f"Error running Wikipedia search: {str(e)}")
     
-    # Run Google search example (requires API key)
-    try:
-        print("\nGoogle Search Example (requires API key):")
-        print("-" * 50)
-        google_results = google_tool(query=query)
+    # # Run Google search example (requires API key)
+    # try:
+    #     print("\nGoogle Search Example (requires API key):")
+    #     print("-" * 50)
+    #     google_results = google_tool(query=query)
         
-        if google_results.get("error"):
-            print(f"Error: {google_results['error']}")
-        else:
-            for i, result in enumerate(google_results.get("results", [])):
-                print(f"Result {i+1}: {result['title']}")
-                print(f"URL: {result['url']}")
-                print("-" * 30)
-    except Exception as e:
-        print(f"Error running Google search: {str(e)}")
+    #     if google_results.get("error"):
+    #         print(f"Error: {google_results['error']}")
+    #     else:
+    #         for i, result in enumerate(google_results.get("results", [])):
+    #             print(f"Result {i+1}: {result['title']}")
+    #             print(f"URL: {result['url']}")
+    #             print("-" * 30)
+    # except Exception as e:
+    #     print(f"Error running Google search: {str(e)}")
     
-    # Run Google Free search example
-    try:
-        print("\nGoogle Free Search Example:")
-        print("-" * 50)
-        free_results = google_free_tool(query=query, num_search_pages=2)
+    # # Run Google Free search example
+    # try:
+    #     print("\nGoogle Free Search Example:")
+    #     print("-" * 50)
+    #     free_results = google_free_tool(query=query, num_search_pages=2)
         
-        if free_results.get("error"):
-            print(f"Error: {free_results['error']}")
-        else:
-            for i, result in enumerate(free_results.get("results", [])):
-                print(f"Result {i+1}: {result['title']}")
-                print(f"URL: {result['url']}")
-                print("-" * 30)
-    except Exception as e:
-        print(f"Error running free Google search: {str(e)}")
+    #     if free_results.get("error"):
+    #         print(f"Error: {free_results['error']}")
+    #     else:
+    #         for i, result in enumerate(free_results.get("results", [])):
+    #             print(f"Result {i+1}: {result['title']}")
+    #             print(f"URL: {result['url']}")
+    #             print("-" * 30)
+    # except Exception as e:
+    #     print(f"Error running free Google search: {str(e)}")
     
     # Run DDGS search example
     try:
@@ -335,7 +339,6 @@ def run_search_examples():
                 print("-" * 30)
     except Exception as e:
         print(f"Error running DDGS search: {str(e)}")
-    
     
     # Run SerpAPI search example (requires API key)
     serpapi_api_key = os.getenv("SERPAPI_KEY")
@@ -933,55 +936,69 @@ def run_faiss_tool_example():
             "Computer vision enables machines to interpret visual information from images and videos."
         ]
         
-        result = insert_tool(
-            documents=documents,
-            metadata={"source": "ai_knowledge", "topic": "artificial_intelligence"}
-        )
-        
-        if result["success"]:
-            print(f"✓ Inserted {result['data']['documents_inserted']} documents")
-            
-            # Perform semantic search
-            search_result = query_tool(
-                query="How do machines learn?",
-                top_k=3,
-                similarity_threshold=0.1
+        try:
+            result = insert_tool(
+                documents=documents,
+                metadata={"source": "ai_knowledge", "topic": "artificial_intelligence"}
             )
             
-            if search_result["success"]:
-                print(f"✓ Found {search_result['data']['total_results']} relevant results")
-                for i, res in enumerate(search_result["data"]["results"], 1):
-                    print(f"  {i}. Score: {res['score']:.3f} - {res['content'][:80]}...")
-            
-            # Get statistics
-            stats_result = stats_tool()
-            if stats_result["success"]:
-                print(f"✓ Database stats: {stats_result['data']['total_corpora']} corpora")
-            
-            # Test delete functionality
-            print("\n🗑️ Testing delete functionality...")
-            delete_result = delete_tool(
-                metadata_filters={"source": "ai_knowledge"}
-            )
-            
-            if delete_result["success"]:
-                print(f"✓ Deleted documents with metadata filter")
+            if result["success"]:
+                print(f"✓ Inserted {result['data']['documents_inserted']} documents")
                 
-                # Verify deletion
-                verify_result = query_tool(
-                    query="artificial intelligence",
-                    top_k=5,
+                # Perform semantic search
+                search_result = query_tool(
+                    query="How do machines learn?",
+                    top_k=3,
                     similarity_threshold=0.1
                 )
                 
-                if verify_result["success"]:
-                    remaining = verify_result['data']['total_results']
-                    print(f"✓ Remaining documents after deletion: {remaining}")
+                if search_result["success"]:
+                    print(f"✓ Found {search_result['data']['total_results']} relevant results")
+                    for i, res in enumerate(search_result["data"]["results"], 1):
+                        print(f"  {i}. Score: {res['score']:.3f} - {res['content'][:80]}...")
+                
+                # Get statistics
+                stats_result = stats_tool()
+                if stats_result["success"]:
+                    print(f"✓ Database stats: {stats_result['data']['total_corpora']} corpora")
+                
+                # Test delete functionality
+                print("\n🗑️ Testing delete functionality...")
+                delete_result = delete_tool(
+                    metadata_filters={"source": "ai_knowledge"}
+                )
+                
+                if delete_result["success"]:
+                    print(f"✓ Deleted documents with metadata filter")
+                    
+                    # Verify deletion
+                    verify_result = query_tool(
+                        query="artificial intelligence",
+                        top_k=5,
+                        similarity_threshold=0.1
+                    )
+                    
+                    if verify_result["success"]:
+                        remaining = verify_result['data']['total_results']
+                        print(f"✓ Remaining documents after deletion: {remaining}")
+            else:
+                print(f"❌ Insert failed: {result.get('error', 'Unknown error')}")
+                
+        except Exception as e:
+            if "DocumentMetadata" in str(e):
+                print("⚠ DocumentMetadata import issue detected - this may be a dependency problem")
+                print("   The FAISS toolkit requires proper RAG engine dependencies")
+                print(f"   Error details: {str(e)}")
+            else:
+                print(f"❌ Unexpected error during FAISS operations: {str(e)}")
         
         print("\n✓ FaissToolkit test completed with default storage")
         
     except Exception as e:
         print(f"Error: {str(e)}")
+        if "DocumentMetadata" in str(e):
+            print("Note: This appears to be a dependency issue with the RAG engine components")
+            print("The FAISS toolkit may need additional setup or dependencies")
 
 
 def run_postgresql_tool_example():
@@ -1210,21 +1227,177 @@ def run_rss_tool_example():
         print("Note: RSS feed availability may vary. Some feeds may be temporarily unavailable.")
 
 
+def run_cmd_tool_example():
+    """Simple example using CMDToolkit for command line operations."""
+    print("\n===== CMD TOOL EXAMPLE =====\n")
+    
+    try:
+        # Initialize the CMD toolkit
+        cmd_toolkit = CMDToolkit(name="DemoCMDToolkit")
+        execute_tool = cmd_toolkit.get_tool("execute_command")
+        
+        print("✓ CMDToolkit initialized")
+        
+        # Test basic command execution
+        print("1. Testing basic command execution...")
+        result = execute_tool(command="echo 'Hello from CMD toolkit'")
+        
+        if result.get("success"):
+            print("✓ Command executed successfully")
+            print(f"Output: {result.get('stdout', 'No output')}")
+        else:
+            print(f"❌ Command failed: {result.get('error', 'Unknown error')}")
+        
+        # Test system information commands
+        print("\n2. Testing system information commands...")
+        
+        # Get current working directory
+        pwd_result = execute_tool(command="pwd")
+        if pwd_result.get("success"):
+            print(f"✓ Current directory: {pwd_result.get('stdout', '').strip()}")
+        
+        # Get system information
+        if os.name == 'posix':  # Linux/Mac
+            uname_result = execute_tool(command="uname -a")
+            if uname_result.get("success"):
+                print(f"✓ System info: {uname_result.get('stdout', '').strip()}")
+        else:  # Windows
+            ver_result = execute_tool(command="ver")
+            if ver_result.get("success"):
+                print(f"✓ System info: {ver_result.get('stdout', '').strip()}")
+        
+        # Test file listing
+        print("\n3. Testing file listing...")
+        if os.name == 'posix':
+            ls_result = execute_tool(command="ls -la", working_directory=".")
+        else:
+            ls_result = execute_tool(command="dir", working_directory=".")
+        
+        if ls_result.get("success"):
+            print("✓ File listing successful")
+            print(f"Output length: {len(ls_result.get('stdout', ''))} characters")
+        else:
+            print(f"❌ File listing failed: {ls_result.get('error', 'Unknown error')}")
+        
+        # Test with timeout
+        print("\n4. Testing command timeout...")
+        timeout_result = execute_tool(command="sleep 5", timeout=12)
+        if not timeout_result.get("success"):
+            print("✓ Timeout working correctly (command was interrupted)")
+        else:
+            print("⚠ Timeout may not be working as expected")
+        
+        print("\n✓ CMDToolkit test completed")
+        
+    except Exception as e:
+        print(f"Error: {str(e)}")
+
+
+def run_request_tool_example():
+    """Simple example using RequestToolkit for HTTP operations."""
+    print("\n===== REQUEST TOOL EXAMPLE =====\n")
+    
+    try:
+        # Initialize the request toolkit
+        request_toolkit = RequestToolkit(name="DemoRequestToolkit")
+        http_tool = request_toolkit.get_tool("http_request")
+        
+        print("✓ RequestToolkit initialized")
+        
+        # Test GET request
+        print("1. Testing GET request...")
+        get_result = http_tool(
+            url="https://httpbin.org/get",
+            method="GET",
+            params={"test": "param", "example": "value"}
+        )
+        
+        if get_result.get("success"):
+            print("✓ GET request successful")
+            print(f"Status: {get_result.get('status_code')}")
+            print(f"Response size: {len(str(get_result.get('content', '')))} characters")
+        else:
+            print(f"❌ GET request failed: {get_result.get('error', 'Unknown error')}")
+        
+        # Test POST request with JSON data
+        print("\n2. Testing POST request with JSON...")
+        post_result = http_tool(
+            url="https://httpbin.org/post",
+            method="POST",
+            json_data={"name": "Test User", "email": "test@example.com"},
+            headers={"Content-Type": "application/json"}
+        )
+        
+        if post_result.get("success"):
+            print("✓ POST request successful")
+            print(f"Status: {post_result.get('status_code')}")
+            content = post_result.get('content', '')
+            if isinstance(content, dict) and 'json' in content:
+                print(f"✓ JSON data received: {content['json']}")
+        else:
+            print(f"❌ POST request failed: {post_result.get('error', 'Unknown error')}")
+        
+        # Test PUT request
+        print("\n3. Testing PUT request...")
+        put_result = http_tool(
+            url="https://httpbin.org/put",
+            method="PUT",
+            data={"update": "new value", "timestamp": "2024-01-01"}
+        )
+        
+        if put_result.get("success"):
+            print("✓ PUT request successful")
+            print(f"Status: {put_result.get('status_code')}")
+        else:
+            print(f"❌ PUT request failed: {put_result.get('error', 'Unknown error')}")
+        
+        # Test DELETE request
+        print("\n4. Testing DELETE request...")
+        delete_result = http_tool(
+            url="https://httpbin.org/delete",
+            method="DELETE"
+        )
+        
+        if delete_result.get("success"):
+            print("✓ DELETE request successful")
+            print(f"Status: {delete_result.get('status_code')}")
+        else:
+            print(f"❌ DELETE request failed: {delete_result.get('error', 'Unknown error')}")
+        
+        # Test error handling with invalid URL
+        print("\n5. Testing error handling...")
+        error_result = http_tool(
+            url="https://invalid-domain-that-does-not-exist-12345.com",
+            method="GET"
+        )
+        
+        if not error_result.get("success"):
+            print("✓ Error handling working correctly")
+            print(f"Error: {error_result.get('error', 'Unknown error')}")
+        else:
+            print("⚠ Error handling may not be working as expected")
+        
+        print("\n✓ RequestToolkit test completed")
+        
+    except Exception as e:
+        print(f"Error: {str(e)}")
+
+
 def main():
     """Main function to run all examples"""
     print("===== INTERPRETER TOOL EXAMPLES =====")
     
-    # Run storage tool example (updated from file tool)
-    run_file_tool_example()
+    # # Run storage tool example (updated from file tool)
+    # run_file_tool_example()
    
-    # Run Python interpreter examples
-    run_python_interpreter_examples()
+    # # Run Python interpreter examples
+    # run_python_interpreter_examples()
     
-    # Run Docker interpreter examples
-    run_docker_interpreter_examples()
+    # # Run Docker interpreter examples
+    # run_docker_interpreter_examples()
     
-    # # Run search tools examples
-    # run_search_examples()
+    # Run search tools examples
+    run_search_examples()
     
     # Run arXiv tool example
     run_arxiv_tool_example()
@@ -1247,10 +1420,16 @@ def main():
     # Run RSS tool example
     run_rss_tool_example()
     
+    # Run CMD tool example
+    run_cmd_tool_example()
+
+    # Run Request tool example
+    run_request_tool_example()
+   
     # # Run MCP toolkit example
     # run_mcp_example()
     
-    print("\n===== ALL EXAMPLES COMPLETED =====")
+    # print("\n===== ALL EXAMPLES COMPLETED =====")
 
 
 if __name__ == "__main__":

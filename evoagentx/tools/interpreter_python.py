@@ -37,6 +37,7 @@ class PythonInterpreter(BaseInterpreter):
             project_path (Optional[str]): Path to the project directory for module resolution
             directory_names (Optional[List[str]]): List of directory names to check for imports
             allowed_imports (Optional[Set[str]]): Set of allowed module imports to enforce security
+            storage_handler (Optional[FileStorageHandler]): Storage handler for file operations
             **kwargs: Additional data to pass to the parent class
         """
         super().__init__(
@@ -47,7 +48,15 @@ class PythonInterpreter(BaseInterpreter):
             **kwargs
         )
         self.allowed_imports = allowed_imports or set()
-        self.storage_handler = storage_handler
+        self.namespace = {}
+        self.visited_modules = {}
+        
+        # Initialize storage handler
+        if storage_handler is None:
+            from .storage_file import LocalStorageHandler
+            self.storage_handler = LocalStorageHandler(base_path="./workplace/interpreter")
+        else:
+            self.storage_handler = storage_handler
 
     def _get_file_and_folder_names(self, target_path: str) -> List[str]:
         """Retrieves the names of files and folders (without extensions) in a given directory.
@@ -458,5 +467,4 @@ class PythonInterpreterToolkit(Toolkit):
         
         # Store python_interpreter as instance variable
         self.python_interpreter = python_interpreter
-        self.storage_handler = storage_handler
     

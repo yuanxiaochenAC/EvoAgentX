@@ -106,7 +106,7 @@ class PostgreSQLDatabase(DatabaseBase):
             self.cursor = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             if self.database_name:
                 self.conn.set_isolation_level(0)
-                self.cursor.execute(f"SELECT 1 FROM pg_database WHERE datname = %s", (self.database_name,))
+                self.cursor.execute("SELECT 1 FROM pg_database WHERE datname = %s", (self.database_name,))
             self._is_initialized = True
             self.is_local_database = False
             self.file_based_mode = False
@@ -543,7 +543,7 @@ class PostgreSQLDatabase(DatabaseBase):
                 with self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                     cur.execute(f"SELECT COUNT(*) as row_count FROM {collection_name}")
                     row_count = cur.fetchone()["row_count"]
-                    cur.execute(f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = %s", (collection_name,))
+                    cur.execute("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = %s", (collection_name,))
                     columns = cur.fetchall()
                 info = {
                     "table_name": collection_name,
@@ -577,7 +577,7 @@ class PostgreSQLDatabase(DatabaseBase):
                 
                 with self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                     if collection_name:
-                        cur.execute(f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = %s", (collection_name,))
+                        cur.execute("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = %s", (collection_name,))
                         columns = cur.fetchall()
                         schema = {col["column_name"]: col["data_type"] for col in columns}
                         return self.format_query_result({"table_name": collection_name, "schema": schema}, QueryType.SELECT)
@@ -586,7 +586,7 @@ class PostgreSQLDatabase(DatabaseBase):
                         tables = [row[0] for row in cur.fetchall()]
                         schemas = {}
                         for table in tables:
-                            cur.execute(f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = %s", (table,))
+                            cur.execute("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = %s", (table,))
                             columns = cur.fetchall()
                             schemas[table] = {col["column_name"]: col["data_type"] for col in columns}
                         return self.format_query_result({"database_name": self.database_name, "schemas": schemas}, QueryType.SELECT)

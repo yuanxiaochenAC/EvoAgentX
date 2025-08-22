@@ -317,5 +317,5 @@ class DatabaseBase(ABC):
         """Cleanup on deletion"""
         try:
             self.disconnect()
-        except:
+        except Exception:
             pass 

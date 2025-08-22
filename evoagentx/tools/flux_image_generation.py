@@ -1,9 +1,7 @@
-from typing import Dict, Optional, List
+from typing import Dict, List
 from .tool import Tool, Toolkit
 from .storage_handler import FileStorageHandler
 import requests
-import os
-import base64
 import time
 
 class FluxImageGenerationTool(Tool):

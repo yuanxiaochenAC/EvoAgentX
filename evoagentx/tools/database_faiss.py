@@ -38,10 +38,9 @@ Usage:
 """
 
 import os
-import json
 import asyncio
 import concurrent.futures
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional
 from uuid import uuid4
 from datetime import datetime
 from pathlib import Path
@@ -52,7 +51,7 @@ from ..core.module import BaseModule
 from ..core.logging import logger
 from ..rag.rag import RAGEngine
 from ..rag.rag_config import RAGConfig
-from ..rag.schema import Query, Document, Chunk, Corpus, DocumentMetadata
+from ..rag.schema import Query, Document, Corpus, DocumentMetadata
 from ..storages.base import StorageHandler
 from ..storages.storages_config import StoreConfig
 from .storage_handler import FileStorageHandler
@@ -255,15 +254,15 @@ class FaissDatabase(BaseModule):
         try:
             # Check if we're already in an event loop
             try:
-                loop = asyncio.get_running_loop()
+                asyncio.get_running_loop()
                 # We're in an event loop, use thread executor to avoid asyncio.run() conflict
-                logger.info(f"Detected running event loop, using thread executor for query")
+                logger.info("Detected running event loop, using thread executor for query")
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(self._query_sync, query, corpus_id, top_k, similarity_threshold, metadata_filters)
                     return future.result()
             except RuntimeError:
                 # No event loop running, safe to use asyncio.run() in the RAG engine
-                logger.info(f"No event loop detected, using direct query processing")
+                logger.info("No event loop detected, using direct query processing")
                 return self._query_sync(query, corpus_id, top_k, similarity_threshold, metadata_filters)
                 
         except Exception as e:
@@ -380,7 +379,7 @@ class FaissDatabase(BaseModule):
         try:
             # Check if we're already in an event loop
             try:
-                loop = asyncio.get_running_loop()
+                asyncio.get_running_loop()
                 # We're in an event loop, use thread executor to avoid asyncio.run() conflict
                 logger.info(f"Detected running event loop, using thread executor for {file_path}")
                 with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -722,7 +721,7 @@ class FaissDatabase(BaseModule):
                                 if hasattr(vector_store, 'faiss_index'):
                                     stats["vector_count"] = vector_store.faiss_index.ntotal
                                     stats["dimensions"] = vector_store.faiss_index.d
-                        except:
+                        except Exception:
                             pass
                 
                 return {"success": True, "data": stats}
