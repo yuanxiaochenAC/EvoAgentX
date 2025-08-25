@@ -12,7 +12,6 @@ from .request_arxiv import ArxivToolkit
 from .browser_use import BrowserUseToolkit
 from .database_mongodb import MongoDBToolkit
 from .database_postgresql import PostgreSQLToolkit
-from .database_faiss import FaissToolkit
 from .storage_handler import FileStorageHandler, LocalStorageHandler, SupabaseStorageHandler
 from .storage_file import StorageToolkit
 from .flux_image_generation import FluxImageGenerationToolkit
@@ -41,7 +40,6 @@ __all__ = [
     "BrowserUseToolkit",
     "MongoDBToolkit",
     "PostgreSQLToolkit",
-    "FaissToolkit",
     "FileStorageHandler",
     "LocalStorageHandler",
     "SupabaseStorageHandler",

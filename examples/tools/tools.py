@@ -1393,14 +1393,14 @@ def main():
     # # Run Python interpreter examples
     # run_python_interpreter_examples()
     
-    # # Run Docker interpreter examples
-    # run_docker_interpreter_examples()
+    # Run Docker interpreter examples
+    run_docker_interpreter_examples()
     
-    # Run search tools examples
-    run_search_examples()
+    # # Run search tools examples
+    # run_search_examples()
     
-    # Run arXiv tool example
-    run_arxiv_tool_example()
+    # # Run arXiv tool example
+    # run_arxiv_tool_example()
     
     # # Run BrowserUse tool example
     # run_browser_use_tool_example()
@@ -1408,23 +1408,23 @@ def main():
     # # Run browser tool example
     # run_browser_tool_example()
     
-    # Run FAISS tool example
-    run_faiss_tool_example()
+    # # Run FAISS tool example
+    # run_faiss_tool_example()
     
-    # Run PostgreSQL tool example
-    run_postgresql_tool_example()
+    # # Run PostgreSQL tool example
+    # run_postgresql_tool_example()
     
-    # Run MongoDB tool example
-    run_mongodb_tool_example()
+    # # Run MongoDB tool example
+    # run_mongodb_tool_example()
     
-    # Run RSS tool example
-    run_rss_tool_example()
+    # # Run RSS tool example
+    # run_rss_tool_example()
     
-    # Run CMD tool example
-    run_cmd_tool_example()
+    # # Run CMD tool example
+    # run_cmd_tool_example()
 
-    # Run Request tool example
-    run_request_tool_example()
+    # # Run Request tool example
+    # run_request_tool_example()
    
     # # Run MCP toolkit example
     # run_mcp_example()
