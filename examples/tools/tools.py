@@ -44,13 +44,13 @@ from evoagentx.tools import (
     BrowserToolkit,
     ArxivToolkit,
     BrowserUseToolkit,
-    FaissToolkit,
     PostgreSQLToolkit,
     MongoDBToolkit,
     RSSToolkit,
     CMDToolkit,
     RequestToolkit
 )
+from evoagentx.tools.database_faiss import FaissToolkit
 
 
 def run_simple_hello_world(interpreter):
