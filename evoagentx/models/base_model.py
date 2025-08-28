@@ -1,3 +1,4 @@
+import io
 import yaml
 import inspect
 import asyncio
@@ -5,7 +6,6 @@ import base64
 from abc import ABC, abstractmethod
 from pydantic import Field
 from typing import Union, Optional, Type, Callable, List, Any, Dict
-from pathlib import Path
 
 from ..core.parser import Parser
 from .model_configs import LLMConfig
@@ -401,8 +401,6 @@ def _process_multimodal_content(content: List[Any], model_type: str = "openai") 
 
 def _get_image_data_url(image_chunk) -> str:
     """Convert ImageChunk to data URL format for model consumption."""
-    from PIL import Image
-    import io
     
     try:
         # Load image using the chunk's lazy loading

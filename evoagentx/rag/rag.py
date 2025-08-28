@@ -35,12 +35,11 @@ class RAGEngine:
         
         # Set chunk class based on modality config
         logger.info(f"RAGEngine modality config: {self.config.modality}")
+        
         if self.config.modality == "multimodal":
             self.chunk_class = ImageChunk
-            logger.info(f"RAGEngine configured for multimodal mode - using ImageChunk")
         else:
             self.chunk_class = TextChunk
-            logger.info(f"RAGEngine configured for text mode - using TextChunk")
 
         # Initialize reader based on modality
         if self.config.modality == "multimodal":
