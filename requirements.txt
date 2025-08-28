@@ -87,3 +87,4 @@ colpali-engine==0.3.9
 Pillow
 torch
 transformers>=4.50.0,<4.51.0
+voyageai

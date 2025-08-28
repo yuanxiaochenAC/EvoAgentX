@@ -75,6 +75,7 @@ dependencies = [
     "colpali-engine==0.3.9",
     "Pillow",
     "torch",
+    "voyageai",
 ]
 
 [project.optional-dependencies]
