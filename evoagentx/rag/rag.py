@@ -3,9 +3,7 @@ import json
 import asyncio
 from uuid import uuid4
 from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Union, Optional, Sequence, Dict, Any, Tuple
-
 from llama_index.core.schema import NodeWithScore, TextNode, ImageNode, RelatedNodeInfo
 
 from .rag_config import RAGConfig
@@ -596,7 +594,7 @@ class RAGEngine:
             logger.error(f"Failed to load index for corpus {corpus_id}, index_type {index_type}: {str(e)}")
             raise
 
-    async def aget(self, corpus_id: str, index_type: str, node_ids: List[str]) -> List[Chunk]:
+    async def aget(self, corpus_id: str, index_type: str, node_ids: List[str]) -> List[Union[TextChunk, ImageChunk]]:
         """Retrieve chunks by node_ids from the index."""
         try:
             chunks = await self.indices[corpus_id][index_type].get(node_ids=node_ids)

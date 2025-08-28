@@ -1,7 +1,7 @@
 from .rag import RAGEngine
 from .readers import LLamaIndexReader, MultimodalReader
 from .chunkers import SimpleChunker, SemanticChunker, HierarchicalChunker
-from .embeddings import OpenAIEmbeddingWrapper, MultimodalHuggingFaceEmbeddingWrapper
+from .embeddings import OpenAIEmbeddingWrapper, VoyageEmbeddingWrapper
 from .indexings import VectorIndexing
 from .retrievers import VectorRetriever
 from .postprocessors import SimpleReranker
