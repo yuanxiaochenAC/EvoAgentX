@@ -404,7 +404,7 @@ class MCPToolkit:
                 thread.join(timeout=30)  # 30 second timeout
                 
                 if thread.is_alive():
-                    logger.warning(f"Timeout getting tools from MCP server after 30 seconds")
+                    logger.warning("Timeout getting tools from MCP server after 30 seconds")
                     continue
                 
                 if not exception_queue.empty():
