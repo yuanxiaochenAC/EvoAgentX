@@ -195,63 +195,300 @@ class PostgreSQLDatabase(DatabaseBase):
         except Exception as e:
             logger.error(f"Error saving table {table_name}: {str(e)}")
 
+    def _parse_query(self, query: Union[str, Dict, List]) -> Union[str, Dict, List]:
+        """Parse query into appropriate format - supports JSON strings and SQL"""
+        if isinstance(query, (dict, list)):
+            return query
+        
+        if isinstance(query, str):
+            # Try to parse as JSON first
+            try:
+                return json.loads(query)
+            except (json.JSONDecodeError, ValueError):
+                # If not JSON, treat as SQL
+                return query
+        
+        return query
+
     def _parse_sql_query(self, sql: str) -> Dict[str, Any]:
-        """Minimal SQL parser for file-based mode"""
+        """Enhanced SQL parser for file-based mode - now supports JOINs and complex queries"""
         sql = sql.strip()
         upper_sql = sql.upper()
+        
         # CREATE TABLE
         if upper_sql.startswith("CREATE TABLE"):
             match = re.search(r"CREATE TABLE (?:IF NOT EXISTS )?(\w+) *\((.*?)\)", sql, re.IGNORECASE | re.DOTALL)
             if match:
-                table = match.group(1).lower()  # Normalize table name to lowercase
+                table = match.group(1).lower()
                 columns = match.group(2)
                 col_defs = [c.strip() for c in columns.split(',') if c.strip()]
                 col_names = [c.split()[0] for c in col_defs]
                 return {"type": "CREATE", "table": table, "columns": col_names}
+        
         # INSERT
         elif upper_sql.startswith("INSERT"):
             match = re.search(r"INSERT INTO (\w+) *\((.*?)\) *VALUES", sql, re.IGNORECASE | re.DOTALL)
             if match:
-                table = match.group(1).lower()  # Normalize table name to lowercase
+                table = match.group(1).lower()
                 columns = [c.strip() for c in match.group(2).split(',')]
-                # Extract all VALUES groups
                 values_match = re.search(r"VALUES\s*(.*)", sql, re.IGNORECASE | re.DOTALL)
                 if values_match:
                     values_str = values_match.group(1)
-                    # Split by ),( to get individual value groups
                     value_groups = re.findall(r'\(([^)]+)\)', values_str)
                     all_values = []
                     for group in value_groups:
                         values = [v.strip().strip("'\"") for v in group.split(',')]
                         all_values.append(values)
                     return {"type": "INSERT", "table": table, "columns": columns, "values": all_values}
-        # SELECT
+        
+        # SELECT - Enhanced to support JOINs
         elif upper_sql.startswith("SELECT"):
-            match = re.search(r"SELECT (.*?) FROM (\w+)(?: WHERE (.*?))?(?: GROUP BY (.*?))?(?: ORDER BY (.*?))?(?: LIMIT (\d+))?", sql, re.IGNORECASE | re.DOTALL)
-            if match:
-                columns = [c.strip() for c in match.group(1).split(',')]
-                table = match.group(2).lower()  # Normalize table name to lowercase
-                where = match.group(3)
-                group_by = match.group(4)
-                order_by = match.group(5)
-                limit = match.group(6)
-                return {"type": "SELECT", "table": table, "columns": columns, "where": where, "group_by": group_by, "order_by": order_by, "limit": limit}
+            # Complex SELECT with JOINs
+            if "JOIN" in upper_sql:
+                # Parse JOIN queries
+                match = re.search(r"SELECT (.*?) FROM (\w+)(?:\s+(\w+))?\s+(?:(\w+)\s+)?JOIN\s+(\w+)(?:\s+(\w+))?\s+ON\s+(.*?)(?: WHERE (.*?))?(?: ORDER BY (.*?))?(?: LIMIT (\d+))?", sql, re.IGNORECASE | re.DOTALL)
+                if match:
+                    columns = [c.strip() for c in match.group(1).split(',')]
+                    table1 = match.group(2).lower()
+                    alias1 = match.group(3)
+                    join_type = match.group(4) or "INNER"
+                    table2 = match.group(5).lower()
+                    alias2 = match.group(6)
+                    join_condition = match.group(7)
+                    where = match.group(8)
+                    order_by = match.group(9)
+                    limit = match.group(10)
+                    
+                    return {
+                        "type": "SELECT_JOIN",
+                        "columns": columns,
+                        "table1": table1,
+                        "alias1": alias1,
+                        "join_type": join_type,
+                        "table2": table2,
+                        "alias2": alias2,
+                        "join_condition": join_condition,
+                        "where": where,
+                        "order_by": order_by,
+                        "limit": limit
+                    }
+                
+                # CROSS JOIN support
+                elif "CROSS JOIN" in upper_sql:
+                    match = re.search(r"SELECT (.*?) FROM (\w+)(?:\s+(\w+))?\s+CROSS\s+JOIN\s+(\w+)(?:\s+(\w+))?(?: WHERE (.*?))?(?: ORDER BY (.*?))?(?: LIMIT (\d+))?", sql, re.IGNORECASE | re.DOTALL)
+                    if match:
+                        columns = [c.strip() for c in match.group(1).split(',')]
+                        table1 = match.group(2).lower()
+                        alias1 = match.group(3)
+                        table2 = match.group(4).lower()
+                        alias2 = match.group(5)
+                        where = match.group(6)
+                        order_by = match.group(7)
+                        limit = match.group(8)
+                        
+                        return {
+                            "type": "SELECT_CROSS_JOIN",
+                            "columns": columns,
+                            "table1": table1,
+                            "alias1": alias1,
+                            "table2": table2,
+                            "alias2": alias2,
+                            "where": where,
+                            "order_by": order_by,
+                            "limit": limit
+                        }
+            
+            # Simple SELECT (existing logic)
+            else:
+                match = re.search(r"SELECT (.*?) FROM (\w+)(?: WHERE (.*?))?(?: GROUP BY (.*?))?(?: ORDER BY (.*?))?(?: LIMIT (\d+))?", sql, re.IGNORECASE | re.DOTALL)
+                if match:
+                    columns = [c.strip() for c in match.group(1).split(',')]
+                    table = match.group(2).lower()
+                    where = match.group(3)
+                    group_by = match.group(4)
+                    order_by = match.group(5)
+                    limit = match.group(6)
+                    return {"type": "SELECT", "table": table, "columns": columns, "where": where, "group_by": group_by, "order_by": order_by, "limit": limit}
+        
         # UPDATE
         elif upper_sql.startswith("UPDATE"):
             match = re.search(r"UPDATE (\w+) SET (.*?)(?: WHERE (.*?))?$", sql, re.IGNORECASE | re.DOTALL)
             if match:
-                table = match.group(1).lower()  # Normalize table name to lowercase
+                table = match.group(1).lower()
                 set_clause = match.group(2)
                 where = match.group(3)
                 return {"type": "UPDATE", "table": table, "set": set_clause, "where": where}
+        
         # DELETE
         elif upper_sql.startswith("DELETE"):
             match = re.search(r"DELETE FROM (\w+)(?: WHERE (.*?))?", sql, re.IGNORECASE | re.DOTALL)
             if match:
-                table = match.group(1).lower()  # Normalize table name to lowercase
+                table = match.group(1).lower()
                 where = match.group(2)
                 return {"type": "DELETE", "table": table, "where": where}
+        
         return {"type": "UNKNOWN"}
+
+    def _apply_where_filter(self, rows: List[Dict], where: str) -> List[Dict]:
+        """Apply WHERE filter to rows"""
+        if not where:
+            return rows
+        
+        # Handle simple conditions: col = 'val', col > val, etc.
+        m = re.match(r"(\w+) *([=><]+) *'?([\w@.\- ]+)'?", where)
+        if m:
+            col, op, val = m.group(1), m.group(2), m.group(3)
+            if op == "=":
+                return [r for r in rows if str(r.get(col)) == val]
+            elif op == ">":
+                try:
+                    val_num = int(val)
+                    return [r for r in rows if int(r.get(col, 0)) > val_num]
+                except ValueError:
+                    pass
+            elif op == "<":
+                try:
+                    val_num = int(val)
+                    return [r for r in rows if int(r.get(col, 0)) < val_num]
+                except ValueError:
+                    pass
+        return rows
+
+    def _apply_column_selection(self, rows: List[Dict], columns: List[str]) -> List[Dict]:
+        """Apply column selection to rows"""
+        if columns == ['*']:
+            return rows
+        
+        filtered_rows = []
+        for row in rows:
+            filtered_row = {}
+            for col in columns:
+                if col in row:
+                    filtered_row[col] = row[col]
+            filtered_rows.append(filtered_row)
+        return filtered_rows
+
+    def _apply_group_by(self, rows: List[Dict], group_by: str) -> List[Dict]:
+        """Apply GROUP BY aggregation to rows"""
+        if not group_by:
+            return rows
+        
+        group_col = group_by.strip()
+        groups = {}
+        for row in rows:
+            group_val = row.get(group_col, "Unknown")
+            if group_val not in groups:
+                groups[group_val] = []
+            groups[group_val].append(row)
+        
+        result = []
+        for group_val, group_rows in groups.items():
+            group_result = {group_col: group_val}
+            # Always include all aggregation keys
+            group_result["employee_count"] = len(group_rows)
+            salaries = [float(r.get("salary", 0)) for r in group_rows if r.get("salary") is not None]
+            group_result["avg_salary"] = sum(salaries) / len(salaries) if salaries else 0
+            group_result["max_salary"] = max(salaries) if salaries else 0
+            result.append(group_result)
+        
+        return result
+
+    def _execute_join_query(self, parsed: Dict) -> Dict[str, Any]:
+        """Execute JOIN query in file-based mode"""
+        try:
+            table1 = parsed["table1"]
+            table2 = parsed["table2"]
+            columns = parsed["columns"]
+            join_condition = parsed["join_condition"]
+            where = parsed.get("where")
+            
+            # Get table data
+            rows1 = self.tables.get(table1, [])
+            rows2 = self.tables.get(table2, [])
+            
+            # Parse join condition: table1.col = table2.col
+            join_match = re.match(r"(\w+)\.(\w+)\s*=\s*(\w+)\.(\w+)", join_condition)
+            if not join_match:
+                return {"error": "Invalid join condition format"}
+            
+            col1, col2 = join_match.group(2), join_match.group(4)
+            
+            # Perform JOIN
+            result_rows = []
+            for row1 in rows1:
+                for row2 in rows2:
+                    if str(row1.get(col1)) == str(row2.get(col2)):
+                        # Combine rows
+                        combined_row = {}
+                        for col in columns:
+                            if '.' in col:
+                                # Handle aliased columns: table.col
+                                table_alias, col_name = col.split('.', 1)
+                                if table_alias == parsed.get("alias1") or table_alias == table1:
+                                    combined_row[col] = row1.get(col_name)
+                                elif table_alias == parsed.get("alias2") or table_alias == table2:
+                                    combined_row[col] = row2.get(col_name)
+                            else:
+                                # Handle simple columns
+                                if col in row1:
+                                    combined_row[col] = row1[col]
+                                elif col in row2:
+                                    combined_row[col] = row2[col]
+                        result_rows.append(combined_row)
+            
+            # Apply WHERE filter if specified
+            if where:
+                result_rows = self._apply_where_filter(result_rows, where)
+            
+            return result_rows
+            
+        except Exception as e:
+            logger.error(f"Error executing JOIN query: {str(e)}")
+            return {"error": str(e)}
+
+    def _execute_cross_join_query(self, parsed: Dict) -> Dict[str, Any]:
+        """Execute CROSS JOIN query in file-based mode"""
+        try:
+            table1 = parsed["table1"]
+            table2 = parsed["table2"]
+            columns = parsed["columns"]
+            where = parsed.get("where")
+            
+            # Get table data
+            rows1 = self.tables.get(table1, [])
+            rows2 = self.tables.get(table2, [])
+            
+            # Perform CROSS JOIN
+            result_rows = []
+            for row1 in rows1:
+                for row2 in rows2:
+                    # Combine rows
+                    combined_row = {}
+                    for col in columns:
+                        if '.' in col:
+                            # Handle aliased columns: table.col
+                            table_alias, col_name = col.split('.', 1)
+                            if table_alias == parsed.get("alias1") or table_alias == table1:
+                                combined_row[col] = row1.get(col_name)
+                            elif table_alias == parsed.get("alias2") or table_alias == table2:
+                                combined_row[col] = row2.get(col_name)
+                        else:
+                            # Handle simple columns
+                            if col in row1:
+                                combined_row[col] = row1[col]
+                            elif col in row2:
+                                combined_row[col] = row2[col]
+                    result_rows.append(combined_row)
+            
+            # Apply WHERE filter if specified
+            if where:
+                result_rows = self._apply_where_filter(result_rows, where)
+            
+            return result_rows
+            
+        except Exception as e:
+            logger.error(f"Error executing CROSS JOIN query: {str(e)}")
+            return {"error": str(e)}
 
     def _get_database_type(self) -> DatabaseType:
         return DatabaseType.POSTGRESQL
@@ -288,8 +525,11 @@ class PostgreSQLDatabase(DatabaseBase):
         if not self._is_initialized:
             return self.format_error_result("Database not initialized")
         
+        # Parse query (JSON strings, Python objects, or SQL)
+        parsed_query = self._parse_query(query)
+        
         if self.file_based_mode:
-            return self._execute_file_based_query(query, query_type)
+            return self._execute_file_based_query(parsed_query, query_type)
         
         if self.conn is None:
             return self.format_error_result("PostgreSQL server not available")
@@ -308,12 +548,15 @@ class PostgreSQLDatabase(DatabaseBase):
                         cur.execute(q)
                 else:
                     return self.format_error_result("Unsupported query format", query_type)
+                
                 if cur.description:
                     result = cur.fetchall()
                 else:
                     result = {"rowcount": cur.rowcount}
+                
                 self.conn.commit()
             execution_time = time.time() - start_time
+            
             return self.format_query_result(result, query_type or QueryType.SELECT, execution_time=execution_time)
         except Exception as e:
             execution_time = time.time() - start_time
@@ -365,53 +608,33 @@ class PostgreSQLDatabase(DatabaseBase):
                     where = parsed.get("where")
                     group_by = parsed.get("group_by")
                     rows = self.tables.get(table_name, [])
-                    # WHERE support (simple col = 'val' and col > val)
+                    
+                    # Apply WHERE filter
                     if where:
-                        # Handle simple conditions: col = 'val', col > val, etc.
-                        m = re.match(r"(\w+) *([=><]+) *'?([\w@.\- ]+)'?", where)
-                        if m:
-                            col, op, val = m.group(1), m.group(2), m.group(3)
-                            if op == "=":
-                                rows = [r for r in rows if str(r.get(col)) == val]
-                            elif op == ">":
-                                try:
-                                    val_num = int(val)
-                                    rows = [r for r in rows if int(r.get(col, 0)) > val_num]
-                                except ValueError:
-                                    pass
-                            elif op == "<":
-                                try:
-                                    val_num = int(val)
-                                    rows = [r for r in rows if int(r.get(col, 0)) < val_num]
-                                except ValueError:
-                                    pass
+                        rows = self._apply_where_filter(rows, where)
                     
                     # Handle basic aggregation
                     if group_by:
-                        # Simple GROUP BY with basic aggregation
-                        group_col = group_by.strip()
-                        groups = {}
-                        for row in rows:
-                            group_val = row.get(group_col, "Unknown")
-                            if group_val not in groups:
-                                groups[group_val] = []
-                            groups[group_val].append(row)
-                        
-                        result = []
-                        for group_val, group_rows in groups.items():
-                            group_result = {group_col: group_val}
-                            # Always include all aggregation keys
-                            group_result["employee_count"] = len(group_rows)
-                            salaries = [float(r.get("salary", 0)) for r in group_rows if r.get("salary") is not None]
-                            group_result["avg_salary"] = sum(salaries) / len(salaries) if salaries else 0
-                            group_result["max_salary"] = max(salaries) if salaries else 0
-                            result.append(group_result)
+                        result = self._apply_group_by(rows, group_by)
                     else:
-                        # Only return requested columns
-                        if columns == ['*']:
-                            result = rows
-                        else:
-                            result = [{col: r.get(col) for col in columns if col in r} for r in rows]
+                        # Apply column selection
+                        result = {"data": self._apply_column_selection(rows, columns)}
+                
+                elif parsed["type"] == "SELECT_JOIN":
+                    # Handle JOIN queries
+                    join_result = self._execute_join_query(parsed)
+                    if isinstance(join_result, dict) and "error" in join_result:
+                        result = {"error": join_result["error"]}
+                    else:
+                        result = {"data": join_result}
+                
+                elif parsed["type"] == "SELECT_CROSS_JOIN":
+                    # Handle CROSS JOIN queries
+                    cross_join_result = self._execute_cross_join_query(parsed)
+                    if isinstance(cross_join_result, dict) and "error" in cross_join_result:
+                        result = {"error": cross_join_result["error"]}
+                    else:
+                        result = {"data": cross_join_result}
                 elif parsed["type"] == "UPDATE":
                     table_name = parsed["table"]
                     set_clause = parsed["set"]
@@ -632,13 +855,18 @@ class PostgreSQLExecuteTool(Tool):
         try:
             if not self.database:
                 return {"success": False, "error": "PostgreSQL database not initialized", "data": None}
+            
+            # Parse query if it's a JSON string
+            parsed_query = self.database._parse_query(query)
+            
             query_type_enum = None
             if query_type:
                 try:
                     query_type_enum = QueryType(query_type.lower())
                 except ValueError:
                     return {"success": False, "error": f"Invalid query type: {query_type}", "data": None}
-            result = self.database.execute_query(query=query, query_type=query_type_enum)
+            
+            result = self.database.execute_query(query=parsed_query, query_type=query_type_enum)
             return result
         except Exception as e:
             logger.error(f"Error in postgresql_execute tool: {str(e)}")

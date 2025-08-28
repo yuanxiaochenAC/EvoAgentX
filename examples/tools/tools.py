@@ -1393,8 +1393,8 @@ def main():
     # # Run Python interpreter examples
     # run_python_interpreter_examples()
     
-    # Run Docker interpreter examples
-    run_docker_interpreter_examples()
+    # # Run Docker interpreter examples
+    # run_docker_interpreter_examples()
     
     # # Run search tools examples
     # run_search_examples()
@@ -1405,8 +1405,8 @@ def main():
     # # Run BrowserUse tool example
     # run_browser_use_tool_example()
         
-    # # Run browser tool example
-    # run_browser_tool_example()
+    # Run browser tool example
+    run_browser_tool_example()
     
     # # Run FAISS tool example
     # run_faiss_tool_example()

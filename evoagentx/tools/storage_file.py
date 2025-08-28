@@ -16,7 +16,7 @@ class SaveTool(Tool):
         },
         "content": {
             "type": "string",
-            "description": "Content to save to the file (can be JSON string for structured data)"
+            "description": "Content to save to the file (string for text, JSON string for structured data, or Python object for JSON files)"
         },
         "encoding": {
             "type": "string",
@@ -40,15 +40,21 @@ class SaveTool(Tool):
     def __init__(self, storage_handler: FileStorageHandler = None):
         super().__init__()
         self.storage_handler = storage_handler or LocalStorageHandler()
+    
+    @classmethod
+    def validate_attributes(cls):
+        # Skip validation for this tool to allow flexible content types
+        # This allows us to accept Python objects while maintaining JSON schema compatibility
+        pass
 
-    def __call__(self, file_path: str, content: str, encoding: str = "utf-8", indent: int = 2, 
+    def __call__(self, file_path: str, content: Any, encoding: str = "utf-8", indent: int = 2, 
                  sheet_name: str = "Sheet1", root_tag: str = "root") -> Dict[str, Any]:
         """
         Save content to a file with automatic format detection.
         
         Args:
             file_path: Path to the file to save
-            content: Content to save to the file
+            content: Content to save to the file (string for text, dict/list for JSON, list for CSV/Excel)
             encoding: Text encoding for text files
             indent: Indentation for JSON files
             sheet_name: Sheet name for Excel files
@@ -62,34 +68,50 @@ class SaveTool(Tool):
             file_extension = self.storage_handler.get_file_type(file_path)
             parsed_content = content
             
-            # Try to parse JSON content for appropriate file types
+            # Handle JSON content - convert Python objects to Python objects for StorageToolkit
             if file_extension in ['.json', '.yaml', '.yml', '.xml']:
-                try:
-                    import json
-                    parsed_content = json.loads(content)
-                except json.JSONDecodeError:
-                    # If not valid JSON, use as string
+                # If content is already a string, try to parse it as JSON
+                if isinstance(content, str):
+                    try:
+                        import json
+                        parsed_content = json.loads(content)
+                    except json.JSONDecodeError:
+                        # If not valid JSON, use as string
+                        parsed_content = content
+                else:
+                    # If content is a Python object, pass it directly to StorageToolkit
+                    # StorageToolkit will handle the JSON serialization
                     parsed_content = content
             
             # Handle CSV content
             elif file_extension == '.csv':
-                try:
-                    import json
-                    parsed_content = json.loads(content)
-                    if not isinstance(parsed_content, list):
-                        return {"success": False, "error": "CSV content must be a list of dictionaries"}
-                except json.JSONDecodeError:
-                    return {"success": False, "error": "CSV content must be valid JSON array"}
+                # If content is already a list, use it directly
+                if isinstance(content, list):
+                    parsed_content = content
+                else:
+                    # If content is a string, try to parse it as JSON
+                    try:
+                        import json
+                        parsed_content = json.loads(content)
+                        if not isinstance(parsed_content, list):
+                            return {"success": False, "error": "CSV content must be a list of dictionaries"}
+                    except json.JSONDecodeError:
+                        return {"success": False, "error": "CSV content must be valid JSON array"}
             
             # Handle Excel content
             elif file_extension == '.xlsx':
-                try:
-                    import json
-                    parsed_content = json.loads(content)
-                    if not isinstance(parsed_content, list):
-                        return {"success": False, "error": "Excel content must be a list of lists"}
-                except json.JSONDecodeError:
-                    return {"success": False, "error": "Excel content must be valid JSON array"}
+                # If content is already a list, use it directly
+                if isinstance(content, list):
+                    parsed_content = content
+                else:
+                    # If content is a string, try to parse it as JSON
+                    try:
+                        import json
+                        parsed_content = json.loads(content)
+                        if not isinstance(parsed_content, list):
+                            return {"success": False, "error": "Excel content must be a list of lists"}
+                    except json.JSONDecodeError:
+                        return {"success": False, "error": "Excel content must be valid JSON array"}
             
             kwargs = {
                 "encoding": encoding,

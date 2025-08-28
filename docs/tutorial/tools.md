@@ -2,15 +2,49 @@
 
 This tutorial walks you through using EvoAgentX's powerful tool ecosystem. Tools allow agents to interact with the external world, perform computations, and access information. We'll cover:
 
+**📁 Example Files Structure**:
+- `examples/tools/tools_interpreter.py` - Code interpreter examples (Section 2)
+- `examples/tools/tools_search.py` - Search and request examples (Section 3)  
+- `examples/tools/tools_files.py` - File system examples (Section 4)
+- `examples/tools/tools_database.py` - Database examples (Section 5)
+- `examples/tools/tools_images.py` - Image handling examples (Section 6)
+- `examples/tools/tools_browser.py` - Browser automation examples (Section 7)
+- `examples/tools/tools_integration.py` - MCP and integration examples (Section 8)
+
 1. **Understanding the Tool Architecture**: Learn about the base Tool class and Toolkit system
 2. **Code Interpreters**: Execute Python code safely using Python and Docker interpreters
 3. **Search Tools**: Access information from the web using Wikipedia and Google search tools
 4. **File Operations**: Handle file reading and writing with special support for different file formats
-5. **Browser Automation**: Control web browsers using both traditional Selenium-based automation and AI-driven natural language automation
-6. **MCP Tools**: Connect to external services using the Model Context Protocol
-7. **Image Handling Tools**: Comprehensive capabilities for image analysis, generation, and manipulation using various AI services and APIs
+5. **Database Tools**: Comprehensive database management with MongoDB, PostgreSQL, and FAISS
+6. **Image Handling Tools**: Comprehensive capabilities for image analysis, generation, and manipulation using various AI services and APIs
+7. **Browser Tools**: Control web browsers using both traditional Selenium-based automation and AI-driven natural language automation
+8. **MCP Tools**: Connect to external services using the Model Context Protocol
 
 By the end of this tutorial, you'll understand how to leverage these tools in your own agents and workflows.
+
+---
+
+## Quick Start
+
+**🚀 Run All Examples at Once**:
+```bash
+# Run the comprehensive examples file (except for image tools)
+python -m examples.tools.tools
+```
+
+**📚 Individual Tool Categories**:
+```bash
+# Run specific tool categories
+python -m examples.tools.tools_interpreter    # Code interpreters
+python -m examples.tools.tools_search         # Search and request tools  
+python -m examples.tools.tools_files          # File system tools
+python -m examples.tools.tools_database       # Database tools
+python -m examples.tools.tools_images         # Image handling tools
+python -m examples.tools.tools_browser        # Browser automation tools
+python -m examples.tools.tools_integration    # MCP and integration tools
+```
+
+**Note**: The original `tools.py` file contains all examples in one place, while the separated files focus on specific tool categories for easier learning and testing.
 
 ---
 
@@ -47,12 +81,22 @@ The `Toolkit` system groups related tools together, providing:
 
 ## 2. Code Interpreters
 
+**📁 Example File**: `examples/tools/tools_interpreter.py`
+
+**🔧 Toolkit Files**: 
+- `evoagentx/tools/python_interpreter.py` - PythonInterpreterToolkit implementation
+- `evoagentx/tools/docker_interpreter.py` - DockerInterpreterToolkit implementation
+
+**🚀 Run Examples**: `python -m examples.tools.tools_interpreter`
+
 EvoAgentX provides two main code interpreter toolkits:
 
 1. **PythonInterpreterToolkit**: Executes Python code in a controlled environment
 2. **DockerInterpreterToolkit**: Executes code within isolated Docker containers
 
 ### 2.1 PythonInterpreterToolkit
+
+**Source**: `evoagentx/tools/python_interpreter.py`
 
 **The PythonInterpreterToolkit provides a secure environment for executing Python code with fine-grained control over imports, directory access, and execution context. It uses a sandboxing approach to restrict potentially harmful operations.**
 
@@ -157,6 +201,8 @@ toolkit = PythonInterpreterToolkit(
 ---
 
 ### 2.2 DockerInterpreterToolkit
+
+**Source**: `evoagentx/tools/docker_interpreter.py`
 
 **The DockerInterpreterToolkit executes code in isolated Docker containers, providing maximum security and environment isolation. It allows safe execution of potentially risky code with custom environments, dependencies, and complete resource isolation. Docker must be installed and running on your machine to use this toolkit.**
 
@@ -273,6 +319,40 @@ Container execution completed.
 
 ---
 
+### 2.3 Running the Examples
+
+To run the code interpreter examples:
+
+```bash
+# Run all interpreter examples
+python -m examples.tools.tools_interpreter
+
+# Or run from the examples/tools directory
+cd examples/tools
+python tools_interpreter.py
+```
+
+**Example Output**:
+```
+===== CODE INTERPRETER EXAMPLES =====
+
+===== PYTHON INTERPRETER EXAMPLES =====
+
+Simple Hello World Result:
+--------------------------------------------------
+Hello, World!
+This code is running inside a secure Python interpreter.
+--------------------------------------------------
+
+===== DOCKER INTERPRETER EXAMPLES =====
+Running Docker interpreter examples...
+...
+```
+
+**Note**: Make sure Docker is running if you want to test the Docker interpreter examples.
+
+---
+
 ## 3. Search and Request Tools
 
 EvoAgentX provides comprehensive search and request toolkits to retrieve information from various sources and perform HTTP operations:
@@ -280,7 +360,7 @@ EvoAgentX provides comprehensive search and request toolkits to retrieve informa
 1. **WikipediaSearchToolkit**: Search Wikipedia for information
 2. **GoogleSearchToolkit**: Search Google using the official API
 3. **GoogleFreeSearchToolkit**: Search Google without requiring an API key
-4. **DDGSSearchToolkit**: Search using DuckDuckGo
+4. **DDGSSearchToolkit**: Search using DDGS (Dux Distributed Global Search)
 5. **SerpAPIToolkit**: Multi-engine search (Google, Bing, Baidu, Yahoo, DuckDuckGo)
 6. **SerperAPIToolkit**: Google search via SerperAPI
 7. **RequestToolkit**: Perform HTTP operations (GET, POST, PUT, DELETE)
@@ -494,7 +574,7 @@ for i, result in enumerate(results.get("results", [])):
 
 ### 3.4 DDGSSearchToolkit
 
-**The DDGSSearchToolkit provides web search capabilities using DuckDuckGo, offering privacy-focused search results without requiring API keys. It supports multiple backends and provides comprehensive search results with content extraction.**
+**The DDGSSearchToolkit provides web search capabilities using DDGS (Dux Distributed Global Search), offering privacy-focused search results without requiring API keys. It supports multiple backends and provides comprehensive search results with content extraction.**
 
 #### 3.4.1 Setup
 
@@ -505,7 +585,7 @@ from evoagentx.tools import DDGSSearchToolkit
 toolkit = DDGSSearchToolkit(
     num_search_pages=3,
     max_content_words=300,
-    backend="auto",  # Options: "auto", "duckduckgo", "google", "bing"
+    backend="auto",  # Options: "auto", "duckduckgo", "google", "bing", "brave", "yahoo"
     region="us-en"   # Language and region settings
 )
 ```
@@ -516,18 +596,18 @@ The `DDGSSearchToolkit` provides the following callable tool:
 
 ##### Tool: ddgs_search
 
-**Description**: Searches the web using DuckDuckGo with optional backend selection.
+**Description**: Searches the web using DDGS (Dux Distributed Global Search) with optional backend selection.
 
 **Usage Example**:
 ```python
 # Get the search tool
 search_tool = toolkit.get_tool("ddgs_search")
 
-# Search using DuckDuckGo
+# Search using DDGS
 results = search_tool(
     query="machine learning applications",
     num_search_pages=2,
-    backend="duckduckgo"
+    backend="he "
 )
 
 # Process the results
@@ -1093,7 +1173,7 @@ The search and request tools in EvoAgentX provide comprehensive access to inform
 | **WikipediaSearchToolkit** | Encyclopedic knowledge | ❌ | General information, definitions |
 | **GoogleSearchToolkit** | Web search (official API) | ✅ | High-quality, reliable results |
 | **GoogleFreeSearchToolkit** | Web search (no API) | ❌ | Simple queries, no setup |
-| **DDGSSearchToolkit** | Privacy-focused search | ❌ | Privacy-conscious applications |
+| **DDGSSearchToolkit** | DDGS search | ❌ | Privacy-conscious applications |
 | **SerpAPIToolkit** | Multi-engine search | ✅ | Comprehensive, multi-source results |
 | **SerperAPIToolkit** | Google search alternative | ✅ | Google results with content extraction |
 | **RequestToolkit** | HTTP operations | ❌ | API interactions, web scraping |
@@ -1103,6 +1183,16 @@ The search and request tools in EvoAgentX provide comprehensive access to inform
 Choose the appropriate toolkit based on your specific needs, API key availability, and the type of information you need to retrieve.
 
 ## 4. FileSystem Tools
+
+**📁 Example File**: `examples/tools/tools_files.py`
+
+**🔧 Toolkit Files**: 
+- `evoagentx/tools/storage_file.py` - StorageToolkit implementation (SaveTool, ReadTool, AppendTool)
+- `evoagentx/tools/storage_base.py` - StorageBase core implementation
+- `evoagentx/tools/storage_handler.py` - FileStorageHandler abstract base
+- `evoagentx/tools/cmd.py` - CMDToolkit implementation
+
+**🚀 Run Examples**: `python -m examples.tools.tools_files`
 
 FileSystem tools provide capabilities for file operations, storage management, and command-line execution. These tools are essential for managing data persistence, file manipulation, and system interactions.
 
@@ -1501,7 +1591,18 @@ class CloudStorageHandler(FileStorageHandler):
 - Consider security implications of command execution
 - Use meaningful base paths for organized storage
 
+---
+
 ## 5. Database Tools
+
+**📁 Example File**: `examples/tools/tools_database.py`
+
+**🔧 Toolkit Files**: 
+- `evoagentx/tools/database_mongodb.py` - MongoDBToolkit implementation
+- `evoagentx/tools/database_postgresql.py` - PostgreSQLToolkit implementation
+- `evoagentx/tools/database_faiss.py` - FaissToolkit implementation
+
+**🚀 Run Examples**: `python -m examples.tools.tools_database`
 
 Database tools provide comprehensive database management capabilities including relational databases (PostgreSQL), document databases (MongoDB), and vector databases (FAISS). These tools enable agents to perform complex data operations, semantic search, and data persistence with automatic storage management.
 
@@ -1533,23 +1634,18 @@ toolkit = MongoDBToolkit(
 
 #### 5.1.2 Available Methods
 
-```python
-# Get available tools
-tools = toolkit.get_tools()
-print(f"Available tools: {[tool.name for tool in tools]}")
+The `MongoDBToolkit` provides the following tools:
 
-# Available tools:
-# - mongodb_execute_query: Execute MongoDB queries and aggregation pipelines
-# - mongodb_find: Find documents with filtering, projection, and sorting
-# - mongodb_update: Update documents in collections
-# - mongodb_delete: Delete documents with filters
-# - mongodb_info: Get database and collection information
-```
+- **mongodb_execute_query**: Execute MongoDB queries and aggregation pipelines
+- **mongodb_find**: Find documents with filtering, projection, and sorting
+- **mongodb_update**: Update documents in collections
+- **mongodb_delete**: Delete documents with filters
+- **mongodb_info**: Get database and collection information
 
 #### 5.1.3 Usage Example
 
 ```python
-# Execute complex queries
+# Get tools
 execute_tool = toolkit.get_tool("mongodb_execute_query")
 find_tool = toolkit.get_tool("mongodb_find")
 delete_tool = toolkit.get_tool("mongodb_delete")
@@ -1563,7 +1659,7 @@ products = [
 
 # Insert using execute tool
 result = execute_tool(
-    query=json.dumps(products),
+    query=products,
     query_type="insert",
     collection_name="products"
 )
@@ -1582,94 +1678,6 @@ delete_result = delete_tool(
     multi=True
 )
 ```
-
-#### 5.1.4 Parameters
-
-**mongodb_execute_query:**
-- `query` (str): MongoDB query (JSON string for find, array for aggregation)
-- `query_type` (str, optional): Type of query (select, aggregate) - auto-detected if not provided
-- `collection_name` (str): Collection name (required for all operations)
-
-**mongodb_find:**
-- `collection_name` (str): Collection name to query
-- `filter` (str, optional): MongoDB filter query (JSON string, e.g., '{"age": {"$gt": 18}}')
-- `projection` (str, optional): Fields to include/exclude (JSON string, e.g., '{"name": 1, "_id": 0}')
-- `sort` (str, optional): Sort criteria (JSON string, e.g., '{"age": -1}')
-- `limit` (int, optional): Maximum number of documents to return
-- `skip` (int, optional): Number of documents to skip
-
-**mongodb_delete:**
-- `collection_name` (str): Collection name to delete from
-- `filter` (str): MongoDB filter query (JSON string)
-- `multi` (bool): Whether to delete multiple documents (required parameter)
-
-#### 5.1.5 Return Type
-
-All tools return `dict` with success/error information and data. The actual return structure follows a standardized format:
-
-```python
-{
-    "success": True,                    # Boolean indicating success/failure
-    "data": {...},                      # Actual result data
-    "query_type": "select",             # Type of query executed
-    "execution_time": 0.001,            # Time taken to execute
-    "row_count": 2,                     # Number of rows/documents affected
-    "metadata": {...}                   # Additional metadata (collection names, filters, etc.)
-}
-```
-
-#### 5.1.6 Sample Return
-
-```python
-# Success response for find
-{
-    "success": True,
-    "data": [
-        {
-            "id": "P001",
-            "name": "Laptop",
-            "category": "Electronics",
-            "price": 999.99,
-            "stock": 50
-        },
-        {
-            "id": "P002",
-            "name": "Mouse",
-            "category": "Electronics",
-            "price": 29.99,
-            "stock": 100
-        }
-    ],
-    "query_type": "select",
-    "execution_time": 0.001,
-    "row_count": 2,
-    "metadata": {
-        "collection_name": "products",
-        "filter_applied": {"category": "Electronics"}
-    }
-}
-
-# Success response for delete
-{
-    "success": True,
-    "data": {
-        "deleted_count": 1
-    },
-    "query_type": "delete",
-    "execution_time": 0.002,
-    "row_count": 1,
-    "metadata": {
-        "collection_name": "products"
-    }
-}
-```
-
-#### 5.1.7 Setup Hints
-
-- **Auto-save**: Enable `auto_save=True` for automatic database persistence
-- **Query Format**: Use JSON strings for filters, projections, and sort criteria
-- **Collection Names**: Always specify the collection name for operations
-- **Error Handling**: Check the `success` field before processing results
 
 ---
 
@@ -1702,19 +1710,14 @@ toolkit = PostgreSQLToolkit(
 
 #### 5.2.2 Available Methods
 
-```python
-# Get available tools
-tools = toolkit.get_tools()
-print(f"Available tools: {[tool.name for tool in tools]}")
+The `PostgreSQLToolkit` provides the following tools:
 
-# Available tools:
-# - postgresql_execute: Execute arbitrary SQL queries
-# - postgresql_find: Find (SELECT) rows from tables
-# - postgresql_update: Update rows in tables
-# - postgresql_create: Create tables and other objects
-# - postgresql_delete: Delete rows from tables
-# - postgresql_info: Get database and table information
-```
+- **postgresql_execute**: Execute arbitrary SQL queries
+- **postgresql_find**: Find (SELECT) rows from tables
+- **postgresql_update**: Update rows in tables
+- **postgresql_create**: Create tables and other objects
+- **postgresql_delete**: Delete rows from tables
+- **postgresql_info**: Get database and table information
 
 #### 5.2.3 Usage Example
 
@@ -1763,89 +1766,6 @@ delete_result = delete_tool(
     "department = 'Marketing'"
 )
 ```
-
-#### 5.2.4 Parameters
-
-**postgresql_execute:**
-- `query` (str): SQL query to execute (can be SELECT, INSERT, UPDATE, DELETE, etc.)
-- `query_type` (str, optional): Type of query (select, insert, update, delete, create, drop, alter, index) - auto-detected if not provided
-
-**postgresql_find:**
-- `table_name` (str): Table name to query
-- `where` (str, optional): WHERE clause (e.g., 'age > 18')
-- `columns` (str, optional): Comma-separated columns to select (default: '*')
-- `limit` (int, optional): Maximum number of rows to return
-- `offset` (int, optional): Number of rows to skip
-- `sort` (str, optional): ORDER BY clause (e.g., 'age ASC')
-
-**postgresql_update:**
-- `table_name` (str): Table name to update
-- `set` (str): SET clause (e.g., 'status = \'active\'')
-- `where` (str, optional): WHERE clause
-
-**postgresql_create:**
-- `query` (str): CREATE statement (e.g., CREATE TABLE ...)
-
-**postgresql_delete:**
-- `table_name` (str): Table name to delete from
-- `where` (str): WHERE clause for deletion
-
-#### 5.2.5 Return Type
-
-All tools return `dict` with success/error information and data. The actual return structure follows a standardized format:
-
-```python
-{
-    "success": True,                    # Boolean indicating success/failure
-    "data": {...},                      # Actual result data
-    "query_type": "select",             # Type of query executed
-    "execution_time": 0.001,            # Time taken to execute
-    "row_count": 2,                     # Number of rows affected
-    "metadata": {...}                   # Additional metadata
-}
-```
-
-#### 5.2.6 Sample Return
-
-```python
-# Success response for find
-{
-    "success": True,
-    "data": [
-        {
-            "name": "Alice Johnson",
-            "age": 28
-        },
-        {
-            "name": "Carol Davis",
-            "age": 25
-        }
-    ],
-    "query_type": "select",
-    "execution_time": 0.003,
-    "row_count": 2,
-    "metadata": {}
-}
-
-# Success response for delete
-{
-    "success": True,
-    "data": {
-        "rowcount": 1
-    },
-    "query_type": "delete",
-    "execution_time": 0.001,
-    "row_count": 1,
-    "metadata": {}
-}
-```
-
-#### 5.2.7 Setup Hints
-
-- **Auto-save**: Enable `auto_save=True` for automatic database persistence
-- **Query Types**: The toolkit automatically detects query types, but you can specify them explicitly
-- **SQL Injection**: Always use parameterized queries for user input
-- **Transactions**: Use explicit transaction management for complex operations
 
 ---
 
@@ -1900,18 +1820,13 @@ toolkit = FaissToolkit(
 
 #### 5.3.2 Available Methods
 
-```python
-# Get available tools
-tools = toolkit.get_tools()
-print(f"Available tools: {[tool.name for tool in tools]}")
+The `FaissToolkit` provides the following tools:
 
-# Available tools:
-# - faiss_query: Query the vector database with semantic search
-# - faiss_insert: Insert documents with automatic chunking and embedding
-# - faiss_delete: Delete documents by ID or metadata filters
-# - faiss_list: List all corpora and their configurations
-# - faiss_stats: Get database and corpus statistics
-```
+- **faiss_query**: Query the vector database with semantic search
+- **faiss_insert**: Insert documents with automatic chunking and embedding
+- **faiss_delete**: Delete documents by ID or metadata filters
+- **faiss_list**: List all corpora and their configurations
+- **faiss_stats**: Get database and corpus statistics
 
 #### 5.3.3 Usage Example
 
@@ -1955,93 +1870,6 @@ delete_result = delete_tool(
 )
 ```
 
-#### 5.3.4 Parameters
-
-**faiss_query:**
-- `query` (str): The search query text to find semantically similar content
-- `corpus_id` (str, optional): Optional corpus ID to search in (uses default if not provided)
-- `top_k` (int, optional): Number of top results to return (default: 5)
-- `similarity_threshold` (float, optional): Minimum similarity threshold for results (default: 0.0)
-- `metadata_filters` (dict, optional): Optional metadata filters to apply to search results
-
-**faiss_insert:**
-- `documents` (list): Array of documents to insert (can be strings, file paths, or structured objects)
-- `corpus_id` (str, optional): Optional corpus ID to insert into (uses default if not provided)
-- `metadata` (dict, optional): Optional metadata to add to all documents
-- `batch_size` (int, optional): Batch size for processing documents (default: 100)
-
-**faiss_delete:**
-- `doc_ids` (list, optional): List of document IDs to delete
-- `metadata_filters` (dict, optional): Metadata filters for deletion
-- `corpus_id` (str, optional): Corpus ID to delete from (uses default if not provided)
-
-**faiss_stats:**
-- `corpus_id` (str, optional): Optional corpus ID to get statistics for (returns global stats if not provided)
-
-#### 5.3.5 Return Type
-
-All tools return `dict` with success/error information and data. The actual return structure follows a standardized format:
-
-```python
-{
-    "success": True,                    # Boolean indicating success/failure
-    "data": {...},                      # Actual result data
-    "query_type": "select",             # Type of query executed
-    "execution_time": 0.001,            # Time taken to execute
-    "row_count": 2,                     # Number of documents/vectors affected
-    "metadata": {...}                   # Additional metadata
-}
-```
-
-#### 5.3.6 Sample Return
-
-```python
-# Success response for insert
-{
-    "success": True,
-    "data": {
-        "documents_inserted": 3,
-        "chunks_created": 6,
-        "corpus_id": "example_corpus"
-    }
-}
-
-# Success response for query
-{
-    "success": True,
-    "data": {
-        "total_results": 3,
-        "results": [
-            {
-                "score": 0.8923,
-                "content": "Machine learning is a subset of artificial intelligence...",
-                "doc_id": "doc_001",
-                "metadata": {"source": "AI_knowledge_base", "topic": "artificial_intelligence"}
-            }
-        ]
-    }
-}
-
-# Success response for stats
-{
-    "success": True,
-    "data": {
-        "total_corpora": 1,
-        "corpora": ["example_corpus"],
-        "embedding_model": "text-embedding-ada-002",
-        "vector_store_type": "faiss"
-    }
-}
-```
-
-#### 5.3.7 Setup Hints
-
-- **API Key**: Set `OPENAI_API_KEY` environment variable for OpenAI embeddings
-- **File Processing**: The toolkit automatically detects file paths and reads content
-- **Chunking**: Configure chunk size and overlap for optimal document processing
-- **Metadata**: Use metadata filters for efficient document organization and retrieval
-- **Corpora**: Use different corpus IDs to organize documents by topic or source
-
 ---
 
 ### 5.4 Database Tools Summary
@@ -2066,7 +1894,36 @@ All tools return `dict` with success/error information and data. The actual retu
 - Consider transaction management for complex operations
 - Use connection pooling for high-traffic applications
 
+---
+
 ## 6. Image Handling Tools
+
+**📁 Example File**: `examples/tools/tools_images.py`
+
+**🔧 Toolkit Files**: 
+- `evoagentx/tools/image_analysis.py` - ImageAnalysisToolkit implementation
+- `evoagentx/tools/OpenAI_Image_Generation.py` - OpenAIImageGenerationToolkit implementation
+- `evoagentx/tools/flux_image_generation.py` - FluxImageGenerationToolkit implementation
+
+**🚀 Run Examples**: `python -m examples.tools.tools_images`
+
+**🧪 Test Files**: `tests/tools/test_image_tools.py` (to be created)
+
+**🚀 Run Tests**: `python -m tests.tools.test_image_tools` (when test files are created)
+
+**📁 View Source Code**: 
+```bash
+# View toolkit implementations
+ls evoagentx/tools/image_*.py
+
+# View example file
+cat examples/tools/tools_images.py
+
+# View toolkit source files
+cat evoagentx/tools/image_analysis.py
+cat evoagentx/tools/OpenAI_Image_Generation.py
+cat evoagentx/tools/flux_image_generation.py
+```
 
 Image handling tools provide comprehensive capabilities for image analysis, generation, and manipulation using various AI services and APIs. These tools enable agents to work with visual content, generate images from text descriptions, and analyze image content.
 
@@ -2404,18 +2261,96 @@ Returns `dict` with generation results including file path and storage handler i
 
 ---
 
+### 6.5 Running the Examples
+
+To run the image handling tool examples:
+
+```bash
+# Run all image tool examples
+python -m examples.tools.tools_images
+
+# Or run from the examples/tools directory
+cd examples/tools
+python tools_images.py
+```
+
+**Example Output**:
+```
+===== IMAGE TOOL EXAMPLES =====
+
+===== IMAGE ANALYSIS TOOL EXAMPLE =====
+✓ ImageAnalysisToolkit initialized
+✓ Using OpenRouter API key: your-key...
+Analyzing image: https://upload.wikimedia.org/...
+Prompt: Describe this image in detail.
+✓ Image analysis successful
+Analysis: This image shows a modern office workspace...
+
+===== FLUX IMAGE GENERATION TOOL EXAMPLE =====
+✓ Flux Image Generation Toolkit initialized
+✓ Using BFL API key: your-key...
+Generating image with prompt: 'A futuristic cyberpunk city...'
+✓ Image generation successful
+Generated image path: ./flux_generated_images/flux_42.jpeg
+✓ Generated image file saved successfully
+
+===== ALL IMAGE TOOL EXAMPLES COMPLETED =====
+```
+
+**Note**: Make sure you have the required API keys set in your environment variables before running the examples.
+
+---
+
+### 6.6 File Organization Benefits
+
+The separated `tools_images.py` file provides several advantages:
+
+✅ **Focused Learning**: Concentrate on image-specific tools without distraction from other categories  
+✅ **Easier Testing**: Test image generation and analysis independently  
+✅ **API Key Management**: Manage different API keys (OpenAI, OpenRouter, BFL) separately  
+✅ **Cleaner Examples**: More focused examples for each image toolkit  
+✅ **Better Documentation**: Dedicated section for image tool documentation and troubleshooting  
+✅ **Modular Development**: Develop and test image tools without affecting other tool categories
+
+---
+
 ## 7. Browser Tools
+
+**📁 Example File**: `examples/tools/tools_browser.py`
+
+**🔧 Toolkit Files**: 
+- `evoagentx/tools/browser_tool.py` - BrowserToolkit implementation (Selenium-based)
+- `evoagentx/tools/browser_use.py` - BrowserUseToolkit implementation (AI-driven)
+
+**🚀 Run Examples**: `python -m examples.tools.tools_browser`
+
+**🧪 Test Files**: `tests/tools/test_browser_tools.py` (to be created)
+
+**🚀 Run Tests**: `python -m tests.tools.test_browser_tools` (when test files are created)
+
+**📁 View Source Code**: 
+```bash
+# View toolkit implementations
+ls evoagentx/tools/browser_*.py
+
+# View example file
+cat examples/tools/tools_browser.py
+
+# View toolkit source files
+cat evoagentx/tools/browser_tool.py
+cat evoagentx/tools/browser_use.py
+```
 
 EvoAgentX provides comprehensive browser automation capabilities through two different toolkits:
 
-1. **BrowserToolkit** (Selenium-based): Provides fine-grained control over browser elements with detailed snapshots and element references
-2. **BrowserUseToolkit** (Browser-Use based): Offers natural language browser automation using AI-driven interactions
+1. **BrowserToolkit** (Selenium-based): Provides fine-grained control over browser elements with detailed snapshots and element references. **No API key required** - operated by LLM agents for precise browser automation.
+2. **BrowserUseToolkit** (Browser-Use based): Offers natural language browser automation using AI-driven interactions. **Requires OpenAI API key** for AI-powered browser control.
 
-## Setup
+### 7.1 Setup
 
-### Option 1: BrowserToolkit (Selenium-based)
+#### 7.1.1 BrowserToolkit (Selenium-based)
 
-Best for: Fine-grained control, detailed element inspection, complex automation workflows
+Best for: Fine-grained control, detailed element inspection, complex automation workflows. **No API key required** - operated by LLM agents.
 
 ```python
 from evoagentx.tools import BrowserToolkit
@@ -2437,9 +2372,9 @@ console_tool = toolkit.get_tool("browser_console_messages")
 close_tool = toolkit.get_tool("close_browser")
 ```
 
-### Option 2: BrowserUseToolkit (Browser-Use based)
+#### 7.1.2 BrowserUseToolkit (Browser-Use based)
 
-Best for: Natural language interactions, AI-driven automation, simple task descriptions
+Best for: Natural language interactions, AI-driven automation, simple task descriptions. **Requires OpenAI API key** for AI-powered browser control.
 
 ```python
 from evoagentx.tools import BrowserUseToolkit
@@ -2456,11 +2391,11 @@ toolkit = BrowserUseToolkit(
 browser_tool = toolkit.get_tool("browser_use")
 ```
 
-## Available Methods
+### 7.2 Available Methods
 
-### BrowserToolkit (Selenium-based) Methods
+#### 7.2.1 BrowserToolkit (Selenium-based) Methods
 
-### 1. initialize_browser
+##### 7.2.1.1 initialize_browser
 
 Start or restart a browser session. Must be called before any other browser operations.
 
@@ -2482,7 +2417,7 @@ initialize_tool = toolkit.get_tool("initialize_browser")
 result = initialize_tool()
 ```
 
-### 2. navigate_to_url
+##### 7.2.1.2 navigate_to_url
 
 Navigate to a URL and automatically capture a snapshot of all page elements for interaction.
 
@@ -2520,7 +2455,7 @@ navigate_tool = toolkit.get_tool("navigate_to_url")
 result = navigate_tool(url="https://example.com")
 ```
 
-### 3. input_text
+##### 7.2.1.3 input_text
 
 Type text into form fields, search boxes, or other input elements using element references from snapshots.
 
@@ -2553,7 +2488,7 @@ result = input_tool(
 )
 ```
 
-### 4. browser_click
+##### 7.2.1.4 browser_click
 
 Click on buttons, links, or other clickable elements using element references from snapshots.
 
@@ -2581,7 +2516,7 @@ result = click_tool(
 )
 ```
 
-### 5. browser_snapshot
+##### 7.2.1.5 browser_snapshot
 
 Capture a fresh snapshot of the current page state, including all interactive elements. Use this after page changes not caused by navigation or clicking.
 
@@ -2628,7 +2563,7 @@ snapshot_tool = toolkit.get_tool("browser_snapshot")
 result = snapshot_tool()
 ```
 
-### 6. browser_console_messages
+##### 7.2.1.6 browser_console_messages
 
 Retrieve JavaScript console messages (logs, warnings, errors) for debugging web applications.
 
@@ -2666,7 +2601,7 @@ console_tool = toolkit.get_tool("browser_console_messages")
 result = console_tool()
 ```
 
-### 7. close_browser
+##### 7.2.1.7 close_browser
 
 Close the browser session and free system resources. Always call this when finished.
 
@@ -2690,9 +2625,9 @@ result = close_tool()
 
 ---
 
-### BrowserUseToolkit (Browser-Use based) Methods
+#### 7.2.2 BrowserUseToolkit (AI-driven) Methods
 
-### browser_use
+##### 7.2.2.1 browser_use
 
 Execute browser automation tasks using natural language descriptions. This single tool handles all browser interactions through AI-driven automation.
 
@@ -2734,8 +2669,335 @@ print(f"Registration result: {result}")
 - "Find the download button and click it"
 - "Scroll down to the bottom of the page and click 'Load More'"
 
-## Element Reference System
+### 7.3 Element Reference System
 
 The browser tools use a unique element reference system:
 
-1. **Element IDs**: After taking a snapshot, interactive elements are assigned unique IDs like `e0`, `e1`, `
+1. **Element IDs**: After taking a snapshot, interactive elements are assigned unique IDs like `e0`, `e1`, `e2`, etc.
+2. **Element Descriptions**: Each element has a human-readable description for easy identification
+3. **Element Categories**: Elements are categorized by purpose (navigation, form, action, etc.)
+4. **Element States**: Elements show their current state (visible, interactable, editable)
+
+---
+
+### 7.4 Running the Examples
+
+To run the browser tool examples:
+
+```bash
+# Run all browser tool examples
+python -m examples.tools.tools_browser
+
+# Or run from the examples/tools directory
+cd examples/tools
+python tools_browser.py
+```
+
+**Example Output**:
+```
+===== FOCUSED BROWSER TOOL EXAMPLES =====
+
+===== AI-DRIVEN BROWSER SEARCH EXAMPLE =====
+✓ BrowserUseToolkit initialized
+✓ Using OpenAI API key: your-key...
+
+🔍 Task 1: Searching for EvoAgentX project information...
+Task: Go to GitHub and search for 'EvoAgentX' project, then collect basic information about the project
+✓ Project search completed successfully
+Result: Successfully found EvoAgentX repository with 1000+ stars, description: "Building a Self-Evolving Ecosystem of AI Agents"...
+
+📚 Task 2: Getting project documentation...
+Task: Visit the EvoAgentX documentation and collect key information
+✓ Documentation collection completed successfully
+Result: Found main features: workflow generation, agent management, tool integration...
+
+✓ AI-driven browser search completed
+
+===== SELENIUM BASIC BROWSER OPERATIONS =====
+✓ BrowserToolkit initialized
+✓ All browser tools loaded successfully
+
+Step 1: Browser initialization...
+Initialization result: success
+
+Step 2: Creating and navigating to test page...
+✓ Created test page at: /path/to/simple_test_page.html
+Navigation result: success
+Page title: Simple Test Page
+
+Step 3: Taking snapshot to identify elements...
+✓ Snapshot successful
+Found 7 interactive elements
+  Element 1: name/input
+    Purpose: text input
+    ID: e0
+
+Step 4: Performing basic form operations...
+  - Filling name field...
+  - Filling email field...
+  - Selecting role...
+  - Filling message field...
+  - Submitting form...
+    Submit result: success
+
+Step 5: Checking form submission result...
+✓ Form submission successful - data correctly displayed!
+
+Step 6: Testing clear functionality...
+    Clear result: success
+
+Step 7: Testing show hidden content...
+    Show result: success
+✓ Hidden content successfully revealed!
+
+✓ Basic browser operations test completed successfully!
+
+===== BROWSER TOOL COMPARISON =====
+🔧 **BrowserToolkit (Selenium-based)**
+✅ Pros: Fine-grained control, precise form filling...
+❌ Cons: More complex setup, manual element identification...
+
+🤖 **BrowserUseToolkit (AI-driven)**
+✅ Pros: Natural language, AI-driven decisions...
+❌ Cons: Requires API key, less precise control...
+
+===== ALL BROWSER TOOL EXAMPLES COMPLETED =====
+```
+
+**Note**: Make sure you have the required dependencies installed and API keys set up before running the examples.
+
+---
+
+### 7.5 File Organization Benefits
+
+The separated `tools_browser.py` file provides several advantages:
+
+✅ **Focused Learning**: Concentrate on browser automation without distraction from other tool categories  
+✅ **Toolkit Comparison**: Easily compare Selenium vs AI-driven approaches  
+✅ **Practical Examples**: Real-world tasks (project research) and basic operations (form automation)  
+✅ **Test Page Creation**: Automatic creation of styled test HTML pages for demonstration  
+✅ **Error Handling**: Robust error handling and user guidance  
+✅ **Dependency Management**: Clear requirements for different browser automation approaches  
+✅ **Modular Testing**: Test browser tools independently from other tool categories
+
+---
+
+## 8. MCP Tools
+
+**📁 Example File**: `examples/tools/tools_integration.py`
+
+**🔧 Toolkit Files**: 
+- `evoagentx/tools/mcp.py` - MCPToolkit implementation
+
+**🚀 Run Examples**: `python -m examples.tools.tools_integration`
+
+**🧪 Test Files**: `tests/tools/test_mcp_tools.py` (to be created)
+
+**🚀 Run Tests**: `python -m tests.tools.test_mcp_tools` (when test files are created)
+
+**📁 View Source Code**: 
+```bash
+# View toolkit implementation
+ls evoagentx/tools/mcp.py
+
+# View example file
+cat examples/tools/tools_integration.py
+
+# View toolkit source files
+cat evoagentx/tools/mcp.py
+```
+
+**📋 Configuration Files**:
+- `examples/tools/sample_mcp.config` - Sample MCP server configuration
+
+EvoAgentX provides comprehensive MCP (Model Context Protocol) integration capabilities for connecting to external tools and services:
+
+1. **MCPToolkit**: Connects to external MCP servers and provides access to their tools
+2. **FastMCP 2.0 Integration**: Enhanced performance and reliability with FastMCP backend
+3. **Multiple Server Support**: Connect to multiple MCP servers simultaneously
+4. **Automatic Tool Discovery**: Automatically discover and integrate available tools from MCP servers
+
+### 8.1 MCPToolkit
+
+**The MCPToolkit provides a bridge between EvoAgentX and external MCP servers, enabling agents to use tools and services that are not natively integrated into the framework.**
+
+#### 8.1.1 Setup
+
+```python
+from evoagentx.tools import MCPToolkit
+
+# Initialize with configuration file
+toolkit = MCPToolkit(config_path="path/to/mcp.config")
+
+# Or with direct configuration
+config = {
+    "mcpServers": {
+        "arxiv-server": {
+            "command": "uv",
+            "args": ["tool", "run", "arxiv-mcp-server"]
+        }
+    }
+}
+toolkit = MCPToolkit(config=config)
+```
+
+#### 8.1.2 Available Methods
+
+The `MCPToolkit` provides the following methods:
+
+- **`get_toolkits()`**: Returns a list of toolkits from all connected MCP servers
+- **`disconnect()`**: Closes all MCP server connections
+
+#### 8.1.3 Usage Example
+
+```python
+# Get all available toolkits from MCP servers
+toolkits = toolkit.get_toolkits()
+
+# Explore available tools
+for toolkit_item in toolkits:
+    print(f"Toolkit: {toolkit_item.name}")
+    tools = toolkit_item.get_tools()
+    
+    for tool in tools:
+        print(f"  Tool: {tool.name}")
+        print(f"    Description: {tool.description}")
+        print(f"    Parameters: {tool.inputs}")
+
+# Use a specific tool
+arxiv_tool = None
+for toolkit_item in toolkits:
+    for tool in toolkit_item.get_tools():
+        if "search" in tool.name.lower():
+            arxiv_tool = tool
+            break
+    if arxiv_tool:
+        break
+
+if arxiv_tool:
+    # Call the tool
+    result = arxiv_tool(query="artificial intelligence")
+    print(f"Search result: {result}")
+
+# Always disconnect when done
+toolkit.disconnect()
+```
+
+### 8.2 MCP Configuration
+
+**MCP servers are configured using JSON configuration files that specify how to start and connect to external services.**
+
+#### 8.2.1 Configuration Format
+
+```json
+{
+    "mcpServers": {
+        "server-name": {
+            "command": "command-to-run",
+            "args": ["arg1", "arg2"],
+            "env": {
+                "ENV_VAR": "value"
+            }
+        }
+    }
+}
+```
+
+#### 8.2.2 Example Configurations
+
+**arXiv MCP Server**:
+```json
+{
+    "mcpServers": {
+        "arxiv-mcp-server": {
+            "command": "uv",
+            "args": [
+                "tool",
+                "run",
+                "arxiv-mcp-server",
+                "--storage-path", "./data/"
+            ]
+        }
+    }
+}
+```
+
+**File System MCP Server**:
+```json
+{
+    "mcpServers": {
+        "file-system-server": {
+            "command": "file-system-mcp-server",
+            "args": ["--root", "/path/to/root"]
+        }
+    }
+}
+```
+
+### 8.3 Running the Examples
+
+To run the MCP tool examples:
+
+```bash
+# Run all MCP tool examples
+python -m examples.tools.tools_integration
+
+# Or run from the examples/tools directory
+cd examples/tools
+python tools_integration.py
+```
+
+**Example Output**:
+```
+===== MCP TOOL EXAMPLES =====
+
+===== MCP ARXIV SERVER EXAMPLE =====
+Loading MCP configuration from: /path/to/sample_mcp.config
+Initializing MCPToolkit...
+✓ MCPToolkit initialized successfully
+
+Step 1: Connecting to MCP servers and retrieving tools...
+✓ Connected to 1 MCP server(s)
+
+Step 2: Exploring available tools...
+Toolkit 1: arxiv-mcp-server
+----------------------------------------
+Available tools: 1
+  Tool 1: search_papers
+    Description: Search for research papers on arXiv
+    Inputs: 1 parameters
+    Parameters:
+      ✓ query (string): Search query for papers
+
+Step 3: Using arXiv search tool...
+✓ Found arXiv tool: search_papers
+  Description: Search for research papers on arXiv
+
+Searching for research papers about: 'artificial intelligence'
+
+Search Results:
+--------------------------------------------------
+Result type: <class 'dict'>
+Result content: {'papers': [{'title': 'Deep Learning for AI'...}]}
+
+✓ MCP arXiv example completed
+✓ MCP connection closed
+
+===== ALL MCP TOOL EXAMPLES COMPLETED =====
+```
+
+**Note**: Make sure you have the required MCP server packages installed and running before testing the examples.
+
+---
+
+### 8.4 File Organization Benefits
+
+The separated `tools_integration.py` file provides several advantages:
+
+✅ **Focused Learning**: Concentrate on MCP integration without distraction from other tool categories  
+✅ **Server Management**: Learn how to configure and manage MCP servers  
+✅ **Tool Discovery**: Understand how to explore and use external tools  
+✅ **Error Handling**: Robust error handling and troubleshooting guidance  
+✅ **Configuration Examples**: Multiple configuration examples for different use cases  
+✅ **Setup Guide**: Comprehensive setup guide and best practices  
+✅ **Modular Testing**: Test MCP integration independently from other tool categories
