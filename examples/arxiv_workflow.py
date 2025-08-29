@@ -1,4 +1,4 @@
-import os
+import os 
 from dotenv import load_dotenv
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.workflow import WorkFlowGenerator, WorkFlowGraph, WorkFlow
@@ -13,7 +13,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 def main():
     # 初始化大模型配置
     openai_config = OpenAILLMConfig(
-        model="gpt-4o-mini",
+        model="gpt-4o",
         openai_key=OPENAI_API_KEY,
         stream=True,
         output_response=True,
@@ -50,7 +50,7 @@ def main():
     daily_paper_digest
     """
 
-    target_directory = "EvoAgentX\examples\output\paper_push"
+    target_directory = "EvoAgentX/examples/output/paper_push"
     module_save_path = os.path.join(target_directory, "paper_push_workflow.json")
     result_path = os.path.join(target_directory, "daily_paper_digest.md")
     os.makedirs(target_directory, exist_ok=True)
