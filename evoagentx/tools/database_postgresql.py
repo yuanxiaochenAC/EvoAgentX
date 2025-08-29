@@ -181,7 +181,13 @@ class PostgreSQLDatabase(DatabaseBase):
                     continue
                 table_name = json_file.stem
                 with open(json_file, 'r', encoding='utf-8') as f:
-                    self.tables[table_name] = json.load(f)
+                    loaded_data = json.load(f)
+                    # Ensure loaded data is a list
+                    if not isinstance(loaded_data, list):
+                        logger.warning(f"Table {table_name} file contains non-list data: {type(loaded_data)}, converting to empty list")
+                        self.tables[table_name] = []
+                    else:
+                        self.tables[table_name] = loaded_data
         except Exception as e:
             logger.warning(f"Error loading tables from files: {str(e)}")
 
@@ -195,20 +201,7 @@ class PostgreSQLDatabase(DatabaseBase):
         except Exception as e:
             logger.error(f"Error saving table {table_name}: {str(e)}")
 
-    def _parse_query(self, query: Union[str, Dict, List]) -> Union[str, Dict, List]:
-        """Parse query into appropriate format - supports JSON strings and SQL"""
-        if isinstance(query, (dict, list)):
-            return query
-        
-        if isinstance(query, str):
-            # Try to parse as JSON first
-            try:
-                return json.loads(query)
-            except (json.JSONDecodeError, ValueError):
-                # If not JSON, treat as SQL
-                return query
-        
-        return query
+
 
     def _parse_sql_query(self, sql: str) -> Dict[str, Any]:
         """Enhanced SQL parser for file-based mode - now supports JOINs and complex queries"""
@@ -334,33 +327,53 @@ class PostgreSQLDatabase(DatabaseBase):
         if not where:
             return rows
         
+        # Ensure rows is a list of dictionaries
+        if not isinstance(rows, list):
+            logger.warning(f"_apply_where_filter: rows is not a list: {type(rows)}")
+            return []
+        
+        # Filter out any non-dictionary items
+        valid_rows = [r for r in rows if isinstance(r, dict)]
+        if len(valid_rows) != len(rows):
+            logger.warning(f"_apply_where_filter: filtered out {len(rows) - len(valid_rows)} non-dict rows")
+        
         # Handle simple conditions: col = 'val', col > val, etc.
         m = re.match(r"(\w+) *([=><]+) *'?([\w@.\- ]+)'?", where)
         if m:
             col, op, val = m.group(1), m.group(2), m.group(3)
             if op == "=":
-                return [r for r in rows if str(r.get(col)) == val]
+                return [r for r in valid_rows if str(r.get(col, "")) == val]
             elif op == ">":
                 try:
                     val_num = int(val)
-                    return [r for r in rows if int(r.get(col, 0)) > val_num]
+                    return [r for r in valid_rows if int(r.get(col, 0)) > val_num]
                 except ValueError:
                     pass
             elif op == "<":
                 try:
                     val_num = int(val)
-                    return [r for r in rows if int(r.get(col, 0)) < val_num]
+                    return [r for r in valid_rows if int(r.get(col, 0)) < val_num]
                 except ValueError:
                     pass
-        return rows
+        return valid_rows
 
     def _apply_column_selection(self, rows: List[Dict], columns: List[str]) -> List[Dict]:
         """Apply column selection to rows"""
         if columns == ['*']:
             return rows
         
+        # Ensure rows is a list of dictionaries
+        if not isinstance(rows, list):
+            logger.warning(f"_apply_column_selection: rows is not a list: {type(rows)}")
+            return []
+        
+        # Filter out any non-dictionary items
+        valid_rows = [r for r in rows if isinstance(r, dict)]
+        if len(valid_rows) != len(rows):
+            logger.warning(f"_apply_column_selection: filtered out {len(rows) - len(valid_rows)} non-dict rows")
+        
         filtered_rows = []
-        for row in rows:
+        for row in valid_rows:
             filtered_row = {}
             for col in columns:
                 if col in row:
@@ -373,9 +386,19 @@ class PostgreSQLDatabase(DatabaseBase):
         if not group_by:
             return rows
         
+        # Ensure rows is a list of dictionaries
+        if not isinstance(rows, list):
+            logger.warning(f"_apply_group_by: rows is not a list: {type(rows)}")
+            return []
+        
+        # Filter out any non-dictionary items
+        valid_rows = [r for r in rows if isinstance(r, dict)]
+        if len(valid_rows) != len(rows):
+            logger.warning(f"_apply_group_by: filtered out {len(rows) - len(valid_rows)} non-dict rows")
+        
         group_col = group_by.strip()
         groups = {}
-        for row in rows:
+        for row in valid_rows:
             group_val = row.get(group_col, "Unknown")
             if group_val not in groups:
                 groups[group_val] = []
@@ -406,6 +429,14 @@ class PostgreSQLDatabase(DatabaseBase):
             rows1 = self.tables.get(table1, [])
             rows2 = self.tables.get(table2, [])
             
+            # Ensure rows are lists
+            if not isinstance(rows1, list):
+                logger.warning(f"Table {table1} contains non-list data: {type(rows1)}")
+                rows1 = []
+            if not isinstance(rows2, list):
+                logger.warning(f"Table {table2} contains non-list data: {type(rows2)}")
+                rows2 = []
+            
             # Parse join condition: table1.col = table2.col
             join_match = re.match(r"(\w+)\.(\w+)\s*=\s*(\w+)\.(\w+)", join_condition)
             if not join_match:
@@ -416,8 +447,16 @@ class PostgreSQLDatabase(DatabaseBase):
             # Perform JOIN
             result_rows = []
             for row1 in rows1:
+                # Ensure row1 is a dictionary
+                if not isinstance(row1, dict):
+                    logger.warning(f"Skipping non-dict row1 in JOIN: {type(row1)}")
+                    continue
                 for row2 in rows2:
-                    if str(row1.get(col1)) == str(row2.get(col2)):
+                    # Ensure row2 is a dictionary
+                    if not isinstance(row2, dict):
+                        logger.warning(f"Skipping non-dict row2 in JOIN: {type(row2)}")
+                        continue
+                    if str(row1.get(col1, "")) == str(row2.get(col2, "")):
                         # Combine rows
                         combined_row = {}
                         for col in columns:
@@ -425,9 +464,9 @@ class PostgreSQLDatabase(DatabaseBase):
                                 # Handle aliased columns: table.col
                                 table_alias, col_name = col.split('.', 1)
                                 if table_alias == parsed.get("alias1") or table_alias == table1:
-                                    combined_row[col] = row1.get(col_name)
+                                    combined_row[col] = row1.get(col_name, "")
                                 elif table_alias == parsed.get("alias2") or table_alias == table2:
-                                    combined_row[col] = row2.get(col_name)
+                                    combined_row[col] = row2.get(col_name, "")
                             else:
                                 # Handle simple columns
                                 if col in row1:
@@ -458,10 +497,26 @@ class PostgreSQLDatabase(DatabaseBase):
             rows1 = self.tables.get(table1, [])
             rows2 = self.tables.get(table2, [])
             
+            # Ensure rows are lists
+            if not isinstance(rows1, list):
+                logger.warning(f"Table {table1} contains non-list data: {type(rows1)}")
+                rows1 = []
+            if not isinstance(rows2, list):
+                logger.warning(f"Table {table2} contains non-list data: {type(rows2)}")
+                rows2 = []
+            
             # Perform CROSS JOIN
             result_rows = []
             for row1 in rows1:
+                # Ensure row1 is a dictionary
+                if not isinstance(row1, dict):
+                    logger.warning(f"Skipping non-dict row1 in CROSS JOIN: {type(row1)}")
+                    continue
                 for row2 in rows2:
+                    # Ensure row2 is a dictionary
+                    if not isinstance(row2, dict):
+                        logger.warning(f"Skipping non-dict row2 in CROSS JOIN: {type(row2)}")
+                        continue
                     # Combine rows
                     combined_row = {}
                     for col in columns:
@@ -469,9 +524,9 @@ class PostgreSQLDatabase(DatabaseBase):
                             # Handle aliased columns: table.col
                             table_alias, col_name = col.split('.', 1)
                             if table_alias == parsed.get("alias1") or table_alias == table1:
-                                combined_row[col] = row1.get(col_name)
+                                combined_row[col] = row1.get(col_name, "")
                             elif table_alias == parsed.get("alias2") or table_alias == table2:
-                                combined_row[col] = row2.get(col_name)
+                                combined_row[col] = row2.get(col_name, "")
                         else:
                             # Handle simple columns
                             if col in row1:
@@ -525,43 +580,59 @@ class PostgreSQLDatabase(DatabaseBase):
         if not self._is_initialized:
             return self.format_error_result("Database not initialized")
         
-        # Parse query (JSON strings, Python objects, or SQL)
-        parsed_query = self._parse_query(query)
-        
+        # For file-based mode, keep existing logic
         if self.file_based_mode:
-            return self._execute_file_based_query(parsed_query, query_type)
+            return self._execute_file_based_query(query, query_type)
         
+        # For remote PostgreSQL, use direct psycopg2 execution
         if self.conn is None:
             return self.format_error_result("PostgreSQL server not available")
         
         start_time = time.time()
         try:
             with self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                # Handle different query formats
                 if isinstance(query, str):
+                    # Direct SQL string - execute as-is
                     cur.execute(query)
                 elif isinstance(query, dict):
+                    # Dict with SQL and params - use parameterized query
                     sql = query.get("sql")
                     params = query.get("params", None)
-                    cur.execute(sql, params)
+                    if params:
+                        cur.execute(sql, params)
+                    else:
+                        cur.execute(sql)
                 elif isinstance(query, list):
+                    # List of queries - execute each one
                     for q in query:
-                        cur.execute(q)
+                        if isinstance(q, str):
+                            cur.execute(q)
+                        elif isinstance(q, dict):
+                            sql = q.get("sql")
+                            params = q.get("params", None)
+                            if params:
+                                cur.execute(sql, params)
+                            else:
+                                cur.execute(sql)
                 else:
                     return self.format_error_result("Unsupported query format", query_type)
                 
+                # Handle results
                 if cur.description:
                     result = cur.fetchall()
                 else:
                     result = {"rowcount": cur.rowcount}
                 
                 self.conn.commit()
-            execution_time = time.time() - start_time
             
+            execution_time = time.time() - start_time
             return self.format_query_result(result, query_type or QueryType.SELECT, execution_time=execution_time)
+            
         except Exception as e:
             execution_time = time.time() - start_time
             logger.error(f"Error executing PostgreSQL query: {str(e)}")
-            # Rollback on error to prevent transaction issues
+            # Rollback on error
             try:
                 if self.conn:
                     self.conn.rollback()
@@ -576,10 +647,22 @@ class PostgreSQLDatabase(DatabaseBase):
             if isinstance(query, str):
                 parsed = self._parse_sql_query(query)
                 query_type = query_type or QueryType.SELECT
+                
+                # Ensure parsed is a dictionary with a type key
+                if not isinstance(parsed, dict) or "type" not in parsed:
+                    logger.error(f"_execute_file_based_query: parsed is not a valid dict: {parsed}")
+                    return self.format_error_result(f"Failed to parse SQL query: {query}", query_type)
+                
+                logger.debug(f"Executing {parsed['type']} query: {parsed}")
+                
                 if parsed["type"] == "CREATE":
                     table_name = parsed["table"]
                     columns = parsed.get("columns", ["id"])
                     if table_name not in self.tables:
+                        self.tables[table_name] = []
+                    # Ensure table is always a list
+                    if not isinstance(self.tables[table_name], list):
+                        logger.warning(f"Reinitializing table {table_name} as list (was {type(self.tables[table_name])})")
                         self.tables[table_name] = []
                     # Store schema as a hidden key
                     self.tables[f"__schema__{table_name}"] = columns
@@ -592,22 +675,46 @@ class PostgreSQLDatabase(DatabaseBase):
                     all_values = parsed["values"]
                     if table_name not in self.tables:
                         self.tables[table_name] = []
+                    # Ensure table is always a list
+                    if not isinstance(self.tables[table_name], list):
+                        logger.warning(f"Reinitializing table {table_name} as list (was {type(self.tables[table_name])})")
+                        self.tables[table_name] = []
                     
+                    valid_rows = 0
                     # Insert all rows
                     for values in all_values:
+                        # Skip invalid rows (should have same number of values as columns)
+                        if len(values) != len(columns):
+                            logger.warning(f"Skipping invalid row: {values} (expected {len(columns)} values, got {len(values)})")
+                            continue
+                        # Ensure values is a list
+                        if not isinstance(values, list):
+                            logger.warning(f"Skipping non-list values: {type(values)}")
+                            continue
                         row = {col: val for col, val in zip(columns, values)}
                         row["id"] = len(self.tables[table_name]) + 1
                         self.tables[table_name].append(row)
+                        valid_rows += 1
                     
                     if self.auto_save:
                         self._save_table_to_file(table_name)
-                    result = {"rowcount": len(all_values)}
+                    result = {"rowcount": valid_rows}
                 elif parsed["type"] == "SELECT":
                     table_name = parsed["table"]
                     columns = parsed["columns"]
                     where = parsed.get("where")
                     group_by = parsed.get("group_by")
                     rows = self.tables.get(table_name, [])
+                    # Ensure rows is always a list
+                    if not isinstance(rows, list):
+                        logger.warning(f"Table {table_name} contains non-list data: {type(rows)}")
+                        rows = []
+                    
+                    # Debug logging
+                    logger.debug(f"SELECT query: table={table_name}, columns={columns}, where={where}, group_by={group_by}")
+                    logger.debug(f"Rows from table: {type(rows)}, length={len(rows) if isinstance(rows, list) else 'N/A'}")
+                    if isinstance(rows, list) and rows:
+                        logger.debug(f"First row type: {type(rows[0])}, content: {rows[0]}")
                     
                     # Apply WHERE filter
                     if where:
@@ -622,6 +729,7 @@ class PostgreSQLDatabase(DatabaseBase):
                 
                 elif parsed["type"] == "SELECT_JOIN":
                     # Handle JOIN queries
+                    logger.debug(f"Executing JOIN query: {parsed}")
                     join_result = self._execute_join_query(parsed)
                     if isinstance(join_result, dict) and "error" in join_result:
                         result = {"error": join_result["error"]}
@@ -630,6 +738,7 @@ class PostgreSQLDatabase(DatabaseBase):
                 
                 elif parsed["type"] == "SELECT_CROSS_JOIN":
                     # Handle CROSS JOIN queries
+                    logger.debug(f"Executing CROSS JOIN query: {parsed}")
                     cross_join_result = self._execute_cross_join_query(parsed)
                     if isinstance(cross_join_result, dict) and "error" in cross_join_result:
                         result = {"error": cross_join_result["error"]}
@@ -640,16 +749,28 @@ class PostgreSQLDatabase(DatabaseBase):
                     set_clause = parsed["set"]
                     where = parsed.get("where")
                     rows = self.tables.get(table_name, [])
+                    # Ensure rows is always a list
+                    if not isinstance(rows, list):
+                        logger.warning(f"Table {table_name} contains non-list data: {type(rows)}")
+                        rows = []
                     # Parse set_clause: col1 = 'val1', col2 = 'val2'
                     updates = dict(re.findall(r"(\w+) *= *'?([\w@.\- ]+)'?", set_clause))
                     count = 0
                     for r in rows:
+                        # Ensure r is a dictionary
+                        if not isinstance(r, dict):
+                            logger.warning(f"Skipping non-dict row in UPDATE: {type(r)}")
+                            continue
                         match = True
                         if where:
-                            m = re.match(r"(\w+) *= *'?([\w@.\- ]+)'?", where)
+                            m = re.match(r"(\w+) *([=><]+) *'?([\w@.\- ]+)'?", where)
                             if m:
-                                col, val = m.group(1), m.group(2)
-                                if str(r.get(col)) != val:
+                                col, op, val = m.group(1), m.group(2), m.group(3)
+                                if op == "=" and str(r.get(col, "")) != val:
+                                    match = False
+                                elif op == ">" and int(r.get(col, 0)) <= int(val):
+                                    match = False
+                                elif op == "<" and int(r.get(col, 0)) >= int(val):
                                     match = False
                         if match:
                             r.update(updates)
@@ -661,16 +782,20 @@ class PostgreSQLDatabase(DatabaseBase):
                     table_name = parsed["table"]
                     where = parsed.get("where")
                     rows = self.tables.get(table_name, [])
+                    # Ensure rows is always a list
+                    if not isinstance(rows, list):
+                        logger.warning(f"Table {table_name} contains non-list data: {type(rows)}")
+                        rows = []
                     if where:
                         m = re.match(r"(\w+) *([=><]+) *'?([\w@.\- ]+)'?", where)
                         if m:
                             col, op, val = m.group(1), m.group(2), m.group(3)
                             if op == "=":
-                                new_rows = [r for r in rows if str(r.get(col)) != val]
+                                new_rows = [r for r in rows if isinstance(r, dict) and str(r.get(col, "")) != val]
                             elif op == ">":
                                 try:
                                     val_num = int(val)
-                                    new_rows = [r for r in rows if int(r.get(col, 0)) <= val_num]
+                                    new_rows = [r for r in rows if isinstance(r, dict) and int(r.get(col, 0)) <= val_num]
                                 except ValueError:
                                     new_rows = rows
                             else:
@@ -694,6 +819,10 @@ class PostgreSQLDatabase(DatabaseBase):
         except Exception as e:
             execution_time = time.time() - start_time
             logger.error(f"Error executing file-based query: {str(e)}")
+            logger.error(f"Query that caused error: {query}")
+            logger.error(f"Query type: {query_type}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return self.format_error_result(str(e), query_type, execution_time=execution_time)
 
     def get_database_info(self) -> Dict[str, Any]:
@@ -856,9 +985,8 @@ class PostgreSQLExecuteTool(Tool):
             if not self.database:
                 return {"success": False, "error": "PostgreSQL database not initialized", "data": None}
             
-            # Parse query if it's a JSON string
-            parsed_query = self.database._parse_query(query)
-            
+            # Simply pass the SQL query directly to the database
+            # No more complex parsing - let psycopg2 handle it
             query_type_enum = None
             if query_type:
                 try:
@@ -866,7 +994,7 @@ class PostgreSQLExecuteTool(Tool):
                 except ValueError:
                     return {"success": False, "error": f"Invalid query type: {query_type}", "data": None}
             
-            result = self.database.execute_query(query=parsed_query, query_type=query_type_enum)
+            result = self.database.execute_query(query=query, query_type=query_type_enum)
             return result
         except Exception as e:
             logger.error(f"Error in postgresql_execute tool: {str(e)}")
