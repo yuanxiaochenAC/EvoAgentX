@@ -2,7 +2,7 @@
 
 This tutorial walks you through using EvoAgentX's powerful tool ecosystem. Tools allow agents to interact with the external world, perform computations, and access information. 
 
-**💡 Pro Tip**: Start with the [Toolkit Overview Table](#-toolkit-overview-table) below to quickly find the specific toolkit you need, then jump directly to its documentation section.
+**💡 Pro Tip**: Start with the [Toolkit Overview Table](#🗂️-toolkit-overview-table) below to quickly find the specific toolkit you need, then jump directly to its documentation section.
 
 We'll cover:
 
@@ -36,9 +36,9 @@ By the end of this tutorial, you'll understand how to leverage these tools in yo
 
 | Category | Toolkit Name | Tool Description | Code File Path | Test File Path |
 |----------|--------------|------------------|----------------|----------------|
-| **[1) Code Interpreters](#2-code-interpreters)** | [PythonInterpreterToolkit](#21-pythoninterpretertoolkit) | Safely execute Python code snippets or scripts with controlled imports and filesystem access. Perfect for testing untrusted code. | `evoagentx/tools/interpreter_python.py` | `examples/tools/tools_interpreter.py` |
+| **[1) Code Interpreters](#1-understanding-the-tool-architecture)** | [PythonInterpreterToolkit](#21-pythoninterpretertoolkit) | Safely execute Python code snippets or scripts with controlled imports and filesystem access. Perfect for testing untrusted code. | `evoagentx/tools/interpreter_python.py` | `examples/tools/tools_interpreter.py` |
 | | [DockerInterpreterToolkit](#22-dockerinterpretertoolkit) | Run code in isolated Docker containers for maximum security. Ideal for untrusted code, special dependencies, or strict isolation requirements. | `evoagentx/tools/interpreter_docker.py` | `examples/tools/tools_interpreter.py` |
-| **[2) Search & Request Tools](#3-search-and-request-tools)** | [WikipediaSearchToolkit](#31-wikipediasearchtoolkit) | Search Wikipedia for articles with summaries and content. Great for research and educational content. | `evoagentx/tools/search_wiki.py` | `examples/tools/tools_search.py` |
+| **[2) Search & Request Tools](#2-code-interpreters)** | [WikipediaSearchToolkit](#31-wikipediasearchtoolkit) | Search Wikipedia for articles with summaries and content. Great for research and educational content. | `evoagentx/tools/search_wiki.py` | `examples/tools/tools_search.py` |
 | | [GoogleSearchToolkit](#32-googlesearchtoolkit) | Google Custom Search with official API. High-quality results for professional applications. | `evoagentx/tools/search_google.py` | `examples/tools/tools_search.py` |
 | | [GoogleFreeSearchToolkit](#33-googlefreesearchtoolkit) | Google-style search without API keys. Lightweight alternative for simple queries. | `evoagentx/tools/search_google_f.py` | `examples/tools/tools_search.py` |
 | | [DDGSSearchToolkit](#34-ddgssearchtoolkit) | Privacy-focused search with multiple backends. Ideal for applications requiring user privacy. | `evoagentx/tools/search_ddgs.py` | `examples/tools/tools_search.py` |
@@ -47,26 +47,26 @@ By the end of this tutorial, you'll understand how to leverage these tools in yo
 | | [RequestToolkit](#37-requesttoolkit) | HTTP client for API calls and web scraping. Essential for building web-connected agents. | `evoagentx/tools/request.py` | `examples/tools/tools_search.py` |
 | | [ArxivToolkit](#38-arxivtoolkit) | Search arXiv research papers. Perfect for academic and scientific research applications. | `evoagentx/tools/request_arxiv.py` | `examples/tools/tools_search.py` |
 | | [RSSToolkit](#39-rsstoolkit) | Fetch and validate RSS feeds. Monitor news sources and content updates automatically. | `evoagentx/tools/rss_feed.py` | `examples/tools/tools_search.py` |
-| **[3) FileSystem Tools](#4-filesystem-tools)** | [StorageToolkit](#41-storagetoolkit) | Complete file management with save/read/append/delete/move/copy operations. Essential for data persistence and file handling. | `evoagentx/tools/storage_file.py` | `examples/tools/tools_files.py` |
+| **[3) FileSystem Tools](#3-search-and-request-tools)** | [StorageToolkit](#41-storagetoolkit) | Complete file management with save/read/append/delete/move/copy operations. Essential for data persistence and file handling. | `evoagentx/tools/storage_file.py` | `examples/tools/tools_files.py` |
 | | [CMDToolkit](#42-cmdtoolkit) | Execute shell commands with safety checks and cross-platform support. Perfect for system administration and automation. | `evoagentx/tools/cmd_toolkit.py` | `examples/tools/tools_files.py` |
 | | [FileToolkit](#43-storage-handler-introduction) | File operations toolkit for managing files and directories. | `evoagentx/tools/file_tool.py` | `examples/tools/tools_files.py` |
-| **[4) Database Tools](#5-database-tools)** | [MongoDBToolkit](#51-mongodbtoolkit) | MongoDB operations with automatic local/remote detection. Perfect for document storage and flexible data schemas. | `evoagentx/tools/database_mongodb.py` | `examples/tools/tools_database.py` |
+| **[4) Database Tools](#4-filesystem-tools)** | [MongoDBToolkit](#51-mongodbtoolkit) | MongoDB operations with automatic local/remote detection. Perfect for document storage and flexible data schemas. | `evoagentx/tools/database_mongodb.py` | `examples/tools/tools_database.py` |
 | | [PostgreSQLToolkit](#52-postgresqltoolkit) | PostgreSQL operations with SQL execution and targeted operations. Ideal for structured data and complex queries. | `evoagentx/tools/database_postgresql.py` | `examples/tools/tools_database.py` |
 | | [FaissToolkit](#53-faisstoolkit) | Vector database for semantic search and similarity matching. Great for AI applications and content discovery. | `evoagentx/tools/database_faiss.py` | `examples/tools/tools_database.py` |
-| **[5) Image Handling Tools](#6-image-handling-tools)** | [ImageAnalysisToolkit](#61-imageanalysistoolkit) | Analyze images and PDFs using AI vision models. Perfect for content moderation and visual understanding. | `evoagentx/tools/image_analysis.py` | `examples/tools/tools_images.py` |
+| **[5) Image Handling Tools](#5-database-tools)** | [ImageAnalysisToolkit](#61-imageanalysistoolkit) | Analyze images and PDFs using AI vision models. Perfect for content moderation and visual understanding. | `evoagentx/tools/image_analysis.py` | `examples/tools/tools_images.py` |
 | | [OpenAIImageGenerationToolkit](#62-openaiimagegenerationtoolkit) | Generate images from text using OpenAI's DALL-E. Great for creative content and visual design. | `evoagentx/tools/images_openai_generation.py` | `examples/tools/tools_images.py` |
 | | [FluxImageGenerationToolkit](#63-fluximagegenerationtoolkit) | Generate images with Flux Kontext Max. Advanced control over aspect ratios and artistic styles. | `evoagentx/tools/images_flux_generation.py` | `examples/tools/tools_images.py` |
-| **[6) Browser Tools](#7-browser-tools)** | [BrowserToolkit](#71-browsertoolkit) | Fine-grained browser automation with precise control. Perfect for complex web scraping and testing workflows. | `evoagentx/tools/browser_tool.py` | `examples/tools/tools_browser.py` |
-| | [BrowserUseToolkit](#72-browserusetoolkit) | Natural language browser automation using AI. Ideal for simple tasks described in plain English. | `evoagentx/tools/browser_use.py` | `examples/tools/tools_browser.py` |
+| **[6) Browser Tools](#6-image-handling-tools)** | [BrowserToolkit](#71-setup) | Fine-grained browser automation with precise control. Perfect for complex web scraping and testing workflows. | `evoagentx/tools/browser_tool.py` | `examples/tools/tools_browser.py` |
+| | [BrowserUseToolkit](#72-available-methods) | Natural language browser automation using AI. Ideal for simple tasks described in plain English. | `evoagentx/tools/browser_use.py` | `examples/tools/tools_browser.py` |
 | **[7) MCP Tools](#8-mcp-tools)** | [MCPToolkit](#81-mcptoolkit) | Connect to external MCP servers and discover their tools. Extends EvoAgentX with third-party capabilities. | `evoagentx/tools/mcp.py` | `examples/tools/tools_integration.py` |
 
 **🔗 Quick Navigation Links:**
-- [Code Interpreters](#2-code-interpreters) - Execute code safely
-- [Search & Request Tools](#3-search-and-request-tools) - Access web information
-- [FileSystem Tools](#4-filesystem-tools) - File operations and storage
-- [Database Tools](#5-database-tools) - Data persistence and querying
-- [Image Handling Tools](#6-image-handling-tools) - Image analysis and generation
-- [Browser Tools](#7-browser-tools) - Web automation
+- [Code Interpreters](#1-understanding-the-tool-architecture) - Execute code safely
+- [Search & Request Tools](#2-code-interpreters) - Access web information
+- [FileSystem Tools](#3-search-and-request-tools) - File operations and storage
+- [Database Tools](#4-filesystem-tools) - Data persistence and querying
+- [Image Handling Tools](#5-database-tools) - Image analysis and generation
+- [Browser Tools](#6-image-handling-tools) - Web automation
 - [MCP Tools](#8-mcp-tools) - External service integration
 
 ---
@@ -95,7 +95,7 @@ python -m examples.tools.tools_integration    # MCP and integration tools
 
 ---
 
-## 1. Understanding the Tool Architecture {#1-understanding-the-tool-architecture}
+## 1. Understanding the Tool Architecture
 
 At the core of EvoAgentX's tool ecosystem are the `Tool` base class and the `Toolkit` system, which provide a standardized interface for all tools. 
 
@@ -126,7 +126,7 @@ The `Toolkit` system groups related tools together, providing:
 
 ---
 
-## 2. Code Interpreters {#2-code-interpreters}
+## 2. Code Interpreters
 
 **📁 Example File**: `examples/tools/tools_interpreter.py`
 
@@ -141,7 +141,7 @@ EvoAgentX provides two main code interpreter toolkits:
 1. **PythonInterpreterToolkit**: Executes Python code in a controlled environment
 2. **DockerInterpreterToolkit**: Executes code within isolated Docker containers
 
-### 2.1 PythonInterpreterToolkit {#21-pythoninterpretertoolkit}
+### 2.1 PythonInterpreterToolkit
 
 **Source**: `evoagentx/tools/interpreter_python.py`
 
@@ -247,7 +247,7 @@ toolkit = PythonInterpreterToolkit(
 
 ---
 
-### 2.2 DockerInterpreterToolkit {#22-dockerinterpretertoolkit}
+### 2.2 DockerInterpreterToolkit
 
 **Source**: `evoagentx/tools/interpreter_docker.py`
 
@@ -400,7 +400,7 @@ Running Docker interpreter examples...
 
 ---
 
-## 3. Search and Request Tools {#3-search-and-request-tools}
+## 3. Search and Request Tools
 
 EvoAgentX provides comprehensive search and request toolkits to retrieve information from various sources and perform HTTP operations:
 
@@ -414,7 +414,7 @@ EvoAgentX provides comprehensive search and request toolkits to retrieve informa
 8. **ArxivToolkit**: Search for research papers
 9. **RSSToolkit**: Fetch and validate RSS feeds
 
-### 3.1 WikipediaSearchToolkit {#31-wikipediasearchtoolkit}
+### 3.1 WikipediaSearchToolkit
 
 **The WikipediaSearchToolkit retrieves information from Wikipedia articles, providing summaries, full content, and metadata. It offers a straightforward way to incorporate encyclopedic knowledge into your agents without complex API setups.**
 
@@ -477,7 +477,7 @@ for i, result in enumerate(results.get("results", [])):
 
 ---
 
-### 3.2 GoogleSearchToolkit {#32-googlesearchtoolkit}
+### 3.2 GoogleSearchToolkit
 
 **The GoogleSearchToolkit enables web searches through Google's official Custom Search API, providing high-quality search results with content extraction. It requires API credentials but offers more reliable and comprehensive search capabilities.**
 
@@ -556,7 +556,7 @@ for i, result in enumerate(results.get("results", [])):
 
 ---
 
-### 3.3 GoogleFreeSearchToolkit {#33-googlefreesearchtoolkit}
+### 3.3 GoogleFreeSearchToolkit
 
 **The GoogleFreeSearchToolkit provides web search capability without requiring any API keys or authentication. It offers a simpler alternative to the official Google API with basic search results suitable for most general queries.**
 
@@ -619,7 +619,7 @@ for i, result in enumerate(results.get("results", [])):
 
 ---
 
-### 3.4 DDGSSearchToolkit {#34-ddgssearchtoolkit}
+### 3.4 DDGSSearchToolkit
 
 **The DDGSSearchToolkit provides web search capabilities using DDGS (Dux Distributed Global Search), offering privacy-focused search results without requiring API keys. It supports multiple backends and provides comprehensive search results with content extraction.**
 
@@ -703,7 +703,7 @@ for i, result in enumerate(results.get("results", [])):
 
 ---
 
-### 3.5 SerpAPIToolkit {#35-serpapitoolkit}
+### 3.5 SerpAPIToolkit
 
 **The SerpAPIToolkit provides access to multiple search engines through SerpAPI, including Google, Bing, Baidu, Yahoo, and DuckDuckGo. It offers comprehensive search results with content scraping capabilities and supports various search parameters.**
 
@@ -807,7 +807,7 @@ for i, result in enumerate(results.get("results", [])):
 
 ---
 
-### 3.6 SerperAPIToolkit {#36-serperapitoolkit}
+### 3.6 SerperAPIToolkit
 
 **The SerperAPIToolkit provides Google search capabilities through SerperAPI, offering high-quality search results with content extraction. It's an alternative to the official Google API with simplified setup and comprehensive search capabilities.**
 
@@ -903,7 +903,7 @@ for i, result in enumerate(results.get("results", [])):
 
 ---
 
-### 3.7 RequestToolkit {#37-requesttoolkit}
+### 3.7 RequestToolkit
 
 **The RequestToolkit provides comprehensive HTTP operations for making web requests, including GET, POST, PUT, and DELETE operations. It's essential for building agents that need to interact with web APIs and services.**
 
@@ -1001,7 +1001,7 @@ delete_result = http_tool(
 
 ---
 
-### 3.8 ArxivToolkit {#38-arxivtoolkit}
+### 3.8 ArxivToolkit
 
 **The ArxivToolkit provides access to arXiv, the preprint repository for physics, mathematics, computer science, and other scientific disciplines. It enables agents to search for and retrieve research papers and academic content.**
 
@@ -1088,7 +1088,7 @@ if results.get('success'):
 
 ---
 
-### 3.9 RSSToolkit {#39-rsstoolkit}
+### 3.9 RSSToolkit
 
 **The RSSToolkit provides functionality to fetch, validate, and process RSS feeds from various sources. It enables agents to monitor news sources, blogs, and other regularly updated content.**
 
@@ -1229,7 +1229,7 @@ The search and request tools in EvoAgentX provide comprehensive access to inform
 
 Choose the appropriate toolkit based on your specific needs, API key availability, and the type of information you need to retrieve.
 
-## 4. FileSystem Tools {#4-filesystem-tools}
+## 4. FileSystem Tools
 
 **📁 Example File**: `examples/tools/tools_files.py`
 
@@ -1243,7 +1243,7 @@ Choose the appropriate toolkit based on your specific needs, API key availabilit
 
 FileSystem tools provide capabilities for file operations, storage management, and command-line execution. These tools are essential for managing data persistence, file manipulation, and system interactions.
 
-### 4.1 StorageToolkit {#41-storagetoolkit}
+### 4.1 StorageToolkit
 
 **The StorageToolkit provides comprehensive file storage operations including saving, loading, appending, and managing various file formats with flexible storage backends.**
 
@@ -1406,7 +1406,7 @@ All tools return `dict` with success/error information.
 
 ---
 
-### 4.2 CMDToolkit {#42-cmdtoolkit}
+### 4.2 CMDToolkit
 
 **The CMDToolkit provides command-line execution capabilities, allowing you to run system commands, scripts, and shell operations with proper timeout handling and result processing.**
 
@@ -1527,7 +1527,7 @@ Returns `dict` with command execution results.
 
 ---
 
-### 4.3 Storage Handler Introduction {#43-storage-handler-introduction}
+### 4.3 Storage Handler Introduction
 
 **Storage handlers provide the underlying storage abstraction for the StorageToolkit, allowing you to implement custom storage backends for different environments and requirements.**
 
@@ -1640,7 +1640,7 @@ class CloudStorageHandler(FileStorageHandler):
 
 ---
 
-## 5. Database Tools {#5-database-tools}
+## 5. Database Tools
 
 **📁 Example File**: `examples/tools/tools_database.py`
 
@@ -1653,7 +1653,7 @@ class CloudStorageHandler(FileStorageHandler):
 
 Database tools provide comprehensive database management capabilities including relational databases (PostgreSQL), document databases (MongoDB), and vector databases (FAISS). These tools enable agents to perform complex data operations, semantic search, and data persistence with automatic storage management.
 
-### 5.1 MongoDBToolkit {#51-mongodbtoolkit}
+### 5.1 MongoDBToolkit
 
 **The MongoDBToolkit provides comprehensive document database operations for MongoDB, including querying, inserting, updating, and deleting documents with support for complex queries, aggregation pipelines, and metadata filtering.**
 
@@ -1728,7 +1728,7 @@ delete_result = delete_tool(
 
 ---
 
-### 5.2 PostgreSQLToolkit {#52-postgresqltoolkit}
+### 5.2 PostgreSQLToolkit
 
 **The PostgreSQLToolkit provides comprehensive relational database operations for PostgreSQL, including SQL execution, table creation, data querying, updating, and deletion with automatic query type detection and result processing.**
 
@@ -1816,7 +1816,7 @@ delete_result = delete_tool(
 
 ---
 
-### 5.3 FAISSToolkit {#53-faisstoolkit}
+### 5.3 FAISSToolkit
 
 **The FAISSToolkit provides comprehensive vector database operations using FAISS, enabling semantic search, document insertion with automatic chunking and embedding, and advanced metadata filtering for building intelligent search applications.**
 
@@ -1943,7 +1943,7 @@ delete_result = delete_tool(
 
 ---
 
-## 6. Image Handling Tools {#6-image-handling-tools}
+## 6. Image Handling Tools
 
 **📁 Example File**: `examples/tools/tools_images.py`
 
@@ -1974,7 +1974,7 @@ cat evoagentx/tools/images_flux_generation.py
 
 Image handling tools provide comprehensive capabilities for image analysis, generation, and manipulation using various AI services and APIs. These tools enable agents to work with visual content, generate images from text descriptions, and analyze image content.
 
-### 6.1 ImageAnalysisToolkit {#61-imageanalysistoolkit}
+### 6.1 ImageAnalysisToolkit
 
 **The ImageAnalysisToolkit provides AI-powered image analysis capabilities using OpenAI's GPT-4 Vision model through OpenRouter API. It can analyze images, extract information, and provide detailed descriptions of visual content.**
 
@@ -2070,7 +2070,7 @@ Returns `dict` with analysis results and metadata.
 
 ---
 
-### 6.2 OpenAIImageGenerationToolkit {#62-openaiimagegenerationtoolkit}
+### 6.2 OpenAIImageGenerationToolkit
 
 **The OpenAIImageGenerationToolkit provides access to OpenAI's DALL-E image generation capabilities, allowing you to create high-quality images from text descriptions with various customization options.**
 
@@ -2177,7 +2177,7 @@ Returns `dict` with generation results including file path and storage handler i
 
 ---
 
-### 6.3 FluxImageGenerationToolkit {#63-fluximagegenerationtoolkit}
+### 6.3 FluxImageGenerationToolkit
 
 **The FluxImageGenerationToolkit provides access to Flux Kontext Max image generation capabilities, offering high-quality image creation with advanced customization options and various artistic styles.**
 
@@ -2361,7 +2361,7 @@ The separated `tools_images.py` file provides several advantages:
 
 ---
 
-## 7. Browser Tools {#7-browser-tools}
+## 7. Browser Tools
 
 **📁 Example File**: `examples/tools/tools_browser.py`
 
@@ -2393,7 +2393,7 @@ EvoAgentX provides comprehensive browser automation capabilities through two dif
 1. **BrowserToolkit** (Selenium-based): Provides fine-grained control over browser elements with detailed snapshots and element references. **No API key required** - operated by LLM agents for precise browser automation.
 2. **BrowserUseToolkit** (Browser-Use based): Offers natural language browser automation using AI-driven interactions. **Requires OpenAI API key** for AI-powered browser control.
 
-### 7.1 Setup {#71-browsertoolkit}
+### 7.1 Setup
 
 #### 7.1.1 BrowserToolkit (Selenium-based)
 
@@ -2438,7 +2438,7 @@ toolkit = BrowserUseToolkit(
 browser_tool = toolkit.get_tool("browser_use")
 ```
 
-### 7.2 Available Methods {#72-browserusetoolkit}
+### 7.2 Available Methods
 
 #### 7.2.1 BrowserToolkit (Selenium-based) Methods
 
@@ -2829,7 +2829,7 @@ The separated `tools_browser.py` file provides several advantages:
 
 ---
 
-## 8. MCP Tools {#8-mcp-tools}
+## 8. MCP Tools
 
 **📁 Example File**: `examples/tools/tools_integration.py`
 
@@ -2864,7 +2864,7 @@ EvoAgentX provides comprehensive MCP (Model Context Protocol) integration capabi
 3. **Multiple Server Support**: Connect to multiple MCP servers simultaneously
 4. **Automatic Tool Discovery**: Automatically discover and integrate available tools from MCP servers
 
-### 8.1 MCPToolkit {#81-mcptoolkit}
+### 8.1 MCPToolkit
 
 **The MCPToolkit provides a bridge between EvoAgentX and external MCP servers, enabling agents to use tools and services that are not natively integrated into the framework.**
 
