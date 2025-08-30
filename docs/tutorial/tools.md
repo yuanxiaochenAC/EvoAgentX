@@ -56,8 +56,8 @@ By the end of this tutorial, you'll understand how to leverage these tools in yo
 | **[5) Image Handling Tools](#5-database-tools)** | [ImageAnalysisToolkit](#61-imageanalysistoolkit) | Analyze images and PDFs using AI vision models. Perfect for content moderation and visual understanding. | `evoagentx/tools/image_analysis.py` | `examples/tools/tools_images.py` |
 | | [OpenAIImageGenerationToolkit](#62-openaiimagegenerationtoolkit) | Generate images from text using OpenAI's DALL-E. Great for creative content and visual design. | `evoagentx/tools/images_openai_generation.py` | `examples/tools/tools_images.py` |
 | | [FluxImageGenerationToolkit](#63-fluximagegenerationtoolkit) | Generate images with Flux Kontext Max. Advanced control over aspect ratios and artistic styles. | `evoagentx/tools/images_flux_generation.py` | `examples/tools/tools_images.py` |
-| **[6) Browser Tools](#6-image-handling-tools)** | [BrowserToolkit](#71-setup) | Fine-grained browser automation with precise control. Perfect for complex web scraping and testing workflows. | `evoagentx/tools/browser_tool.py` | `examples/tools/tools_browser.py` |
-| | [BrowserUseToolkit](#72-available-methods) | Natural language browser automation using AI. Ideal for simple tasks described in plain English. | `evoagentx/tools/browser_use.py` | `examples/tools/tools_browser.py` |
+| **[6) Browser Tools](#6-image-handling-tools)** | [BrowserToolkit](#7-browser-tools) | Fine-grained browser automation with precise control. Perfect for complex web scraping and testing workflows. | `evoagentx/tools/browser_tool.py` | `examples/tools/tools_browser.py` |
+| | [BrowserUseToolkit](#7-browser-tools) | Natural language browser automation using AI. Ideal for simple tasks described in plain English. | `evoagentx/tools/browser_use.py` | `examples/tools/tools_browser.py` |
 | **[7) MCP Tools](#8-mcp-tools)** | [MCPToolkit](#81-mcptoolkit) | Connect to external MCP servers and discover their tools. Extends EvoAgentX with third-party capabilities. | `evoagentx/tools/mcp.py` | `examples/tools/tools_integration.py` |
 
 **🔗 Quick Navigation Links:**
@@ -2437,6 +2437,8 @@ toolkit = BrowserUseToolkit(
 # Get the browser automation tool
 browser_tool = toolkit.get_tool("browser_use")
 ```
+
+**⚠️ Troubleshooting**: If you get `FileNotFoundError` for Chromium, run: `uvx playwright install chromium --with-deps` ([docs](https://docs.browser-use.com/quickstart))
 
 ### 7.2 Available Methods
 
