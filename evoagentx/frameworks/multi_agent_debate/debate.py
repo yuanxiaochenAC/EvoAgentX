@@ -8,7 +8,6 @@ from ...workflow.action_graph import ActionGraph
 from ...models.model_configs import LLMConfig, OpenAILLMConfig
 from ...models.base_model import LLMOutputParser
 from ...workflow.operators import QAScEnsemble
-from .config_pool import load_default_llm_config_pool
 from .utils import (
     build_agent_prompt,
     build_judge_prompt,
