@@ -14,8 +14,8 @@ from .database_mongodb import MongoDBToolkit
 from .database_postgresql import PostgreSQLToolkit
 from .storage_handler import FileStorageHandler, LocalStorageHandler, SupabaseStorageHandler
 from .storage_file import StorageToolkit
-from .flux_image_generation import FluxImageGenerationToolkit
-from .OpenAI_Image_Generation import OpenAIImageGenerationToolkit
+from .images_flux_generation import FluxImageGenerationToolkit
+from .images_openai_generation import OpenAIImageGenerationToolkit
 from .image_analysis import ImageAnalysisToolkit
 from .cmd_toolkit import CMDToolkit
 from .rss_feed import RSSToolkit

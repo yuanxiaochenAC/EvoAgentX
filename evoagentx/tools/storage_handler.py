@@ -126,35 +126,57 @@ class FileStorageHandler(StorageBase):
             Dict[str, Any]: Result of the operation with success status and details
         """
         try:
-            # Convert content to bytes if it's not already
-            if isinstance(content, str):
-                content_bytes = content.encode(kwargs.get('encoding', 'utf-8'))
-            elif isinstance(content, bytes):
-                content_bytes = content
+            # Get file type to determine the appropriate save method
+            file_extension = self.get_file_type(file_path)
+            target_file_path = self.translate_in(file_path)
+            
+            # Route to specialized save methods based on file type
+            if file_extension == '.json':
+                return self._save_json(target_file_path, content, **kwargs)
+            elif file_extension in ['.txt', '.md', '.log']:
+                return self._save_text(target_file_path, content, **kwargs)
+            elif file_extension == '.csv':
+                return self._save_csv(target_file_path, content, **kwargs)
+            elif file_extension in ['.yaml', '.yml']:
+                return self._save_yaml(target_file_path, content, **kwargs)
+            elif file_extension == '.xml':
+                return self._save_xml(target_file_path, content, **kwargs)
+            elif file_extension == '.xlsx':
+                return self._save_excel(target_file_path, content, **kwargs)
+            elif file_extension == '.pickle':
+                return self._save_pickle(target_file_path, content, **kwargs)
+            elif file_extension == '.pdf':
+                return self._save_pdf(target_file_path, content, **kwargs)
+            elif file_extension in ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff']:
+                return self._save_image(target_file_path, content, **kwargs)
             else:
-                content_bytes = str(content).encode(kwargs.get('encoding', 'utf-8'))
+                # For other file types, use the generic approach
+                # Convert content to bytes if it's not already
+                if isinstance(content, str):
+                    content_bytes = content.encode(kwargs.get('encoding', 'utf-8'))
+                elif isinstance(content, bytes):
+                    content_bytes = content
+                else:
+                    content_bytes = str(content).encode(kwargs.get('encoding', 'utf-8'))
+                
+                # Write the file using the raw method
+                success = self._write_raw(target_file_path, content_bytes, **kwargs)
             
-            # Use translate_in to get the full path
-            full_path = self.translate_in(file_path)
-            
-            # Write the file using the raw method
-            success = self._write_raw(full_path, content_bytes, **kwargs)
-            
-            if success:
-                return {
-                    "success": True,
-                    "message": f"File '{file_path}' created successfully",
-                    "file_path": file_path,
-                    "full_path": full_path,
-                    "size": len(content_bytes)
-                }
-            else:
-                return {
-                    "success": False,
-                    "message": f"Failed to create file '{file_path}'",
-                    "file_path": file_path,
-                    "full_path": full_path
-                }
+                if success:
+                    return {
+                        "success": True,
+                        "message": f"File '{file_path}' created successfully",
+                        "file_path": file_path,
+                        "full_path": target_file_path,
+                        "size": len(content_bytes)
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "message": f"Failed to create file '{file_path}'",
+                        "file_path": file_path,
+                        "full_path": target_file_path
+                    }
         except Exception as e:
             logger.error(f"Error creating file {file_path}: {str(e)}")
             return {
@@ -1004,10 +1026,11 @@ class SupabaseStorageHandler(FileStorageHandler):
             return {"success": False, "error": str(e), "file_path": file_path}
     
     def _read_text(self, file_path: str, encoding: str = 'utf-8', **kwargs) -> Dict[str, Any]:
-        """Read text content from Supabase Storage"""
+        """Read text content from storage"""
         try:
-            # Use the raw read method
-            content_bytes = self._read_raw(file_path, **kwargs)
+            # Resolve the path and use the raw read method
+            resolved_path = self._resolve_path(file_path)
+            content_bytes = self._read_raw(resolved_path, **kwargs)
             content = content_bytes.decode(encoding)
             
             return {
@@ -1017,7 +1040,7 @@ class SupabaseStorageHandler(FileStorageHandler):
                 "content_length": len(content)
             }
         except Exception as e:
-            logger.error(f"Error reading text file {file_path} from Supabase: {str(e)}")
+            logger.error(f"Error reading text file {file_path}: {str(e)}")
             return {"success": False, "error": str(e), "file_path": file_path}
     
     def _save_json(self, file_path: str, content: Any, indent: int = 2, **kwargs) -> Dict[str, Any]:
@@ -1034,8 +1057,9 @@ class SupabaseStorageHandler(FileStorageHandler):
             # Convert to bytes
             content_bytes = json_content.encode('utf-8')
             
-            # Use the raw write method
-            success = self._write_raw(file_path, content_bytes, **kwargs)
+            # Resolve the path and use the raw write method
+            resolved_path = self._resolve_path(file_path)
+            success = self._write_raw(resolved_path, content_bytes, **kwargs)
             
             if success:
                 return {
@@ -1051,10 +1075,11 @@ class SupabaseStorageHandler(FileStorageHandler):
             return {"success": False, "error": str(e), "file_path": file_path}
     
     def _read_json(self, file_path: str, **kwargs) -> Dict[str, Any]:
-        """Read JSON content from Supabase Storage"""
+        """Read JSON content from storage"""
         try:
-            # Use the raw read method
-            content_bytes = self._read_raw(file_path, **kwargs)
+            # Resolve the path and use the raw read method
+            resolved_path = self._resolve_path(file_path)
+            content_bytes = self._read_raw(resolved_path, **kwargs)
             content_str = content_bytes.decode('utf-8')
             
             # Parse JSON
@@ -1066,7 +1091,7 @@ class SupabaseStorageHandler(FileStorageHandler):
                 "file_path": file_path
             }
         except Exception as e:
-            logger.error(f"Error reading JSON file {file_path} from Supabase: {str(e)}")
+            logger.error(f"Error reading JSON file {file_path}: {str(e)}")
             return {"success": False, "error": str(e), "file_path": file_path}
     
     def get_file_info(self, file_path: str) -> Dict[str, Any]:
