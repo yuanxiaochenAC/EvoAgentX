@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 
 # For handling various file types
 try:
-    import PyPDF2
+    from unstructured.partition.pdf import partition_pdf
     PDF_AVAILABLE = True
 except ImportError:
     PDF_AVAILABLE = False
@@ -377,6 +377,21 @@ class StorageBase(BaseModule, ABC):
             }
         except Exception as e:
             logger.error(f"Error reading text file {file_path}: {str(e)}")
+            return {"success": False, "error": str(e), "file_path": file_path}
+        
+    def _append_text(self, file_path: str, content: str, encoding: str = 'utf-8', **kwargs) -> Dict[str, Any]:
+        """Append text content to a file"""
+        try:
+            with open(file_path, 'a', encoding=encoding) as f:
+                f.write(str(content))
+            
+            return {
+                "success": True,
+                "message": f"Content appended to file {file_path}",
+                "file_path": file_path
+            }
+        except Exception as e:
+            logger.error(f"Error appending to text file {file_path}: {str(e)}")
             return {"success": False, "error": str(e), "file_path": file_path}
     
     # JSON file handlers
@@ -868,22 +883,16 @@ class StorageBase(BaseModule, ABC):
     def _read_pdf(self, file_path: str, **kwargs) -> Dict[str, Any]:
         """Read content from a PDF file"""
         if not PDF_AVAILABLE:
-            return {"success": False, "error": "PyPDF2 library not available"}
+            return {"success": False, "error": "unstructured library not available"}
         
         try:
-            with open(file_path, 'rb') as f:
-                pdf_reader = PyPDF2.PdfReader(f)
-                text = ""
-                for page_num in range(len(pdf_reader.pages)):
-                    page = pdf_reader.pages[page_num]
-                    text += page.extract_text() + "\n"
-                
-                return {
-                    "success": True,
-                    "content": text,
-                    "file_path": file_path,
-                    "pages": len(pdf_reader.pages)
-                }
+            elements = partition_pdf(file_path, strategy="fast")
+            text = "\n\n".join([str(el) for el in elements])
+            return {
+                "success": True,
+                "content": text,
+                "file_path": file_path
+            }
                 
         except Exception as e:
             logger.error(f"Error reading PDF file {file_path}: {str(e)}")
@@ -959,22 +968,6 @@ class StorageBase(BaseModule, ABC):
                 
         except Exception as e:
             logger.error(f"Error reading image file {file_path}: {str(e)}")
-            return {"success": False, "error": str(e), "file_path": file_path}
-    
-    # Text append handler
-    def _append_text(self, file_path: str, content: str, encoding: str = 'utf-8', **kwargs) -> Dict[str, Any]:
-        """Append text content to a file"""
-        try:
-            with open(file_path, 'a', encoding=encoding) as f:
-                f.write(str(content))
-            
-            return {
-                "success": True,
-                "message": f"Content appended to file {file_path}",
-                "file_path": file_path
-            }
-        except Exception as e:
-            logger.error(f"Error appending to text file {file_path}: {str(e)}")
             return {"success": False, "error": str(e), "file_path": file_path}
     
     # Placeholder for future database integration
