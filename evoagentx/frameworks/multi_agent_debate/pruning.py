@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple
 import math
 
 from ...models.model_configs import LLMConfig
