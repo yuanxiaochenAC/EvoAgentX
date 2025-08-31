@@ -154,7 +154,7 @@ def test_flux_image_generation_tool():
     img.show()
 
 if __name__ == "__main__":
-    # test_MCP_server()
-    # test_image_analysis_tool()
-    # test_image_generation_tool()
+    test_MCP_server()
+    test_image_analysis_tool()
+    test_image_generation_tool()
     test_flux_image_generation_tool()

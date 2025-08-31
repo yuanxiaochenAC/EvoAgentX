@@ -16,7 +16,6 @@ The examples demonstrate various file operations and system interactions includi
 
 import os
 import sys
-import json
 from pathlib import Path
 
 # Add the parent directory to sys.path to import from evoagentx
