@@ -1,9 +1,11 @@
 from typing import Dict, Any, List, Optional, Tuple
 import random
+import json
+import os
 from pydantic import Field
 
 from ...workflow.action_graph import ActionGraph
-from ...models.model_configs import LLMConfig
+from ...models.model_configs import LLMConfig, OpenAILLMConfig
 from ...models.base_model import LLMOutputParser
 from ...workflow.operators import QAScEnsemble
 from .config_pool import load_default_llm_config_pool
@@ -40,14 +42,17 @@ class MultiAgentDebateActionGraph(ActionGraph):
 
     name: str = "MultiAgentDebate"
     description: str = "多智能体辩论工作流框架"
-    llm_config: LLMConfig = Field(description="用于执行辩论的LLM配置")
-    # 可选：外部注入的辩手/裁判 CustomizeAgent（支持不同LLM）
+    # 统一的LLM配置：所有agent的默认配置
+    llm_config: LLMConfig = Field(default_factory=lambda: OpenAILLMConfig(
+        model="gpt-4o-mini",
+        openai_key=os.getenv("OPENAI_API_KEY")
+    ), description="所有agent的默认LLM配置")
+    # 统一的agent配置：所有辩手使用相同的agent配置
     debater_agents: Optional[List[CustomizeAgent]] = Field(default=None, description="可选：多个辩手CustomizeAgent，执行时将随机选择其一用于该回合/该辩手")
-    debater_agent: Optional[CustomizeAgent] = Field(default=None, description="可选：所有辩手复用的单个CustomizeAgent（当未提供 debater_agents 时使用）")
     judge_agent: Optional[CustomizeAgent] = Field(default=None, description="可选：裁判CustomizeAgent，提供则用于裁判阶段")
-    # 新增：可选的模型池。当仅给定 agent 数量时，将从该池随机分配给每个 agent（若未提供 debater_agents/agent）
-    llm_config_pool: Optional[List[LLMConfig]] = Field(default=None, description="可选：辩手可用的 LLMConfig 候选池，用于仅提供数量时的随机分配")
-    # 新增：分组工作流模式（每个席位由一个独立 workflow graph 替代 agent）
+    # 可选的模型池：用于随机选择不同模型
+    llm_config_pool: Optional[List[LLMConfig]] = Field(default=None, description="可选：用于随机选择的LLM配置池，为没有指定模型的agent提供选择")
+    # 分组工作流模式（每个席位由一个独立 workflow graph 替代 agent）
     group_graphs_enabled: bool = Field(default=False, description="启用分组图模式：用工作流图替代单个辩手")
     group_graphs: Optional[List[ActionGraph]] = Field(default=None, description="当启用分组图模式时，提供的工作流图列表（长度≥1）")
 
@@ -57,14 +62,11 @@ class MultiAgentDebateActionGraph(ActionGraph):
     def init_module(self):
         """初始化模块（创建 LLM，构造可复用运算符）。"""
         super().init_module()
+        
         # 配置冲突与完整性校验
-        if self.group_graphs_enabled and (self.debater_agents or self.debater_agent is not None):
+        if self.group_graphs_enabled and self.debater_agents:
             raise ValueError(
-                "配置冲突：已启用 group_graphs_enabled 时，不能同时配置 debater_agents 或 debater_agent。"
-            )
-        if self.debater_agents and self.debater_agent is not None:
-            raise ValueError(
-                "配置冲突：不能同时提供 debater_agents 与 debater_agent，请择一使用。"
+                "配置冲突：已启用 group_graphs_enabled 时，不能同时配置 debater_agents。"
             )
         if self.group_graphs_enabled and (not self.group_graphs or len(self.group_graphs) == 0):
             raise ValueError(
@@ -74,22 +76,9 @@ class MultiAgentDebateActionGraph(ActionGraph):
             raise ValueError(
                 "配置错误：提供了 group_graphs 但未启用 group_graphs_enabled。请同时启用或移除 group_graphs。"
             )
+        
         self._sc_ensemble = QAScEnsemble(self._llm)
-        # 若未配置 llm_config_pool，尝试加载默认池（从环境或本地配置文件）
-        if self.llm_config_pool is None:
-            try:
-                default_pool = load_default_llm_config_pool()
-                if default_pool:
-                    self.llm_config_pool = default_pool
-            except Exception:
-                # 静默失败，保持 None
-                pass
-        # 默认：强制使用 CustomizeAgent（若外部未注入且最终无模型池时创建内置的）
-        if not self.debater_agents and self.debater_agent is None and (not self.llm_config_pool):
-            self.debater_agent = self._create_default_debater_agent()
-        if self.judge_agent is None:
-            self.judge_agent = self._create_default_judge_agent()
-
+           
     def _create_default_debater_agent(self) -> CustomizeAgent:
         """构建默认辩手 CustomizeAgent（XML解析 thought/argument/answer）。"""
         debater_prompt = (
@@ -127,11 +116,13 @@ Instructions:
             {"name": "argument", "type": "str", "description": "Argument or rebuttal", "required": True},
             {"name": "answer", "type": "str", "description": "Optional current answer", "required": False},
         ]
+        llm_config = random.choice(self.llm_config_pool) if self.llm_config_pool else self.llm_config
+        
         return CustomizeAgent(
             name="DebaterAgent",
             description="Generate argument/rebuttal and optional answer per debate round.",
             prompt=debater_prompt,
-            llm_config=self.llm_config,
+            llm_config=llm_config,
             inputs=inputs,
             outputs=outputs,
             parse_mode="xml",
@@ -170,11 +161,13 @@ Return the following XML:
             {"name": "winning_agent_id", "type": "str", "description": "Winning agent id (integer as string)", "required": True},
             {"name": "final_answer", "type": "str", "description": "Final answer", "required": True},
         ]
+        llm_config = random.choice(self.llm_config_pool) if self.llm_config_pool else self.llm_config
+        
         return CustomizeAgent(
             name="JudgeAgent",
             description="Deliver final decision and answer based on debate transcript.",
             prompt=judge_prompt,
-            llm_config=self.llm_config,
+            llm_config=llm_config,
             inputs=inputs,
             outputs=outputs,
             parse_mode="xml",
@@ -195,11 +188,12 @@ Return the following XML:
         pruning_enable_mr: bool = False,
         pruning_mr_llm_config: Optional[LLMConfig] = None,
         pruning_snapshot_mode: bool = False,
+        transcript_mode: str = "prev",  # options: ["prev", "all"]
         **kwargs,
     ) -> dict:
         """执行辩论工作流（同步）。"""
         state = self._setup_debate(problem, num_agents, num_rounds, personas, agent_llm_configs)
-        transcript = self._run_debate_rounds(problem, state)
+        transcript = self._run_debate_rounds(problem, state, transcript_mode)
         # 剪枝（在共识前，对最后一轮候选做筛选和可选纠偏）
         pruning_info = None
         pruning_debug = None
@@ -248,6 +242,7 @@ Return the following XML:
         result: Dict[str, Any] = {
             "final_answer": consensus["final_answer"],
             "winner": consensus.get("winner"),
+            "rationale": consensus.get("rationale"),
         }
         if return_transcript:
             result["transcript"] = transcript
@@ -272,11 +267,12 @@ Return the following XML:
         pruning_enable_mr: bool = False,
         pruning_mr_llm_config: Optional[LLMConfig] = None,
         pruning_snapshot_mode: bool = False,
+        transcript_mode: str = "prev",  # options: ["prev", "all"]
         **kwargs,
     ) -> dict:
         """执行辩论工作流（异步）。"""
         state = self._setup_debate(problem, num_agents, num_rounds, personas, agent_llm_configs)
-        transcript = await self._run_debate_rounds_async(problem, state)
+        transcript = await self._run_debate_rounds_async(problem, state, transcript_mode)
         pruning_info = None
         pruning_debug = None
         pruning_rounds_debug: Optional[List[Dict[str, Any]]] = None
@@ -361,32 +357,33 @@ Return the following XML:
         """为每个 agent_id 选定在整个辩论中保持不变的 CustomizeAgent。
         优先级：
         1) 用户显式传入 debater_agents → 按长度循环/截断分配给每个位置
-        2) 用户传入 debater_agent → 所有位置共用
-        3) 传入 agent_llm_configs 或构造时提供 llm_config_pool → 按池随机为每个位置创建默认 debater
-        4) 回退到默认的单一 llm_config
+        2) 传入 agent_llm_configs → 为每个位置创建默认 debater
+        3) 使用 llm_config_pool 随机选择 → 为每个位置创建默认 debater（优先于默认llm_config）
+        4) 回退到默认的 llm_config
         """
         # 若启用分组图模式，不生成内部 Agent（改由 group_graphs 驱动）
         if self.group_graphs_enabled:
             return []
+        
         # 1) 明确的多个 Agent
         if self.debater_agents:
             agents: List[CustomizeAgent] = []
             for i in range(num_agents):
                 agents.append(self.debater_agents[i % len(self.debater_agents)])
             return agents
-        # 2) 单一 Agent 复用
-        if self.debater_agent is not None:
-            return [self.debater_agent for _ in range(num_agents)]
-        # 3) 依据模型池创建（优先使用调用时传入的 agent_llm_configs）
+        
+        # 2) 依据传入的 agent_llm_configs 创建
         if agent_llm_configs and len(agent_llm_configs) > 0:
             return [
                 self._create_debater_agent_with_llm(agent_llm_configs[i % len(agent_llm_configs)])
                 for i in range(num_agents)
             ]
-        pool = self.llm_config_pool
-        if pool and len(pool) > 0:
-            return [self._create_debater_agent_with_llm(random.choice(pool)) for _ in range(num_agents)]
-        # 4) 默认：同一配置
+        
+        # 3) 使用 llm_config_pool 随机选择
+        if self.llm_config_pool and len(self.llm_config_pool) > 0:
+            return [self._create_debater_agent_with_llm(random.choice(self.llm_config_pool)) for _ in range(num_agents)]
+        
+        # 4) 默认：使用 llm_config
         default_agent = self._create_default_debater_agent()
         return [default_agent for _ in range(num_agents)]
 
@@ -437,8 +434,14 @@ Instructions:
             parse_mode="xml",
         )
 
-    def _run_debate_rounds(self, problem: str, state: dict) -> List[dict]:
-        """运行辩论轮次（同步）。返回 transcript。"""
+    def _run_debate_rounds(self, problem: str, state: dict, transcript_mode: str = "prev") -> List[dict]:
+        """运行辩论轮次（同步）。返回 transcript。
+        
+        Args:
+            transcript_mode: 控制agent可以访问的transcript范围
+                - "prev": 只能看到n-1轮次的发言（默认）
+                - "all": 可以看到之前所有轮次的发言
+        """
         transcript: List[dict] = []
         num_agents: int = state["num_agents"]
         num_rounds: int = state["num_rounds"]
@@ -449,9 +452,13 @@ Instructions:
                 # 分组图模式：调用对应 graph.execute()
                 if self.group_graphs_enabled and self.group_graphs:
                     graph = self.group_graphs[agent_id % len(self.group_graphs)]
+                    # 根据访问模式获取相应的transcript
+                    transcript_text = self._get_transcript_for_agent(
+                        transcript, round_index, agent_id, transcript_mode, num_agents
+                    )
                     g_inputs = {
                         "problem": problem,
-                        "transcript_text": format_transcript(transcript),
+                        "transcript_text": transcript_text,
                         "role": roles[agent_id],
                         "agent_id": str(agent_id),
                         "round_index": str(round_index + 1),
@@ -471,24 +478,34 @@ Instructions:
                         selected_agent = agents_for_ids[agent_id]
                     elif self.debater_agents:
                         selected_agent = random.choice(self.debater_agents)
-                    elif self.debater_agent is not None:
-                        selected_agent = self.debater_agent
 
                     if selected_agent is not None:
-                        inputs = {
-                            "problem": problem,
-                            "transcript_text": format_transcript(transcript),
-                            "role": roles[agent_id],
-                            "agent_id": str(agent_id),
-                            "round_index": str(round_index + 1),
-                            "total_rounds": str(num_rounds),
-                        }
-                        msg = selected_agent(inputs=inputs)
-                        structured = msg.content.get_structured_data()
+                        try:
+                            # 根据访问模式获取相应的transcript
+                            transcript_text = self._get_transcript_for_agent(
+                                transcript, round_index, agent_id, transcript_mode, num_agents
+                            )
+                            inputs = {
+                                "problem": problem,
+                                "transcript_text": transcript_text,
+                                "role": roles[agent_id],
+                                "agent_id": str(agent_id),
+                                "round_index": str(round_index + 1),
+                                "total_rounds": str(num_rounds),
+                            }
+                            msg = selected_agent(inputs=inputs)
+                            structured = msg.content.get_structured_data()
+                        except Exception as e:
+                            print(f"Agent执行错误: {e}")
+                            structured = {"argument": "", "answer": "", "thought": ""}
                     else:
+                        # 根据访问模式获取相应的transcript
+                        transcript_text = self._get_transcript_for_agent(
+                            transcript, round_index, agent_id, transcript_mode, num_agents
+                        )
                         prompt = build_agent_prompt(
                             problem=problem,
-                            transcript_text=format_transcript(transcript),
+                            transcript_text=transcript_text,
                             role=roles[agent_id],
                             agent_id=agent_id,
                             round_index=round_index,
@@ -523,8 +540,49 @@ Instructions:
                     pass
         return transcript
 
-    async def _run_debate_rounds_async(self, problem: str, state: dict) -> List[dict]:
-        """运行辩论轮次（异步）。返回 transcript。"""
+    def _get_transcript_for_agent(self, transcript: List[dict], round_index: int, agent_id: int, 
+                                 transcript_mode: str, num_agents: int) -> str:
+        """根据访问模式获取agent可以访问的transcript。
+        
+        Args:
+            transcript: 完整的transcript
+            round_index: 当前轮次索引
+            agent_id: 当前agent的ID
+            transcript_mode: 访问模式
+                - "prev": 只能看到n-1轮次的发言（默认）
+                - "all": 可以看到之前所有轮次的发言
+            num_agents: agent总数
+            
+        Returns:
+            str: 格式化后的transcript文本
+        """
+        if transcript_mode == "prev":
+            # 只包含当前轮次之前的transcript（n-1轮次）
+            filtered_transcript = [t for t in transcript if t["round"] < round_index]
+        elif transcript_mode == "all":
+            # 包含当前轮次之前的所有transcript + 当前轮次中当前agent之前的发言
+            filtered_transcript = []
+            for t in transcript:
+                if t["round"] < round_index:
+                    # 之前轮次的所有发言
+                    filtered_transcript.append(t)
+                elif t["round"] == round_index and t["agent_id"] < agent_id:
+                    # 当前轮次中，当前agent之前的发言
+                    filtered_transcript.append(t)
+        else:
+            # 默认使用prev
+            filtered_transcript = [t for t in transcript if t["round"] < round_index]
+        
+        return format_transcript(filtered_transcript)
+
+    async def _run_debate_rounds_async(self, problem: str, state: dict, transcript_mode: str = "prev") -> List[dict]:
+        """运行辩论轮次（异步）。返回 transcript。
+        
+        Args:
+            transcript_mode: 控制agent可以访问的transcript范围
+                - "prev": 只能看到n-1轮次的发言（默认）
+                - "all": 可以看到之前所有轮次的发言
+        """
         transcript: List[dict] = []
         num_agents: int = state["num_agents"]
         num_rounds: int = state["num_rounds"]
@@ -532,11 +590,15 @@ Instructions:
 
         for round_index in range(num_rounds):
             # 每个回合内可并行生成
-            transcript_text = format_transcript(transcript)
+            # 注意：在异步版本中，我们需要为每个agent单独计算transcript
             # 若分组图模式：逐个调用 graph.execute()（并发复杂性留待后续）
             if self.group_graphs_enabled and self.group_graphs:
                 for agent_id in range(num_agents):
                     graph = self.group_graphs[agent_id % len(self.group_graphs)]
+                    # 根据访问模式获取相应的transcript
+                    transcript_text = self._get_transcript_for_agent(
+                        transcript, round_index, agent_id, transcript_mode, num_agents
+                    )
                     g_inputs = {
                         "problem": problem,
                         "transcript_text": transcript_text,
@@ -582,7 +644,11 @@ Instructions:
                     elif self.debater_agents:
                         selected_agent = random.choice(self.debater_agents)
                     else:
-                        selected_agent = self.debater_agent
+                        selected_agent = None
+                    # 根据访问模式获取相应的transcript
+                    transcript_text = self._get_transcript_for_agent(
+                        transcript, round_index, agent_id, transcript_mode, num_agents
+                    )
                     inputs = {
                         "problem": problem,
                         "transcript_text": transcript_text,
@@ -622,6 +688,10 @@ Instructions:
             else:
                 prompts: List[Tuple[int, str]] = []
                 for agent_id in range(num_agents):
+                    # 根据访问模式获取相应的transcript
+                    transcript_text = self._get_transcript_for_agent(
+                        transcript, round_index, agent_id, transcript_mode, num_agents
+                    )
                     prompt = build_agent_prompt(
                         problem=problem,
                         transcript_text=transcript_text,
@@ -693,9 +763,18 @@ Instructions:
                 prompt=judge_prompt, parser=DebateJudgeOutput, parse_mode="xml"
             )
             jd = judge_resp.get_structured_data()
+        
+        winner_id = int(jd.get("winning_agent_id", 0))
+        final_answer = jd.get("final_answer", "")
+        
+        # 获取获胜者的答案
+        winner_answer = self._get_winner_answer(transcript, winner_id, state["num_rounds"])
+        
         return {
-            "final_answer": jd.get("final_answer", ""),
-            "winner": int(jd.get("winning_agent_id", 0)),
+            "final_answer": final_answer,
+            "winner": winner_id,
+            "winner_answer": winner_answer,
+            "rationale": jd.get("rationale", ""),
         }
 
     async def _generate_consensus_async(
@@ -735,9 +814,18 @@ Instructions:
                 prompt=judge_prompt, parser=DebateJudgeOutput, parse_mode="xml"
             )
             jd = judge_resp.get_structured_data()
+        
+        winner_id = int(jd.get("winning_agent_id", 0))
+        final_answer = jd.get("final_answer", "")
+        
+        # 获取获胜者的答案
+        winner_answer = self._get_winner_answer(transcript, winner_id, state["num_rounds"])
+        
         return {
-            "final_answer": jd.get("final_answer", ""),
-            "winner": int(jd.get("winning_agent_id", 0)),
+            "final_answer": final_answer,
+            "winner": winner_id,
+            "winner_answer": winner_answer,
+            "rationale": jd.get("rationale", ""),
         }
 
     def _collect_agent_final_answers(self, state: dict, transcript: List[dict]) -> List[str]:
@@ -754,3 +842,259 @@ Instructions:
             if ans and isinstance(ans, str) and len(ans.strip()) > 0:
                 final_answers.append(ans)
         return final_answers
+
+    def _get_winner_answer(self, transcript: List[dict], winner_id: int, num_rounds: int) -> Optional[str]:
+        """获取获胜者在最后一轮的答案。"""
+        # 查找获胜者在最后一轮的记录
+        records = [t for t in transcript if t["agent_id"] == winner_id and t["round"] == num_rounds - 1]
+        if len(records) == 0:
+            return None
+        
+        answer = records[-1].get("answer")
+        if answer and isinstance(answer, str) and len(answer.strip()) > 0:
+            return answer.strip()
+        
+        # 如果没有明确的答案，返回最后一轮的论据
+        argument = records[-1].get("argument", "")
+        return argument.strip() if argument else None
+
+    def save_module(self, path: str, ignore: List[str] = [], **kwargs) -> str:
+        """保存模块配置（直接保存agents，不保存llm_config_pool）"""
+        # 确保目录存在
+        os.makedirs(os.path.dirname(path) if os.path.dirname(path) else ".", exist_ok=True)
+        
+        # 保存debater agents
+        agent_pool_path = path.replace('.json', '_agents.json')
+        if self.debater_agents:
+            agent_data = []
+            for i, agent in enumerate(self.debater_agents):
+                # 为每个agent创建单独的保存路径
+                agent_path = agent_pool_path.replace('.json', f'_{i}.json')
+                agent.save_module(agent_path)
+                agent_data.append({
+                    "name": agent.name,
+                    "description": agent.description,
+                    "file_path": agent_path
+                })
+            
+            with open(agent_pool_path, 'w', encoding='utf-8') as f:
+                json.dump(agent_data, f, ensure_ascii=False, indent=2)
+        
+        # 保存judge agent
+        judge_agent_path = path.replace('.json', '_judge.json')
+        if self.judge_agent:
+            self.judge_agent.save_module(judge_agent_path)
+        
+        # 保存debate配置（只保存基本配置，不保存llm_config_pool）
+        config = {
+            "llm_config": self._serialize_llm_config(self.llm_config),
+            "name": self.name,
+            "description": self.description,
+            "agent_pool_file": agent_pool_path if self.debater_agents else None,
+            "judge_agent_file": judge_agent_path if self.judge_agent else None
+        }
+        
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
+        
+        print(f"模块配置已保存到: {path}")
+        return path
+    
+    def get_config(self) -> dict:
+        """获取当前模块的配置字典（不包含llm_config_pool）"""
+        config = {
+            "llm_config": self._serialize_llm_config(self.llm_config),
+            "name": self.name,
+            "description": self.description,
+        }
+        
+        # 序列化agent pool
+        if self.debater_agents:
+            agent_data = []
+            for agent in self.debater_agents:
+                agent_info = {
+                    "name": agent.name,
+                    "description": agent.description,
+                    "config": agent.get_config()
+                }
+                agent_data.append(agent_info)
+            config["debater_agents"] = agent_data
+        
+        # 序列化judge agent
+        if self.judge_agent:
+            config["judge_agent"] = {
+                "name": self.judge_agent.name,
+                "description": self.judge_agent.description,
+                "config": self.judge_agent.get_config()
+            }
+        
+        return config
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any], **kwargs) -> 'MultiAgentDebateActionGraph':
+        """从配置字典创建MultiAgentDebateActionGraph实例（不重建llm_config_pool）"""
+        # 创建实例
+        instance = cls()
+        
+        # 重建llm_config
+        if data.get("llm_config"):
+            instance.llm_config = instance._deserialize_llm_config(data["llm_config"])
+        
+        # 设置其他属性
+        if data.get("name"):
+            instance.name = data["name"]
+        
+        if data.get("description"):
+            instance.description = data["description"]
+        
+        # 重建agent pool
+        if data.get("debater_agents"):
+            agents = []
+            for agent_info in data["debater_agents"]:
+                try:
+                    agent_config = agent_info.get("config", {})
+                    llm_config = instance._deserialize_llm_config(agent_config.get("llm_config"))
+                    
+                    agent = CustomizeAgent(
+                        name=agent_info["name"],
+                        description=agent_info["description"],
+                        llm_config=llm_config,
+                        **agent_config
+                    )
+                    agents.append(agent)
+                except Exception as e:
+                    print(f"警告: 重建agent {agent_info.get('name', 'unknown')}失败: {e}")
+                    continue
+            
+            instance.debater_agents = agents
+        
+        # 重建judge agent
+        if data.get("judge_agent"):
+            try:
+                judge_info = data["judge_agent"]
+                judge_config = judge_info.get("config", {})
+                llm_config = instance._deserialize_llm_config(judge_config.get("llm_config"))
+                
+                instance.judge_agent = CustomizeAgent(
+                    name=judge_info["name"],
+                    description=judge_info["description"],
+                    llm_config=llm_config,
+                    **judge_config
+                )
+            except Exception as e:
+                print(f"警告: 重建judge agent失败: {e}")
+        
+        return instance
+    
+    @classmethod
+    def load_module(cls, path: str, llm_config: LLMConfig = None, **kwargs) -> 'MultiAgentDebateActionGraph':
+        """从文件加载MultiAgentDebateActionGraph实例（类方法，不重建llm_config_pool）"""
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"模块配置文件不存在: {path}")
+        
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"配置文件格式错误: {e}")
+        except Exception as e:
+            raise RuntimeError(f"读取配置文件失败: {e}")
+        
+        # 创建实例
+        instance = cls()
+        
+        # 重建llm_config
+        if config.get("llm_config"):
+            try:
+                instance.llm_config = instance._deserialize_llm_config(config["llm_config"])
+            except Exception as e:
+                print(f"警告: 重建llm_config失败: {e}")
+        
+        # 设置其他属性
+        if config.get("name"):
+            instance.name = config["name"]
+        
+        if config.get("description"):
+            instance.description = config["description"]
+        
+        # 加载agent pool
+        agent_pool_file = config.get("agent_pool_file")
+        if agent_pool_file and os.path.exists(agent_pool_file):
+            try:
+                with open(agent_pool_file, 'r', encoding='utf-8') as f:
+                    agent_data = json.load(f)
+                
+                agents = []
+                for agent_info in agent_data:
+                    try:
+                        agent_path = agent_info.get("file_path")
+                        if agent_path and os.path.exists(agent_path):
+                            # 使用agent的load_module方法
+                            agent = CustomizeAgent.from_file(
+                                path=agent_path,
+                                llm_config=instance.llm_config or llm_config
+                            )
+                            agents.append(agent)
+                        else:
+                            print(f"警告: agent文件不存在: {agent_path}")
+                    except Exception as e:
+                        print(f"警告: 加载agent {agent_info.get('name', 'unknown')}失败: {e}")
+                        continue
+                
+                instance.debater_agents = agents
+                print(f"从 {agent_pool_file} 加载了 {len(agents)} 个agents")
+            except Exception as e:
+                print(f"警告: 加载agent pool失败: {e}")
+        
+        # 加载judge agent
+        judge_agent_file = config.get("judge_agent_file")
+        if judge_agent_file and os.path.exists(judge_agent_file):
+            try:
+                # 使用agent的from_file方法
+                instance.judge_agent = CustomizeAgent.from_file(
+                    path=judge_agent_file,
+                    llm_config=instance.llm_config or llm_config
+                )
+                print(f"从 {judge_agent_file} 加载了judge agent")
+            except Exception as e:
+                print(f"警告: 加载judge agent失败: {e}")
+        
+        print(f"从 {path} 加载了模块配置")
+        return instance
+    
+
+    
+    def _serialize_llm_config(self, llm_config) -> Optional[Dict[str, Any]]:
+        """序列化LLM配置（只保存模型名称和基本参数）"""
+        if not llm_config:
+            return None
+        
+        config_info = {
+            "model": llm_config.model if hasattr(llm_config, 'model') else None,
+            "temperature": llm_config.temperature if hasattr(llm_config, 'temperature') else None,
+            "config_type": type(llm_config).__name__
+        }
+        
+        return config_info
+    
+    def _deserialize_llm_config(self, config_info: Optional[Dict[str, Any]]) -> Optional[LLMConfig]:
+        """反序列化LLM配置（从环境变量重建）"""
+        if not config_info:
+            return None
+        
+        config_type = config_info.get("config_type", "OpenAILLMConfig")
+        
+        if config_type == "OpenAILLMConfig":
+            from ...models.model_configs import OpenAILLMConfig
+            return OpenAILLMConfig(
+                model=config_info.get("model", "gpt-4o-mini"),
+                openai_key=os.getenv("OPENAI_API_KEY")
+            )
+        elif config_type == "OpenRouterConfig":
+            from ...models.model_configs import OpenRouterConfig
+            return OpenRouterConfig(
+                model=config_info.get("model", "meta-llama/llama-3.1-70b-instruct"),
+                openrouter_key=os.getenv("OPENROUTER_API_KEY")
+            )
+        
+        return None

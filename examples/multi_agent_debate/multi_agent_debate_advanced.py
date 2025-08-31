@@ -1,3 +1,21 @@
+#!/usr/bin/env python3
+"""
+MultiAgentDebate 高级示例 - 动态角色-模型匹配
+
+这个示例专注于：
+1. 根据角色特点动态选择最适合的模型
+2. 通过角色设计优化辩论策略
+3. 展示智能匹配对辩论质量的提升
+
+与基础示例的区别：
+- 基础示例：使用默认配置，展示基本功能
+- 高级示例：自定义角色-模型匹配，优化辩论效果
+
+与分组示例的区别：
+- 分组示例：展示复杂架构设计
+- 高级示例：展示角色和模型的智能匹配
+"""
+
 import os
 import random
 from dotenv import load_dotenv
@@ -7,12 +25,12 @@ from evoagentx.models.model_configs import OpenAILLMConfig, OpenRouterConfig
 from evoagentx.agents.customize_agent import CustomizeAgent
 
 
-def create_dynamic_agent(role_name, role_description, model_config, temperature_adjustment=0.0):
-    """动态创建智能体，根据角色调整模型参数"""
+def create_optimized_agent(role_name, role_description, model_config, temperature_adjustment=0.0):
+    """创建优化的智能体，根据角色特点调整模型参数"""
     
-    # 基础提示词模板
-    base_prompt = f"""
-You are debater #{{agent_id}} (role: {role_name}). This is round {{round_index}} of {{total_rounds}}.
+    # 根据角色特点调整prompt
+    role_prompt = f"""
+You are debater #{{agent_id}} (role: {{role}}). This is round {{round_index}} of {{total_rounds}}.
 
 Problem:
 {{problem}}
@@ -35,7 +53,7 @@ Instructions:
 """
     
     # 调整模型配置
-    adjusted_config = model_config.copy()
+    adjusted_config = model_config.model_copy()
     if hasattr(adjusted_config, 'temperature'):
         adjusted_config.temperature = max(0.0, min(1.0, adjusted_config.temperature + temperature_adjustment))
     
@@ -57,7 +75,7 @@ Instructions:
     return CustomizeAgent(
         name=role_name,
         description=f"{role_name} debater: {role_description}",
-        prompt=base_prompt,
+        prompt=role_prompt,
         llm_config=adjusted_config,
         inputs=inputs,
         outputs=outputs,
@@ -65,13 +83,13 @@ Instructions:
     )
 
 
-def create_role_model_combinations():
-    """创建角色和模型的组合配置"""
+def create_role_model_mapping():
+    """创建角色-模型映射策略"""
     load_dotenv()
     openai_key = os.getenv("OPENAI_API_KEY")
     openrouter_key = os.getenv("OPENROUTER_API_KEY")
     
-    # 定义角色
+    # 定义角色及其特点
     roles = {
         "Optimist": "always sees the bright side and positive opportunities",
         "Pessimist": "focuses on risks, problems, and potential downsides", 
@@ -92,49 +110,49 @@ def create_role_model_combinations():
         "llama": OpenRouterConfig(model="meta-llama/llama-3.1-70b-instruct", openrouter_key=openrouter_key, temperature=0.3),
     }
     
-    # 角色-模型映射策略
+    # 角色-模型匹配策略（基于角色特点选择最适合的模型）
     role_model_mapping = {
-        # 乐观角色使用较温暖的模型
-        "Optimist": ("gpt4o_mini", 0.1),  # 增加温度
-        "Advocate": ("gpt4o", 0.2),
-        "Innovator": ("gpt4o", 0.3),
+        # 需要创造力的角色使用GPT-4o
+        "Innovator": ("gpt4o", 0.3),      # 高温度增加创造性
+        "Advocate": ("gpt4o", 0.2),       # 中等温度增加说服力
         
-        # 分析角色使用较冷静的模型
-        "Analyst": ("llama", -0.1),  # 降低温度
-        "Expert": ("gpt4o", -0.1),
-        "Skeptic": ("llama", 0.0),
+        # 需要精确分析的角色使用Llama
+        "Analyst": ("llama", -0.1),       # 低温度增加精确性
+        "Expert": ("llama", 0.0),         # 标准温度保持专业性
+        "Skeptic": ("llama", 0.0),       # 标准温度保持批判性
         
-        # 其他角色使用默认配置
-        "Pessimist": ("gpt4o_mini", 0.0),
-        "Conservative": ("llama", -0.1),
-        "Critic": ("gpt4o_mini", 0.0),
-        "Mediator": ("gpt4o", 0.0),
+        # 其他角色使用GPT-4o-mini（平衡性能和成本）
+        "Optimist": ("gpt4o_mini", 0.1),  # 轻微增加温度
+        "Pessimist": ("gpt4o_mini", 0.0), # 标准温度
+        "Conservative": ("gpt4o_mini", -0.1), # 降低温度增加稳定性
+        "Critic": ("gpt4o_mini", 0.0),    # 标准温度
+        "Mediator": ("gpt4o_mini", 0.1),  # 轻微增加温度增加灵活性
     }
     
     return roles, models, role_model_mapping
 
 
-def run_dynamic_combination():
-    """运行动态组合的辩论"""
-    print("=== 动态角色-模型组合辩论 ===")
+def run_optimized_debate():
+    """运行优化的辩论：根据角色特点选择最适合的模型"""
+    print("=== 优化辩论：角色-模型智能匹配 ===")
     
-    roles, models, mapping = create_role_model_combinations()
+    roles, models, mapping = create_role_model_mapping()
     
-    # 随机选择5个角色
-    selected_roles = random.sample(list(roles.keys()), 5)
+    # 选择具有代表性的角色组合
+    selected_roles = ["Analyst", "Innovator", "Skeptic", "Advocate", "Mediator"]
     
-    # 为每个角色创建对应的智能体
+    # 为每个角色创建优化的智能体
     agents = []
     for role in selected_roles:
         model_name, temp_adjust = mapping[role]
         model_config = models[model_name]
-        agent = create_dynamic_agent(role, roles[role], model_config, temp_adjust)
+        agent = create_optimized_agent(role, roles[role], model_config, temp_adjust)
         agents.append(agent)
     
     # 创建辩论图
     graph = MultiAgentDebateActionGraph(
-        llm_config=OpenAILLMConfig(model="gpt-4o-mini", openai_key=os.getenv("OPENAI_API_KEY")),
         debater_agents=agents,
+        llm_config=agents[0].llm_config if agents else None,
     )
     
     # 执行辩论
@@ -148,107 +166,24 @@ def run_dynamic_combination():
     
     print("最终答案:", result.get("final_answer"))
     print("获胜者:", result.get("winner"))
+    if result.get("winner_answer"):
+        print("获胜者答案:", result.get("winner_answer"))
     
-    # 显示配置信息
-    print("\n智能体配置:")
+    # 显示角色-模型匹配信息
+    print("\n角色-模型匹配策略:")
     for i, agent in enumerate(agents):
         model_name = agent.llm_config.model if hasattr(agent.llm_config, 'model') else "Unknown"
         temp = agent.llm_config.temperature if hasattr(agent.llm_config, 'temperature') else "Unknown"
-        print(f"  智能体 {i}: {agent.name} (模型: {model_name}, 温度: {temp})")
+        print(f"  {agent.name}: {model_name} (温度: {temp}) - {roles[agent.name]}")
 
 
-def run_balanced_debate():
-    """运行平衡的辩论：确保正反两方都有代表"""
-    print("\n=== 平衡辩论：正反两方代表 ===")
-    
-    roles, models, mapping = create_role_model_combinations()
-    
-    # 选择支持方和反对方的角色
-    pro_roles = ["Optimist", "Advocate", "Innovator"]
-    con_roles = ["Pessimist", "Skeptic", "Conservative"]
-    neutral_roles = ["Analyst", "Mediator", "Expert"]
-    
-    # 创建平衡的智能体组合
-    selected_roles = [
-        random.choice(pro_roles),      # 支持方
-        random.choice(con_roles),     # 反对方  
-        random.choice(neutral_roles), # 中立方
-        random.choice(pro_roles),     # 支持方
-        random.choice(con_roles),     # 反对方
-    ]
-    
-    agents = []
-    for role in selected_roles:
-        model_name, temp_adjust = mapping[role]
-        model_config = models[model_name]
-        agent = create_dynamic_agent(role, roles[role], model_config, temp_adjust)
-        agents.append(agent)
-    
-    graph = MultiAgentDebateActionGraph(
-        llm_config=OpenAILLMConfig(model="gpt-4o-mini", openai_key=os.getenv("OPENAI_API_KEY")),
-        debater_agents=agents,
-    )
-    
-    result = graph.execute(
-        problem="Should we ban social media for teenagers? Give a final Yes/No with reasons.",
-        num_agents=5,
-        num_rounds=3,
-        judge_mode="llm_judge",
-        return_transcript=True,
-    )
-    
-    print("最终答案:", result.get("final_answer"))
-    print("获胜者:", result.get("winner"))
-    
-    print("\n辩论方阵:")
-    for i, agent in enumerate(agents):
-        stance = "支持方" if agent.name in pro_roles else "反对方" if agent.name in con_roles else "中立方"
-        print(f"  智能体 {i}: {agent.name} ({stance})")
 
-
-def run_model_comparison():
-    """运行模型对比：相同角色使用不同模型"""
-    print("\n=== 模型对比：相同角色不同模型 ===")
-    
-    roles, models, mapping = create_role_model_combinations()
-    
-    # 选择同一个角色，但使用不同模型
-    role = "Analyst"
-    role_description = roles[role]
-    
-    # 创建三个相同角色但不同模型的智能体
-    agents = [
-        create_dynamic_agent(f"{role}_GPT4o", role_description, models["gpt4o"], 0.0),
-        create_dynamic_agent(f"{role}_GPT4oMini", role_description, models["gpt4o_mini"], 0.0),
-        create_dynamic_agent(f"{role}_Llama", role_description, models["llama"], 0.0),
-    ]
-    
-    graph = MultiAgentDebateActionGraph(
-        llm_config=OpenAILLMConfig(model="gpt-4o-mini", openai_key=os.getenv("OPENAI_API_KEY")),
-        debater_agents=agents,
-    )
-    
-    result = graph.execute(
-        problem="What's the best programming language for beginners? Give a final recommendation with reasons.",
-        num_agents=3,
-        num_rounds=2,
-        judge_mode="llm_judge",
-        return_transcript=True,
-    )
-    
-    print("最终答案:", result.get("final_answer"))
-    print("获胜者:", result.get("winner"))
-    
-    print("\n模型对比:")
-    for i, agent in enumerate(agents):
-        model_name = agent.llm_config.model if hasattr(agent.llm_config, 'model') else "Unknown"
-        print(f"  智能体 {i}: {agent.name} (模型: {model_name})")
 
 
 def main():
     """主函数"""
-    print("多智能体辩论高级示例")
-    print("=" * 50)
+    print("MultiAgentDebate 高级示例 - 动态角色-模型匹配")
+    print("=" * 60)
     
     # 检查环境变量
     if not os.getenv("OPENAI_API_KEY"):
@@ -256,14 +191,8 @@ def main():
     if not os.getenv("OPENROUTER_API_KEY"):
         print("警告: 未设置 OPENROUTER_API_KEY 环境变量")
     
-    # 运行动态组合
-    run_dynamic_combination()
-    
-    # 运行平衡辩论
-    run_balanced_debate()
-    
-    # 运行模型对比
-    run_model_comparison()
+    # 运行优化辩论
+    run_optimized_debate()
 
 
 if __name__ == "__main__":

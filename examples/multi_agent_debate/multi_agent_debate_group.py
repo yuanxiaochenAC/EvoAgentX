@@ -120,9 +120,9 @@ if __name__ == "__main__":
 	group_graphs = [group1, group2]
 
 	debate = MultiAgentDebateActionGraph(
-		llm_config=llm_cfg,
 		group_graphs_enabled=True,
 		group_graphs=group_graphs,
+		llm_config=llm_cfg,
 	)
 	debate.init_module()
 
