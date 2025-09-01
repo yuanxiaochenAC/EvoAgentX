@@ -889,7 +889,7 @@ class StorageBase(BaseModule, ABC):
             doc = pymupdf.open(file_path)
             all_text = []
             for page in doc:
-                text = page.get_text().encode("utf8")
+                text = page.get_text()
                 all_text.append(text)
             text = "\n\n".join(all_text)
             return {
