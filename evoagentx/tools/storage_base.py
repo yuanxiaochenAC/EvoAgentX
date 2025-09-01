@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 
 # For handling various file types
 try:
-    from unstructured.partition.pdf import partition_pdf
+    import pymupdf
     PDF_AVAILABLE = True
 except ImportError:
     PDF_AVAILABLE = False
@@ -886,8 +886,12 @@ class StorageBase(BaseModule, ABC):
             return {"success": False, "error": "unstructured library not available"}
         
         try:
-            elements = partition_pdf(file_path, strategy="fast")
-            text = "\n\n".join([str(el) for el in elements])
+            doc = pymupdf.open(file_path)
+            all_text = []
+            for page in doc:
+                text = page.get_text().encode("utf8")
+                all_text.append(text)
+            text = "\n\n".join(all_text)
             return {
                 "success": True,
                 "content": text,
