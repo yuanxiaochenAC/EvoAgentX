@@ -217,7 +217,7 @@ def main():
     run_image_analysis_example()
     
     # # Run OpenAI image generation example
-    # run_openai_image_generation_example()
+    run_openai_image_generation_example()
     
     # Run Flux image generation example
     run_flux_image_generation_example()

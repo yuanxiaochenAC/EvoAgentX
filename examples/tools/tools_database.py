@@ -173,13 +173,12 @@ def run_mongodb_examples():
     except Exception as e:
         print(f"❌ Error running MongoDB examples: {str(e)}")
 
-
 def run_postgresql_examples():
-    """Run examples using PostgreSQLToolkit for relational database operations."""
-    print("\n===== POSTGRESQL TOOLKIT EXAMPLES =====\n")
+    """Powerful example using PostgreSQLToolkit for database operations."""
+    print("\n===== POSTGRESQL TOOL EXAMPLE =====\n")
     
     try:
-        # Initialize PostgreSQL toolkit with default storage
+        # Initialize PostgreSQL toolkit with default storage (no explicit path needed)
         toolkit = PostgreSQLToolkit(
             name="DemoPostgreSQLToolkit",
             database_name="demo_db",
@@ -188,239 +187,77 @@ def run_postgresql_examples():
         
         print("✓ PostgreSQLToolkit initialized with default storage")
         
-        # Get available tools
+        # Get tools
         execute_tool = toolkit.get_tool("postgresql_execute")
         find_tool = toolkit.get_tool("postgresql_find")
-        update_tool = toolkit.get_tool("postgresql_update")
         create_tool = toolkit.get_tool("postgresql_create")
         delete_tool = toolkit.get_tool("postgresql_delete")
-        info_tool = toolkit.get_tool("postgresql_info")
         
-        print(f"✓ Available tools: {[tool.name for tool in toolkit.get_tools()]}")
-        
-        # Example 1: Create tables
-        print("\n1. Creating database tables...")
-        
-        # Create employees table
-        create_employees_sql = """
-        CREATE TABLE IF NOT EXISTS employees (
+        # Create users table and insert data
+        create_sql = """
+        CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
             name VARCHAR(100) NOT NULL,
             email VARCHAR(100) UNIQUE NOT NULL,
-            department VARCHAR(50) NOT NULL,
-            salary DECIMAL(10,2) NOT NULL,
-            hire_date DATE NOT NULL,
-            is_active BOOLEAN DEFAULT TRUE
+            age INTEGER,
+            department VARCHAR(50)
         );
         """
         
-        create_result = create_tool(create_employees_sql)
-        if create_result.get("success"):
-            print("✓ Created employees table")
-        else:
-            print(f"❌ Create table failed: {create_result.get('error', 'Unknown error')}")
-            return
-        
-        # Create projects table
-        create_projects_sql = """
-        CREATE TABLE IF NOT EXISTS projects (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR(100) NOT NULL,
-            description TEXT,
-            start_date DATE NOT NULL,
-            end_date DATE,
-            budget DECIMAL(12,2),
-            status VARCHAR(20) DEFAULT 'active'
-        );
-        """
-        
-        create_result = create_tool(create_projects_sql)
-        if create_result.get("success"):
-            print("✓ Created projects table")
-        else:
-            print(f"❌ Create table failed: {create_result.get('error', 'Unknown error')}")
-        
-        # Example 2: Insert employee data
-        print("\n2. Inserting employee data...")
-        insert_employees_sql = """
-        INSERT INTO employees (name, email, department, salary, hire_date) VALUES
-        ('Alice Johnson', 'alice.johnson@company.com', 'Engineering', 85000.00, '2023-01-15'),
-        ('Bob Smith', 'bob.smith@company.com', 'Marketing', 72000.00, '2023-02-01'),
-        ('Carol Davis', 'carol.davis@company.com', 'Engineering', 90000.00, '2022-11-10'),
-        ('David Wilson', 'david.wilson@company.com', 'Sales', 68000.00, '2023-03-20'),
-        ('Eva Brown', 'eva.brown@company.com', 'HR', 65000.00, '2023-01-08')
-        ON CONFLICT (email) DO NOTHING;
-        """
-        
-        insert_result = execute_tool(insert_employees_sql)
-        if insert_result.get("success"):
-            print("✓ Successfully inserted employee data")
-        else:
-            print(f"❌ Insert failed: {insert_result.get('error', 'Unknown error')}")
-        
-        # Example 3: Insert project data
-        print("\n3. Inserting project data...")
-        insert_projects_sql = """
-        INSERT INTO projects (name, description, start_date, end_date, budget, status) VALUES
-        ('Website Redesign', 'Modernize company website with new design and features', '2024-01-01', '2024-06-30', 50000.00, 'active'),
-        ('Mobile App Development', 'Create iOS and Android apps for customer engagement', '2024-02-01', '2024-12-31', 150000.00, 'active'),
-        ('Data Migration', 'Migrate legacy systems to new cloud infrastructure', '2024-01-15', '2024-04-15', 75000.00, 'active'),
-        ('Marketing Campaign', 'Q2 marketing campaign for new product launch', '2024-04-01', '2024-06-30', 25000.00, 'planning')
-        ON CONFLICT (id) DO NOTHING;
-        """
-        
-        insert_result = execute_tool(insert_projects_sql)
-        if insert_result.get("success"):
-            print("✓ Successfully inserted project data")
-        else:
-            print(f"❌ Insert failed: {insert_result.get('error', 'Unknown error')}")
-        
-        # Example 4: Query employees by department
-        print("\n4. Finding engineering employees...")
-        find_sql = """
-        SELECT name, email, salary, hire_date 
-        FROM employees 
-        WHERE department = 'Engineering' 
-        ORDER BY salary DESC
-        """
-        
-        find_result = execute_tool(find_sql)
-        if find_result.get("success"):
-            engineers = find_result.get("data", [])
-            print(f"✓ Found {len(engineers)} engineering employees:")
-            for emp in engineers:
-                name = emp.get('name', 'Unknown')
-                email = emp.get('email', 'Unknown')
-                salary = emp.get('salary', 0)
-                hire_date = emp.get('hire_date', 'Unknown')
-                # Handle salary formatting safely
-                if isinstance(salary, (int, float)):
-                    salary_str = f"${salary:,.2f}"
-                else:
-                    salary_str = str(salary)
-                print(f"  - {name} ({email}): {salary_str}, Hired: {hire_date}")
-        else:
-            print(f"❌ Find failed: {find_result.get('error', 'Unknown error')}")
-        
-        # Example 5: Update employee salaries
-        print("\n5. Updating employee salaries (5% raise for engineering)...")
-        update_sql = """
-        UPDATE employees 
-        SET salary = salary * 1.05 
-        WHERE department = 'Engineering'
-        """
-        
-        update_result = execute_tool(update_sql)
-        if update_result.get("success"):
-            updated_count = update_result.get("data", {}).get("rowcount", 0)
-            print(f"✓ Updated {updated_count} engineering employees with 5% raise")
-        else:
-            print(f"❌ Update failed: {update_result.get('error', 'Unknown error')}")
-        
-        # Example 6: Complex JOIN query
-        print("\n6. Running complex JOIN query (employees and projects)...")
-        
-        join_sql = """
-        SELECT 
-            e.name as employee_name,
-            e.department,
-            p.name as project_name,
-            p.status,
-            p.budget
-        FROM employees e
-        CROSS JOIN projects p
-        WHERE e.department = 'Engineering' AND p.status = 'active'
-        ORDER BY p.budget DESC;
-        """
-        
-        join_result = execute_tool(join_sql)
-        if join_result.get("success"):
-            results = join_result.get("data", [])
-            print(f"✓ Found {len(results)} employee-project combinations:")
+        result = create_tool(create_sql)
+        if result["success"]:
+            print("✓ Created users table")
             
-            for i, row in enumerate(results[:5]):  # Show first 5 results
-                # Try different possible field names
-                emp_name = (row.get('employee_name') or row.get('name') or 
-                           row.get('e.name') or 'Unknown')
-                dept = (row.get('department') or row.get('e.department') or 'Unknown')
-                proj_name = (row.get('project_name') or row.get('p.name') or 'Unknown')
-                budget = (row.get('budget') or row.get('p.budget') or 0)
+            # Insert users
+            insert_sql = """
+            INSERT INTO users (name, email, age, department) VALUES
+            ('Alice Johnson', 'alice@example.com', 28, 'Engineering'),
+            ('Bob Smith', 'bob@example.com', 32, 'Marketing'),
+            ('Carol Davis', 'carol@example.com', 25, 'Engineering')
+            """
+            
+            result = execute_tool(insert_sql)
+            if result["success"]:
+                print("✓ Inserted users")
                 
-                # Handle budget formatting safely
-                if isinstance(budget, (int, float)):
-                    budget_str = f"${budget:,.2f}"
-                else:
-                    budget_str = str(budget)
-                print(f"  - {emp_name} ({dept}) → {proj_name}: {budget_str}")
-        else:
-            print(f"❌ JOIN query failed: {join_result.get('error', 'Unknown error')}")
+                # Query users - fix the field access issue
+                find_result = find_tool(
+                    "users",
+                    where="department = 'Engineering'",
+                    columns="name, age",
+                    sort="age ASC"
+                )
+                
+                if find_result["success"]:
+                    engineers = find_result["data"]["data"]
+                    print(f"✓ Found {len(engineers)} engineers:")
+                    for user in engineers:
+                        # Handle potential missing fields safely
+                        name = user.get('name', 'Unknown')
+                        age = user.get('age', 'N/A')
+                        print(f"  - {name} (age: {age})")
+                
+                # Test delete functionality
+                print("\n🗑️ Testing delete functionality...")
+                delete_result = delete_tool(
+                    "users",
+                    "department = 'Marketing'"
+                )
+                
+                if delete_result["success"]:
+                    deleted_count = delete_result["data"].get("rowcount", 0)
+                    print(f"✓ Deleted {deleted_count} marketing users")
+                    
+                    # Verify deletion
+                    verify_result = find_tool("users")
+                    if verify_result["success"]:
+                        remaining = verify_result["data"]
+                        print(f"✓ Remaining users after deletion: {len(remaining)}")
         
-        # Example 6b: JSON query format (new feature!)
-        print("\n6b. Testing JSON query format...")
-        json_query = '{"sql": "SELECT * FROM employees WHERE department = \'Engineering\'", "type": "select"}'
-        
-        json_result = execute_tool(json_query)
-        if json_result.get("success"):
-            results = json_result.get("data", [])
-            print(f"✓ JSON query returned {len(results)} engineering employees:")
-            for i, row in enumerate(results[:3]):
-                print(f"  - {row.get('name', 'Unknown')} ({row.get('department', 'Unknown')})")
-        else:
-            print(f"❌ JSON query failed: {json_result.get('error', 'Unknown error')}")
-        
-        # Example 6c: Python object query format (new feature!)
-        print("\n6c. Testing Python object query format...")
-        python_query = {
-            "sql": "SELECT name, department FROM employees WHERE salary > 50000",
-            "type": "select"
-        }
-        
-        python_result = execute_tool(python_query)
-        if python_result.get("success"):
-            results = python_result.get("data", [])
-            print(f"✓ Python object query returned {len(results)} high-salary employees:")
-            for i, row in enumerate(results[:3]):
-                print(f"  - {row.get('name', 'Unknown')} ({row.get('department', 'Unknown')})")
-        else:
-            print(f"❌ Python object query failed: {python_result.get('error', 'Unknown error')}")
-        
-        # Example 7: Delete inactive projects
-        print("\n7. Testing delete functionality...")
-        delete_sql = "DELETE FROM projects WHERE status = 'planning'"
-        
-        delete_result = execute_tool(delete_sql)
-        if delete_result.get("success"):
-            deleted_count = delete_result.get("data", {}).get("rowcount", 0)
-            print(f"✓ Deleted {deleted_count} planning projects")
-        else:
-            print(f"❌ Delete failed: {delete_result.get('error', 'Unknown error')}")
-        
-        # Example 8: Get database information
-        print("\n8. Getting database information...")
-        info_sql = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
-        
-        info_result = execute_tool(info_sql)
-        if info_result.get("success"):
-            tables_data = info_result.get("data", [])
-            print(f"✓ Database info:")
-            print(f"  - Database: PostgreSQL (file-based mode)")
-            
-            # Safely handle tables display
-            if isinstance(tables_data, list) and tables_data:
-                table_names = [row.get('table_name', 'Unknown') for row in tables_data]
-                print(f"  - Tables: {', '.join(table_names)}")
-                print(f"  - Total tables: {len(table_names)}")
-            else:
-                print("  - Tables: None")
-                print("  - Total tables: 0")
-        else:
-            print(f"❌ Info failed: {info_result.get('error', 'Unknown error')}")
-        
-        print("\n✓ PostgreSQL examples completed successfully!")
+        print("\n✓ PostgreSQLToolkit test completed with default storage")
         
     except Exception as e:
-        print(f"❌ Error running PostgreSQL examples: {str(e)}")
-
+        print(f"Error: {str(e)}")
 
 def run_faiss_examples():
     """Run examples using FaissToolkit for vector database operations."""

@@ -9,7 +9,7 @@ This script provides comprehensive examples for:
 
 import os
 import sys
-import time
+# import time
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -246,8 +246,8 @@ def main():
     # Run Selenium-based browser example
     run_browser_tool_example()
     
-    # # Run AI-driven browser example
-    # run_browser_use_tool_example()
+    # Run AI-driven browser example
+    run_browser_use_tool_example()
     
 if __name__ == "__main__":
     main()

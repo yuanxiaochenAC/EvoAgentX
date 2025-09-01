@@ -19,7 +19,6 @@ The examples demonstrate various search capabilities and HTTP operations.
 
 import os
 import sys
-import json
 from pathlib import Path
 
 # Add the parent directory to sys.path to import from evoagentx
@@ -402,13 +401,13 @@ def main():
     run_search_examples()
     
     # # Run arXiv tool example
-    # run_arxiv_tool_example()
+    run_arxiv_tool_example()
     
     # # Run RSS tool example
-    # run_rss_tool_example()
+    run_rss_tool_example()
     
     # # Run Request tool example
-    # run_request_tool_example()
+    run_request_tool_example()
     
     print("\n===== ALL SEARCH AND REQUEST EXAMPLES COMPLETED =====")
 
