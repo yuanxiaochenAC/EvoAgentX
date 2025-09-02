@@ -349,6 +349,29 @@ metadata:
 
         # Test PDF file operations
         print("\n3. Testing PDF file operations...")
+        
+        # Create PDF file first
+        pdf_content = """Test PDF Document
+
+This is a test PDF created by EvoAgentX.
+
+Features:
+• PDF creation from text
+• Automatic formatting
+• Professional layout
+
+This demonstrates the storage system's PDF capabilities."""
+        
+        pdf_result = save_tool(
+            file_path="test_pdf.pdf",
+            content=pdf_content
+        )
+        
+        if pdf_result.get("success"):
+            print("✓ PDF file created successfully")
+        else:
+            print(f"❌ Failed to create PDF file: {pdf_result.get('error')}")
+        
         # Read PDF file
         pdf_read_result = read_tool(file_path="test_pdf.pdf")
         
