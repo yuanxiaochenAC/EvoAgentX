@@ -287,7 +287,7 @@ def run_advanced_file_operations():
     
     try:
         # Initialize storage toolkit
-        storage_toolkit = StorageToolkit(name="AdvancedStorageToolkit")
+        storage_toolkit = StorageToolkit()
         save_tool = storage_toolkit.get_tool("save")
         read_tool = storage_toolkit.get_tool("read")
         
@@ -366,7 +366,7 @@ metadata:
         test_files = ["sample_document.txt", "sample_data.json", "custom_test.txt"]
         for test_file in test_files:
             if os.path.exists(test_file):
-                delete_result = delete_tool(file_path=test_file)
+                delete_result = delete_tool(path=test_file)
                 if delete_result.get("success"):
                     print(f"✓ Deleted {test_file}")
                 else:

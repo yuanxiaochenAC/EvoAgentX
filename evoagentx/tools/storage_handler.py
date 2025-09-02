@@ -279,6 +279,24 @@ class FileStorageHandler(StorageBase):
                 "file_path": file_path
             }
     
+    def _delete_raw(self, path: str) -> bool:
+        """Delete file or directory - basic implementation for local filesystem"""
+        try:
+            path_obj = Path(path)
+            if path_obj.is_file():
+                path_obj.unlink()
+                logger.info(f"File deleted: {path}")
+            elif path_obj.is_dir():
+                shutil.rmtree(path_obj)
+                logger.info(f"Directory deleted: {path}")
+            else:
+                logger.warning(f"Path does not exist: {path}")
+                return False
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting {path}: {str(e)}")
+            return False
+    
     def list_files(self, path: str = None, max_depth: int = 3, include_hidden: bool = False) -> Dict[str, Any]:
         """
         List files and directories in the specified path.

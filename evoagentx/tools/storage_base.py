@@ -465,24 +465,54 @@ class StorageBase(BaseModule, ABC):
             return {"success": False, "error": str(e), "file_path": file_path}
     
     # CSV file handlers
-    def _save_csv(self, file_path: str, content: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]:
-        """Save CSV content to a file"""
+    def _save_csv(self, file_path: str, content: Any, **kwargs) -> Dict[str, Any]:
+        """Save CSV content to a file - handles both raw CSV strings and structured data"""
         try:
             if not content:
                 return {"success": False, "error": "No content to save"}
             
             with open(file_path, 'w', newline='', encoding='utf-8') as f:
-                fieldnames = content[0].keys()
-                writer = csv.DictWriter(f, fieldnames=fieldnames)
-                writer.writeheader()
-                writer.writerows(content)
+                # If content is a string, write it directly as raw CSV
+                if isinstance(content, str):
+                    f.write(content)
+                    # Count rows by counting newlines
+                    rows = content.count('\n')
+                    return {
+                        "success": True,
+                        "message": f"CSV file saved to {file_path}",
+                        "file_path": file_path,
+                        "rows": rows
+                    }
+                
+                # If content is a list of dictionaries, use CSV writer
+                elif isinstance(content, list) and content and isinstance(content[0], dict):
+                    fieldnames = content[0].keys()
+                    writer = csv.DictWriter(f, fieldnames=fieldnames)
+                    writer.writeheader()
+                    writer.writerows(content)
+                    
+                    return {
+                        "success": True,
+                        "message": f"CSV file saved to {file_path}",
+                        "file_path": file_path,
+                        "rows": len(content)
+                    }
+                
+                # If content is a list of lists, use CSV writer
+                elif isinstance(content, list) and content and isinstance(content[0], list):
+                    writer = csv.writer(f)
+                    writer.writerows(content)
+                    
+                    return {
+                        "success": True,
+                        "message": f"CSV file saved to {file_path}",
+                        "file_path": file_path,
+                        "rows": len(content)
+                    }
+                
+                else:
+                    return {"success": False, "error": "CSV content must be a string, list of dictionaries, or list of lists"}
             
-            return {
-                "success": True,
-                "message": f"CSV file saved to {file_path}",
-                "file_path": file_path,
-                "rows": len(content)
-            }
         except Exception as e:
             logger.error(f"Error saving CSV file {file_path}: {str(e)}")
             return {"success": False, "error": str(e), "file_path": file_path}
@@ -884,7 +914,6 @@ class StorageBase(BaseModule, ABC):
         """Read content from a PDF file"""
         if not PDF_AVAILABLE:
             return {"success": False, "error": "unstructured library not available"}
-        
         try:
             doc = pymupdf.open(file_path)
             all_text = []
