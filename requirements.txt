@@ -88,3 +88,4 @@ mcp>=0.1.0
 psycopg2-binary>=2.9.0
 feedparser
 markdown
+ujson>=5.9.0
