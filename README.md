@@ -52,7 +52,7 @@ At its core, EvoAgentX enables developers and researchers to move beyond static 
   From a single prompt, EvoAgentX builds structured, multi-agent workflows tailored to the task.
 
 - 🔍 **Built-in Evaluation**  
-  It integrates automatic evaluators to score agent behavior using task-specific or general-purpose criteria (e.g., success rate, factuality, latency).
+  It integrates automatic evaluators to score agent behavior using task-specific criteria.
 
 - 🔁 **Self-Evolution Engine**  
   Agents don’t just work—they learn. EvoAgentX evolves workflows using optimization strategies like retrieval augmentation, mutation, and guided search.
@@ -60,16 +60,14 @@ At its core, EvoAgentX enables developers and researchers to move beyond static 
 - 🧩 **Plug-and-Play Compatibility**  
   Easily integrate original OpenAI and qwen or other popular models, including Claude, Deepseek, kimi models through (LiteLLM, siliconflow or openrouter) or local models (via LiteLLM). If you want to use LLMs locally deployed on your own machine, you can try LiteLLM. 
 
-- 🎯 **From Prompt to Workflows**  
-  Whether you’re building a PDF summarizer, a multi-step QA bot, or an AI coding assistant, EvoAgentX gets you from intent to functioning system—fast.
-
 - 🧰 **Comprehensive Built-in Tools**
   EvoAgentX ships with a rich set of built-in tools that empower agents to interact with real-world environments.
 
 - 🧠 **Memory Module**
   EvoAgentX supports both ephemeral (short-term) and persistent (long-term) memory systems。
 
-  
+- 🧑‍💻 **Human-in-the-Loop (HITL) Interactions**
+  EvoAgentX supports interactive workflows where humans review, correct, and guide agent behavior.
 
 
 ## 🔥 Latest News
