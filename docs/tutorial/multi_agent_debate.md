@@ -1,6 +1,3 @@
----
-title: 多智能体辩论（MAD）进阶使用与参数设计
----
 
 本教程系统讲解 EvoAgentX 的多智能体辩论 Multi-Agent Debate（简称 MAD）框架：核心概念、快速上手、关键参数、策略化角色与模型映射、分组工作流、以及配置的保存/加载。文中示例均可直接运行，并可参考 `examples/multi_agent_debate/` 下的示例脚本。
 
