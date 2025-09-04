@@ -60,8 +60,16 @@ At its core, EvoAgentX enables developers and researchers to move beyond static 
 - 🧩 **Plug-and-Play Compatibility**  
   Easily integrate original OpenAI and qwen or other popular models, including Claude, Deepseek, kimi models through (LiteLLM, siliconflow or openrouter) or local models (via LiteLLM). If you want to use LLMs locally deployed on your own machine, you can try LiteLLM. 
 
-- 🎯 **From Prompt to Pipeline**  
+- 🎯 **From Prompt to Workflows**  
   Whether you’re building a PDF summarizer, a multi-step QA bot, or an AI coding assistant, EvoAgentX gets you from intent to functioning system—fast.
+
+- 🧰 **Comprehensive Built-in Tools**
+  EvoAgentX ships with a rich set of built-in tools that empower agents to interact with real-world environments.
+
+- 🧠 **Memory Module**
+  EvoAgentX supports both ephemeral (short-term) and persistent (long-term) memory systems。
+
+  
 
 
 ## 🔥 Latest News
