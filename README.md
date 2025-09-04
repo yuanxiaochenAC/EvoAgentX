@@ -46,13 +46,17 @@ EvoAgentX is an open-source framework for building, evaluating, and evolving LLM
 
 At its core, EvoAgentX enables developers, researchers, and startups to move beyond static prompt chaining or manual workflow orchestration. It introduces a self-evolving agent ecosystem, where AI agents can be constructed, assessed, and optimized through iterative feedback loops—much like how software is continuously tested and improved.
 
-EvoAgentX provides:
-	•	🧱 Agent Workflow Autoconstruction: From a single prompt, EvoAgentX builds structured, multi-agent workflows tailored to the task.
-	•	🔍 Built-in Evaluation: It integrates automatic evaluators to score agent behavior using task-specific or general-purpose criteria (e.g., success rate, factuality, latency).
-	•	🔁 Self-Evolution Engine: Agents don’t just work—they learn. EvoAgentX evolves workflows using optimization strategies like retrieval augmentation, mutation, and guided search.
-	•	🧩 Plug-and-Play Compatibility: Easily integrate OpenAI, Claude, Deepseek, or local models (via Ollama, vLLM, etc.) under a unified LiteLLM backend.
-	•	🎯 From Prompt to Pipeline: Whether you’re building a PDF summarizer, a multi-step QA bot, or an AI coding assistant, EvoAgentX gets you from intent to functioning system—fast.
-
+✨ Key Features
+	•	🧱 Agent Workflow Autoconstruction
+From a single prompt, EvoAgentX builds structured, multi-agent workflows tailored to the task.
+	•	🔍 Built-in Evaluation
+It integrates automatic evaluators to score agent behavior using task-specific or general-purpose criteria (e.g., success rate, factuality, latency).
+	•	🔁 Self-Evolution Engine
+Agents don’t just work—they learn. EvoAgentX evolves workflows using optimization strategies like retrieval augmentation, mutation, and guided search.
+	•	🧩 Plug-and-Play Compatibility
+Easily integrate OpenAI, Claude, Deepseek, or local models (via Ollama, vLLM, etc.) under a unified LiteLLM backend.
+	•	🎯 From Prompt to Pipeline
+Whether you’re building a PDF summarizer, a multi-step QA bot, or an AI coding assistant, EvoAgentX gets you from intent to functioning system—fast.
 
 ## 🔥 Latest News
 - **[Aug 2025]** 🎉 **The EvoAgentX Team has published the latest survey of self-evolving AI Agents** on [arxiv](https://arxiv.org/abs/2508.07407)!
