@@ -41,6 +41,9 @@
   <img src="./assets/framework_en.jpg">
 </p>
 
+## What is EvoAgentX
+
+
 
 ## 🔥 Latest News
 - **[Aug 2025]** 🎉 **The EvoAgentX Team has published the latest survey of self-evolving AI Agents** on [arxiv](https://arxiv.org/abs/2508.07407)!
