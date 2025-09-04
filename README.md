@@ -48,7 +48,7 @@ At its core, EvoAgentX enables developers and researchers to move beyond static 
 
 ### ✨ Key Features
 
-- 🧱 **Agent Workflow Autoconstruction**  
+- 🧱 **Agent Workflow Autoconstruction**
   From a single prompt, EvoAgentX builds structured, multi-agent workflows tailored to the task.
 
 - 🔍 **Built-in Evaluation**  
