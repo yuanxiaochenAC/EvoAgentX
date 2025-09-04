@@ -42,9 +42,9 @@
 </p>
 
 ## What is EvoAgentX
-EvoAgentX is an open-source framework for building, evaluating, and evolving LLM-based agents or agentic workflow in an automated, modular, and goal-driven manner.
+EvoAgentX is an open-source framework for building, evaluating, and evolving LLM-based agents or agentic workflows in an automated, modular, and goal-driven manner.
 
-At its core, EvoAgentX enables developers, researchers, and startups to move beyond static prompt chaining or manual workflow orchestration. It introduces a self-evolving agent ecosystem, where AI agents can be constructed, assessed, and optimized through iterative feedback loops—much like how software is continuously tested and improved.
+At its core, EvoAgentX enables developers and researchers to move beyond static prompt chaining or manual workflow orchestration. It introduces a self-evolving agent ecosystem, where AI agents can be constructed, assessed, and optimized through iterative feedback loops—much like how software is continuously tested and improved.
 
 ### ✨ Key Features
 
@@ -58,7 +58,7 @@ At its core, EvoAgentX enables developers, researchers, and startups to move bey
   Agents don’t just work—they learn. EvoAgentX evolves workflows using optimization strategies like retrieval augmentation, mutation, and guided search.
 
 - 🧩 **Plug-and-Play Compatibility**  
-  Easily integrate OpenAI, Claude, Deepseek, or local models (via Ollama, vLLM, etc.) under a unified LiteLLM backend.
+  Easily integrate original OpenAI and qwen or other popular models, including Claude, Deepseek, kimi models through (LiteLLM, siliconflow or openrouter) or local models (via LiteLLM). If you want to use LLMs locally deployed on your own machine, you can try LiteLLM. 
 
 - 🎯 **From Prompt to Pipeline**  
   Whether you’re building a PDF summarizer, a multi-step QA bot, or an AI coding assistant, EvoAgentX gets you from intent to functioning system—fast.
