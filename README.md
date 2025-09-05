@@ -100,7 +100,7 @@ Here’s how:
   With a rich library of built-in tools (search, code, browser, file I/O, APIs, and more), EvoAgentX empowers agents to **interact with the real world**, not just talk about it.
 
 
-### 🧰 EvoAgentX Built-in Tools Summary
+## 🧰 EvoAgentX Built-in Tools Summary
 EvoAgentX ships with a comprehensive suite of **built-in tools**, enabling agents to interact with code environments, search engines, databases, filesystems, images, and browsers. These modular toolkits form the backbone of multi-agent workflows and are easy to extend, customize, and test.
 
 Categories include:
@@ -180,6 +180,7 @@ Feel free to propose or submit new tools via [pull requests](https://github.com/
   - [Configure and Use the LLM](#configure-and-use-the-llm)
 - [Automatic WorkFlow Generation](#automatic-workflow-generation)
 - [Tool-Enabled Workflows Generation:](#tool-enabled-workflows-generation)
+- [Tool Corpus:](#🧰 EvoAgentX Built-in Tools Summary)
 - [Demo Video](#demo-video)
   - [✨ Final Results](#-final-results)
 - [Evolution Algorithms](#evolution-algorithms)
