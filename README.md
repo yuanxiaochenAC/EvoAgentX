@@ -77,11 +77,20 @@ At its core, EvoAgentX enables developers and researchers to move beyond static 
   EvoAgentX supports interactive workflows where humans review, correct, and guide agent behavior.
 
 ### 🧰 EvoAgentX Built-in Tools Summary
-EvoAgentX comes with a growing collection of built-in **agent tools** that enable agents to interact with external environments, APIs, and interfaces. From web search and browser automation to PDF parsing and memory retrieval, these tools form the building blocks of rich, multi-agent workflows.
+EvoAgentX ships with a comprehensive suite of **built-in tools**, enabling agents to interact with code environments, search engines, databases, filesystems, images, and browsers. These modular toolkits form the backbone of multi-agent workflows and are easy to extend, customize, and test.
 
-We warmly welcome contributions from the community—if you have ideas for useful tools (e.g., new APIs, domain-specific utilities, or integrations), feel free to open a PR or start a discussion!
+Categories include:
+- 🧮 Code Interpreters (Python, Docker)
+- 🔍 Search & HTTP Requests (Google, Wikipedia, arXiv, RSS)
+- 🗂️ Filesystem Utilities (read/write, shell commands)
+- 🧠 Databases (MongoDB, PostgreSQL, FAISS)
+- 🖼️ Image Tools (analysis, generation)
+- 🌐 Browser Automation (low-level & LLM-driven)
 
-👉 Check out the table below to explore currently supported tools and their capabilities.
+We actively welcome contributions from the community!  
+Feel free to propose or submit new tools via [pull requests](https://github.com/EvoAgentX/EvoAgentX/pulls) or [discussions](https://github.com/EvoAgentX/EvoAgentX/discussions).
+
+👉 Explore the full toolkit below 👇
 
 | **Category**              | **Toolkit Name**               | **Description**                                                                                                                                 | **Code File Path**                             | **Test File Path**                        |
 |--------------------------|-------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------|-------------------------------------------|
