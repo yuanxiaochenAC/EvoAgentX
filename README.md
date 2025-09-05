@@ -159,6 +159,7 @@ Feel free to propose or submit new tools via [pull requests](https://github.com/
 - **[Aug 2025]** 🚀 **New Survey Released!**  
   Our team just published a comprehensive survey on **Self-Evolving AI Agents**—exploring how agents can learn, adapt, and optimize over time.  
   👉 [Read it on arXiv](https://arxiv.org/abs/2508.07407)
+  👉 [Check the repo](https://github.com/EvoAgentX/Awesome-Self-Evolving-Agents)
 
 - **[July 2025]** 📚 **EvoAgentX Framework Paper is Live!**  
   We officially published the EvoAgentX framework paper on arXiv, detailing our approach to building evolving agentic workflows.  
