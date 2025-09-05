@@ -76,6 +76,31 @@ At its core, EvoAgentX enables developers and researchers to move beyond static 
   
   EvoAgentX supports interactive workflows where humans review, correct, and guide agent behavior.
 
+
+### 🚀 What You Can Do with EvoAgentX
+
+EvoAgentX isn’t just a framework — it’s your **launchpad for real-world AI agents**.
+
+Whether you're an AI researcher, workflow engineer, or startup team, EvoAgentX helps you **go from a vague idea to a fully functional agentic system** — with minimal engineering and maximum flexibility.
+
+Here’s how:
+
+- 🔍 **Struggling to find the perfect prompt?**  
+  EvoAgentX can **automatically explore and evolve prompts** using state-of-the-art self-improving algorithms, all guided by your dataset and goal.
+
+- 🧑‍💻 **Want to supervise the agent and stay in control?**  
+  Insert yourself into the loop! EvoAgentX supports **Human-in-the-Loop (HITL)** checkpoints, so you can step in, review, or guide the workflow as needed — and step out again.
+
+- 🧠 **Frustrated by agents that forget everything?**  
+  EvoAgentX provides **both short-term and long-term memory modules**, enabling your agents to remember, reflect, and improve across interactions.
+
+- ⚙️ **Lost in manual workflow orchestration?**  
+  Just describe your goal — EvoAgentX will **automatically assemble a multi-agent workflow** that matches your intent.
+
+- 🌍 **Want your agents to actually *do* things?**  
+  With a rich library of built-in tools (search, code, browser, file I/O, APIs, and more), EvoAgentX empowers agents to **interact with the real world**, not just talk about it.
+
+
 ### 🧰 EvoAgentX Built-in Tools Summary
 EvoAgentX ships with a comprehensive suite of **built-in tools**, enabling agents to interact with code environments, search engines, databases, filesystems, images, and browsers. These modular toolkits form the backbone of multi-agent workflows and are easy to extend, customize, and test.
 
