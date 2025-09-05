@@ -91,6 +91,7 @@ We actively welcome contributions from the community!
 Feel free to propose or submit new tools via [pull requests](https://github.com/EvoAgentX/EvoAgentX/pulls) or [discussions](https://github.com/EvoAgentX/EvoAgentX/discussions).
 
 👉 Explore the full toolkit below 👇
+
 | Toolkit Name                    | Description                                                                                                              | Code File Path                                       | Test File Path                                |
 |--------------------------------|--------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------|-------------------------------------------------|
 | **🧱 Code Interpreters**        |                                                                                                                          |                                                      |                                                 |
