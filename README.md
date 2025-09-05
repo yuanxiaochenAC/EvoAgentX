@@ -92,7 +92,7 @@ Feel free to propose or submit new tools via [pull requests](https://github.com/
 
 👉 Explore the full toolkit below 👇
 
-<details>
+<Full_Table>
   
 | Toolkit Name | Description | Code File Path | Test File Path |
 |--------------|-------------|----------------|----------------|
@@ -125,7 +125,7 @@ Feel free to propose or submit new tools via [pull requests](https://github.com/
 | BrowserToolkit | Fine-grained browser automation: initialize, navigate, type, click, resnapshot page, read console logs, and close. | [link](evoagentx/tools/browser_tool.py) | [link](examples/tools/tools_browser.py) |
 | BrowserUseToolkit | High-level, natural-language browser automation (navigate, fill forms, click, search, etc.) driven by an LLM. | [link](evoagentx/tools/browser_use.py) | [link](examples/tools/tools_browser.py) |
 
-</details>
+</Full_Table>
 
 ## 🔥 EAX Latest News
 
