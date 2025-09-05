@@ -180,7 +180,7 @@ Feel free to propose or submit new tools via [pull requests](https://github.com/
   - [Configure and Use the LLM](#configure-and-use-the-llm)
 - [Automatic WorkFlow Generation](#automatic-workflow-generation)
 - [Tool-Enabled Workflows Generation:](#tool-enabled-workflows-generation)
-- [Tool Corpus:](#🧰 EvoAgentX Built-in Tools Summary)
+- [Tool Corpus:](#🧰-EvoAgentX-Built-in-Tools-Summary)
 - [Demo Video](#demo-video)
   - [✨ Final Results](#-final-results)
 - [Evolution Algorithms](#evolution-algorithms)
