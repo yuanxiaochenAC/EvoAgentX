@@ -400,7 +400,7 @@ When this interceptor triggers, the workflow will pause and prompt in the consol
 [![Watch on Bilibili](https://img.shields.io/badge/-Watch%20on%20Bilibili-00A1D6?logo=bilibili&labelColor=white)](https://www.bilibili.com/video/BV1AjahzRECi/?vd_source=02f8f3a7c8865b3af6378d9680393f5a)
 
 <div align="center">
-  <video src="https://github.com/user-attachments/assets/27852d5a-9131-43e8-b7f3-55fc56d02e53.mp4" autoplay loop muted playsinline width="600">
+  <video src="https://github.com/user-attachments/assets/65af8cce-43ad-4e81-ab8d-fc085a7fdc05.mp4" autoplay loop muted playsinline width="600">
     Your browser does not support the video tag.
   </video>
 </div>
