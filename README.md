@@ -85,9 +85,8 @@ Whether you're an AI researcher, workflow engineer, or startup team, EvoAgentX h
 
 Here’s how:
 
-- 🔍 **Struggling to find the perfect prompt?**  
-  EvoAgentX can **automatically explore and evolve prompts** using state-of-the-art self-improving algorithms, all guided by your dataset and goal.
-
+- 🔍 **Struggling to improve your workflows?**  
+  EvoAgentX can **automatically evolve and optimize your agentic workflows** using SOTA self-evolving algorithms, driven by your dataset and goals.
 - 🧑‍💻 **Want to supervise the agent and stay in control?**  
   Insert yourself into the loop! EvoAgentX supports **Human-in-the-Loop (HITL)** checkpoints, so you can step in, review, or guide the workflow as needed — and step out again.
 
@@ -397,11 +396,11 @@ When this interceptor triggers, the workflow will pause and prompt in the consol
 ## Demo Video
 
 
-[![Watch on YouTube](https://img.shields.io/badge/-Watch%20on%20YouTube-red?logo=youtube&labelColor=grey)](https://www.youtube.com/watch?v=Wu0ZydYDqgg)
-[![Watch on Bilibili](https://img.shields.io/badge/-Watch%20on%20Bilibili-00A1D6?logo=bilibili&labelColor=white)](https://www.bilibili.com/video/BV1mEJizyE7H/?vd_source=02f8f3a7c8865b3af6378d9680393f5a)
+[![Watch on YouTube](https://img.shields.io/badge/-Watch%20on%20YouTube-red?logo=youtube&labelColor=grey)](https://www.youtube.com/watch?v=8ALcspHOe0o)
+[![Watch on Bilibili](https://img.shields.io/badge/-Watch%20on%20Bilibili-00A1D6?logo=bilibili&labelColor=white)](https://www.bilibili.com/video/BV1AjahzRECi/?vd_source=02f8f3a7c8865b3af6378d9680393f5a)
 
 <div align="center">
-  <video src="https://github.com/user-attachments/assets/692fbf8c-15a7-4fa2-b53b-79a2582a8d7c.mp4" autoplay loop muted playsinline width="600">
+  <video src="https://github.com/user-attachments/assets/27852d5a-9131-43e8-b7f3-55fc56d02e53.mp4" autoplay loop muted playsinline width="600">
     Your browser does not support the video tag.
   </video>
 </div>
