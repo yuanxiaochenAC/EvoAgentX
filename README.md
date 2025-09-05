@@ -80,9 +80,9 @@ At its core, EvoAgentX enables developers and researchers to move beyond static 
 
 | **Category**              | **Toolkit Name**               | **Description**                                                                                                                                 | **Code File Path**                             | **Test File Path**                        |
 |--------------------------|-------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------|-------------------------------------------|
-| **1) Code Interpreters**  | PythonInterpreterToolkit       | Safely execute Python code snippets or local `.py` scripts with sandboxed imports and controlled filesystem access.                             | `evoagentx/tools/interpreter_python.py`        | `examples/tools/tools_interpreter.py`     |
+| **Code Interpreters**  | PythonInterpreterToolkit       | Safely execute Python code snippets or local `.py` scripts with sandboxed imports and controlled filesystem access.                             | `evoagentx/tools/interpreter_python.py`        | `examples/tools/tools_interpreter.py`     |
 |                          | DockerInterpreterToolkit       | Run code (e.g., Python) inside an isolated Docker container—useful for untrusted code, special deps, or strict isolation.                      | `evoagentx/tools/interpreter_docker.py`        | `examples/tools/tools_interpreter.py`     |
-| **2) Search & Requests** | WikipediaSearchToolkit         | Search Wikipedia and retrieve results with title, summary, full content, and URL.                                                              | `evoagentx/tools/search_wiki.py`               | `examples/tools/tools_search.py`          |
+| **Search & Requests** | WikipediaSearchToolkit         | Search Wikipedia and retrieve results with title, summary, full content, and URL.                                                              | `evoagentx/tools/search_wiki.py`               | `examples/tools/tools_search.py`          |
 |                          | GoogleSearchToolkit            | Google Custom Search (official API). Requires `GOOGLE_API_KEY` and `GOOGLE_SEARCH_ENGINE_ID`.                                                  | `evoagentx/tools/search_google.py`             | `examples/tools/tools_search.py`          |
 |                          | GoogleFreeSearchToolkit        | Google-style search without API credentials (lightweight alternative).                                                                         | `evoagentx/tools/search_google_f.py`           | `examples/tools/tools_search.py`          |
 |                          | DDGSSearchToolkit              | Search using DDGS with multiple backends and privacy-focused results.                                                                          | `evoagentx/tools/search_ddgs.py`               | `examples/tools/tools_search.py`          |
@@ -91,23 +91,35 @@ At its core, EvoAgentX enables developers and researchers to move beyond static 
 |                          | RequestToolkit                 | General HTTP client supporting GET/POST/PUT/DELETE with headers, JSON, and optional file saving.                                               | `evoagentx/tools/request.py`                   | `examples/tools/tools_search.py`          |
 |                          | ArxivToolkit                   | Search arXiv for research papers (title, authors, abstract, etc.).                                                                             | `evoagentx/tools/request_arxiv.py`             | `examples/tools/tools_search.py`          |
 |                          | RSSToolkit                     | Fetch RSS feeds and extract webpage content.                                                                                                   | `evoagentx/tools/rss_feed.py`                  | `examples/tools/tools_search.py`          |
-| **3) Filesystem Tools**  | StorageToolkit                 | File I/O utilities: save/read/append/delete, check existence, list files, format support.                                                      | `evoagentx/tools/storage_file.py`              | `examples/tools/tools_files.py`           |
+| **Filesystem Tools**  | StorageToolkit                 | File I/O utilities: save/read/append/delete, check existence, list files, format support.                                                      | `evoagentx/tools/storage_file.py`              | `examples/tools/tools_files.py`           |
 |                          | CMDToolkit                     | Execute shell/CLI commands with timeout and working directory control.                                                                         | `evoagentx/tools/cmd_toolkit.py`               | `examples/tools/tools_files.py`           |
 |                          | FileToolkit                    | Toolkit for general file and directory operations.                                                                                              | `evoagentx/tools/file_tool.py`                 | `examples/tools/tools_files.py`           |
-| **4) Database Tools**    | MongoDBToolkit                 | MongoDB operations—query, update, delete, and aggregation.                                                                                      | `evoagentx/tools/database_mongodb.py`          | `examples/tools/tools_database.py`        |
+| **Database Tools**    | MongoDBToolkit                 | MongoDB operations—query, update, delete, and aggregation.                                                                                      | `evoagentx/tools/database_mongodb.py`          | `examples/tools/tools_database.py`        |
 |                          | PostgreSQLToolkit              | PostgreSQL operations—SQL execution, SELECT, UPDATE, DELETE, etc.                                                                              | `evoagentx/tools/database_postgresql.py`       | `examples/tools/tools_database.py`        |
 |                          | FaissToolkit                   | Vector database (FAISS) for semantic search with embedding, querying, and metadata filtering.                                                   | `evoagentx/tools/database_faiss.py`            | `examples/tools/tools_database.py`        |
-| **5) Image Tools**       | ImageAnalysisToolkit           | Analyze images with LLM (e.g., describe, extract objects, answer visual questions).                                                             | `evoagentx/tools/OpenAI_Image_Generation.py`   | `examples/tools/tools_images.py`          |
+| **Image Tools**       | ImageAnalysisToolkit           | Analyze images with LLM (e.g., describe, extract objects, answer visual questions).                                                             | `evoagentx/tools/OpenAI_Image_Generation.py`   | `examples/tools/tools_images.py`          |
 |                          | OpenAIImageGenerationToolkit   | Generate images from text using OpenAI DALL·E with resolution, style, and quality options.                                                      | `evoagentx/tools/OpenAI_Image_Generation.py`   | `examples/tools/tools_images.py`          |
 |                          | FluxImageGenerationToolkit     | Use Flux Kontext Max (BFL) to generate images with advanced prompt handling, seed, safety settings.                                             | `evoagentx/tools/flux_image_generation.py`     | `examples/tools/tools_images.py`          |
-| **6) Browser Tools**     | BrowserToolkit                 | Low-level browser automation: navigate, type, click, snapshot, etc.                                                                            | `evoagentx/tools/browser_tool.py`              | `examples/tools/tools_browser.py`         |
+| **Browser Tools**     | BrowserToolkit                 | Low-level browser automation: navigate, type, click, snapshot, etc.                                                                            | `evoagentx/tools/browser_tool.py`              | `examples/tools/tools_browser.py`         |
 |                          | BrowserUseToolkit              | High-level LLM-driven browser control: fill forms, click links, search, and interact.                                                           | `evoagentx/tools/browser_use.py`               | `examples/tools/tools_browser.py`         |
 
 ## 🔥 Latest News
-- **[Aug 2025]** 🎉 **The EvoAgentX Team has published the latest survey of self-evolving AI Agents** on [arxiv](https://arxiv.org/abs/2508.07407)!
-- **[July 2025]** 🎉 **EvoAgentX** is on [arxiv](https://arxiv.org/abs/2507.03616)!
-- **[July 2025]** 🎉 **EvoAgentX** has achieved 1,000 stars!
-- **[May 2025]** 🎉 **EvoAgentX** has been officially released!
+
+- **[Aug 2025]** 🚀 **New Survey Released!**  
+  Our team just published a comprehensive survey on **Self-Evolving AI Agents**—exploring how agents can learn, adapt, and optimize over time.  
+  👉 [Read it on arXiv](https://arxiv.org/abs/2508.07407)
+
+- **[July 2025]** 📚 **EvoAgentX Framework Paper is Live!**  
+  We officially published the EvoAgentX framework paper on arXiv, detailing our approach to building evolving agentic workflows.  
+  👉 [Check it out](https://arxiv.org/abs/2507.03616)
+
+- **[July 2025]** ⭐️ **1,000 Stars Reached!**  
+  Thanks to our amazing community, **EvoAgentX** has surpassed 1,000 GitHub stars!  
+  🌟 [Join the community](https://github.com/EvoAgentX/EvoAgentX)
+
+- **[May 2025]** 🚀 **Official Launch!**  
+  **EvoAgentX** is now live! Start building self-evolving AI workflows from day one.  
+  🔧 [Get Started on GitHub](https://github.com/EvoAgentX/EvoAgentX)
 
 ## ⚡ Get Started
 - [🔥 Latest News](#-latest-news)
