@@ -1,6 +1,7 @@
 from collections import defaultdict
 from pydantic import Field, PositiveInt
 from typing import Union, Optional, List, Dict
+from collections import deque
 
 from ..core.module import BaseModule
 from ..core.module_utils import generate_id, get_timestamp
@@ -185,14 +186,67 @@ class BaseMemory(BaseModule):
         return messages
 
 
-class ShortTermMemory(BaseMemory):
-    """Short-term memory implementation.
-    
-    This class extends BaseMemory to represent a temporary, short-term memory
-    storage. In the current implementation, it inherits all functionality from
-    BaseMemory without modifications, but it provides a semantic distinction
-    for different memory usage patterns in the framework.
+class ShortTermMemory(BaseModule):
     """
-    pass
+    Short-term memory implementation.
+    
+    Stores only the most recent N messages (like a sliding window).
+    Unlike BaseMemory/LongTermMemory, this is purely in-memory cache 
+    and does not persist to storage_handler or vector DB.
 
+    Attributes:
+        buffer: A deque holding Message objects, capped at max_size.
+        max_size: Maximum number of messages to retain.
+        memory_id: Unique identifier for this memory instance.
+        timestamp: Creation timestamp.
+    """
 
+    buffer: deque = Field(default_factory=deque, exclude=True)
+    max_size: PositiveInt = Field(default=5, description="Maximum number of messages to keep in short-term memory")
+    memory_id: str = Field(default_factory=generate_id)
+    timestamp: str = Field(default_factory=get_timestamp)
+
+    def __init__(self, max_size: int = 5, **kwargs):
+        super().__init__(**kwargs)
+        self.max_size = max_size
+        self.buffer = deque(maxlen=max_size)  # Circular buffer
+
+    @property
+    def size(self) -> int:
+        """Return current number of messages stored."""
+        return len(self.buffer)
+
+    def clear(self):
+        """Clear all short-term memory."""
+        self.buffer.clear()
+
+    def add_message(self, message: Message):
+        """Add a single message to short-term memory."""
+        if not message:
+            return
+        self.buffer.append(message)
+
+    def add_messages(self, messages: Union[Message, List[Message]]):
+        """Add one or multiple messages."""
+        if not isinstance(messages, list):
+            messages = [messages]
+        for msg in messages:
+            self.add_message(msg)
+
+    def get(self, n: Optional[int] = None) -> List[Message]:
+        """
+        Retrieve the most recent n messages (default: all).
+        
+        Args:
+            n: Number of messages to return. If None, return all.
+        
+        Returns:
+            List of Message objects, oldest → newest.
+        """
+        if n is None:
+            return list(self.buffer)
+        return list(self.buffer)[-n:]
+
+    def get_last(self) -> Optional[Message]:
+        """Return the latest message, or None if empty."""
+        return self.buffer[-1] if self.buffer else None

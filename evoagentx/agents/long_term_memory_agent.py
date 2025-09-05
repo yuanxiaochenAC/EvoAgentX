@@ -76,7 +76,10 @@ class MemoryAction(Action):
 
         action_input = self.inputs_format(**inputs)
         user_prompt = action_input.user_prompt
-        conversation_id = action_input.conversation_id or str(uuid4())
+        conversation_id = action_input.conversation_id
+        if not conversation_id:
+            conversation_id = str(uuid4())
+            logger.warning("No conversation_id provided; generated a new UUID4 for this session")
         top_k = action_input.top_k
         metadata_filters = action_input.metadata_filters
 
@@ -127,6 +130,7 @@ class MemoryAgent(Agent):
     memory_manager: Optional[MemoryManager] = Field(default=None, description="Manager for long-term memory operations")
     inputs: List[Dict] = Field(default_factory=list, description="Input specifications for the memory action")
     outputs: List[Dict] = Field(default_factory=list, description="Output specifications for the memory action")
+    # conversation_scope: str = Field(default="session", description="Scope of conversation memory (e.g., session, user, global)")
 
     def __init__(
         self,
@@ -139,12 +143,16 @@ class MemoryAgent(Agent):
         rag_config: Optional[RAGConfig] = None,
         conversation_id: Optional[str] = None,
         system_prompt: Optional[str] = None,
+        # conversation_scope: str = "session",   # <<< 新增参数
         prompt: str = "Based on the following context and user prompt, provide a relevant response:\n\nContext: {context}\n\nUser Prompt: {user_prompt}",
         **kwargs
     ):
         # Define inputs and outputs inspired by CustomizeAgent
         inputs = inputs or []
         outputs = outputs or []
+
+        # # ✅ 用 object.__setattr__ 来安全赋值，避免 Pydantic 报错
+        # object.__setattr__(self, "conversation_scope", conversation_scope)
 
         # Initialize base Agent with provided parameters
         super().__init__(
@@ -184,6 +192,84 @@ class MemoryAgent(Agent):
             outputs_format=MemoryActionOutput
         )
         self.add_action(memory_action)
+
+    # def _prepare_execution(
+    #     self,
+    #     action_name: str,
+    #     msgs: Optional[List["Message"]] = None,
+    #     action_input_data: Optional[dict] = None,
+    #     **kwargs
+    # ) -> Tuple["Action", dict]:
+    #     """
+    #     Prepare action execution with conversation_scope handling.
+
+    #     - session: 每次对话独立 (uuid)
+    #     - user: 使用 user_id (metadata_filters["user_id"])
+    #     - global: 全局共享 ("global_corpus")
+    #     """
+    #     # 调用父类逻辑：更新短期记忆 & 拿到 action
+    #     action, action_input_data = super()._prepare_execution(
+    #         action_name=action_name,
+    #         msgs=msgs,
+    #         action_input_data=action_input_data,
+    #         **kwargs
+    #     )
+    #     # scope 处理
+    #     scope = getattr(self, "conversation_scope", "session")
+    #     metadata_filters = action_input_data.get("metadata_filters", {})
+    #     if scope == "session":
+    #         conversation_id = action_input_data.get("conversation_id") or str(uuid4())
+    #     elif scope == "user":
+    #         user_id = metadata_filters.get("user_id") or kwargs.get("user_id")
+    #         if not user_id:
+    #             raise ValueError("User scope requires 'user_id' in metadata_filters or kwargs")
+    #         conversation_id = f"user_{user_id}"
+    #     elif scope == "global":
+    #         conversation_id = "global_corpus"
+    #     else:
+    #         raise ValueError(f"Invalid conversation_scope: {scope}")
+    #     # 回写 conversation_id，保证传递给 MemoryAction
+    #     action_input_data["conversation_id"] = conversation_id
+
+    #     return action, action_input_data
+
+    def _create_output_message(
+        self,
+        action_output,
+        action_name: str,
+        action_input_data: Optional[Dict],
+        prompt: str,
+        return_msg_type: MessageType = MessageType.RESPONSE,
+        **kwargs
+    ) -> Message:
+        # 调用父类逻辑，先生成标准 Message
+        msg = super()._create_output_message(
+            action_output=action_output,
+            action_name=action_name,
+            action_input_data=action_input_data,
+            prompt=prompt,
+            return_msg_type=return_msg_type,
+            **kwargs
+        )
+
+        # 自动保存用户输入
+        if action_input_data and "user_prompt" in action_input_data:
+            user_msg = Message(
+                content=action_input_data["user_prompt"],
+                msg_type=MessageType.REQUEST,
+                conversation_id=msg.conversation_id
+            )
+            asyncio.create_task(self.memory_manager.handle_memory(action="add", data=user_msg))
+
+        # 自动保存模型输出
+        response_msg = Message(
+            content=action_output.response if hasattr(action_output, "response") else str(action_output),
+            msg_type=MessageType.RESPONSE,
+            conversation_id=msg.conversation_id
+        )
+        asyncio.create_task(self.memory_manager.handle_memory(action="add", data=response_msg))
+
+        return msg
 
     async def async_execute(
         self,
@@ -231,6 +317,7 @@ class MemoryAgent(Agent):
             prompt=prompt,
             action_name=action_name,
             return_msg_type=return_msg_type,
+            action_input_data=action_input_data,
             **kwargs
         )
         if return_action_input_data:
@@ -283,11 +370,139 @@ class MemoryAgent(Agent):
             prompt=prompt,
             action_name=action_name,
             return_msg_type=return_msg_type,
+            action_input_data=action_input_data,
             **kwargs
         )
         if return_action_input_data:
             return message, action_input_data
         return message
+
+    # 便于业务方发现，这里给出两个便利入口
+    def chat(
+        self,
+        user_prompt: str,
+        *,
+        conversation_id: Optional[str] = None,
+        top_k: Optional[int] = None,
+        metadata_filters: Optional[dict] = None,
+        return_message: bool = True,   # True 返回 Message；False 返回纯文本 content
+        **kwargs
+    ):
+        """同步：最自然的带记忆对话入口"""
+        action_input_data = {
+            "user_prompt": user_prompt,
+            # 如果业务传了 conversation_id 就用传入值；否则走默认策略
+            "conversation_id": conversation_id or self._default_conversation_id(),
+            "top_k": top_k if top_k is not None else 3,
+            "metadata_filters": metadata_filters or {},
+        }
+        msg = self.execute(
+            action_name="MemoryAction",
+            action_input_data=action_input_data,
+            return_msg_type=MessageType.RESPONSE,
+            **kwargs
+        )
+        return msg if return_message else (getattr(msg, "content", None) or str(msg))
+
+
+    async def async_chat(
+        self,
+        user_prompt: str,
+        *,
+        conversation_id: Optional[str] = None,
+        top_k: Optional[int] = None,
+        metadata_filters: Optional[dict] = None,
+        return_message: bool = True,
+        **kwargs
+    ):
+        """异步：适合异步 Web 服务"""
+        action_input_data = {
+            "user_prompt": user_prompt,
+            "conversation_id": conversation_id or self._default_conversation_id(),
+            "top_k": top_k if top_k is not None else 3,
+            "metadata_filters": metadata_filters or {},
+        }
+        msg = await self.async_execute(
+            action_name="MemoryAction",
+            action_input_data=action_input_data,
+            return_msg_type=MessageType.RESPONSE,
+            **kwargs
+        )
+        return msg if return_message else (getattr(msg, "content", None) or str(msg))
+
+
+    # 默认会话ID策略：与 conversation_scope 对齐
+    def _default_conversation_id(self) -> str:
+        """
+        session 作用域：默认返回一个新的 uuid4()（新会话）
+        user/global 作用域：复用 LongTermMemory.default_corpus_id（稳定命名空间）
+        备注：最终 id 仍由 MemoryAgent._prepare_execution() 统一管控（会根据 scope 覆盖）
+        """
+        scope = getattr(self, "conversation_scope", "session")
+        if scope == "session":
+            return str(uuid4())
+        # user/global：尽量复用初始化时设置的默认 corpus
+        return getattr(getattr(self, "long_term_memory", None), "default_corpus_id", None) or "global_corpus"
+    
+    async def interactive_chat(
+        self,
+        conversation_id: Optional[str] = None,
+        top_k: int = 3,
+        metadata_filters: Optional[dict] = None
+    ):
+        """
+        交互式聊天，每轮输入会：
+        1. 检索记忆
+        2. 根据历史上下文生成回答
+        3. 将输入/输出写入长期记忆并刷新索引
+        """
+        conversation_id = conversation_id or self._default_conversation_id()
+        metadata_filters = metadata_filters or {}
+
+        print("💬 MemoryAgent 已启动 (输入 'exit' 退出)\n")
+
+        while True:
+            user_prompt = input("You: ").strip()
+            if user_prompt.lower() in ["exit", "quit"]:
+                print("🔚 会话结束")
+                break
+
+            # 1️⃣ 检索历史上下文
+            retrieved_memories = await self.memory_manager.handle_memory(
+                action="search",
+                user_prompt=user_prompt,
+                top_k=top_k,
+                metadata_filters=metadata_filters
+            )
+
+            context_texts = []
+            for msg, _ in retrieved_memories:
+                if hasattr(msg, "content") and msg.content:
+                    context_texts.append(msg.content)
+            context_str = "\n".join(context_texts)
+
+            if context_str:
+                print(f"📖 Retrieved context from memory:\n{context_str}\n")
+
+            # 2️⃣ 将历史上下文拼接到用户输入中，调用 async_chat
+            full_prompt = f"Context:\n{context_str}\n\nUser: {user_prompt}" if context_str else user_prompt
+            msg = await self.async_chat(
+                user_prompt=full_prompt,
+                conversation_id=conversation_id,
+                top_k=top_k,
+                metadata_filters=metadata_filters
+            )
+
+            print(f"Agent: {msg.content}\n")
+
+            # 3️⃣ 刷新索引确保下一轮可检索
+            if hasattr(self.memory_manager, "handle_memory_flush"):
+                await self.memory_manager.handle_memory_flush()
+            else:
+                # fallback，给一点时间让索引写入
+                await asyncio.sleep(0.1)
+
+
 
     def save_module(self, path: str, ignore: List[str] = ["llm", "llm_config", "memory_manager"], **kwargs) -> str:
         """
@@ -331,140 +546,3 @@ class MemoryAgent(Agent):
             use_long_term_memory=config.get("use_long_term_memory", True),
             **kwargs
         )
-
-
-# Test Helper
-async def add_memory_history(memory_agent):
-    from datetime import datetime, timedelta
-    messages = [
-        Message(
-            content="Python is great for scripting and automation tasks.",
-            msg_type=MessageType.INPUT,
-            timestamp=(datetime.now() - timedelta(days=1)).isoformat(),
-            agent="User",
-        ),
-        Message(
-            content="Yes, Python's simplicity and extensive libraries make it ideal for scripting.",
-            msg_type=MessageType.RESPONSE,
-            timestamp=(datetime.now() - timedelta(days=1)).isoformat(),
-            agent="MemoryAgent",
-        ),
-        Message(
-            content="What are some popular Python libraries for data analysis?",
-            msg_type=MessageType.INPUT,
-            timestamp=(datetime.now() - timedelta(days=1)).isoformat(),
-            agent="User",
-        ),
-        Message(
-            content="Popular Python libraries for data analysis include Pandas, NumPy, and Matplotlib.",
-            msg_type=MessageType.RESPONSE,
-            timestamp=(datetime.now() - timedelta(days=1)).isoformat(),
-            agent="MemoryAgent",
-        )
-    ]
-
-    for message in messages:
-        await memory_agent.memory_manager.handle_memory(
-            action="add",
-            data=message,
-        )
-
-# Example usage
-if __name__ == "__main__":
-    import os
-    from dotenv import load_dotenv
-    load_dotenv()
-    # from evoagentx.models import OpenRouterConfig, OpenRouterLLM
-
-    # OPEN_ROUNTER_API_KEY = os.environ["OPEN_ROUNTER_API_KEY"]
-    # config = OpenRouterConfig(
-    #     openrouter_key=OPEN_ROUNTER_API_KEY,
-    #     temperature=0.3,
-    #     model="qwen/qwen3-235b-a22b:free",
-    # )
-    # llm = OpenRouterLLM(config=config)
-
-
-    from evoagentx.models import OpenAILLMConfig, OpenAILLM
-    OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-    # Configure the model
-    config = OpenAILLMConfig(
-        model="gpt-4o-mini",  
-        openai_key=OPENAI_API_KEY,
-        temperature=0.3,
-    )
-
-    # Initialize the model
-    llm = OpenAILLM(config=config)
-
-    # Initialize StorageHandler
-    store_config = StoreConfig(
-        dbConfig=DBConfig(
-            db_name="sqlite",
-            path="./debug/data/hotpotqa/cache/test_hotpotQA.sql"
-        ),
-        vectorConfig=VectorStoreConfig(
-            vector_name="faiss",
-            dimensions=768,    # 1536: text-embedding-ada-002, 384: bge-small-en-v1.5, 768: nomic-embed-text
-            index_type="flat_l2",
-        ),
-        graphConfig=None,
-        # graphConfig=None,
-        path="./debug/data/hotpotqa/cache/indexing"
-    )
-    storage_handler = StorageHandler(storageConfig=store_config)
-
-    embedding=EmbeddingConfig(
-            provider="huggingface",
-            model_name=r"debug/bge-small-en-v1.5",
-            device="cpu"
-    )
-
-    rag_config = RAGConfig(
-        reader=ReaderConfig(
-            recursive=False, exclude_hidden=True,
-            num_files_limit=None, custom_metadata_function=None,
-            extern_file_extractor=None,
-            errors="ignore", encoding="utf-8"
-        ),
-        chunker=ChunkerConfig(
-            strategy="simple",
-            chunk_size=512,
-            chunk_overlap=0,
-            max_chunks=None
-        ),
-        embedding=embedding,
-        index=IndexConfig(index_type="vector"),
-        retrieval=RetrievalConfig(
-            retrivel_type="vector",
-            postprocessor_type="simple",
-            top_k=2,  # Retrieve top-10 contexts
-            similarity_cutoff=0.3,
-            keyword_filters=None,
-            metadata_filters=None
-        )
-    )
-
-    # Initialize MemoryAgent
-    agent = MemoryAgent(
-        llm=llm,
-        rag_config=rag_config,
-        storage_handler=storage_handler,
-        name="MemoryAgent",
-        description="An agent that uses long-term memory for context-aware responses",
-    )
-
-    # Add History
-    asyncio.run(add_memory_history(agent))
-
-    # Example execution
-    result = agent.execute(
-        action_name="MemoryAction",
-        action_input_data={
-            "user_prompt": "What did we discuss about Python yesterday?",
-            "conversation_id": agent.memory_manager.memory.default_corpus_id,
-            "top_k": 3,
-            "metadata_filters": {}
-        }
-    )
-    print(f"Response: {result}")
