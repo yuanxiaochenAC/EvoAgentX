@@ -103,7 +103,7 @@ At its core, EvoAgentX enables developers and researchers to move beyond static 
 | **Browser Tools**     | BrowserToolkit                 | Low-level browser automation: navigate, type, click, snapshot, etc.                                                                            | `evoagentx/tools/browser_tool.py`              | `examples/tools/tools_browser.py`         |
 |                          | BrowserUseToolkit              | High-level LLM-driven browser control: fill forms, click links, search, and interact.                                                           | `evoagentx/tools/browser_use.py`               | `examples/tools/tools_browser.py`         |
 
-## 🔥 Latest News
+## 🔥 EAX Latest News
 
 - **[Aug 2025]** 🚀 **New Survey Released!**  
   Our team just published a comprehensive survey on **Self-Evolving AI Agents**—exploring how agents can learn, adapt, and optimize over time.  
@@ -114,8 +114,7 @@ At its core, EvoAgentX enables developers and researchers to move beyond static 
   👉 [Check it out](https://arxiv.org/abs/2507.03616)
 
 - **[July 2025]** ⭐️ **1,000 Stars Reached!**  
-  Thanks to our amazing community, **EvoAgentX** has surpassed 1,000 GitHub stars!  
-  🌟 [Join the community](https://github.com/EvoAgentX/EvoAgentX)
+  Thanks to our amazing community, **EvoAgentX** has surpassed 1,000 GitHub stars!
 
 - **[May 2025]** 🚀 **Official Launch!**  
   **EvoAgentX** is now live! Start building self-evolving AI workflows from day one.  
