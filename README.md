@@ -58,8 +58,7 @@ At its core, EvoAgentX enables developers and researchers to move beyond static 
 
 - 🔁 **Self-Evolution Engine**
   
-  Agents don’t just work—they learn. EvoAgentX evolves workflows using optimization strategies like retrieval augmentation, mutation, and guided search.
-
+  Agents don’t just work—they learn. EvoAgentX improves workflows using self-evolving algorithms.
 - 🧩 **Plug-and-Play Compatibility**
   
   Easily integrate original [OpenAI](https://github.com/EvoAgentX/EvoAgentX/blob/main/evoagentx/models/openai_model.py) and [qwen](https://github.com/EvoAgentX/EvoAgentX/blob/main/evoagentx/models/aliyun_model.py) or other popular models, including Claude, Deepseek, kimi models through ([LiteLLM](https://github.com/EvoAgentX/EvoAgentX/blob/main/evoagentx/models/litellm_model.py), [siliconflow](https://github.com/EvoAgentX/EvoAgentX/blob/main/evoagentx/models/siliconflow_model.py) or [openrouter](https://github.com/EvoAgentX/EvoAgentX/blob/main/evoagentx/models/openrouter_model.py)). If you want to use LLMs locally deployed on your own machine, you can try LiteLLM. 
@@ -437,7 +436,16 @@ In this demo, we showcase the workflow generation and execution capabilities of 
 
 ## Evolution Algorithms 
 
-We have integrated some existing agent/workflow evolution algorithms into EvoAgentX, including [TextGrad](https://www.nature.com/articles/s41586-025-08661-4), [MIPRO](https://arxiv.org/abs/2406.11695) and [AFlow](https://arxiv.org/abs/2410.10762).
+We have integrated some effective agent/workflow evolution algorithms into EvoAgentX:
+
+| **Algorithm** | **Description** | **Link** |
+|---------------|-----------------|----------|
+| **TextGrad**  | Gradient-based optimization for LLM prompts and reasoning chains, enabling differentiable planning. | [📄 Nature (2025)](https://www.nature.com/articles/s41586-025-08661-4) |
+| **MIPRO**     | Model-agnostic Iterative Prompt Optimization using black-box evaluations and adaptive reranking. | [📄 arXiv:2406.11695](https://arxiv.org/abs/2406.11695) |
+| **AFlow**     | Reinforcement learning-inspired agent workflow evolution using Monte Carlo Tree Search. | [📄 arXiv:2410.10762](https://arxiv.org/abs/2410.10762) |
+| **EvoPrompt** | Evolutionary algorithm for prompt optimization with mutation, crossover, and selection operators. | [📄 arXiv:2309.08532](https://arxiv.org/abs/2309.08532) |
+
+**Please suggest the latest self-evolving algorithm by submitting an issue or a Pull Request.**
 
 To evaluate the performance, we use them to optimize the same agent system on three different tasks: multi-hop QA (HotPotQA), code generation (MBPP) and reasoning (MATH). We randomly sample 50 examples for validation and other 100 examples for testing. 
 
