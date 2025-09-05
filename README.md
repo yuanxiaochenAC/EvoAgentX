@@ -93,6 +93,7 @@ Feel free to propose or submit new tools via [pull requests](https://github.com/
 👉 Explore the full toolkit below 👇
 
 <details>
+  
 | Toolkit Name | Description | Code File Path | Test File Path |
 |--------------|-------------|----------------|----------------|
 | **🧰 Code Interpreters** |  |  |  |
