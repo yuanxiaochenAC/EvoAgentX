@@ -14,20 +14,23 @@ Prerequisites:
 
 2. Set your API key as an environment variable:
    export GOOGLE_MAPS_API_KEY="your_api_key_here"
+
+Note: The GoogleMapsToolkit will automatically retrieve the API key from
+the environment variable, making it compatible with AI agents.
 """
 
 import os
 from evoagentx.tools import GoogleMapsToolkit
 
 def main():
-    # Get API key from environment
-    api_key = os.getenv("GOOGLE_MAPS_API_KEY") 
-    if not api_key:
-        print("Please set GOOGLE_MAPS_API_KEY environment variable")
-        return
+    # Initialize the toolkit - API key will be automatically retrieved from environment
+    gmaps_toolkit = GoogleMapsToolkit()
     
-    # Initialize the toolkit
-    gmaps_toolkit = GoogleMapsToolkit(api_key=api_key)
+    # Check if API key is available
+    if not gmaps_toolkit.google_maps_base.api_key:
+        print("Please set GOOGLE_MAPS_API_KEY environment variable")
+        print("Get your API key from: https://console.cloud.google.com/apis/")
+        return
     
     print("=== Google Maps Platform Tools Demo ===\n")
     

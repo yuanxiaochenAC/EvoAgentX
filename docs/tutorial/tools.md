@@ -8,6 +8,7 @@ This tutorial walks you through using EvoAgentX's powerful tool ecosystem. Tools
 4. **File Operations**: Handle file reading and writing with special support for different file formats
 5. **Browser Automation**: Control web browsers using both traditional Selenium-based automation and AI-driven natural language automation
 6. **MCP Tools**: Connect to external services using the Model Context Protocol
+7. **Google Maps Tools**: Access comprehensive mapping and location services for geocoding, places search, directions, and time zone information
 
 By the end of this tutorial, you'll understand how to leverage these tools in your own agents and workflows.
 
@@ -1304,6 +1305,548 @@ if hirebase_tool:
 
 ---
 
+## 7. Google Maps Tools
+
+### Tutorial: Obtaining and Configuring a Google Maps API Key
+
+To use the Google Maps Toolkit, you'll need an API key from the Google Cloud Platform. This key authenticates your requests to Google's services. Follow these steps to create a key and enable the required services.
+
+#### 1. Set Up Your Google Cloud Project
+
+First, you need a Google Cloud project to associate with your API key.
+
+1. **Go to the Google Cloud Console:** Navigate to [https://console.cloud.google.com/](https://console.cloud.google.com/) and sign in with your Google account.
+2. **Create or Select a Project:**
+   - If you don't have a project, click on the project selector at the top of the page and then click "**New Project**". Give it a memorable name (e.g., "Maps-Toolkit-Project") and click "**Create**".
+   - If you have an existing project, you can select it from the dropdown.
+3. **Enable Billing:** Using Google Maps Platform APIs requires a billing account.
+   - In the navigation menu (☰), go to **Billing**.
+   - If you don't have a billing account, you'll be prompted to create one. Google provides a generous free tier for Maps Platform services, so you are unlikely to be charged for typical development and testing usage.
+
+#### 2. Enable the Required APIs
+
+The toolkit relies on several specific Google Maps APIs to function correctly. You'll need to enable each one.
+
+1. **Navigate to the API Library:** In the navigation menu (☰), go to **APIs & Services \> Library**.
+2. **Search for and Enable APIs:** Use the search bar to find and enable each of the following APIs. Simply click "**Enable**" on the API's page.
+   - **Geocoding API:** Converts addresses into geographic coordinates (latitude and longitude) and vice versa.
+   - **Places API:** Provides detailed information about millions of places, including names, addresses, and user ratings.
+   - **Directions API:** Calculates travel directions between locations.
+   - **Distance Matrix API:** Calculates travel time and distance for a matrix of origins and destinations.
+   - **Time Zone API:** Provides time zone data for any location on Earth.
+
+#### 3. Create and Restrict Your API Key
+
+Now you'll generate the actual API key. For security, it's crucial to restrict its usage to prevent unauthorized access.
+
+1. **Go to Credentials:** In the navigation menu (☰), go to **APIs & Services \> Credentials**.
+2. **Create API Key:** Click **+ CREATE CREDENTIALS** at the top of the page and select **API key**. A new key will be generated and displayed in a pop-up. Copy this key and store it securely for the next step.
+3. **Restrict the Key (Highly Recommended):**
+   - From the credentials list, click on the name of your newly created API key.
+   - Under **API restrictions**, select "**Restrict key**".
+   - In the dropdown, check the boxes for the five APIs you enabled in the previous step: **Geocoding API, Places API, Directions API, Distance Matrix API, and Time Zone API.**
+   - Click **OK** and then **Save**. This ensures your key can only be used for the services required by the toolkit.
+
+#### 4. Set Up the API Key as an Environment Variable
+
+For security and flexibility, you should not hardcode your API key directly into your code. The best practice is to use an environment variable.
+
+1. **Create a `.env` file:** In the root directory of your project, create a new file named `.env`.
+2. **Add your key to the file:** Open the `.env` file and add the following line, pasting your own API key:
+   ```
+   GOOGLE_MAPS_API_KEY="YOUR_API_KEY_HERE"
+   ```
+3. **Load the environment variable:** Your application can now load this key from the environment. The toolkit is configured to do this by default using a library like `python-dotenv`.
+
+That's it! You now have a secure, configured API key ready to be used with the Google Maps Toolkit. 👍
+
+---
+
+EvoAgentX provides comprehensive Google Maps Platform integration through the GoogleMapsToolkit, enabling agents to access geocoding, places search, directions, and time zone information. This toolkit requires a Google Maps API key but provides powerful location-based capabilities for your agents.
+
+### 7.1 GoogleMapsToolkit
+
+**The GoogleMapsToolkit provides access to Google's comprehensive mapping and location services, including geocoding, places search, directions, distance calculations, and time zone information. It's designed to work seamlessly with AI agents by automatically retrieving API keys from environment variables.**
+
+#### 7.1.1 Setup
+
+```python
+from evoagentx.tools import GoogleMapsToolkit
+
+# Initialize the toolkit - API key will be automatically retrieved from environment
+toolkit = GoogleMapsToolkit()
+
+# Or initialize with explicit API key
+toolkit = GoogleMapsToolkit(api_key="your_api_key_here")
+```
+
+#### 7.1.2 Available Methods
+
+The `GoogleMapsToolkit` provides **7 callable tools**:
+
+##### Tool 1: geocode_address
+
+**Description**: Convert a street address into geographic coordinates (latitude and longitude).
+
+**Usage Example**:
+```python
+# Get the geocoding tool
+geocode_tool = toolkit.get_tool("geocode_address")
+
+# Convert address to coordinates
+result = geocode_tool(address="1600 Amphitheatre Parkway, Mountain View, CA")
+
+if result["success"]:
+    print(f"Address: {result['formatted_address']}")
+    print(f"Coordinates: {result['latitude']}, {result['longitude']}")
+    print(f"Place ID: {result['place_id']}")
+else:
+    print(f"Error: {result['error']}")
+```
+
+**Parameters**:
+- `address` (str, required): The street address to geocode
+- `components` (str, optional): Component filters (e.g., 'country:US|locality:Mountain View')
+- `region` (str, optional): Region code for biasing results (e.g., 'us', 'uk')
+
+**Return Type**: `Dict[str, Any]`
+
+**Sample Return**:
+```python
+{
+    "success": True,
+    "address": "1600 Amphitheatre Parkway, Mountain View, CA",
+    "formatted_address": "Google Building 41, 1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA",
+    "latitude": 37.4205384,
+    "longitude": -122.0865117,
+    "place_id": "ChIJxQvW8wK6j4AR3ukttGy3w2s",
+    "location_type": "ROOFTOP",
+    "address_components": [...]
+}
+```
+
+---
+
+##### Tool 2: reverse_geocode
+
+**Description**: Convert geographic coordinates (latitude and longitude) into a human-readable address.
+
+**Usage Example**:
+```python
+# Get the reverse geocoding tool
+reverse_geocode_tool = toolkit.get_tool("reverse_geocode")
+
+# Convert coordinates to address
+result = reverse_geocode_tool(latitude=37.4205384, longitude=-122.0865117)
+
+if result["success"]:
+    print("Addresses found:")
+    for i, addr in enumerate(result['addresses'][:3]):
+        print(f"  {i+1}. {addr['formatted_address']}")
+else:
+    print(f"Error: {result['error']}")
+```
+
+**Parameters**:
+- `latitude` (float, required): Latitude coordinate
+- `longitude` (float, required): Longitude coordinate
+- `result_type` (str, optional): Filter for result types (e.g., 'street_address|route')
+
+**Return Type**: `Dict[str, Any]`
+
+**Sample Return**:
+```python
+{
+    "success": True,
+    "latitude": 37.4205384,
+    "longitude": -122.0865117,
+    "addresses": [
+        {
+            "formatted_address": "Google Building 41, 1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA",
+            "place_id": "ChIJxQvW8wK6j4AR3ukttGy3w2s",
+            "types": ["premise"],
+            "address_components": [...]
+        }
+    ]
+}
+```
+
+---
+
+##### Tool 3: places_search
+
+**Description**: Search for places (restaurants, shops, landmarks) using text queries. Can search near a specific location.
+
+**Usage Example**:
+```python
+# Get the places search tool
+places_search_tool = toolkit.get_tool("places_search")
+
+# Search for restaurants near a location
+result = places_search_tool(
+    query="restaurants near Mountain View, CA",
+    location="37.4205384,-122.0865117",
+    radius=2000
+)
+
+if result["success"]:
+    print(f"Found {result['places_found']} restaurants")
+    for i, place in enumerate(result['places'][:3]):
+        print(f"  {i+1}. {place['name']}")
+        print(f"     Address: {place['formatted_address']}")
+        print(f"     Rating: {place.get('rating', 'N/A')}")
+else:
+    print(f"Error: {result['error']}")
+```
+
+**Parameters**:
+- `query` (str, required): Text search query (e.g., 'pizza restaurants near Times Square')
+- `location` (str, optional): Location bias as 'latitude,longitude' (e.g., '40.7589,-73.9851')
+- `radius` (float, optional): Search radius in meters (max 50000)
+- `type` (str, optional): Place type filter (e.g., 'restaurant', 'gas_station')
+
+**Return Type**: `Dict[str, Any]`
+
+**Sample Return**:
+```python
+{
+    "success": True,
+    "query": "restaurants near Mountain View, CA",
+    "places_found": 5,
+    "places": [
+        {
+            "name": "Restaurant Name",
+            "place_id": "ChIJ...",
+            "formatted_address": "123 Main St, Mountain View, CA",
+            "rating": 4.5,
+            "user_ratings_total": 150,
+            "price_level": 2,
+            "types": ["restaurant", "food"],
+            "geometry": {...},
+            "business_status": "OPERATIONAL"
+        }
+    ]
+}
+```
+
+---
+
+##### Tool 4: place_details
+
+**Description**: Get comprehensive information about a specific place using its Place ID, including contact info, hours, reviews.
+
+**Usage Example**:
+```python
+# Get the place details tool
+place_details_tool = toolkit.get_tool("place_details")
+
+# Get detailed information about a place
+result = place_details_tool(place_id="ChIJxQvW8wK6j4AR3ukttGy3w2s")
+
+if result["success"]:
+    print(f"Name: {result['name']}")
+    print(f"Address: {result['formatted_address']}")
+    print(f"Phone: {result.get('phone_number', 'N/A')}")
+    print(f"Website: {result.get('website', 'N/A')}")
+    print(f"Rating: {result.get('rating', 'N/A')} ({result.get('user_ratings_total', 0)} reviews)")
+else:
+    print(f"Error: {result['error']}")
+```
+
+**Parameters**:
+- `place_id` (str, required): Unique Place ID from a place search
+- `fields` (str, optional): Comma-separated list of fields to return (e.g., 'name,rating,formatted_phone_number')
+
+**Return Type**: `Dict[str, Any]`
+
+**Sample Return**:
+```python
+{
+    "success": True,
+    "place_id": "ChIJxQvW8wK6j4AR3ukttGy3w2s",
+    "name": "Google Building 41",
+    "formatted_address": "1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA",
+    "phone_number": "+1 650-253-0000",
+    "website": "https://www.google.com/",
+    "rating": 4.2,
+    "user_ratings_total": 1250,
+    "price_level": None,
+    "types": ["premise"],
+    "opening_hours": {...},
+    "geometry": {...},
+    "business_status": "OPERATIONAL",
+    "reviews": [...]
+}
+```
+
+---
+
+##### Tool 5: directions
+
+**Description**: Calculate directions between two or more locations with different travel modes (driving, walking, bicycling, transit).
+
+**Usage Example**:
+```python
+# Get the directions tool
+directions_tool = toolkit.get_tool("directions")
+
+# Get driving directions
+result = directions_tool(
+    origin="San Francisco, CA",
+    destination="Mountain View, CA",
+    mode="driving"
+)
+
+if result["success"] and result['routes']:
+    route = result['routes'][0]
+    print(f"Route from {result['origin']} to {result['destination']}")
+    print(f"Distance: {route['total_distance_meters']} meters")
+    print(f"Duration: {route['total_duration_seconds']} seconds")
+    
+    # Show first few steps
+    if route['legs'] and route['legs'][0]['steps']:
+        print("First 3 steps:")
+        for i, step in enumerate(route['legs'][0]['steps'][:3]):
+            instructions = step['instructions'].replace('<b>', '').replace('</b>', '')
+            print(f"  {i+1}. {instructions}")
+else:
+    print(f"Error: {result['error']}")
+```
+
+**Parameters**:
+- `origin` (str, required): Starting location (address, coordinates, or place ID)
+- `destination` (str, required): Ending location (address, coordinates, or place ID)
+- `mode` (str, optional): Travel mode: 'driving', 'walking', 'bicycling', or 'transit' (default: driving)
+- `waypoints` (str, optional): Waypoints separated by '|' (e.g., 'via:San Francisco|via:Los Angeles')
+- `alternatives` (bool, optional): Whether to return alternative routes (default: false)
+
+**Return Type**: `Dict[str, Any]`
+
+**Sample Return**:
+```python
+{
+    "success": True,
+    "origin": "San Francisco, CA",
+    "destination": "Mountain View, CA",
+    "mode": "driving",
+    "routes": [
+        {
+            "summary": "I-280 S",
+            "legs": [...],
+            "total_distance_meters": 50000,
+            "total_duration_seconds": 3600,
+            "overview_polyline": {...},
+            "warnings": [],
+            "copyrights": "Map data ©2024 Google"
+        }
+    ]
+}
+```
+
+---
+
+##### Tool 6: distance_matrix
+
+**Description**: Calculate travel times and distances between multiple origins and destinations. Useful for finding the closest location.
+
+**Usage Example**:
+```python
+# Get the distance matrix tool
+distance_matrix_tool = toolkit.get_tool("distance_matrix")
+
+# Calculate distances between multiple locations
+result = distance_matrix_tool(
+    origins="San Francisco,CA|Oakland,CA",
+    destinations="Mountain View,CA|Palo Alto,CA",
+    mode="driving",
+    units="imperial"
+)
+
+if result["success"]:
+    print("Distance Matrix Results:")
+    for origin_data in result['matrix']:
+        print(f"\nFrom: {origin_data['origin_address']}")
+        for dest in origin_data['destinations']:
+            if dest['status'] == 'OK':
+                print(f"  To {dest['destination_address']}: {dest['distance'].get('text', 'N/A')} - {dest['duration'].get('text', 'N/A')}")
+else:
+    print(f"Error: {result['error']}")
+```
+
+**Parameters**:
+- `origins` (str, required): Origin locations separated by '|' (e.g., 'Seattle,WA|Portland,OR')
+- `destinations` (str, required): Destination locations separated by '|' (e.g., 'San Francisco,CA|Los Angeles,CA')
+- `mode` (str, optional): Travel mode: 'driving', 'walking', 'bicycling', or 'transit' (default: driving)
+- `units` (str, optional): Unit system: 'metric' or 'imperial' (default: metric)
+
+**Return Type**: `Dict[str, Any]`
+
+**Sample Return**:
+```python
+{
+    "success": True,
+    "origins": ["San Francisco,CA", "Oakland,CA"],
+    "destinations": ["Mountain View,CA", "Palo Alto,CA"],
+    "mode": "driving",
+    "units": "imperial",
+    "matrix": [
+        {
+            "origin_address": "San Francisco, CA, USA",
+            "destinations": [
+                {
+                    "destination_address": "Mountain View, CA, USA",
+                    "status": "OK",
+                    "distance": {"text": "35.2 mi", "value": 56644},
+                    "duration": {"text": "45 mins", "value": 2700}
+                }
+            ]
+        }
+    ]
+}
+```
+
+---
+
+##### Tool 7: timezone
+
+**Description**: Get time zone information for a specific location using coordinates.
+
+**Usage Example**:
+```python
+# Get the timezone tool
+timezone_tool = toolkit.get_tool("timezone")
+
+# Get timezone information
+result = timezone_tool(latitude=37.4205384, longitude=-122.0865117)
+
+if result["success"]:
+    print(f"Location: {result['latitude']}, {result['longitude']}")
+    print(f"Time Zone: {result['time_zone_name']} ({result['time_zone_id']})")
+    print(f"UTC Offset: {result['raw_offset']} seconds")
+    print(f"DST Offset: {result['dst_offset']} seconds")
+else:
+    print(f"Error: {result['error']}")
+```
+
+**Parameters**:
+- `latitude` (float, required): Latitude coordinate
+- `longitude` (float, required): Longitude coordinate
+- `timestamp` (float, optional): Unix timestamp for the desired time (default: current time)
+
+**Return Type**: `Dict[str, Any]`
+
+**Sample Return**:
+```python
+{
+    "success": True,
+    "latitude": 37.4205384,
+    "longitude": -122.0865117,
+    "time_zone_id": "America/Los_Angeles",
+    "time_zone_name": "Pacific Standard Time",
+    "dst_offset": 3600,
+    "raw_offset": -28800,
+    "status": "OK"
+}
+```
+
+#### 7.1.3 Setup Hints
+
+- **API Key Requirements**: The toolkit requires a Google Maps Platform API key. Set it in your environment:
+  ```bash
+  export GOOGLE_MAPS_API_KEY="your_api_key_here"
+  ```
+
+- **Required APIs**: Enable the following APIs in your Google Cloud Console:
+  - **Geocoding API**: For address-to-coordinates conversion
+  - **Places API**: For place search and details
+  - **Directions API**: For route calculation
+  - **Distance Matrix API**: For multi-point distance calculations
+  - **Time Zone API**: For timezone information
+
+- **API Key Security**: 
+  - Never hardcode API keys in your source code
+  - Use environment variables or secure configuration management
+  - Restrict your API key to only the required APIs
+  - Set up billing alerts to monitor usage
+
+- **Error Handling**: The toolkit provides comprehensive error handling:
+  - Missing API key: Returns clear error message with setup instructions
+  - Invalid API key: Returns Google Maps API error messages
+  - Network issues: Returns appropriate error messages
+  - Rate limiting: Handles Google's rate limits gracefully
+
+- **Usage Limits**: Google Maps Platform has usage quotas and billing:
+  - Free tier provides generous limits for development and testing
+  - Monitor your usage in the Google Cloud Console
+  - Consider implementing caching for frequently accessed data
+
+#### 7.1.4 Complete Example
+
+```python
+from evoagentx.tools import GoogleMapsToolkit
+
+# Initialize the toolkit
+toolkit = GoogleMapsToolkit()
+
+# Check if API key is available
+if not toolkit.google_maps_base.api_key:
+    print("Please set GOOGLE_MAPS_API_KEY environment variable")
+    print("Get your API key from: https://console.cloud.google.com/apis/")
+    exit(1)
+
+print("=== Google Maps Platform Tools Demo ===\n")
+
+# 1. Geocoding - Convert address to coordinates
+print("1. Geocoding Address to Coordinates")
+geocode_tool = toolkit.get_tool("geocode_address")
+result = geocode_tool(address="1600 Amphitheatre Parkway, Mountain View, CA")
+
+if result["success"]:
+    print(f"Address: {result['formatted_address']}")
+    print(f"Coordinates: {result['latitude']}, {result['longitude']}")
+    lat, lng = result['latitude'], result['longitude']
+else:
+    print(f"Geocoding failed: {result['error']}")
+    exit(1)
+
+# 2. Places Search - Find nearby restaurants
+print("\n2. Places Search - Find Restaurants")
+places_search_tool = toolkit.get_tool("places_search")
+result = places_search_tool(
+    query="restaurants near Mountain View, CA",
+    location=f"{lat},{lng}",
+    radius=2000
+)
+
+if result["success"]:
+    print(f"Found {result['places_found']} restaurants")
+    for i, place in enumerate(result['places'][:3]):
+        print(f"  {i+1}. {place['name']} - Rating: {place.get('rating', 'N/A')}")
+else:
+    print(f"Places search failed: {result['error']}")
+
+# 3. Directions - Get driving directions
+print("\n3. Directions - Driving Route")
+directions_tool = toolkit.get_tool("directions")
+result = directions_tool(
+    origin="San Francisco, CA",
+    destination="Mountain View, CA",
+    mode="driving"
+)
+
+if result["success"] and result['routes']:
+    route = result['routes'][0]
+    print(f"Route from {result['origin']} to {result['destination']}")
+    print(f"Distance: {route['total_distance_meters']} meters")
+    print(f"Duration: {route['total_duration_seconds']} seconds")
+else:
+    print(f"Directions failed: {result['error']}")
+
+print("\n=== Demo Complete ===")
+```
+
+---
+
 ## Summary
 
 In this tutorial, we've explored the tool ecosystem in EvoAgentX:
@@ -1314,6 +1857,7 @@ In this tutorial, we've explored the tool ecosystem in EvoAgentX:
 4. **File Operations**: Learned how to handle file operations with special support for different file formats
 5. **Browser Automation**: Learned how to control web browsers using both Selenium-based fine-grained control and AI-driven natural language automation
 6. **MCP Tools**: Learned how to connect to external services using the Model Context Protocol
+7. **Google Maps Tools**: Learned how to access comprehensive mapping and location services for geocoding, places search, directions, and time zone information
 
 Tools in EvoAgentX extend your agents' capabilities by providing access to external resources and computation. By combining these toolkits with agents and workflows, you can build powerful AI systems that can retrieve information, perform calculations, and interact with the world.
 

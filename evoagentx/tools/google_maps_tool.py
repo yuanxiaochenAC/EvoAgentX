@@ -12,6 +12,7 @@ Compatible with EvoAgentX tool architecture and follows the latest Google Maps P
 
 import requests
 import json
+import os
 from typing import Dict, Any, List
 
 from .tool import Tool, Toolkit
@@ -25,17 +26,26 @@ class GoogleMapsBase(BaseModule):
     Handles API key management, request formatting, and common utilities.
     """
     
-    def __init__(self, api_key: str, timeout: int = 10, **kwargs):
+    def __init__(self, api_key: str = None, timeout: int = 10, **kwargs):
         """
         Initialize the Google Maps base.
         
         Args:
-            api_key (str): Google Maps Platform API key
+            api_key (str, optional): Google Maps Platform API key. If not provided, will try to get from GOOGLE_MAPS_API_KEY environment variable.
             timeout (int): Request timeout in seconds
             **kwargs: Additional keyword arguments for parent class
         """
         super().__init__(**kwargs)
-        self.api_key = api_key
+        
+        # Get API key from parameter or environment variable
+        self.api_key = api_key or os.getenv("GOOGLE_MAPS_API_KEY")
+        
+        if not self.api_key:
+            logger.warning(
+                "No Google Maps API key provided. Please set GOOGLE_MAPS_API_KEY environment variable "
+                "or pass api_key parameter. Get your API key from: https://console.cloud.google.com/apis/"
+            )
+        
         self.timeout = timeout
         self.base_url = "https://maps.googleapis.com/maps/api"
         
@@ -50,6 +60,13 @@ class GoogleMapsBase(BaseModule):
         Returns:
             dict: API response
         """
+        # Check if API key is available
+        if not self.api_key:
+            return {
+                "success": False,
+                "error": "Google Maps API key not found. Please set GOOGLE_MAPS_API_KEY environment variable or pass api_key parameter."
+            }
+        
         try:
             # Add API key to parameters
             params['key'] = self.api_key
@@ -688,12 +705,12 @@ class GoogleMapsToolkit(Toolkit):
     Complete Google Maps Platform toolkit containing all available tools.
     """
     
-    def __init__(self, api_key: str, timeout: int = 10, name: str = "GoogleMapsToolkit"):
+    def __init__(self, api_key: str = None, timeout: int = 10, name: str = "GoogleMapsToolkit"):
         """
         Initialize the Google Maps toolkit.
         
         Args:
-            api_key (str): Google Maps Platform API key
+            api_key (str, optional): Google Maps Platform API key. If not provided, will try to get from GOOGLE_MAPS_API_KEY environment variable.
             timeout (int): Request timeout in seconds
             name (str): Toolkit name
         """
