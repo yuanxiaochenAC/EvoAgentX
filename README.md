@@ -92,6 +92,11 @@ Feel free to propose or submit new tools via [pull requests](https://github.com/
 
 👉 Explore the full toolkit below 👇
 
+| Toolkit Name       | Description                                                                                  | Code File Path                                 | Test File Path                              |
+|--------------------|----------------------------------------------------------------------------------------------|------------------------------------------------|---------------------------------------------|
+| BrowserToolkit     | Low-level browser automation: navigate, type, click, snapshot, etc.                         | [link](evoagentx/tools/browser_tool.py)        | [link](examples/tools/tools_browser.py)     |
+| BrowserUseToolkit  | High-level LLM-driven browser control: fill forms, click links, search, and interact.       | [link](evoagentx/tools/browser_use.py)         | [link](examples/tools/tools_browser.py)     |
+
 | **Category**              | **Toolkit Name**               | **Description**                                                                                                                                 | **Code File Path**                             | **Test File Path**                        |
 |--------------------------|-------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------|-------------------------------------------|
 | **Code Interpreters**  | PythonInterpreterToolkit       | Safely execute Python code snippets or local python scripts with sandboxed imports and controlled filesystem access.                             | [link](evoagentx/tools/interpreter_python.py)        | [link](examples/tools/tools_interpreter.py)     |
