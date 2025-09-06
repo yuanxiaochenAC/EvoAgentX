@@ -17,11 +17,8 @@ We'll cover:
 
 1. **Understanding the Tool Architecture**: Learn about the base Tool class and Toolkit system
 2. **Code Interpreters**: Execute Python code safely using Python and Docker interpreters
-3. **Search Tools**: Access information from the web using Wikipedia and Google search tools
+3. **Search Tools**: Access information from the web using various search tools
 4. **File Operations**: Handle file reading and writing with special support for different file formats
-5. **Browser Automation**: Control web browsers using both traditional Selenium-based automation and AI-driven natural language automation
-6. **MCP Tools**: Connect to external services using the Model Context Protocol
-7. **Google Maps Tools**: Access comprehensive mapping and location services for geocoding, places search, directions, and time zone information
 5. **Database Tools**: Comprehensive database management with MongoDB, PostgreSQL, and FAISS
 6. **Image Handling Tools**: Comprehensive capabilities for image analysis, generation, and manipulation using various AI services and APIs
 7. **Browser Tools**: Control web browsers using both traditional Selenium-based automation and AI-driven natural language automation
@@ -39,9 +36,9 @@ By the end of this tutorial, you'll understand how to leverage these tools in yo
 
 | Category | Toolkit Name | Tool Description | Code File Path | Test File Path |
 |----------|--------------|------------------|----------------|----------------|
-| **[1) Code Interpreters](#1-understanding-the-tool-architecture)** | [PythonInterpreterToolkit](#21-pythoninterpretertoolkit) | Safely execute Python code snippets or scripts with controlled imports and filesystem access. Perfect for testing untrusted code. | `evoagentx/tools/interpreter_python.py` | `examples/tools/tools_interpreter.py` |
+| **[Code Interpreters](#1-understanding-the-tool-architecture)** | [PythonInterpreterToolkit](#21-pythoninterpretertoolkit) | Safely execute Python code snippets or scripts with controlled imports and filesystem access. Perfect for testing untrusted code. | `evoagentx/tools/interpreter_python.py` | `examples/tools/tools_interpreter.py` |
 | | [DockerInterpreterToolkit](#22-dockerinterpretertoolkit) | Run code in isolated Docker containers for maximum security. Ideal for untrusted code, special dependencies, or strict isolation requirements. | `evoagentx/tools/interpreter_docker.py` | `examples/tools/tools_interpreter.py` |
-| **[2) Search & Request Tools](#2-code-interpreters)** | [WikipediaSearchToolkit](#31-wikipediasearchtoolkit) | Search Wikipedia for articles with summaries and content. Great for research and educational content. | `evoagentx/tools/search_wiki.py` | `examples/tools/tools_search.py` |
+| **[Search & Request Tools](#2-code-interpreters)** | [WikipediaSearchToolkit](#31-wikipediasearchtoolkit) | Search Wikipedia for articles with summaries and content. Great for research and educational content. | `evoagentx/tools/search_wiki.py` | `examples/tools/tools_search.py` |
 | | [GoogleSearchToolkit](#32-googlesearchtoolkit) | Google Custom Search with official API. High-quality results for professional applications. | `evoagentx/tools/search_google.py` | `examples/tools/tools_search.py` |
 | | [GoogleFreeSearchToolkit](#33-googlefreesearchtoolkit) | Google-style search without API keys. Lightweight alternative for simple queries. | `evoagentx/tools/search_google_f.py` | `examples/tools/tools_search.py` |
 | | [DDGSSearchToolkit](#34-ddgssearchtoolkit) | Privacy-focused search with multiple backends. Ideal for applications requiring user privacy. | `evoagentx/tools/search_ddgs.py` | `examples/tools/tools_search.py` |
@@ -51,18 +48,18 @@ By the end of this tutorial, you'll understand how to leverage these tools in yo
 | | [ArxivToolkit](#38-arxivtoolkit) | Search arXiv research papers. Perfect for academic and scientific research applications. | `evoagentx/tools/request_arxiv.py` | `examples/tools/tools_search.py` |
 | | [RSSToolkit](#39-rsstoolkit) | Fetch and validate RSS feeds. Monitor news sources and content updates automatically. | `evoagentx/tools/rss_feed.py` | `examples/tools/tools_search.py` |
 | | [GoogleMapsToolkit](#310-GoogleMapsToolkit) | Geoinformation retrieval and path planning via Goolge API service. | `evoagentx/tools/google_maps_tool.py` | `examples/tools/google_maps_example.py` |
-| **[3) FileSystem Tools](#3-search-and-request-tools)** | [StorageToolkit](#41-storagetoolkit) | Complete file management with save/read/append/delete/move/copy operations. Essential for data persistence and file handling. | `evoagentx/tools/storage_file.py` | `examples/tools/tools_files.py` |
+| **[FileSystem Tools](#3-search-and-request-tools)** | [StorageToolkit](#41-storagetoolkit) | Complete file management with save/read/append/delete/move/copy operations. Essential for data persistence and file handling. | `evoagentx/tools/storage_file.py` | `examples/tools/tools_files.py` |
 | | [CMDToolkit](#42-cmdtoolkit) | Execute shell commands with safety checks and cross-platform support. Perfect for system administration and automation. | `evoagentx/tools/cmd_toolkit.py` | `examples/tools/tools_files.py` |
 | | [FileToolkit](#43-storage-handler-introduction) | File operations toolkit for managing files and directories. | `evoagentx/tools/file_tool.py` | `examples/tools/tools_files.py` |
-| **[4) Database Tools](#4-filesystem-tools)** | [MongoDBToolkit](#51-mongodbtoolkit) | MongoDB operations with automatic local/remote detection. Perfect for document storage and flexible data schemas. | `evoagentx/tools/database_mongodb.py` | `examples/tools/tools_database.py` |
+| **[Database Tools](#4-filesystem-tools)** | [MongoDBToolkit](#51-mongodbtoolkit) | MongoDB operations with automatic local/remote detection. Perfect for document storage and flexible data schemas. | `evoagentx/tools/database_mongodb.py` | `examples/tools/tools_database.py` |
 | | [PostgreSQLToolkit](#52-postgresqltoolkit) | PostgreSQL operations with SQL execution and targeted operations. Ideal for structured data and complex queries. | `evoagentx/tools/database_postgresql.py` | `examples/tools/tools_database.py` |
 | | [FaissToolkit](#53-faisstoolkit) | Vector database for semantic search and similarity matching. Great for AI applications and content discovery. | `evoagentx/tools/database_faiss.py` | `examples/tools/tools_database.py` |
-| **[5) Image Handling Tools](#5-database-tools)** | [ImageAnalysisToolkit](#61-imageanalysistoolkit) | Analyze images and PDFs using AI vision models. Perfect for content moderation and visual understanding. | `evoagentx/tools/image_analysis.py` | `examples/tools/tools_images.py` |
+| **[Image Handling Tools](#5-database-tools)** | [ImageAnalysisToolkit](#61-imageanalysistoolkit) | Analyze images and PDFs using AI vision models. Perfect for content moderation and visual understanding. | `evoagentx/tools/image_analysis.py` | `examples/tools/tools_images.py` |
 | | [OpenAIImageGenerationToolkit](#62-openaiimagegenerationtoolkit) | Generate images from text using OpenAI's DALL-E. Great for creative content and visual design. | `evoagentx/tools/images_openai_generation.py` | `examples/tools/tools_images.py` |
 | | [FluxImageGenerationToolkit](#63-fluximagegenerationtoolkit) | Generate images with Flux Kontext Max. Advanced control over aspect ratios and artistic styles. | `evoagentx/tools/images_flux_generation.py` | `examples/tools/tools_images.py` |
-| **[6) Browser Tools](#6-image-handling-tools)** | [BrowserToolkit](#7-browser-tools) | Fine-grained browser automation with precise control. Perfect for complex web scraping and testing workflows. | `evoagentx/tools/browser_tool.py` | `examples/tools/tools_browser.py` |
+| **[Browser Tools](#6-image-handling-tools)** | [BrowserToolkit](#7-browser-tools) | Fine-grained browser automation with precise control. Perfect for complex web scraping and testing workflows. | `evoagentx/tools/browser_tool.py` | `examples/tools/tools_browser.py` |
 | | [BrowserUseToolkit](#7-browser-tools) | Natural language browser automation using AI. Ideal for simple tasks described in plain English. | `evoagentx/tools/browser_use.py` | `examples/tools/tools_browser.py` |
-| **[7) MCP Tools](#8-mcp-tools)** | [MCPToolkit](#81-mcptoolkit) | Connect to external MCP servers and discover their tools. Extends EvoAgentX with third-party capabilities. | `evoagentx/tools/mcp.py` | `examples/tools/tools_integration.py` |
+| **[MCP Tools](#8-mcp-tools)** | [MCPToolkit](#81-mcptoolkit) | Connect to external MCP servers and discover their tools. Extends EvoAgentX with third-party capabilities. | `evoagentx/tools/mcp.py` | `examples/tools/tools_integration.py` |
 
 **🔗 Quick Navigation Links:**
 - [Code Interpreters](#1-understanding-the-tool-architecture) - Execute code safely
@@ -86,13 +83,14 @@ python -m examples.tools.tools
 **📚 Individual Tool Categories**:
 ```bash
 # Run specific tool categories
-python -m examples.tools.tools_interpreter    # Code interpreters
-python -m examples.tools.tools_search         # Search and request tools  
-python -m examples.tools.tools_files          # File system tools
-python -m examples.tools.tools_database       # Database tools
-python -m examples.tools.tools_images         # Image handling tools
-python -m examples.tools.tools_browser        # Browser automation tools
-python -m examples.tools.tools_integration    # MCP and integration tools
+python -m examples.tools.tools_interpreter        # Code interpreters
+python -m examples.tools.tools_search             # Search and request tools  
+python -m examples.tools.tools_files              # File system tools
+python -m examples.tools.tools_database           # Database tools
+python -m examples.tools.tools_images             # Image handling tools
+python -m examples.tools.tools_browser            # Browser automation tools
+python -m examples.tools.tools_integration        # MCP and integration tools
+python -m examples.tools.google_maps_example.py   # Google maps tool
 ```
 
 **Note**: The original `tools.py` file contains all examples in one place, while the separated files focus on specific tool categories for easier learning and testing.
