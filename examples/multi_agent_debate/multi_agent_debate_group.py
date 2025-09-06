@@ -108,7 +108,7 @@ Return XML:
 
 if __name__ == "__main__":
 	llm_cfg = OpenAILLMConfig(
-		model="gpt-4o-mini",  # 按你本地可用模型名替换
+		model="gpt-4o-mini",  # Replace with your locally available model name
 		temperature=0.6,
 		max_tokens=512,
 	)
@@ -127,7 +127,7 @@ if __name__ == "__main__":
 	debate.init_module()
 
 	result = debate.execute(
-		problem="设计一个可扩展的多模态RAG系统评测方案，包括指标与自动化流程。",
+		problem="Design a scalable multi-modal RAG system evaluation plan, including metrics and automated processes.",
 		num_agents=2,
 		num_rounds=3,
 		judge_mode="llm_judge",

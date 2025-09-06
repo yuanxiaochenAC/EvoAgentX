@@ -7,7 +7,7 @@ from evoagentx.models import OpenAILLMConfig
 
 def get_llm_config():
     load_dotenv()
-    # 仅使用 OpenAI GPT-4o（可通过 OPENAI_MODEL 覆盖，默认 gpt-4o）
+    # Only use OpenAI GPT-4o (can be overridden via OPENAI_MODEL, default gpt-4o)
     openai_key = os.getenv("OPENAI_API_KEY")
     if not openai_key:
         raise RuntimeError("Set OPENAI_API_KEY for OpenAI access.")
@@ -40,7 +40,7 @@ def run_self_consistency_example():
 
     print("=== Example: Self-Consistency (Fixed Answer) ===")
     print("Final Answer:", result.get("final_answer"))
-    print("Winner:", result.get("winner"))  # 应为 None
+    print("Winner:", result.get("winner"))  # Should be None
     print("\nTranscript:")
     for turn in result.get("transcript", []):
         print(
@@ -85,7 +85,7 @@ def run_llm_judge_example():
 
 
 def main():
-    # 任选其一运行：将另一个注释掉即可
+    # Choose one to run: comment out the other one
     # run_self_consistency_example()
     run_llm_judge_example()
 

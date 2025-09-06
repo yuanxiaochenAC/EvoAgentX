@@ -9,166 +9,123 @@ from ...models.model_configs import LLMConfig, OpenAILLMConfig
 from ...models.base_model import LLMOutputParser
 from ...workflow.operators import QAScEnsemble
 from .utils import (
-    build_agent_prompt,
-    build_judge_prompt,
-    default_personas,
     format_transcript,
     collect_last_round_candidates,
     collect_round_candidates,
+)
+from ...prompts.workflow.multi_agent_debate import (
+    DEBATER_AGENT_PROMPT,
+    JUDGE_AGENT_PROMPT,
+    build_agent_prompt,
+    build_judge_prompt,
+    get_default_personas,
 )
 from .pruning import PruningPipeline
 from ...agents.customize_agent import CustomizeAgent
 
 
 class DebateAgentOutput(LLMOutputParser):
-    """单个辩手在某一轮的输出结构。"""
+    """Output structure for individual debater in a round."""
 
-    thought: str = Field(default="", description="思考过程")
-    argument: str = Field(default="", description="该轮次给出的论据/反驳")
-    answer: Optional[str] = Field(default=None, description="该轮次给出的当前答案（可选）")
+    thought: str = Field(default="", description="Thinking process")
+    argument: str = Field(default="", description="Argument or rebuttal for this round")
+    answer: Optional[str] = Field(default=None, description="Current answer for this round (optional)")
 
 
 class DebateJudgeOutput(LLMOutputParser):
-    """裁判在辩论结束后的最终判决。"""
+    """Final judgment from judge after debate."""
 
-    rationale: str = Field(default="", description="评审理由")
-    winning_agent_id: int = Field(default=0, description="优胜辩手ID（从0开始）")
-    final_answer: str = Field(default="", description="最终答案")
+    rationale: str = Field(default="", description="Judging rationale")
+    winning_agent_id: int = Field(default=0, description="Winning debater ID (starting from 0)")
+    final_answer: str = Field(default="", description="Final answer")
 
 
 class MultiAgentDebateActionGraph(ActionGraph):
-    """多智能体辩论的 ActionGraph 实现（Google MAD 风格）。"""
+    """Multi-Agent Debate ActionGraph implementation (Google MAD style)."""
 
     name: str = "MultiAgentDebate"
-    description: str = "多智能体辩论工作流框架"
-    # 统一的LLM配置：所有agent的默认配置
+    description: str = "Multi-agent debate workflow framework"
+    # Unified LLM configuration: default configuration for all agents
     llm_config: LLMConfig = Field(default_factory=lambda: OpenAILLMConfig(
         model="gpt-4o-mini",
         openai_key=os.getenv("OPENAI_API_KEY")
-    ), description="所有agent的默认LLM配置")
-    # 统一的agent配置：所有辩手使用相同的agent配置
-    debater_agents: Optional[List[CustomizeAgent]] = Field(default=None, description="可选：多个辩手CustomizeAgent，执行时将随机选择其一用于该回合/该辩手")
-    judge_agent: Optional[CustomizeAgent] = Field(default=None, description="可选：裁判CustomizeAgent，提供则用于裁判阶段")
-    # 可选的模型池：用于随机选择不同模型
-    llm_config_pool: Optional[List[LLMConfig]] = Field(default=None, description="可选：用于随机选择的LLM配置池，为没有指定模型的agent提供选择")
-    # 分组工作流模式（每个席位由一个独立 workflow graph 替代 agent）
-    group_graphs_enabled: bool = Field(default=False, description="启用分组图模式：用工作流图替代单个辩手")
-    group_graphs: Optional[List[ActionGraph]] = Field(default=None, description="当启用分组图模式时，提供的工作流图列表（长度≥1）")
+    ), description="Default LLM configuration for all agents")
+    # Unified agent configuration: all debaters use the same agent configuration
+    debater_agents: Optional[List[CustomizeAgent]] = Field(default=None, description="Optional: multiple debater CustomizeAgents, randomly selected during execution")
+    judge_agent: Optional[CustomizeAgent] = Field(default=None, description="Optional: judge CustomizeAgent, used for judging phase if provided")
+    # Optional model pool: for random selection of different models
+    llm_config_pool: Optional[List[LLMConfig]] = Field(default=None, description="Optional: LLM configuration pool for random selection, provides choices for agents without specified models")
+    # Group workflow mode (each position occupied by an independent workflow graph instead of agent)
+    group_graphs_enabled: bool = Field(default=False, description="Enable group graph mode: replace individual debaters with workflow graphs")
+    group_graphs: Optional[List[ActionGraph]] = Field(default=None, description="When group graph mode is enabled, provide workflow graph list (length >= 1)")
 
-    # 运行期属性
+    # Runtime attributes
     _sc_ensemble: Optional[QAScEnsemble] = None
 
     def init_module(self):
-        """初始化模块（创建 LLM，构造可复用运算符）。"""
+        """Initialize module (create LLM, construct reusable operators)."""
         super().init_module()
         
-        # 配置冲突与完整性校验
+        # Configuration conflict and integrity validation
         if self.group_graphs_enabled and self.debater_agents:
             raise ValueError(
-                "配置冲突：已启用 group_graphs_enabled 时，不能同时配置 debater_agents。"
+                "Configuration conflict: cannot configure debater_agents when group_graphs_enabled is enabled."
             )
         if self.group_graphs_enabled and (not self.group_graphs or len(self.group_graphs) == 0):
             raise ValueError(
-                "配置错误：启用分组图模式时必须提供非空的 group_graphs 列表。"
+                "Configuration error: must provide non-empty group_graphs list when group graph mode is enabled."
             )
         if (not self.group_graphs_enabled) and self.group_graphs:
             raise ValueError(
-                "配置错误：提供了 group_graphs 但未启用 group_graphs_enabled。请同时启用或移除 group_graphs。"
+                "Configuration error: provided group_graphs but did not enable group_graphs_enabled. Please enable both or remove group_graphs."
             )
         
         self._sc_ensemble = QAScEnsemble(self._llm)
            
     def _create_default_debater_agent(self) -> CustomizeAgent:
-        """构建默认辩手 CustomizeAgent（XML解析 thought/argument/answer）。"""
-        debater_prompt = (
-            """
-You are debater #{agent_id} (role: {role}). This is round {round_index} of {total_rounds}.
-
-Problem:
-{problem}
-
-Conversation so far:
-{transcript_text}
-
-Instructions:
-- Think briefly (<= 120 words), then present your argument or rebuttal.
-- If confident, provide your current answer for this round.
-- Your output MUST follow this XML template:
-
-<response>
-  <thought>Your brief reasoning</thought>
-  <argument>Your argument or rebuttal</argument>
-  <answer>Optional current answer; leave empty if uncertain</answer>
-</response>
-            """
-        ).strip()
-        inputs = [
-            {"name": "problem", "type": "str", "description": "Problem statement"},
-            {"name": "transcript_text", "type": "str", "description": "Formatted debate transcript so far"},
-            {"name": "role", "type": "str", "description": "Debater role/persona"},
-            {"name": "agent_id", "type": "str", "description": "Debater id (string)"},
-            {"name": "round_index", "type": "str", "description": "1-based round index"},
-            {"name": "total_rounds", "type": "str", "description": "Total rounds"},
-        ]
-        outputs = [
-            {"name": "thought", "type": "str", "description": "Brief reasoning", "required": True},
-            {"name": "argument", "type": "str", "description": "Argument or rebuttal", "required": True},
-            {"name": "answer", "type": "str", "description": "Optional current answer", "required": False},
-        ]
+        """Create default debater CustomizeAgent (XML parsing thought/argument/answer)."""
         llm_config = random.choice(self.llm_config_pool) if self.llm_config_pool else self.llm_config
         
         return CustomizeAgent(
             name="DebaterAgent",
             description="Generate argument/rebuttal and optional answer per debate round.",
-            prompt=debater_prompt,
+            prompt=DEBATER_AGENT_PROMPT,
             llm_config=llm_config,
-            inputs=inputs,
-            outputs=outputs,
+            inputs=[
+                {"name": "problem", "type": "str", "description": "Problem statement"},
+                {"name": "transcript_text", "type": "str", "description": "Formatted debate transcript so far"},
+                {"name": "role", "type": "str", "description": "Debater role/persona"},
+                {"name": "agent_id", "type": "str", "description": "Debater id (string)"},
+                {"name": "round_index", "type": "str", "description": "1-based round index"},
+                {"name": "total_rounds", "type": "str", "description": "Total rounds"},
+            ],
+            outputs=[
+                {"name": "thought", "type": "str", "description": "Brief reasoning", "required": True},
+                {"name": "argument", "type": "str", "description": "Argument or rebuttal", "required": True},
+                {"name": "answer", "type": "str", "description": "Optional current answer", "required": False},
+            ],
             parse_mode="xml",
         )
 
     def _create_default_judge_agent(self) -> CustomizeAgent:
-        """构建默认裁判 CustomizeAgent（XML解析 rationale/winning_agent_id/final_answer）。"""
-        judge_prompt = (
-            """
-You are the judge. Based on the multi-round debate, deliver a final decision and answer.
-
-Problem:
-{problem}
-
-Debater roles:
-{roles_text}
-
-Debate transcript:
-{transcript_text}
-
-Return the following XML:
-<response>
-  <rationale>Your judging rationale</rationale>
-  <winning_agent_id>Winning debater ID (integer)</winning_agent_id>
-  <final_answer>The final answer</final_answer>
-</response>
-            """
-        ).strip()
-        inputs = [
-            {"name": "problem", "type": "str", "description": "Problem statement"},
-            {"name": "transcript_text", "type": "str", "description": "Formatted debate transcript"},
-            {"name": "roles_text", "type": "str", "description": "Roles listing text"},
-        ]
-        outputs = [
-            {"name": "rationale", "type": "str", "description": "Judging rationale", "required": True},
-            {"name": "winning_agent_id", "type": "str", "description": "Winning agent id (integer as string)", "required": True},
-            {"name": "final_answer", "type": "str", "description": "Final answer", "required": True},
-        ]
+        """Create default judge CustomizeAgent (XML parsing rationale/winning_agent_id/final_answer)."""
         llm_config = random.choice(self.llm_config_pool) if self.llm_config_pool else self.llm_config
         
         return CustomizeAgent(
             name="JudgeAgent",
             description="Deliver final decision and answer based on debate transcript.",
-            prompt=judge_prompt,
+            prompt=JUDGE_AGENT_PROMPT,
             llm_config=llm_config,
-            inputs=inputs,
-            outputs=outputs,
+            inputs=[
+                {"name": "problem", "type": "str", "description": "Problem statement"},
+                {"name": "transcript_text", "type": "str", "description": "Formatted debate transcript"},
+                {"name": "roles_text", "type": "str", "description": "Roles listing text"},
+            ],
+            outputs=[
+                {"name": "rationale", "type": "str", "description": "Judging rationale", "required": True},
+                {"name": "winning_agent_id", "type": "str", "description": "Winning agent id (integer as string)", "required": True},
+                {"name": "final_answer", "type": "str", "description": "Final answer", "required": True},
+            ],
             parse_mode="xml",
         )
 
@@ -190,15 +147,15 @@ Return the following XML:
         transcript_mode: str = "prev",  # options: ["prev", "all"]
         **kwargs,
     ) -> dict:
-        """执行辩论工作流（同步）。"""
+        """Execute debate workflow (synchronous)."""
         state = self._setup_debate(problem, num_agents, num_rounds, personas, agent_llm_configs)
         transcript = self._run_debate_rounds(problem, state, transcript_mode)
-        # 剪枝（在共识前，对最后一轮候选做筛选和可选纠偏）
+        # Pruning (before consensus, filter and optionally correct last round candidates)
         pruning_info = None
         pruning_debug = None
         pruning_rounds_debug: Optional[List[Dict[str, Any]]] = None
         if enable_pruning:
-            # 依据参与人数设定最少保留（默认比例 0.3，至少 1 条）
+            # Set minimum retention based on participants (default ratio 0.3, at least 1)
             min_keep = max(1, int(round(state["num_agents"] * 0.3)))
             pipeline = PruningPipeline(
                 enable_qp=True,
@@ -210,7 +167,7 @@ Return the following XML:
                 min_keep_count=min_keep,
             )
             if pruning_snapshot_mode:
-                # 为每一轮生成快照（不改变主流程，仅用于展示）
+                # Generate snapshot for each round (doesn't change main flow, only for display)
                 pruning_rounds_debug = []
                 for r in range(state["num_rounds"]):
                     rcands = collect_round_candidates(
@@ -269,7 +226,7 @@ Return the following XML:
         transcript_mode: str = "prev",  # options: ["prev", "all"]
         **kwargs,
     ) -> dict:
-        """执行辩论工作流（异步）。"""
+        """Execute debate workflow (asynchronous)."""
         state = self._setup_debate(problem, num_agents, num_rounds, personas, agent_llm_configs)
         transcript = await self._run_debate_rounds_async(problem, state, transcript_mode)
         pruning_info = None
@@ -334,14 +291,14 @@ Return the following XML:
         personas: Optional[List[str]],
         agent_llm_configs: Optional[List[LLMConfig]] = None,
     ) -> dict:
-        """设置辩论环境。"""
+        """Setup debate environment."""
         if num_agents <= 1:
-            raise ValueError("num_agents 必须大于 1")
+            raise ValueError("num_agents must be greater than 1")
         if num_rounds <= 0:
-            raise ValueError("num_rounds 必须为正数")
+            raise ValueError("num_rounds must be positive")
 
-        roles: List[str] = personas or default_personas(num_agents)
-        # 基于用户输入或模型池，准备每个 agent 对象（固定于整个对战周期，不在各轮随机变更）
+        roles: List[str] = personas or get_default_personas(num_agents)
+        # Based on user input or model pool, prepare each agent object (fixed for entire battle cycle, not randomly changed per round)
         agents_for_ids: List[CustomizeAgent] = self._prepare_runtime_debaters(num_agents, agent_llm_configs)
         state: Dict[str, Any] = {
             "problem": problem,
@@ -353,93 +310,69 @@ Return the following XML:
         return state
 
     def _prepare_runtime_debaters(self, num_agents: int, agent_llm_configs: Optional[List[LLMConfig]]) -> List[CustomizeAgent]:
-        """为每个 agent_id 选定在整个辩论中保持不变的 CustomizeAgent。
-        优先级：
-        1) 用户显式传入 debater_agents → 按长度循环/截断分配给每个位置
-        2) 传入 agent_llm_configs → 为每个位置创建默认 debater
-        3) 使用 llm_config_pool 随机选择 → 为每个位置创建默认 debater（优先于默认llm_config）
-        4) 回退到默认的 llm_config
+        """Select CustomizeAgent for each agent_id that remains unchanged throughout the debate.
+        Priority:
+        1) User explicitly passes debater_agents → cycle/truncate by length and assign to each position
+        2) Pass agent_llm_configs → create default debater for each position
+        3) Use llm_config_pool random selection → create default debater for each position (prioritized over default llm_config)
+        4) Fallback to default llm_config
         """
-        # 若启用分组图模式，不生成内部 Agent（改由 group_graphs 驱动）
+        # If group graph mode is enabled, don't generate internal agents (driven by group_graphs instead)
         if self.group_graphs_enabled:
             return []
         
-        # 1) 明确的多个 Agent
+        # 1) Explicit multiple agents
         if self.debater_agents:
             agents: List[CustomizeAgent] = []
             for i in range(num_agents):
                 agents.append(self.debater_agents[i % len(self.debater_agents)])
             return agents
         
-        # 2) 依据传入的 agent_llm_configs 创建
+        # 2) Create based on passed agent_llm_configs
         if agent_llm_configs and len(agent_llm_configs) > 0:
             return [
                 self._create_debater_agent_with_llm(agent_llm_configs[i % len(agent_llm_configs)])
                 for i in range(num_agents)
             ]
         
-        # 3) 使用 llm_config_pool 随机选择
+        # 3) Use llm_config_pool random selection
         if self.llm_config_pool and len(self.llm_config_pool) > 0:
             return [self._create_debater_agent_with_llm(random.choice(self.llm_config_pool)) for _ in range(num_agents)]
         
-        # 4) 默认：使用 llm_config
+        # 4) Default: use llm_config
         default_agent = self._create_default_debater_agent()
         return [default_agent for _ in range(num_agents)]
 
     def _create_debater_agent_with_llm(self, llm_cfg: LLMConfig) -> CustomizeAgent:
-        """使用给定 llm 配置创建一个与默认结构一致的辩手 Agent。"""
-        debater_prompt = (
-            """
-You are debater #{agent_id} (role: {role}). This is round {round_index} of {total_rounds}.
-
-Problem:
-{problem}
-
-Conversation so far:
-{transcript_text}
-
-Instructions:
-- Think briefly (<= 120 words), then present your argument or rebuttal.
-- If confident, provide your current answer for this round.
-- Your output MUST follow this XML template:
-
-<response>
-  <thought>Your brief reasoning</thought>
-  <argument>Your argument or rebuttal</argument>
-  <answer>Optional current answer; leave empty if uncertain</answer>
-</response>
-            """
-        ).strip()
-        inputs = [
-            {"name": "problem", "type": "str", "description": "Problem statement"},
-            {"name": "transcript_text", "type": "str", "description": "Formatted debate transcript so far"},
-            {"name": "role", "type": "str", "description": "Debater role/persona"},
-            {"name": "agent_id", "type": "str", "description": "Debater id (string)"},
-            {"name": "round_index", "type": "str", "description": "1-based round index"},
-            {"name": "total_rounds", "type": "str", "description": "Total rounds"},
-        ]
-        outputs = [
-            {"name": "thought", "type": "str", "description": "Brief reasoning", "required": True},
-            {"name": "argument", "type": "str", "description": "Argument or rebuttal", "required": True},
-            {"name": "answer", "type": "str", "description": "Optional current answer", "required": False},
-        ]
+        """Create a debater agent with given LLM configuration that is consistent with default structure."""
         return CustomizeAgent(
             name="DebaterAgent",
             description="Generate argument/rebuttal and optional answer per debate round.",
-            prompt=debater_prompt,
+            prompt=DEBATER_AGENT_PROMPT,
             llm_config=llm_cfg,
-            inputs=inputs,
-            outputs=outputs,
+            inputs=[
+                {"name": "problem", "type": "str", "description": "Problem statement"},
+                {"name": "transcript_text", "type": "str", "description": "Formatted debate transcript so far"},
+                {"name": "role", "type": "str", "description": "Debater role/persona"},
+                {"name": "agent_id", "type": "str", "description": "Debater id (string)"},
+                {"name": "round_index", "type": "str", "description": "1-based round index"},
+                {"name": "total_rounds", "type": "str", "description": "Total rounds"},
+            ],
+            outputs=[
+                {"name": "thought", "type": "str", "description": "Brief reasoning", "required": True},
+                {"name": "argument", "type": "str", "description": "Argument or rebuttal", "required": True},
+                {"name": "answer", "type": "str", "description": "Optional current answer", "required": False},
+            ],
             parse_mode="xml",
         )
 
     def _run_debate_rounds(self, problem: str, state: dict, transcript_mode: str = "prev") -> List[dict]:
-        """运行辩论轮次（同步）。返回 transcript。
+        """Run debate rounds (synchronous). Return transcript.
         
         Args:
-            transcript_mode: 控制agent可以访问的transcript范围
-                - "prev": 只能看到n-1轮次的发言（默认）
-                - "all": 可以看到之前所有轮次的发言
+            transcript_mode: Control transcript range accessible to agents
+                - "prev": Can only see n-1 round speeches (default)
+                - "all": Can see all previous round speeches
         """
         transcript: List[dict] = []
         num_agents: int = state["num_agents"]
@@ -448,10 +381,10 @@ Instructions:
 
         for round_index in range(num_rounds):
             for agent_id in range(num_agents):
-                # 分组图模式：调用对应 graph.execute()
+                # Group graph mode: call corresponding graph.execute()
                 if self.group_graphs_enabled and self.group_graphs:
                     graph = self.group_graphs[agent_id % len(self.group_graphs)]
-                    # 根据访问模式获取相应的transcript
+                    # Get corresponding transcript based on access mode
                     transcript_text = self._get_transcript_for_agent(
                         transcript, round_index, agent_id, transcript_mode, num_agents
                     )
@@ -470,7 +403,7 @@ Instructions:
                         "thought": g_out.get("thought", ""),
                     }
                 else:
-                    # 若 _setup_debate 已为每个位置确定 Agent，则直接使用
+                    # If _setup_debate has determined agent for each position, use directly
                     selected_agent: Optional[CustomizeAgent] = None
                     agents_for_ids: Optional[List[CustomizeAgent]] = state.get("agents")
                     if agents_for_ids:
@@ -480,7 +413,7 @@ Instructions:
 
                     if selected_agent is not None:
                         try:
-                            # 根据访问模式获取相应的transcript
+                            # Get corresponding transcript based on access mode
                             transcript_text = self._get_transcript_for_agent(
                                 transcript, round_index, agent_id, transcript_mode, num_agents
                             )
@@ -495,10 +428,10 @@ Instructions:
                             msg = selected_agent(inputs=inputs)
                             structured = msg.content.get_structured_data()
                         except Exception as e:
-                            print(f"Agent执行错误: {e}")
+                            print(f"Agent execution error: {e}")
                             structured = {"argument": "", "answer": "", "thought": ""}
                     else:
-                        # 根据访问模式获取相应的transcript
+                        # Get corresponding transcript based on access mode
                         transcript_text = self._get_transcript_for_agent(
                             transcript, round_index, agent_id, transcript_mode, num_agents
                         )
@@ -526,7 +459,7 @@ Instructions:
                         "thought": structured.get("thought", ""),
                     }
                 )
-                # 即时打印每个 agent 的产出（同步，完整内容）
+                # Print each agent's output immediately (synchronous, complete content)
                 try:
                     arg_full = str(structured.get("argument", "")).strip()
                     ans_full = str(structured.get("answer") or "").strip()
@@ -954,11 +887,15 @@ Instructions:
                     agent_config = agent_info.get("config", {})
                     llm_config = instance._deserialize_llm_config(agent_config.get("llm_config"))
                     
+                    # 从agent_config中移除可能重复的字段
+                    agent_config_clean = {k: v for k, v in agent_config.items() 
+                                        if k not in ['name', 'description', 'llm_config']}
+                    
                     agent = CustomizeAgent(
                         name=agent_info["name"],
                         description=agent_info["description"],
                         llm_config=llm_config,
-                        **agent_config
+                        **agent_config_clean
                     )
                     agents.append(agent)
                 except Exception as e:
@@ -974,11 +911,15 @@ Instructions:
                 judge_config = judge_info.get("config", {})
                 llm_config = instance._deserialize_llm_config(judge_config.get("llm_config"))
                 
+                # 从judge_config中移除可能重复的字段
+                judge_config_clean = {k: v for k, v in judge_config.items() 
+                                    if k not in ['name', 'description', 'llm_config']}
+                
                 instance.judge_agent = CustomizeAgent(
                     name=judge_info["name"],
                     description=judge_info["description"],
                     llm_config=llm_config,
-                    **judge_config
+                    **judge_config_clean
                 )
             except Exception as e:
                 print(f"警告: 重建judge agent失败: {e}")

@@ -1,218 +1,440 @@
 
-本教程系统讲解 EvoAgentX 的多智能体辩论 Multi-Agent Debate（简称 MAD）框架：核心概念、快速上手、关键参数、策略化角色与模型映射、分组工作流、以及配置的保存/加载。文中示例均可直接运行，并可参考 `examples/multi_agent_debate/` 下的示例脚本。
+# Multi-Agent Debate Tutorial
 
-## 快速开始
+This tutorial provides a practical guide to using EvoAgentX's Multi-Agent Debate (MAD) framework. You'll learn how to set up debates, configure agents, and solve real-world problems through collaborative AI reasoning.
 
-最小可运行示例（自一致裁判或 LLM 裁判二选一）：
+## Quick Start
+
+### Basic Debate Example
+
+Here's the simplest way to run a multi-agent debate:
 
 ```python
 from evoagentx.frameworks.multi_agent_debate.debate import MultiAgentDebateActionGraph
 from evoagentx.models import OpenAILLMConfig
 
+# Create a debate system
 debate = MultiAgentDebateActionGraph(
-    name="MAD Minimal",
-    description="Minimal runnable example for multi-agent debate",
-    llm_config=OpenAILLMConfig(model="gpt-4o", temperature=0.5, max_completion_tokens=800),
+    name="Simple Debate",
+    description="Basic multi-agent debate example",
+    llm_config=OpenAILLMConfig(model="gpt-4o-mini", temperature=0.5),
 )
 
+# Run the debate
 result = debate.execute(
-    problem="Should we invest heavily in AI research? Give a final Yes/No with reasons.",
-    num_agents=5,
-    num_rounds=5,
-    judge_mode="llm_judge",          # 可选："self_consistency"
+    problem="Should companies prioritize AI automation over human workers?",
+    num_agents=3,
+    num_rounds=3,
+    judge_mode="llm_judge",
     return_transcript=True,
 )
 
-print("Final:", result.get("final_answer"))
-print("Winner:", result.get("winner"))
+print(f"Final Answer: {result['final_answer']}")
+print(f"Winning Agent: Agent #{result['winner']}")
 ```
 
-更多可运行示例参见：
+### Self-Consistency Mode
 
-```12:27:examples/multi_agent_debate/multi_agent_debate.py
-def run_self_consistency_example():
-    llm_config = get_llm_config()
-    debate = MultiAgentDebateActionGraph(
-        name="MAD Minimal",
-        description="Minimal runnable example for multi-agent debate",
-        llm_config=llm_config,
-    )
-    fixed_problem = "How many labeled trees on 10 vertices ..."
-    result = debate.execute(
-        problem=fixed_problem,
-        num_agents=3,
-        num_rounds=5,
-        judge_mode="self_consistency",
-        return_transcript=True,
-    )
+For objective problems, you can use self-consistency mode where the final answer is determined by majority vote:
+
+```python
+result = debate.execute(
+    problem="What is the optimal number of layers for a neural network with 10,000 parameters?",
+    num_agents=5,
+    num_rounds=3,
+    judge_mode="self_consistency",  # No judge needed
+    return_transcript=True,
+)
+
+print(f"Consensus Answer: {result['final_answer']}")
 ```
 
-## 核心概念
+## Understanding the Parameters
 
-- 辩手（Debater）：承担论证与反驳的智能体，可设置不同 persona 与提示词。
-- 裁判（Judge）：可选的 LLM 裁判，基于论辩记录判定胜者与最终答案；或启用自一致（self-consistency）。
-- 回合（Rounds）：往返辩论的轮数。更多回合通常更稳健，但成本更高。
-- 抄本（Transcript）：历史论辩的可控可见性，影响论证的上下文与信息量。
+### Core Parameters
 
-## execute() 关键参数与默认值建议
+- **`problem`**: The question or task for debate
+- **`num_agents`**: Number of participating agents (recommended: 3-7)
+- **`num_rounds`**: Number of debate rounds (recommended: 2-6)
+- **`judge_mode`**: 
+  - `"llm_judge"`: Uses an AI judge to evaluate and decide
+  - `"self_consistency"`: Uses majority voting among final answers
+- **`return_transcript`**: Include full debate history in results
 
-- problem: 必填。题目或任务描述。
-- num_agents: 默认为 3。建议范围 3-7；过多易噪声与成本上升。
-- num_rounds: 默认为 3。建议 2-6；任务复杂度↑可适当提高。
-- judge_mode: "llm_judge" | "self_consistency"。开放问题推荐 "llm_judge"；客观题或可聚焦单一最终值时可用 "self_consistency"。
-- return_transcript: 是否返回回合记录，便于审计与可视化。
-- personas: 可选。自定义角色列表（名称/风格/目标）；若不提供将自动生成通用辩手。
-- transcript_mode: "prev" | "all"。仅上一轮或全部历史回合喂给辩手。"prev" 成本低，"all" 信息更全。
-- enable_pruning: 是否启用剪枝，减少不佳候选的干扰。默认 False；当 num_agents 或 num_rounds 较大时建议开启。
+### Advanced Parameters
 
-参数在 `examples/multi_agent_debate/README.md` 中也有简要说明，可配合本文选择合适的策略。
+- **`personas`**: Custom role definitions for agents
+- **`transcript_mode`**: 
+  - `"prev"`: Agents only see previous round (cost-effective)
+  - `"all"`: Agents see full debate history (more context)
+- **`enable_pruning`**: Remove low-quality candidates to reduce noise
 
-```96:112:examples/multi_agent_debate/README.md
-### execute() 方法参数
+## Customizing Agent Roles
 
-- `problem`: 辩论问题
-- `num_agents`: 参与辩论的智能体数量 (默认3)
-- `num_rounds`: 辩论轮次 (默认3)
-- `judge_mode`: 裁判模式 ("llm_judge" 或 "self_consistency")
-- `personas`: 自定义角色列表
-- `transcript_mode`: 记录访问模式 ("prev" 或 "all")
+### Using Default Personas
+
+The framework automatically generates diverse personas if none are specified:
+
+```python
+# Uses default personas automatically
+result = debate.execute(
+    problem="Evaluate the pros and cons of remote work",
+    num_agents=4,
+    num_rounds=3,
+)
 ```
 
-## 角色设计与模型映射（高级）
+### Creating Custom Personas
 
-通过为不同角色匹配更合适的模型与温度，可显著提升多样性与有效性。参考：
+Define specific roles for your debate:
 
-```86:131:examples/multi_agent_debate/multi_agent_debate_advanced.py
-def create_role_model_mapping():
-    roles = {
-        "Optimist": "always sees the bright side ...",
-        "Pessimist": "focuses on risks ...",
-        "Analyst": "data-driven, balanced analysis",
-        "Innovator": "thinks outside the box ...",
-        ...
+```python
+custom_personas = [
+    {
+        "name": "Productivity Expert",
+        "style": "Data-driven analysis of work efficiency",
+        "goal": "Focus on measurable productivity outcomes"
+    },
+    {
+        "name": "Employee Advocate", 
+        "style": "Human-centered perspective on work-life balance",
+        "goal": "Prioritize employee wellbeing and satisfaction"
+    },
+    {
+        "name": "Business Strategist",
+        "style": "Cost-benefit analysis and strategic planning",
+        "goal": "Evaluate business impact and competitive advantages"
+    },
+    {
+        "name": "Technology Specialist",
+        "style": "Technical feasibility and implementation focus",
+        "goal": "Assess technological requirements and challenges"
     }
-    models = {
-        "gpt4o_mini": OpenAILLMConfig(..., temperature=0.3),
-        "gpt4o": OpenAILLMConfig(..., temperature=0.2),
-        "llama": OpenRouterConfig(..., temperature=0.3),
-    }
-    role_model_mapping = {
-        "Innovator": ("gpt4o", 0.3),
-        "Analyst": ("llama", -0.1),
-        "Optimist": ("gpt4o_mini", 0.1),
-        ...
-    }
+]
+
+result = debate.execute(
+    problem="Should our company adopt a fully remote work policy?",
+    personas=custom_personas,
+    num_agents=4,
+    num_rounds=4,
+)
 ```
 
-要点：
+## Advanced Agent Configuration
 
-- 为“创造力”角色提高温度；为“分析/怀疑”角色降低温度。
-- 成本受模型选择影响，可用较弱模型承担“背景噪声”角色，以节流。
-- 将 `CustomizeAgent` 的 `parse_mode` 设为 `xml`，严格模板输出，利于结构化判决与可视化。
+### Custom Agent Creation
 
-示例（创建优化辩手）：
+For more control, create custom agents with specific prompts and configurations:
 
-```28:83:examples/multi_agent_debate/multi_agent_debate_advanced.py
-def create_optimized_agent(role_name, role_description, model_config, temperature_adjustment=0.0):
-    role_prompt = """
-You are debater #{agent_id} (role: {role}). This is round {round_index} of {total_rounds}.
-...
-<response>
-  <thought>...</thought>
-  <argument>...</argument>
-  <answer>...</answer>
-</response>
-"""
-    adjusted_config = model_config.model_copy()
-    adjusted_config.temperature = ...
-    return CustomizeAgent(..., prompt=role_prompt, llm_config=adjusted_config, parse_mode="xml")
+```python
+from evoagentx.agents.customize_agent import CustomizeAgent
+
+# Create specialized debaters
+optimist_agent = CustomizeAgent(
+    name="Optimist",
+    prompt="""You are an optimistic debater who focuses on positive outcomes and opportunities. 
+    Always highlight potential benefits and constructive solutions.""",
+    llm_config=OpenAILLMConfig(model="gpt-4o-mini", temperature=0.7)
+)
+
+pessimist_agent = CustomizeAgent(
+    name="Pessimist", 
+    prompt="""You are a cautious debater who identifies risks and potential problems.
+    Focus on potential downsides and implementation challenges.""",
+    llm_config=OpenAILLMConfig(model="gpt-4o-mini", temperature=0.3)
+)
+
+analyst_agent = CustomizeAgent(
+    name="Data Analyst",
+    prompt="""You are a data-driven analyst who evaluates evidence objectively.
+    Focus on facts, statistics, and measurable outcomes.""",
+    llm_config=OpenAILLMConfig(model="gpt-4o", temperature=0.1)
+)
+
+# Use custom agents
+debate = MultiAgentDebateActionGraph(
+    debater_agents=[optimist_agent, pessimist_agent, analyst_agent],
+    llm_config=OpenAILLMConfig(model="gpt-4o-mini")
+)
+
+result = debate.execute(
+    problem="Should we invest in renewable energy infrastructure?",
+    num_agents=3,
+    num_rounds=4,
+)
 ```
 
-## 分组模式（Group Graphs）
+### Role-Model Mapping
 
-当单个辩手本身需要由一个子团队（子图）组成时，启用分组图工作流：
+Match different roles to optimal models for better performance:
 
-```1:16:examples/multi_agent_debate/multi_agent_debate_group.py
-class GroupOfManyGraph(ActionGraph):
-    name: str = "GroupOfManyGraph"
-    description: str = "Group with variable number of inner debaters"
+```python
+from evoagentx.models import OpenAILLMConfig, OpenRouterConfig
+
+# Define different model configurations
+models = {
+    "creative": OpenAILLMConfig(model="gpt-4o", temperature=0.7),
+    "analytical": OpenAILLMConfig(model="gpt-4o", temperature=0.1), 
+    "general": OpenAILLMConfig(model="gpt-4o-mini", temperature=0.3),
+}
+
+# Map roles to models
+role_model_mapping = {
+    "Innovator": ("creative", 0.0),      # Use creative model
+    "Analyst": ("analytical", 0.0),     # Use analytical model  
+    "Generalist": ("general", 0.0),     # Use general model
+}
+
+debate = MultiAgentDebateActionGraph(
+    role_model_mapping=role_model_mapping,
+    models=models
+)
+```
+
+## Group Graphs for Complex Debates
+
+When each debater position should be occupied by a sub-team, use group graphs:
+
+```python
+from evoagentx.workflow.action_graph import ActionGraph
+
+class TeamGraph(ActionGraph):
+    name: str = "TeamGraph"
+    description: str = "A team of specialized agents"
     llm_config: OpenAILLMConfig
-    num_inner: int = 3
-```
+    team_size: int = 3
+    
+    def __init__(self, team_size: int = 3, **kwargs):
+        super().__init__(**kwargs)
+        self.team_size = team_size
+        # Add specialized team members
+        self.add_team_members()
 
-运行方式：
+# Create team graphs
+team1 = TeamGraph(team_size=3, llm_config=llm_config)
+team2 = TeamGraph(team_size=4, llm_config=llm_config)
 
-```116:136:examples/multi_agent_debate/multi_agent_debate_group.py
-group1 = GroupOfManyGraph(llm_config=llm_cfg, num_inner=3)
-group2 = GroupOfManyGraph(llm_config=llm_cfg, num_inner=4)
-...
+# Enable group mode
 debate = MultiAgentDebateActionGraph(
     group_graphs_enabled=True,
-    group_graphs=[group1, group2],
-    llm_config=llm_cfg,
+    group_graphs=[team1, team2],
+    llm_config=llm_config
 )
+
 result = debate.execute(
-    problem="设计一个可扩展的多模态RAG系统评测方案...",
-    num_agents=2,
+    problem="Design a comprehensive AI ethics framework",
+    num_agents=2,  # Two teams
     num_rounds=3,
+)
+```
+
+## Cost Optimization Strategies
+
+### Transcript Management
+
+Control costs by managing how much context agents see:
+
+```python
+# Cost-effective: Only previous round visible
+result = debate.execute(
+    problem="Complex multi-faceted problem...",
+    transcript_mode="prev",  # Lower cost
+    num_rounds=5,
+)
+
+# Full context: All history visible  
+result = debate.execute(
+    problem="Complex multi-faceted problem...",
+    transcript_mode="all",  # Higher cost, more context
+    num_rounds=3,  # Fewer rounds to balance cost
+)
+```
+
+### Pruning for Efficiency
+
+Remove low-quality candidates to reduce noise and improve efficiency:
+
+```python
+result = debate.execute(
+    problem="Evaluate multiple solution approaches",
+    num_agents=7,  # Large number of agents
+    num_rounds=4,
+    enable_pruning=True,  # Remove poor candidates
+    transcript_mode="prev",  # Combine with cost control
+)
+```
+
+### Model Selection Strategy
+
+Use different models for different roles to balance cost and quality:
+
+```python
+# Expensive model for critical roles
+judge_agent = CustomizeAgent(
+    name="Judge",
+    prompt="You are an impartial judge...",
+    llm_config=OpenAILLMConfig(model="gpt-4o", temperature=0.1)
+)
+
+# Cheaper models for general debaters
+debater_agents = [
+    CustomizeAgent(
+        name="General Debater",
+        llm_config=OpenAILLMConfig(model="gpt-4o-mini", temperature=0.3)
+    )
+]
+
+debate = MultiAgentDebateActionGraph(
+    debater_agents=debater_agents,
+    judge_agent=judge_agent
+)
+```
+
+## Configuration Management
+
+### Saving and Loading Configurations
+
+Save your debate setups for reuse:
+
+```python
+# Save configuration
+debate.save_module("my_debate_config.json")
+
+# Load configuration
+loaded_debate = MultiAgentDebateActionGraph.load_module("my_debate_config.json")
+
+# Create from dictionary
+config_dict = debate.get_config()
+new_debate = MultiAgentDebateActionGraph.from_dict(config_dict)
+```
+
+### Environment Setup
+
+Ensure you have the required API keys:
+
+```bash
+export OPENAI_API_KEY="your_openai_key"
+export OPENROUTER_API_KEY="your_openrouter_key"  # Optional
+```
+
+## Real-World Examples
+
+### Business Decision Making
+
+```python
+business_personas = [
+    {
+        "name": "Financial Analyst",
+        "style": "ROI and cost-benefit analysis",
+        "goal": "Focus on financial implications and returns"
+    },
+    {
+        "name": "Operations Manager", 
+        "style": "Implementation feasibility and logistics",
+        "goal": "Evaluate operational requirements and challenges"
+    },
+    {
+        "name": "Customer Advocate",
+        "style": "Customer impact and satisfaction",
+        "goal": "Prioritize customer experience and needs"
+    }
+]
+
+result = debate.execute(
+    problem="Should we implement a new customer service chatbot system?",
+    personas=business_personas,
+    num_agents=3,
+    num_rounds=4,
     judge_mode="llm_judge",
 )
 ```
 
-建议：
+### Technical Architecture Decisions
 
-- 用子图聚合多视角“子辩手”，输出单一合成观点与可选答案。
-- 将子图的输出严格模板化（XML/JSON），便于主图整合。
-- 当 `num_inner` 较大时，结合 `enable_pruning` 与较低 `transcript_mode` 降本增效。
+```python
+tech_personas = [
+    {
+        "name": "Scalability Expert",
+        "style": "Performance and scalability focus",
+        "goal": "Ensure system can handle growth"
+    },
+    {
+        "name": "Security Specialist",
+        "style": "Security and compliance focus", 
+        "goal": "Identify and address security concerns"
+    },
+    {
+        "name": "Developer Experience",
+        "style": "Developer productivity and maintainability",
+        "goal": "Focus on ease of development and maintenance"
+    }
+]
 
-## 抄本策略与成本控制
-
-- transcript_mode = "prev"：仅喂入上一轮摘要，适合多轮长辩；可配合回合摘要节点降低 token 压力。
-- transcript_mode = "all"：信息最全，但成本最高；仅在轮次较少、问题复杂时使用。
-- 可选启用“简述再喂”（在辩手前插一个摘要 Agent），进一步压缩上下文。
-
-## 剪枝与搜索深度
-
-- enable_pruning: True 时，在每轮或整场结束时对候选进行裁剪，减少低质量分支。
-- 建议与自一致结合：多样生成 → 剪枝 → 复核。
-
-## 配置管理：保存、加载与复用
-
-```78:94:examples/multi_agent_debate/README.md
-loaded_debate = MultiAgentDebateActionGraph.load_module("my_debate_config.json")
-new_debate = MultiAgentDebateActionGraph.from_dict(config_dict)
-config = debate.get_config()
-```
-
-完整演示：
-
-```52:86:examples/multi_agent_debate/config_methods_example.py
-graph = MultiAgentDebateActionGraph(
-    name="Demo Debate",
-    description="演示用的辩论图",
-    debater_agents=agents,
+result = debate.execute(
+    problem="Choose between microservices vs monolithic architecture for our new platform",
+    personas=tech_personas,
+    num_agents=3,
+    num_rounds=3,
+    judge_mode="self_consistency",
 )
-config = graph.get_config()
-save_path = graph.save_module("demo_debate_config.json")
-new_graph_from_dict = MultiAgentDebateActionGraph.from_dict(config)
-new_graph_from_file = MultiAgentDebateActionGraph.load_module("demo_debate_config.json")
 ```
 
-## 实战调优清单（经验值）
+## Best Practices
 
-- 明确 judge_mode：客观题→自一致；开放题→LLM 裁判。
-- 角色多样但不过量：3-5 个“互补视角”足够；多则噪声↑。
-- 控温：创造性↑（0.6-0.9），分析性↓（0.1-0.3）。
-- 抄本裁剪：长辩优先“prev”，必要时加摘要节点。
-- 结构化输出：统一 XML/JSON 模板，降解析难度，提高裁判稳定性。
-- 成本优先级：将“噪声角色”绑定低价模型，关键角色用强模型。
+### Problem Design
+- Make problems specific and actionable
+- Include clear success criteria
+- Avoid overly subjective topics for self-consistency mode
 
-## 参考与入口
+### Agent Configuration  
+- Balance diversity with coherence
+- Match model capabilities to role requirements
+- Use appropriate temperature settings (0.1-0.3 for analysis, 0.6-0.9 for creativity)
 
-- 示例目录：`examples/multi_agent_debate/`
-- 基础示例：`examples/multi_agent_debate/multi_agent_debate.py`
-- 高级映射：`examples/multi_agent_debate/multi_agent_debate_advanced.py`
-- 分组模式：`examples/multi_agent_debate/multi_agent_debate_group.py`
-- 配置方法：`examples/multi_agent_debate/config_methods_example.py`
+### Performance Tuning
+- Start with 2-3 rounds for simple problems
+- Increase rounds for complex, multi-faceted issues
+- Monitor convergence patterns
+- Use pruning for large agent counts
 
+### Quality Assurance
+- Enable transcript logging for analysis
+- Use structured outputs for reliable parsing
+- Implement validation for critical decisions
 
+## Troubleshooting
+
+### Common Issues
+
+**Low Quality Debates:**
+- Increase agent diversity
+- Adjust temperature settings
+- Improve prompt quality
+- Add more rounds
+
+**High Costs:**
+- Use cheaper models for non-critical roles
+- Enable pruning
+- Reduce transcript visibility
+- Limit number of rounds
+
+**Inconsistent Results:**
+- Use structured output formats
+- Increase round count
+- Improve judge prompts
+- Enable self-consistency mode for objective problems
+
+## Next Steps
+
+1. **Run Basic Examples**: Start with the examples in `examples/multi_agent_debate/`
+2. **Customize Agents**: Create specialized debaters for your domain
+3. **Experiment with Configurations**: Try different model combinations and parameters
+4. **Integrate with Workflows**: Use MAD as part of larger EvoAgentX workflows
+5. **Scale Up**: Explore group graphs for complex multi-team scenarios
+
+## Reference Examples
+
+- **Basic Usage**: `examples/multi_agent_debate/multi_agent_debate.py`
+- **Advanced Configurations**: `examples/multi_agent_debate/multi_agent_debate_advanced.py`  
+- **Group Graphs**: `examples/multi_agent_debate/multi_agent_debate_group.py`
+- **Configuration Management**: `examples/multi_agent_debate/config_methods_example.py`
