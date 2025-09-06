@@ -430,7 +430,7 @@ In this demo, we showcase the workflow generation and execution capabilities of 
       <strong>Application&nbsp;1:</strong><br>Job Recommendation
     </td>
     <td align="center">
-      <img src="./assets/demo_result_2.jpeg" width="400"><br>
+      <img src="./assets/demo_result_2.png" width="400"><br>
       <strong>Application&nbsp;2:</strong><br>Stock Visual Analysis
     </td>
   </tr>
