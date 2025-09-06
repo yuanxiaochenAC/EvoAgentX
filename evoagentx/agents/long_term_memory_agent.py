@@ -481,8 +481,8 @@ class MemoryAgent(Agent):
                     context_texts.append(msg.content)
             context_str = "\n".join(context_texts)
 
-            if context_str:
-                print(f"📖 Retrieved context from memory:\n{context_str}\n")
+            # if context_str:
+            #     print(f"📖 Retrieved context from memory:\n{context_str}\n")
 
             # 2️⃣ 将历史上下文拼接到用户输入中，调用 async_chat
             full_prompt = f"Context:\n{context_str}\n\nUser: {user_prompt}" if context_str else user_prompt

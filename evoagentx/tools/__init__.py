@@ -10,6 +10,7 @@ from .mcp import MCPToolkit
 from .request import RequestToolkit
 from .request_arxiv import ArxivToolkit
 from .browser_use import BrowserUseToolkit
+from .google_maps_tool import GoogleMapsToolkit
 from .database_mongodb import MongoDBToolkit
 from .database_postgresql import PostgreSQLToolkit
 from .storage_handler import FileStorageHandler, LocalStorageHandler, SupabaseStorageHandler
@@ -22,7 +23,6 @@ from .rss_feed import RSSToolkit
 from .file_tool import FileToolkit
 from .search_serperapi import SerperAPIToolkit
 from .search_serpapi import SerpAPIToolkit
-
 
 __all__ = [
     "Tool", 
@@ -38,6 +38,7 @@ __all__ = [
     "RequestToolkit",
     "ArxivToolkit",
     "BrowserUseToolkit",
+    "GoogleMapsToolkit",
     "MongoDBToolkit",
     "PostgreSQLToolkit",
     "FileStorageHandler",
