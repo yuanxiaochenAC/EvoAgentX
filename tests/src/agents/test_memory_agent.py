@@ -1,6 +1,7 @@
 import asyncio
 import nest_asyncio
 import os
+import pytest
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.storages.base import StorageHandler
 from evoagentx.storages.storages_config import VectorStoreConfig, DBConfig, StoreConfig
@@ -9,6 +10,7 @@ from evoagentx.core.message import MessageType
 from evoagentx.agents.long_term_memory_agent import MemoryAgent
 import uuid
 
+@pytest.mark.asyncio
 async def test_memory_agent_in_memory_corpus():
     # 初始化 LLM
     llm = OpenAILLM(

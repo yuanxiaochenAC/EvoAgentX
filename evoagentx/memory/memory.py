@@ -8,7 +8,6 @@ from ..core.module_utils import generate_id, get_timestamp
 from ..core.message import Message
 from ..utils.utils import safe_remove
 
-
 class BaseMemory(BaseModule):
     """Base class for memory implementations in the EvoAgentX framework.
     
@@ -206,10 +205,12 @@ class ShortTermMemory(BaseModule):
     memory_id: str = Field(default_factory=generate_id)
     timestamp: str = Field(default_factory=get_timestamp)
 
-    def __init__(self, max_size: int = 5, **kwargs):
-        super().__init__(**kwargs)
-        self.max_size = max_size
-        self.buffer = deque(maxlen=max_size)  # Circular buffer
+    def model_post_init(self, __context=None):
+        """
+        Pydantic V2 hook after model initialization.
+        Set buffer maxlen according to max_size.
+        """
+        self.buffer = deque(self.buffer, maxlen=self.max_size)
 
     @property
     def size(self) -> int:

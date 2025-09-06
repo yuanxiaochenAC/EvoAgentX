@@ -16,8 +16,7 @@ from evoagentx.core.message import Message, MessageType
 from evoagentx.memory.memory_manager import MemoryManager
 from evoagentx.memory.long_term_memory import LongTermMemory
 from evoagentx.actions.action import Action, ActionInput, ActionOutput
-from evoagentx.storages.storages_config import VectorStoreConfig, DBConfig, StoreConfig
-from evoagentx.rag.rag_config import ReaderConfig, ChunkerConfig, IndexConfig, RetrievalConfig, EmbeddingConfig, RAGConfig
+from evoagentx.rag.rag_config import RAGConfig
 
 
 class MemoryActionInput(ActionInput):

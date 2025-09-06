@@ -1,6 +1,7 @@
 import asyncio
 import os
 import nest_asyncio
+import pytest
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.storages.base import StorageHandler
 from evoagentx.storages.storages_config import VectorStoreConfig, DBConfig, StoreConfig
@@ -9,6 +10,7 @@ from evoagentx.rag.rag_config import (
 )
 from evoagentx.agents.long_term_memory_agent import MemoryAgent
 
+@pytest.mark.asyncio
 async def main():
     # 初始化 LLM
     llm_config = OpenAILLMConfig(

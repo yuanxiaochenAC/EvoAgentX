@@ -1,6 +1,7 @@
 import asyncio  
 import os
 import nest_asyncio
+import pytest
 from evoagentx.core.message import Message, MessageType
 from evoagentx.agents.agent import Agent
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
@@ -31,6 +32,7 @@ class ShortTermMemoryTestAgent(Agent):
         # ✅ 注意这里用 DummyAction()，不再传 action_name
         self.add_action(DummyAction())
 
+@pytest.mark.asyncio
 async def test_short_term_memory_via_agent():
     # 初始化 LLM（虽然 DummyAction 不用 LLM，但 Agent 要求有）
     config = OpenAILLMConfig(
