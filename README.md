@@ -427,11 +427,11 @@ In this demo, we showcase the workflow generation and execution capabilities of 
   <tr>
     <td align="center">
       <img src="./assets/demo_result_1.png" width="400"><br>
-      <strong>Application&nbsp;1:</strong><br>Job Recommendation
+      <strong>Application&nbsp;1:</strong><br>Stock Recommendation
     </td>
     <td align="center">
       <img src="./assets/demo_result_2.png" width="400"><br>
-      <strong>Application&nbsp;2:</strong><br>Stock Visual Analysis
+      <strong>Application&nbsp;2:</strong><br>Arxiv Daily Paper Recommendation
     </td>
   </tr>
 </table>
