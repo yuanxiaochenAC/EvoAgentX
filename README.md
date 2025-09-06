@@ -127,7 +127,7 @@ Here’s how:
   - [Configure and Use the LLM](#configure-and-use-the-llm)
 - [Automatic WorkFlow Generation](#automatic-workflow-generation)
 - [EvoAgentX Built-in Tools Summary](#-evoagentx-built-in-tools-summary)
-- [Tool-Enabled Workflows Generation:](#tool-enabled-workflows-generation)
+- [Tool-Enabled Workflows Generation](#tool-enabled-workflows-generation)
 - [Demo Video](#demo-video)
   - [✨ Final Results](#-final-results)
 - [Evolution Algorithms](#evolution-algorithms)
@@ -342,6 +342,8 @@ Feel free to propose or submit new tools via [pull requests](https://github.com/
 
 </details>
 
+**EvoAgentX also supports MCP tools.**  
+Check out our [tutorial](https://github.com/EvoAgentX/EvoAgentX/blob/main/docs/tutorial/mcp.md) to learn how to configure your preferred MCP tools with EvoAgentX.
 
 ## Tool-Enabled Workflows Generation:
 
