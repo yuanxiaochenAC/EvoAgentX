@@ -455,7 +455,6 @@ We have integrated some effective agent/workflow evolution algorithms into EvoAg
 | **TextGrad**  | Gradient-based optimization for LLM prompts and reasoning chains, enabling differentiable planning. | [📄 Nature (2025)](https://www.nature.com/articles/s41586-025-08661-4) |
 | **MIPRO**     | Model-agnostic Iterative Prompt Optimization using black-box evaluations and adaptive reranking. | [📄 arXiv:2406.11695](https://arxiv.org/abs/2406.11695) |
 | **AFlow**     | Reinforcement learning-inspired agent workflow evolution using Monte Carlo Tree Search. | [📄 arXiv:2410.10762](https://arxiv.org/abs/2410.10762) |
-| **EvoPrompt** | Evolutionary algorithm for prompt optimization with mutation, crossover, and selection operators. | [📄 arXiv:2309.08532](https://arxiv.org/abs/2309.08532) |
 
 **Please suggest the latest self-evolving algorithm by submitting an issue or a Pull Request.**
 
