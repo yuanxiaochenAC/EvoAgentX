@@ -135,6 +135,8 @@ Categories include:
   
 - 🌐 **Browser Automation (low-level & LLM-driven)**
 
+Check [here](https://github.com/EvoAgentX/EvoAgentX/blob/main/docs/tutorial/tools.md) for the full list of available tools.
+
 We actively welcome contributions from the community!  
 Feel free to propose or submit new tools via [pull requests](https://github.com/EvoAgentX/EvoAgentX/pulls) or [discussions](https://github.com/EvoAgentX/EvoAgentX/discussions).
 
