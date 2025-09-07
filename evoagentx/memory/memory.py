@@ -200,7 +200,8 @@ class ShortTermMemory(BaseModule):
         timestamp: Creation timestamp.
     """
 
-    buffer: deque = Field(default_factory=deque, exclude=True)
+    # ✅ 默认空 deque，确保不会出现 null
+    buffer: deque = Field(default_factory=deque)
     max_size: PositiveInt = Field(default=5, description="Maximum number of messages to keep in short-term memory")
     memory_id: str = Field(default_factory=generate_id)
     timestamp: str = Field(default_factory=get_timestamp)
@@ -210,7 +211,11 @@ class ShortTermMemory(BaseModule):
         Pydantic V2 hook after model initialization.
         Set buffer maxlen according to max_size.
         """
-        self.buffer = deque(self.buffer, maxlen=self.max_size)
+        if not isinstance(self.buffer, deque):
+            # ✅ 兼容从 list / None 反序列化的情况
+            self.buffer = deque(self.buffer or [], maxlen=self.max_size)
+        else:
+            self.buffer = deque(self.buffer, maxlen=self.max_size)
 
     @property
     def size(self) -> int:
