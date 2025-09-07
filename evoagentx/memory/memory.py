@@ -194,14 +194,13 @@ class ShortTermMemory(BaseModule):
     and does not persist to storage_handler or vector DB.
 
     Attributes:
-        buffer: A deque holding Message objects, capped at max_size.
+        buffer: A list holding Message objects initially, converted to deque for sliding window.
         max_size: Maximum number of messages to retain.
         memory_id: Unique identifier for this memory instance.
         timestamp: Creation timestamp.
     """
 
-    # ✅ 默认空 deque，确保不会出现 null
-    buffer: deque = Field(default_factory=deque)
+    buffer: List[Message] = Field(default_factory=list, exclude=True)
     max_size: PositiveInt = Field(default=5, description="Maximum number of messages to keep in short-term memory")
     memory_id: str = Field(default_factory=generate_id)
     timestamp: str = Field(default_factory=get_timestamp)
@@ -209,13 +208,9 @@ class ShortTermMemory(BaseModule):
     def model_post_init(self, __context=None):
         """
         Pydantic V2 hook after model initialization.
-        Set buffer maxlen according to max_size.
+        Convert list buffer to deque with maxlen = max_size.
         """
-        if not isinstance(self.buffer, deque):
-            # ✅ 兼容从 list / None 反序列化的情况
-            self.buffer = deque(self.buffer or [], maxlen=self.max_size)
-        else:
-            self.buffer = deque(self.buffer, maxlen=self.max_size)
+        self.buffer = deque(self.buffer, maxlen=self.max_size)
 
     @property
     def size(self) -> int:
@@ -242,10 +237,10 @@ class ShortTermMemory(BaseModule):
     def get(self, n: Optional[int] = None) -> List[Message]:
         """
         Retrieve the most recent n messages (default: all).
-        
+
         Args:
             n: Number of messages to return. If None, return all.
-        
+
         Returns:
             List of Message objects, oldest → newest.
         """
