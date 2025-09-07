@@ -54,6 +54,29 @@ Whether you're an AI researcher, workflow engineer, or startup team, EvoAgentX h
 Here’s how:
 
 
+
+- 🔍 **Struggling to find the perfect prompt?**
+  
+  EvoAgentX can **automatically explore and evolve prompts** using state-of-the-art self-improving algorithms, all guided by your dataset and goal.
+
+- 🧑‍💻 **Want to supervise the agent and stay in control?**
+  
+  Insert yourself into the loop! EvoAgentX supports **Human-in-the-Loop (HITL)** checkpoints, so you can step in, review, or guide the workflow as needed — and step out again.
+
+- 🧠 **Frustrated by agents that forget everything?**
+  
+  EvoAgentX provides **both short-term and long-term memory modules**, enabling your agents to remember, reflect, and improve across interactions.
+
+- ⚙️ **Lost in manual workflow orchestration?**
+  
+  Just describe your goal — EvoAgentX will **automatically assemble a multi-agent workflow** that matches your intent.
+
+- 🌍 **Want your agents to actually *do* things?**
+  
+  With a rich library of built-in tools (search, code, browser, file I/O, APIs, and more), EvoAgentX empowers agents to **interact with the real world**, not just talk about it.
+
+
+
 ## 🔥 EAX Latest News
 
 - **[Aug 2025]** 🚀 **New Survey Released!**  
@@ -70,6 +93,10 @@ Here’s how:
 - **[May 2025]** 🚀 **Official Launch!**  
   **EvoAgentX** is now live! Start building self-evolving AI workflows from day one.  
   🔧 [Get Started on GitHub](https://github.com/EvoAgentX/EvoAgentX)
+
+
+
+
 
 ## 🎥 Demo Video
 
