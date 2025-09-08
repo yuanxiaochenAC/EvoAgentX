@@ -2,6 +2,7 @@ from collections import defaultdict
 from pydantic import Field, PositiveInt
 from typing import Union, Optional, List, Dict
 from collections import deque
+from pydantic import Field, PositiveInt, field_validator
 
 from ..core.module import BaseModule
 from ..core.module_utils import generate_id, get_timestamp
@@ -205,6 +206,14 @@ class ShortTermMemory(BaseModule):
     max_size: PositiveInt = Field(default=5, description="Maximum number of messages to keep in short-term memory")
     memory_id: str = Field(default_factory=generate_id)
     timestamp: str = Field(default_factory=get_timestamp)
+
+    @field_validator("buffer", mode="before")
+    @classmethod
+    def ensure_list(cls, v):
+        """保证 buffer 永远是 list，即使 JSON 里是 null。"""
+        if v is None:
+            return []
+        return v
 
     # 初始化时转成 deque
     def model_post_init(self, __context=None):
