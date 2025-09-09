@@ -330,14 +330,14 @@ def main():
     """Main function to run all image tool examples"""
     print("===== IMAGE TOOL EXAMPLES =====")
     
-    # Run image analysis example
     # run_image_analysis_example()
     
     # run_openai_image_toolkit_pipeline()
+   
     # run_flux_image_toolkit_pipeline()
-    run_openrouter_edit_pipeline()
+   
+    # run_openrouter_edit_pipeline()
     
-    # Run Flux image generation example
     # run_flux_image_generation_example()
     
     print("\n===== ALL IMAGE TOOL EXAMPLES COMPLETED =====")
