@@ -85,7 +85,9 @@ class OpenAIImageGenerationV2(Tool):
             response = client.images.generate(**api_params)
 
             # Save results (b64 or url)
-            import os, base64, time
+            import os
+            import base64
+            import time
             os.makedirs(self.save_path, exist_ok=True)
             results = []
             for i, image_data in enumerate(response.data):

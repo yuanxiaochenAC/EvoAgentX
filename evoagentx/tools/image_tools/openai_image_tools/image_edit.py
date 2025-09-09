@@ -116,7 +116,9 @@ class OpenAIGPTImage1EditV2(Tool):
                         pass
 
             # Save base64 images
-            import os, base64, time
+            import os
+            import base64
+            import time
             os.makedirs(self.save_path, exist_ok=True)
             results = []
             for i, img in enumerate(response.data):

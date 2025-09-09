@@ -1,4 +1,3 @@
-from typing import Optional
 from ...tool import Toolkit
 from .image_generation import OpenAIImageGenerationV2
 from .image_edit import OpenAIGPTImage1EditV2
