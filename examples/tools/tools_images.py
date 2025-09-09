@@ -282,31 +282,6 @@ def run_flux_image_toolkit_pipeline():
             print(f"❌ Failed to analyze: {e}")
 
 
-def run_openrouter_image_generation_demo():
-    """OpenRouter: generate image with google/gemini-2.5-flash-image-preview."""
-    print("\n===== OPENROUTER IMAGE GENERATION (T2I) =====\n")
-
-    or_key = os.getenv("OPENROUTER_API_KEY")
-    if not or_key:
-        print("❌ OPENROUTER_API_KEY not found")
-        return
-
-    ortk = OpenRouterImageToolkit(name="DemoOpenRouterImageToolkit", api_key=or_key)
-    gen = ortk.get_tool("openrouter_image_generation_edit")
-
-    prompt = "Generate a beautiful sunset over mountains"
-    print(f"Generating via OpenRouter: {prompt}")
-    res = gen(
-        prompt=prompt,
-        image_urls=[],
-        model="google/gemini-2.5-flash-image-preview",
-        save_path="./openrouter_images",
-        output_basename="sunset"
-    )
-
-    print(res)
-
-
 def run_openrouter_edit_pipeline():
     """OpenRouter: generate → edit (with generated image as input) → save."""
     print("\n===== OPENROUTER EDIT PIPELINE (GEN → EDIT) =====\n")
@@ -360,7 +335,6 @@ def main():
     
     # run_openai_image_toolkit_pipeline()
     # run_flux_image_toolkit_pipeline()
-    run_openrouter_image_generation_demo()
     run_openrouter_edit_pipeline()
     
     # Run Flux image generation example
