@@ -128,7 +128,6 @@ class MemoryAgent(Agent):
     memory_manager: Optional[MemoryManager] = Field(default=None, description="Manager for long-term memory operations")
     inputs: List[Dict] = Field(default_factory=list, description="Input specifications for the memory action")
     outputs: List[Dict] = Field(default_factory=list, description="Output specifications for the memory action")
-    # conversation_scope: str = Field(default="session", description="Scope of conversation memory (e.g., session, user, global)")
 
     def __init__(
         self,
@@ -141,16 +140,12 @@ class MemoryAgent(Agent):
         rag_config: Optional[RAGConfig] = None,
         conversation_id: Optional[str] = None,
         system_prompt: Optional[str] = None,
-        # conversation_scope: str = "session",   # <<< 新增参数
         prompt: str = "Based on the following context and user prompt, provide a relevant response:\n\nContext: {context}\n\nUser Prompt: {user_prompt}",
         **kwargs
     ):
         # Define inputs and outputs inspired by CustomizeAgent
         inputs = inputs or []
         outputs = outputs or []
-
-        # # ✅ 用 object.__setattr__ 来安全赋值，避免 Pydantic 报错
-        # object.__setattr__(self, "conversation_scope", conversation_scope)
 
         # Initialize base Agent with provided parameters
         super().__init__(
@@ -190,46 +185,6 @@ class MemoryAgent(Agent):
             outputs_format=MemoryActionOutput
         )
         self.add_action(memory_action)
-
-    # def _prepare_execution(
-    #     self,
-    #     action_name: str,
-    #     msgs: Optional[List["Message"]] = None,
-    #     action_input_data: Optional[dict] = None,
-    #     **kwargs
-    # ) -> Tuple["Action", dict]:
-    #     """
-    #     Prepare action execution with conversation_scope handling.
-
-    #     - session: 每次对话独立 (uuid)
-    #     - user: 使用 user_id (metadata_filters["user_id"])
-    #     - global: 全局共享 ("global_corpus")
-    #     """
-    #     # 调用父类逻辑：更新短期记忆 & 拿到 action
-    #     action, action_input_data = super()._prepare_execution(
-    #         action_name=action_name,
-    #         msgs=msgs,
-    #         action_input_data=action_input_data,
-    #         **kwargs
-    #     )
-    #     # scope 处理
-    #     scope = getattr(self, "conversation_scope", "session")
-    #     metadata_filters = action_input_data.get("metadata_filters", {})
-    #     if scope == "session":
-    #         conversation_id = action_input_data.get("conversation_id") or str(uuid4())
-    #     elif scope == "user":
-    #         user_id = metadata_filters.get("user_id") or kwargs.get("user_id")
-    #         if not user_id:
-    #             raise ValueError("User scope requires 'user_id' in metadata_filters or kwargs")
-    #         conversation_id = f"user_{user_id}"
-    #     elif scope == "global":
-    #         conversation_id = "global_corpus"
-    #     else:
-    #         raise ValueError(f"Invalid conversation_scope: {scope}")
-    #     # 回写 conversation_id，保证传递给 MemoryAction
-    #     action_input_data["conversation_id"] = conversation_id
-
-    #     return action, action_input_data
 
     def _create_output_message(
         self,
