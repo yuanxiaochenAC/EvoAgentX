@@ -12,7 +12,7 @@ from evoagentx.agents.long_term_memory_agent import MemoryAgent
 
 @pytest.mark.asyncio
 async def main():
-    # 初始化 LLM
+    # Initialize the LLM
     llm_config = OpenAILLMConfig(
         model="gpt-4o-mini",
         openai_key=os.environ["OPENAI_API_KEY"],
@@ -20,7 +20,7 @@ async def main():
     )
     llm = OpenAILLM(config=llm_config)
 
-    # 存储和 RAG 配置
+    # Storage and RAG configuration
     store_config = StoreConfig(
         dbConfig=DBConfig(db_name="sqlite", path="./debug/data/memory_interactive.sql"),
         vectorConfig=VectorStoreConfig(vector_name="faiss", dimensions=768, index_type="flat_l2"),
@@ -42,7 +42,7 @@ async def main():
         retrieval=RetrievalConfig(retrivel_type="vector", postprocessor_type="simple", top_k=3, similarity_cutoff=0.3)
     )
 
-    # 初始化 MemoryAgent
+    # Initialize MemoryAgent
     agent = MemoryAgent(
         llm=llm,
         rag_config=rag_config,
@@ -51,7 +51,7 @@ async def main():
         description="Interactive memory chat test",
     )
 
-    # 启动 interactive_chat
+    # Start interactive_chat
     await agent.interactive_chat(top_k=3)
 
 if __name__ == "__main__":

@@ -200,7 +200,6 @@ class ShortTermMemory(BaseModule):
         timestamp: Creation timestamp.
     """
 
-    # 用 List 做 Pydantic 校验，避免 ValidationError
     buffer: List[Message] = Field(default_factory=list, exclude=True)
     max_size: PositiveInt = Field(default=5, description="Maximum number of messages to keep in short-term memory")
     memory_id: str = Field(default_factory=generate_id)
@@ -209,12 +208,12 @@ class ShortTermMemory(BaseModule):
     @field_validator("buffer", mode="before")
     @classmethod
     def ensure_list(cls, v):
-        """保证 buffer 永远是 list，即使 JSON 里是 null。"""
+        """Ensure that the buffer is always a list, even if it is null in the JSON."""
         if v is None:
             return []
         return v
 
-    # 初始化时转成 deque
+    # Convert to deque during initialization
     def model_post_init(self, __context=None):
         """
         Pydantic V2 hook after model initialization.

@@ -195,7 +195,6 @@ class MemoryAgent(Agent):
         return_msg_type: MessageType = MessageType.RESPONSE,
         **kwargs
     ) -> Message:
-        # 调用父类逻辑，先生成标准 Message
         msg = super()._create_output_message(
             action_output=action_output,
             action_name=action_name,
@@ -205,7 +204,6 @@ class MemoryAgent(Agent):
             **kwargs
         )
 
-        # 自动保存用户输入
         if action_input_data and "user_prompt" in action_input_data:
             user_msg = Message(
                 content=action_input_data["user_prompt"],
@@ -214,7 +212,6 @@ class MemoryAgent(Agent):
             )
             asyncio.create_task(self.memory_manager.handle_memory(action="add", data=user_msg))
 
-        # 自动保存模型输出
         response_msg = Message(
             content=action_output.response if hasattr(action_output, "response") else str(action_output),
             msg_type=MessageType.RESPONSE,
@@ -330,7 +327,6 @@ class MemoryAgent(Agent):
             return message, action_input_data
         return message
 
-    # 便于业务方发现，这里给出两个便利入口
     def chat(
         self,
         user_prompt: str,
@@ -338,13 +334,11 @@ class MemoryAgent(Agent):
         conversation_id: Optional[str] = None,
         top_k: Optional[int] = None,
         metadata_filters: Optional[dict] = None,
-        return_message: bool = True,   # True 返回 Message；False 返回纯文本 content
+        return_message: bool = True,
         **kwargs
     ):
-        """同步：最自然的带记忆对话入口"""
         action_input_data = {
             "user_prompt": user_prompt,
-            # 如果业务传了 conversation_id 就用传入值；否则走默认策略
             "conversation_id": conversation_id or self._default_conversation_id(),
             "top_k": top_k if top_k is not None else 3,
             "metadata_filters": metadata_filters or {},
@@ -368,7 +362,6 @@ class MemoryAgent(Agent):
         return_message: bool = True,
         **kwargs
     ):
-        """异步：适合异步 Web 服务"""
         action_input_data = {
             "user_prompt": user_prompt,
             "conversation_id": conversation_id or self._default_conversation_id(),
@@ -384,17 +377,15 @@ class MemoryAgent(Agent):
         return msg if return_message else (getattr(msg, "content", None) or str(msg))
 
 
-    # 默认会话ID策略：与 conversation_scope 对齐
     def _default_conversation_id(self) -> str:
         """
-        session 作用域：默认返回一个新的 uuid4()（新会话）
-        user/global 作用域：复用 LongTermMemory.default_corpus_id（稳定命名空间）
-        备注：最终 id 仍由 MemoryAgent._prepare_execution() 统一管控（会根据 scope 覆盖）
+        Session scope: By default, a new uuid4() is returned (new session).
+        User/global scope: Reuse LongTermMemory.default_corpus_id (stable namespace).
+        Note: The final ID is still uniformly managed by MemoryAgent._prepare_execution() (which will override based on the scope).
         """
         scope = getattr(self, "conversation_scope", "session")
         if scope == "session":
             return str(uuid4())
-        # user/global：尽量复用初始化时设置的默认 corpus
         return getattr(getattr(self, "long_term_memory", None), "default_corpus_id", None) or "global_corpus"
     
     async def interactive_chat(
@@ -404,23 +395,23 @@ class MemoryAgent(Agent):
         metadata_filters: Optional[dict] = None
     ):
         """
-        交互式聊天，每轮输入会：
-        1. 检索记忆
-        2. 根据历史上下文生成回答
-        3. 将输入/输出写入长期记忆并刷新索引
+        In interactive chat, each round of input will:
+        1. Retrieve from memory
+        2. Generate a response based on historical context
+        3. Write the input/output to long-term memory and refresh the index 
         """
         conversation_id = conversation_id or self._default_conversation_id()
         metadata_filters = metadata_filters or {}
 
-        print("💬 MemoryAgent 已启动 (输入 'exit' 退出)\n")
+        print("💬 MemoryAgent has been started (type 'exit' to quit)\n")
 
         while True:
             user_prompt = input("You: ").strip()
             if user_prompt.lower() in ["exit", "quit"]:
-                print("🔚 会话结束")
+                print("🔚 Conversation ended")
                 break
 
-            # 1️⃣ 检索历史上下文
+            # Retrieve historical context
             retrieved_memories = await self.memory_manager.handle_memory(
                 action="search",
                 user_prompt=user_prompt,
@@ -437,7 +428,7 @@ class MemoryAgent(Agent):
             # if context_str:
             #     print(f"📖 Retrieved context from memory:\n{context_str}\n")
 
-            # 2️⃣ 将历史上下文拼接到用户输入中，调用 async_chat
+            # Concatenate the historical context into the user input and invoke async_chat
             full_prompt = f"Context:\n{context_str}\n\nUser: {user_prompt}" if context_str else user_prompt
             msg = await self.async_chat(
                 user_prompt=full_prompt,
@@ -448,11 +439,10 @@ class MemoryAgent(Agent):
 
             print(f"Agent: {msg.content}\n")
 
-            # 3️⃣ 刷新索引确保下一轮可检索
+            # Refresh the index to ensure it can be retrieved in the next round
             if hasattr(self.memory_manager, "handle_memory_flush"):
                 await self.memory_manager.handle_memory_flush()
             else:
-                # fallback，给一点时间让索引写入
                 await asyncio.sleep(0.1)
 
 
