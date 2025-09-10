@@ -1,6 +1,5 @@
 import asyncio
 import os
-import nest_asyncio
 import pytest
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.storages.base import StorageHandler
@@ -10,7 +9,6 @@ from evoagentx.rag.rag_config import (
 )
 from evoagentx.agents.long_term_memory_agent import MemoryAgent
 
-@pytest.mark.asyncio
 async def main():
     # Initialize the LLM
     llm_config = OpenAILLMConfig(
@@ -55,5 +53,4 @@ async def main():
     await agent.interactive_chat(top_k=3)
 
 if __name__ == "__main__":
-    nest_asyncio.apply()
     asyncio.run(main())

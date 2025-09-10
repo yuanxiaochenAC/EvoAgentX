@@ -1,6 +1,5 @@
 import asyncio  
 import os
-import nest_asyncio
 import pytest
 from evoagentx.core.message import Message, MessageType
 from evoagentx.agents.agent import Agent
@@ -31,7 +30,6 @@ class ShortTermMemoryTestAgent(Agent):
         self.short_term_memory.max_size = 5
         self.add_action(DummyAction())
 
-@pytest.mark.asyncio
 async def test_short_term_memory_via_agent():
     config = OpenAILLMConfig(
         model="gpt-4o-mini",
@@ -72,5 +70,4 @@ async def test_short_term_memory_via_agent():
     print("\n✅ Short-term memory test passed!")
 
 if __name__ == "__main__":
-    nest_asyncio.apply()
     asyncio.run(test_short_term_memory_via_agent())
