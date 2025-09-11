@@ -1,7 +1,7 @@
 import requests
 import base64
 from typing import Dict, Optional, List
-from ...tool import Tool, Toolkit
+from ...tool import Tool
 
 
 class ImageAnalysisTool(Tool):

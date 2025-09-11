@@ -35,7 +35,8 @@ class OpenAIImageAnalysisTool(Tool):
             # Resolve image source: prefer URL, else local path to data URL
             final_image_url = image_url
             if not final_image_url and image_path:
-                import base64, mimetypes
+                import base64
+                import mimetypes
                 mime, _ = mimetypes.guess_type(image_path)
                 mime = mime or "image/png"
                 with open(image_path, "rb") as f:
