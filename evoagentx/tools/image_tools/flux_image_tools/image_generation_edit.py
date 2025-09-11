@@ -1,6 +1,5 @@
 from typing import Dict, List
 from ...tool import Tool
-from ...storage_handler import FileStorageHandler
 import requests
 import time
 
@@ -23,11 +22,10 @@ class FluxImageGenerationEditTool(Tool):
     }
     required: List[str] = ["prompt"]
 
-    def __init__(self, api_key: str, save_path: str = "./imgs", storage_handler: FileStorageHandler = None):
+    def __init__(self, api_key: str, save_path: str = "./imgs"):
         super().__init__()
         self.api_key = api_key
         self.save_path = save_path
-        self.storage_handler = storage_handler
 
     def __call__(
         self,
@@ -85,18 +83,18 @@ class FluxImageGenerationEditTool(Tool):
         image_response.raise_for_status()
         image_content = image_response.content
 
+        import os
+        os.makedirs(self.save_path or "./imgs", exist_ok=True)
         filename = f"flux_{seed}.{output_format}"
         i = 1
-        while self.storage_handler.exists(filename):
+        fullpath = os.path.join(self.save_path or "./imgs", filename)
+        while os.path.exists(fullpath):
             filename = f"flux_{seed}_{i}.{output_format}"
+            fullpath = os.path.join(self.save_path or "./imgs", filename)
             i += 1
 
-        storage_relative_path = filename
-        result = self.storage_handler.save(storage_relative_path, image_content)
-        if result.get("success"):
-            public_path = f"{self.save_path}/{filename}" if self.save_path else filename
-            return {"file_path": public_path, "storage_handler": type(self.storage_handler).__name__}
-        else:
-            return {"error": f"Failed to save image: {result.get('error', 'Unknown error')}"}
+        with open(fullpath, "wb") as f:
+            f.write(image_content)
+        return {"file_path": fullpath}
 
 

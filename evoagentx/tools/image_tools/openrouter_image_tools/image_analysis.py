@@ -2,7 +2,6 @@ import requests
 import base64
 from typing import Dict, Optional, List
 from ...tool import Tool, Toolkit
-from ...storage_handler import FileStorageHandler
 
 
 class ImageAnalysisTool(Tool):
@@ -20,11 +19,10 @@ class ImageAnalysisTool(Tool):
     }
     required: Optional[List[str]] = ["prompt"]
 
-    def __init__(self, api_key, model="openai/gpt-4o", storage_handler: FileStorageHandler = None):
+    def __init__(self, api_key, model="openai/gpt-4o"):
         super().__init__()
         self.api_key = api_key
         self.model = model
-        self.storage_handler = storage_handler
 
     def __call__(
         self,
@@ -48,28 +46,22 @@ class ImageAnalysisTool(Tool):
                 "image_url": {"url": image_url}
             })
         elif image_path:
-            result = self.storage_handler.read(image_path)
-            if result["success"]:
-                image_content = result["content"]
-                if isinstance(image_content, str):
-                    image_content = image_content.encode('utf-8')
-                base64_image = base64.b64encode(image_content).decode("utf-8")
-            else:
-                return {"error": f"Failed to read image: {result.get('error', 'Unknown error')}"}
+            try:
+                with open(image_path, 'rb') as f:
+                    base64_image = base64.b64encode(f.read()).decode("utf-8")
+            except Exception as e:
+                return {"error": f"Failed to read image: {e}"}
             data_url = f"data:image/jpeg;base64,{base64_image}"
             messages[0]["content"].append({
                 "type": "image_url",
                 "image_url": {"url": data_url}
             })
         elif pdf_path:
-            result = self.storage_handler.read(pdf_path)
-            if result["success"]:
-                pdf_content = result["content"]
-                if isinstance(pdf_content, str):
-                    pdf_content = pdf_content.encode('utf-8')
-                base64_pdf = base64.b64encode(pdf_content).decode("utf-8")
-            else:
-                return {"error": f"Failed to read PDF: {result.get('error', 'Unknown error')}"}
+            try:
+                with open(pdf_path, 'rb') as f:
+                    base64_pdf = base64.b64encode(f.read()).decode("utf-8")
+            except Exception as e:
+                return {"error": f"Failed to read PDF: {e}"}
             data_url = f"data:application/pdf;base64,{base64_pdf}"
             messages[0]["content"].append({
                 "type": "file",
@@ -91,15 +83,6 @@ class ImageAnalysisTool(Tool):
             return {"error": f"Failed to parse OpenRouter response: {e}", "raw": response.text}
 
 
-class ImageAnalysisToolkit(Toolkit):
-    def __init__(self, name: str = "ImageAnalysisToolkit", api_key: str = None, model: str = "openai/gpt-4o", storage_handler: FileStorageHandler = None):
-        if storage_handler is None:
-            from ...storage_file import LocalStorageHandler
-            storage_handler = LocalStorageHandler(base_path="./workplace/analysis")
-        tool = ImageAnalysisTool(api_key=api_key, model=model, storage_handler=storage_handler)
-        super().__init__(name=name, tools=[tool])
-        self.api_key = api_key
-        self.model = model
-        self.storage_handler = storage_handler
+## ImageAnalysisToolkit moved to toolkit.py to consolidate toolkits
 
 

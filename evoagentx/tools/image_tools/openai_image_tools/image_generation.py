@@ -8,8 +8,8 @@ from .openai_utils import (
 )
 
 
-class OpenAIImageGenerationV2(Tool):
-    name: str = "openai_image_generation_v2"
+class OpenAIImageGenerationTool(Tool):
+    name: str = "openai_image_generation"
     description: str = "OpenAI image generation supporting dall-e-2, dall-e-3, gpt-image-1 (with validation)."
 
     inputs: Dict[str, Dict[str, str]] = {
@@ -107,7 +107,7 @@ class OpenAIImageGenerationV2(Tool):
                         base = image_name.rsplit(".", 1)[0]
                         filename = f"{base}_{i+1}.png"
                     else:
-                        filename = f"generated_v2_{ts}_{i+1}.png"
+                        filename = f"generated_{ts}_{i+1}.png"
                     out_path = os.path.join(self.save_path, filename)
                     with open(out_path, "wb") as f:
                         f.write(image_bytes)

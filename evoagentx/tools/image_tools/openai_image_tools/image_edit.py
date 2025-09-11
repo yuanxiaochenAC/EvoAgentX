@@ -3,8 +3,8 @@ from ...tool import Tool
 from .openai_utils import create_openai_client, ensure_image_edit_compatible
 
 
-class OpenAIGPTImage1EditV2(Tool):
-    name: str = "openai_gpt_image1_edit_v2"
+class OpenAIImageEditTool(Tool):
+    name: str = "openai_image_edit"
     description: str = "Edit images using OpenAI gpt-image-1 (direct, minimal validation)."
 
     inputs: Dict[str, Dict[str, str]] = {
@@ -128,7 +128,7 @@ class OpenAIGPTImage1EditV2(Tool):
                     if image_name:
                         filename = f"{image_name.rsplit('.', 1)[0]}_{i+1}.png"
                     else:
-                        filename = f"gpt_image1_edit_v2_{ts}_{i+1}.png"
+                        filename = f"image_edit_{ts}_{i+1}.png"
                     out_path = os.path.join(self.save_path, filename)
                     with open(out_path, "wb") as f:
                         f.write(img_bytes)
