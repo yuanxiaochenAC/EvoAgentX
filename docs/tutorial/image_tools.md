@@ -20,6 +20,14 @@ Before running examples, set these environment variables as needed:
 
 ```python
 from evoagentx.tools import OpenAIImageToolkit, OpenRouterImageToolkit, FluxImageGenerationToolkit
+
+# Basic usage with default local storage
+tk = OpenAIImageToolkit(api_key=OPENAI_API_KEY)
+
+# Custom storage path
+from evoagentx.tools import LocalStorageHandler
+storage_handler = LocalStorageHandler(base_path="./my_images")
+tk = OpenAIImageToolkit(api_key=OPENAI_API_KEY, storage_handler=storage_handler)
 ```
 
 ## OpenAI Image Tools
@@ -34,7 +42,8 @@ Example: generate → edit → analyze
 
 ```python
 tk = OpenAIImageToolkit(api_key=OPENAI_API_KEY, organization_id=OPENAI_ORG_ID,
-                        generation_model="gpt-image-1", save_path="./generated_images")
+                        generation_model="gpt-image-1", save_path="./generated_images",
+                        storage_handler=None)  # Uses default LocalStorageHandler
 
 gen = tk.get_tool("openai_image_generation")
 edit = tk.get_tool("openai_image_edit")
@@ -121,7 +130,7 @@ Example: edit with a local path
 ```python
 from evoagentx.tools import OpenRouterImageToolkit
 
-tk = OpenRouterImageToolkit(api_key=OPENROUTER_API_KEY)
+tk = OpenRouterImageToolkit(api_key=OPENROUTER_API_KEY, storage_handler=None)  # Uses default LocalStorageHandler
 gen = tk.get_tool("openrouter_image_generation_edit")
 
 res = gen(
@@ -243,15 +252,21 @@ print(res["file_path"])
 
 ## Storage & File IO Notes
 
-- Internal StorageHandler usage has been removed; all tools use local paths:
-  - Save: `os.makedirs(save_path, exist_ok=True)` + `open(..., "wb")`
-  - Read: `open(..., "rb")` + base64 → data URL when needed
+- **Storage Support**: All image tools support flexible storage options:
+  - **Local Storage**: Default option for saving images to local filesystem
+  - **Remote Storage**: Optional Supabase cloud storage for distributed access
+- **File Operations**: All file I/O is handled automatically through the storage system
+- **Toolkit Parameters**: All toolkits accept `storage_handler` parameter for custom storage
 - Both OpenRouter and OpenAI analysis tools support `image_path` (auto-converted to data URL); `image_url` also works.
 
 ## FAQ
 
-- No image returned? Check API key, model, and quota.
-- OpenAI Responses error? Ensure the model supports image input (e.g., gpt-4o-mini).
-- Flux save failed? Ensure `save_path` is writable and there is disk space.
+- **No image returned?** Check API key, model, and quota.
+- **OpenAI Responses error?** Ensure the model supports image input (e.g., gpt-4o-mini).
+- **Flux save failed?** Ensure `save_path` is writable and there is disk space.
+- **Storage errors?** 
+  - Local storage: Check directory permissions and disk space
+  - Supabase storage: Verify environment variables and bucket access
+- **File not found errors?** Check if the storage path is correct and accessible
 
 

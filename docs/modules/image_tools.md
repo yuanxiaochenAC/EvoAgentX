@@ -46,7 +46,7 @@ from evoagentx.tools import (
   - `openai_image_generation` (text-to-image: gpt-image-1 / dall-e-3 / dall-e-2)
   - `openai_image_edit` (gpt-image-1 image editing)
   - `openai_image_analysis` (Responses API image understanding; supports `image_url` / `image_path`)
-- Constructor params: `api_key`, `organization_id`, `generation_model`, `save_path`
+- Constructor params: `api_key`, `organization_id`, `generation_model`, `save_path`, `storage_handler`
 
 Details:
 - `OpenAIImageGenerationTool`
@@ -68,7 +68,7 @@ Environment:
 - Tools included:
   - `openrouter_image_generation_edit` (text-to-image; if images provided → edit). Supports `image_urls` and `image_paths`.
   - `image_analysis` (multimodal analysis; supports `image_url` / `image_path` / `pdf_path`).
-- Constructor params: `api_key`
+- Constructor params: `api_key`, `storage_handler`
 
 Details:
 - `OpenRouterImageGenerationEditTool`
@@ -85,13 +85,13 @@ Environment:
 ### ImageAnalysisToolkit (OpenRouter)
 
 - Convenience wrapper that only exposes `image_analysis`.
-- Constructor params: `api_key`, `model`
+- Constructor params: `api_key`, `model`, `storage_handler`
 
 ### FluxImageGenerationToolkit
 
 - Tools included:
   - `flux_image_generation_edit` (no `input_image` → generate; with `input_image` (base64) → edit)
-- Constructor params: `api_key`, `save_path`
+- Constructor params: `api_key`, `save_path`, `storage_handler`
 
 Details:
 - `FluxImageGenerationEditTool`
@@ -103,9 +103,10 @@ Environment:
 
 ## I/O and Return Contracts
 
-- All tools use local file IO (no internal StorageHandler):
-  - Write: `os.makedirs(save_path, exist_ok=True)` + `open(path, "wb")`
-  - Read: `open(path, "rb")` and convert to base64 data URL when needed
+- All tools use the storage handler architecture:
+  - **Storage Handler**: All toolkits accept `storage_handler` parameter (defaults to `LocalStorageHandler`)
+  - **File Operations**: Automatic path translation and format detection
+  - **Supported Storage**: Local filesystem and Supabase cloud storage
 - Typical returns:
   - OpenAI generation/edit: `{ "results": ["<local_path>", ...] }`
   - OpenRouter generation/edit: `{ "saved_paths": ["<local_path>", ...] }`
