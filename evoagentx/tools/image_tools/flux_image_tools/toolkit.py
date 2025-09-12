@@ -23,7 +23,8 @@ class FluxImageGenerationToolkit(Toolkit):
 
         gen_tool = FluxImageGenerationEditTool(
             api_key=api_key,
-            save_path=save_path,
+            storage_handler=storage_handler,
+            base_path=save_path,
         )
         tools.append(gen_tool)
 

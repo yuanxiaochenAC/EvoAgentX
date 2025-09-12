@@ -2,6 +2,7 @@ import requests
 import base64
 from typing import Dict, Optional, List
 from ...tool import Tool
+from ...storage_handler import FileStorageHandler, LocalStorageHandler
 
 
 class ImageAnalysisTool(Tool):
@@ -19,10 +20,11 @@ class ImageAnalysisTool(Tool):
     }
     required: Optional[List[str]] = ["prompt"]
 
-    def __init__(self, api_key, model="openai/gpt-4o"):
+    def __init__(self, api_key, model="openai/gpt-4o", storage_handler: Optional[FileStorageHandler] = None):
         super().__init__()
         self.api_key = api_key
         self.model = model
+        self.storage_handler = storage_handler or LocalStorageHandler()
 
     def __call__(
         self,
@@ -47,8 +49,18 @@ class ImageAnalysisTool(Tool):
             })
         elif image_path:
             try:
-                with open(image_path, 'rb') as f:
-                    base64_image = base64.b64encode(f.read()).decode("utf-8")
+                result = self.storage_handler.read(image_path)
+                if not result["success"]:
+                    return {"error": f"Failed to read image: {result.get('error', 'Unknown error')}"}
+                
+                # Get image content as bytes
+                if isinstance(result["content"], bytes):
+                    image_content = result["content"]
+                else:
+                    # If content is not bytes, convert to bytes
+                    image_content = str(result["content"]).encode('utf-8')
+                
+                base64_image = base64.b64encode(image_content).decode("utf-8")
             except Exception as e:
                 return {"error": f"Failed to read image: {e}"}
             data_url = f"data:image/jpeg;base64,{base64_image}"
@@ -58,8 +70,18 @@ class ImageAnalysisTool(Tool):
             })
         elif pdf_path:
             try:
-                with open(pdf_path, 'rb') as f:
-                    base64_pdf = base64.b64encode(f.read()).decode("utf-8")
+                result = self.storage_handler.read(pdf_path)
+                if not result["success"]:
+                    return {"error": f"Failed to read PDF: {result.get('error', 'Unknown error')}"}
+                
+                # Get PDF content as bytes
+                if isinstance(result["content"], bytes):
+                    pdf_content = result["content"]
+                else:
+                    # If content is not bytes, convert to bytes
+                    pdf_content = str(result["content"]).encode('utf-8')
+                
+                base64_pdf = base64.b64encode(pdf_content).decode("utf-8")
             except Exception as e:
                 return {"error": f"Failed to read PDF: {e}"}
             data_url = f"data:application/pdf;base64,{base64_pdf}"

@@ -1,5 +1,6 @@
 from typing import Dict, Optional, List
 from ...tool import Tool
+from ...storage_handler import FileStorageHandler, LocalStorageHandler
 from .openai_utils import create_openai_client
 
 
@@ -15,11 +16,13 @@ class OpenAIImageAnalysisTool(Tool):
     }
     required: Optional[List[str]] = ["prompt"]
 
-    def __init__(self, api_key: str, organization_id: str = None, model: str = "gpt-4o-mini"):
+    def __init__(self, api_key: str, organization_id: str = None, model: str = "gpt-4o-mini", 
+                 storage_handler: Optional[FileStorageHandler] = None):
         super().__init__()
         self.api_key = api_key
         self.organization_id = organization_id
         self.model = model
+        self.storage_handler = storage_handler or LocalStorageHandler()
 
     def __call__(
         self,
@@ -39,8 +42,17 @@ class OpenAIImageAnalysisTool(Tool):
                 import mimetypes
                 mime, _ = mimetypes.guess_type(image_path)
                 mime = mime or "image/png"
-                with open(image_path, "rb") as f:
-                    b64 = base64.b64encode(f.read()).decode("utf-8")
+                
+                # Use storage handler to read raw bytes directly
+                # This bypasses the high-level read() method that processes images
+                try:
+                    # Translate user path to system path first
+                    system_path = self.storage_handler.translate_in(image_path)
+                    content = self.storage_handler._read_raw(system_path)
+                except Exception as e:
+                    return {"error": f"Could not read image {image_path}: {str(e)}"}
+                
+                b64 = base64.b64encode(content).decode("utf-8")
                 final_image_url = f"data:{mime};base64,{b64}"
 
             response = client.responses.create(

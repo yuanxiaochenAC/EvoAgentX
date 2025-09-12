@@ -1,7 +1,8 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 import os
 import requests
 from ...tool import Tool
+from ...storage_handler import FileStorageHandler, LocalStorageHandler
 
 
 class OpenRouterImageGenerationEditTool(Tool):
@@ -22,9 +23,11 @@ class OpenRouterImageGenerationEditTool(Tool):
     }
     required: List[str] = ["prompt"]
 
-    def __init__(self, api_key: str = None):
+    def __init__(self, api_key: str = None, storage_handler: Optional[FileStorageHandler] = None, 
+                 base_path: str = "./openrouter_images"):
         super().__init__()
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
+        self.storage_handler = storage_handler or LocalStorageHandler(base_path=base_path)
 
     def __call__(
         self,
@@ -54,9 +57,20 @@ class OpenRouterImageGenerationEditTool(Tool):
 
         headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
         url = "https://openrouter.ai/api/v1/chat/completions"
-        resp = requests.post(url, headers=headers, json=payload)
-        resp.raise_for_status()
-        data = resp.json()
+        
+        try:
+            resp = requests.post(url, headers=headers, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+        except requests.exceptions.HTTPError as e:
+            # Log the error details for debugging
+            try:
+                error_data = resp.json()
+                return {"error": f"OpenRouter API error: {error_data}", "status_code": resp.status_code}
+            except Exception:
+                return {"error": f"OpenRouter API error: {e}", "status_code": resp.status_code}
+        except Exception as e:
+            return {"error": f"Request failed: {e}"}
 
         saved_paths: List[str] = []
         if data.get("choices"):
@@ -66,10 +80,9 @@ class OpenRouterImageGenerationEditTool(Tool):
                 image_url = im.get("image_url", {}).get("url")
                 if not image_url:
                     continue
-                # Save data URL locally and collect file path
+                # Save data URL using storage handler
                 if image_url.startswith("data:") and "," in image_url:
                     import base64
-                    os.makedirs(save_path or "./openrouter_images", exist_ok=True)
                     header, b64data = image_url.split(",", 1)
                     # mime → extension
                     mime = "image/png"
@@ -84,17 +97,18 @@ class OpenRouterImageGenerationEditTool(Tool):
                         ext = ".heic"
                     elif mime == "image/heif":
                         ext = ".heif"
-                    base = output_basename or "or_gen"
-                    idx = 0
-                    while True:
-                        name = f"{base}{'' if idx==0 else '_'+str(idx)}{ext}"
-                        fullpath = os.path.join(save_path or "./openrouter_images", name)
-                        if not os.path.exists(fullpath):
-                            break
-                        idx += 1
-                    with open(fullpath, "wb") as f:
-                        f.write(base64.b64decode(b64data))
-                    saved_paths.append(fullpath)
+                    
+                    # Generate unique filename
+                    filename = self._get_unique_filename(output_basename or "or_gen", ext)
+                    
+                    # Decode and save using storage handler
+                    image_content = base64.b64decode(b64data)
+                    result = self.storage_handler.save(filename, image_content)
+                    
+                    if result["success"]:
+                        saved_paths.append(filename)
+                    else:
+                        return {"error": f"Failed to save image: {result.get('error', 'Unknown error')}"}
 
         if saved_paths:
             return {"saved_paths": saved_paths}
@@ -112,9 +126,30 @@ class OpenRouterImageGenerationEditTool(Tool):
     def _path_to_data_url(self, path: str) -> str:
         import base64
         mime = self._guess_mime_from_name(path)
-        with open(path, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode("utf-8")
+        
+        # Use storage handler to read raw bytes directly
+        # This bypasses the high-level read() method that processes images
+        try:
+            # Translate user path to system path first
+            system_path = self.storage_handler.translate_in(path)
+            content = self.storage_handler._read_raw(system_path)
+        except Exception as e:
+            raise FileNotFoundError(f"Could not read file {path}: {str(e)}")
+        
+        b64 = base64.b64encode(content).decode("utf-8")
         return f"data:{mime};base64,{b64}"
+    
+    def _get_unique_filename(self, base_name: str, extension: str) -> str:
+        """Generate a unique filename for the image"""
+        filename = f"{base_name}{extension}"
+        counter = 1
+        
+        # Check if file exists and generate unique name
+        while self.storage_handler.exists(filename):
+            filename = f"{base_name}_{counter}{extension}"
+            counter += 1
+            
+        return filename
 
     def _paths_to_image_parts(self, paths: list) -> List[Dict]:
         parts: List[Dict] = []
