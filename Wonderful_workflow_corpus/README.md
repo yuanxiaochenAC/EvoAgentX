@@ -39,6 +39,8 @@ The corpus includes both simple workflows, such as **Arxiv Daily Digest**, **Rec
      --output arxiv_digest.md
    ```
 
+- Arxiv Daily Digest workflow was contributed by Shiyang Liang: victor.liang28@outlook.com & [@Haoyang Li](https://github.com/Oxygennnnn).
+
 ------------------------------------------------------------
 
 2. Recipe Generator
