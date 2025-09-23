@@ -37,9 +37,6 @@
   <i>An automated framework for evaluating and evolving agentic workflows.</i>
 </h4>
 
-<p align="center">
-  <img src="./assets/framework_en.jpg">
-</p>
 
 ## What is EvoAgentX
 EvoAgentX is an open-source framework for building, evaluating, and evolving LLM-based agents or agentic workflows in an automated, modular, and goal-driven manner.
