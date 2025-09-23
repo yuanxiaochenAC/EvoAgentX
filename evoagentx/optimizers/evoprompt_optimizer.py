@@ -1,9 +1,16 @@
-"""
-EvoPrompt Optimizer Module
-
-This module implements evolutionary algorithms for optimizing prompts in multi-agent workflows.
-It provides base functionality for prompt evolution using genetic algorithms and differential evolution.
-"""
+# -----------------------------------------------------------------------------
+# This file re-implements algorithms from the EvoPrompt project:
+#   Repo: GitHub - beeevita/EvoPrompt: Official implementation of the paper Connecting Large Language Models w
+#   Paper: "Connecting Large Language Models with Evolutionary Algorithms
+#           Yields Powerful Prompt Optimizers"
+#   Authors: Qingyan et al.
+#
+# Re-implementation integrated into EvoAgentX with permission from the authors.
+# All mistakes or modifications are our own.
+#
+# Code of Conduct: This project follows the Microsoft Open Source Code of Conduct.
+#   https://opensource.microsoft.com/codeofconduct/
+# -----------------------------------------------------------------------------
 
 import asyncio
 import random
