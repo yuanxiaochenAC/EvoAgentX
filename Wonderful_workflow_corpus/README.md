@@ -53,7 +53,7 @@ The corpus includes both simple workflows, such as **Arxiv Daily Digest**, **Rec
      --output recipe.md
    ```
 
-   - Recipe Generator workflow was contributed by @xyq116
+   - Recipe Generator workflow was contributed by [@xyq116](https://github.com/xyq116).
 
 ------------------------------------------------------------
 
@@ -68,7 +68,7 @@ The corpus includes both simple workflows, such as **Arxiv Daily Digest**, **Rec
    ```
 
    Open tetris.html in a browser to play.
-   - Tetris Game Generator workflow was contributed by @fangjy6 
+   - Tetris Game Generator workflow was contributed by [@fangjy6](https://github.com/fangjy6).
 
 ------------------------------------------------------------
 
@@ -82,7 +82,7 @@ The corpus includes both simple workflows, such as **Arxiv Daily Digest**, **Rec
      --output travel_recommendation.md
    ```
    
-   - Travel Recommendation Generator workflow was contributed by @xyq116
+   - Travel Recommendation Generator workflow was contributed by [@xyq116](https://github.com/xyq116).
 
 ------------------------------------------------------------
 
@@ -95,7 +95,7 @@ Run the full pipeline with:
 ```bash
 python Wonderful_workflow_corpus/invest/stock_analysis.py
 ```
-- Stock Analysis workflow was contributed by @bruuuuuceliu & @yuanxiaochenAC
+- Stock Analysis workflow was contributed by [@bruuuuuceliu](https://github.com/bruuuuuceliu) & [@yuanxiaochenAC](https://github.com/yuanxiaochenAC).
 
 The process will:
 
