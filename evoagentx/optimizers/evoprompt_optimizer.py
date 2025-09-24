@@ -1,3 +1,17 @@
+# -----------------------------------------------------------------------------
+# This file re-implements algorithms from the EvoPrompt project:
+#   Repo: https://github.com/beeevita/EvoPrompt
+#   Paper: "Connecting Large Language Models with Evolutionary Algorithms
+#           Yields Powerful Prompt Optimizers"
+#   Authors: Qingyan et al.
+#
+# Re-implementation integrated into EvoAgentX with permission from the authors.
+# All mistakes or modifications are our own.
+#
+# Code of Conduct: This project follows the Microsoft Open Source Code of Conduct.
+#   https://opensource.microsoft.com/codeofconduct/
+# -----------------------------------------------------------------------------
+
 """
 EvoPrompt Optimizer Module
 

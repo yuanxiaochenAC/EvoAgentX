@@ -605,7 +605,7 @@ Please consider citing our work if you find EvoAgentX helpful:
 ```
 
 ## 📚 Acknowledgements 
-This project builds upon several outstanding open-source projects: [AFlow](https://github.com/FoundationAgents/MetaGPT/tree/main/metagpt/ext/aflow), [TextGrad](https://github.com/zou-group/textgrad), [DSPy](https://github.com/stanfordnlp/dspy), [LiveCodeBench](https://github.com/LiveCodeBench/LiveCodeBench), and more. We would like to thank the developers and maintainers of these frameworks for their valuable contributions to the open-source community.
+This project builds upon several outstanding open-source projects: [AFlow](https://github.com/FoundationAgents/MetaGPT/tree/main/metagpt/ext/aflow), [TextGrad](https://github.com/zou-group/textgrad), [DSPy](https://github.com/stanfordnlp/dspy), [EvoPrompt](https://github.com/beeevita/EvoPrompt), [LiveCodeBench](https://github.com/LiveCodeBench/LiveCodeBench)and more. We would like to thank the developers and maintainers of these frameworks for their valuable contributions to the open-source community.
 
 ## 📄 License
 
