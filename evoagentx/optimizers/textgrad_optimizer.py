@@ -11,6 +11,7 @@
 #   https://opensource.microsoft.com/codeofconduct/
 # -----------------------------------------------------------------------------
 
+# ruff: noqa: E402
 import os
 import shutil
 from copy import deepcopy
@@ -671,4 +672,5 @@ class TextGradOptimizer(BaseModule):
                         if "prompt_template" not in agent:
                             raise ValueError(f"Please provide a PromptTemplate for {agent['name']}.")
                     
+
                     
