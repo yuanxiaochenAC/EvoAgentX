@@ -3,11 +3,11 @@ import json
 from typing import Dict, Any
 from evoagentx.tools.api_converter import create_openapi_toolkit, create_rapidapi_toolkit
 
-# 示例1：OpenWeatherMap API集成
+# Example 1: OpenWeatherMap API integration
 def create_weather_toolkit():
-    """创建天气API工具集"""
+    """Create a weather API toolkit"""
     
-    # OpenWeatherMap API的简化OpenAPI规范
+    # Simplified OpenAPI specification for OpenWeatherMap API
     weather_api_spec = {
         "openapi": "3.0.0",
         "info": {
@@ -112,16 +112,16 @@ def create_weather_toolkit():
         }
     }
     
-    # 从环境变量获取API密钥
+    # Get API key from environment variables
     api_key = os.getenv("OPENWEATHER_API_KEY", "your-api-key")
     
-    # 创建工具集，将API密钥作为默认参数
+    # Create toolkit with API key as default parameter
     toolkit = create_openapi_toolkit(
         schema_path_or_dict=weather_api_spec,
         auth_config={"api_key": api_key}
     )
     
-    # 为每个工具添加默认的API密钥参数
+    # Add default API key parameter for each tool
     for tool in toolkit.tools:
         original_function = tool.function
         
@@ -136,11 +136,11 @@ def create_weather_toolkit():
     return toolkit
 
 
-# 示例2：RapidAPI天气服务集成（完整的三个功能）
+# Example 2: RapidAPI weather service integration (full three features)
 def create_rapidapi_weather_toolkit():
-    """创建天气API工具集（使用RapidAPI）- 包含三个功能"""
+    """Create a weather API toolkit (using RapidAPI) - includes three features"""
     
-    # Open Weather13 on RapidAPI的完整规范
+    # Complete specification for Open Weather13 on RapidAPI
     weather_api_spec = {
         "openapi": "3.0.0",
         "info": {
@@ -155,15 +155,15 @@ def create_rapidapi_weather_toolkit():
             "/city": {
                 "get": {
                     "operationId": "getCityWeather",
-                    "summary": "根据城市名称获取天气",
-                    "description": "通过城市名称获取当前天气数据",
+                    "summary": "Get weather by city name",
+                    "description": "Get current weather data by city name",
                     "parameters": [
                         {
                             "name": "city",
                             "in": "query",
                             "required": True,
                             "schema": {"type": "string"},
-                            "description": "城市名称，例如：new york, beijing, tokyo"
+                            "description": "City name, e.g.: new york, beijing, tokyo"
                         },
                         {
                             "name": "lang",
@@ -174,12 +174,12 @@ def create_rapidapi_weather_toolkit():
                                 "enum": ["AF", "AL", "AR", "AZ", "BG", "CA", "CZ", "DA", "DE", "EL", "EN", "EU", "FA", "FI", "FR", "GL", "HE", "HI", "HR", "HU", "ID", "IT", "JA", "KR", "LA", "LT", "MK", "NO", "NL", "PL", "PT", "PT_BR", "RO", "RU", "SE", "SK", "SL", "SP", "ES", "SR", "TH", "TR", "UK", "VI", "ZH_CN", "ZH_TW", "ZU"],
                                 "default": "EN"
                             },
-                            "description": "语言代码，支持中文简体(ZH_CN)、中文繁体(ZH_TW)等多种语言"
+                            "description": "Language code, supports Simplified Chinese (ZH_CN), Traditional Chinese (ZH_TW), and many other languages"
                         }
                     ],
                     "responses": {
                         "200": {
-                            "description": "城市天气数据响应",
+                            "description": "City weather data response",
                             "content": {
                                 "application/json": {
                                     "schema": {
@@ -258,22 +258,22 @@ def create_rapidapi_weather_toolkit():
             "/latlon": {
                 "get": {
                     "operationId": "getWeatherByCoordinates",
-                    "summary": "根据经纬度获取天气",
-                    "description": "通过经纬度坐标获取当前天气数据",
+                    "summary": "Get weather by coordinates",
+                    "description": "Get current weather data using latitude and longitude",
                     "parameters": [
                         {
                             "name": "latitude",
                             "in": "query",
                             "required": True,
                             "schema": {"type": "string"},
-                            "description": "纬度，例如：40.730610"
+                            "description": "Latitude, e.g.: 40.730610"
                         },
                         {
                             "name": "longitude",
                             "in": "query",
                             "required": True,
                             "schema": {"type": "string"},
-                            "description": "经度，例如：-73.935242"
+                            "description": "Longitude, e.g.: -73.935242"
                         },
                         {
                             "name": "lang",
@@ -284,12 +284,12 @@ def create_rapidapi_weather_toolkit():
                                 "enum": ["AF", "AL", "AR", "AZ", "BG", "CA", "CZ", "DA", "DE", "EL", "EN", "EU", "FA", "FI", "FR", "GL", "HE", "HI", "HR", "HU", "ID", "IT", "JA", "KR", "LA", "LT", "MK", "NO", "NL", "PL", "PT", "PT_BR", "RO", "RU", "SE", "SK", "SL", "SP", "ES", "SR", "TH", "TR", "UK", "VI", "ZH_CN", "ZH_TW", "ZU"],
                                 "default": "EN"
                             },
-                            "description": "语言代码"
+                            "description": "Language code"
                         }
                     ],
                     "responses": {
                         "200": {
-                            "description": "经纬度天气数据响应",
+                            "description": "Coordinate weather data response",
                             "content": {
                                 "application/json": {
                                     "schema": {
@@ -368,22 +368,22 @@ def create_rapidapi_weather_toolkit():
             "/fivedaysforcast": {
                 "get": {
                     "operationId": "getFiveDayForecast",
-                    "summary": "获取5天天气预报",
-                    "description": "通过经纬度坐标获取5天天气预报数据",
+                    "summary": "Get 5-day weather forecast",
+                    "description": "Get 5-day weather forecast using latitude and longitude",
                     "parameters": [
                         {
                             "name": "latitude",
                             "in": "query",
                             "required": True,
                             "schema": {"type": "string"},
-                            "description": "纬度，例如：40.730610"
+                            "description": "Latitude, e.g.: 40.730610"
                         },
                         {
                             "name": "longitude",
                             "in": "query",
                             "required": True,
                             "schema": {"type": "string"},
-                            "description": "经度，例如：-73.935242"
+                            "description": "Longitude, e.g.: -73.935242"
                         },
                         {
                             "name": "lang",
@@ -394,12 +394,12 @@ def create_rapidapi_weather_toolkit():
                                 "enum": ["AF", "AL", "AR", "AZ", "BG", "CA", "CZ", "DA", "DE", "EL", "EN", "EU", "FA", "FI", "FR", "GL", "HE", "HI", "HR", "HU", "ID", "IT", "JA", "KR", "LA", "LT", "MK", "NO", "NL", "PL", "PT", "PT_BR", "RO", "RU", "SE", "SK", "SL", "SP", "ES", "SR", "TH", "TR", "UK", "VI", "ZH_CN", "ZH_TW", "ZU"],
                                 "default": "EN"
                             },
-                            "description": "语言代码"
+                            "description": "Language code"
                         }
                     ],
                     "responses": {
                         "200": {
-                            "description": "5天天气预报数据响应",
+                            "description": "5-day forecast data response",
                             "content": {
                                 "application/json": {
                                     "schema": {
@@ -502,8 +502,8 @@ def create_rapidapi_weather_toolkit():
         }
     }
     
-    # 从环境变量获取RapidAPI凭据
-    rapidapi_key = os.getenv("RAPIDAPI_KEY", "5bad9b417amsh4fb61074f2d054bp114882jsn475094fc19bb")
+    # Get RapidAPI credentials from environment variables
+    rapidapi_key = os.getenv("RAPIDAPI_KEY")
     rapidapi_host = "open-weather13.p.rapidapi.com"
     
     toolkit = create_rapidapi_toolkit(
@@ -516,19 +516,19 @@ def create_rapidapi_weather_toolkit():
     return toolkit
 
 
-# 示例3：创建多服务智能代理
+# Example 3: Create multi-service intelligent agent
 def create_multi_service_agent():
-    """创建使用多个API服务的智能代理"""
+    """Create an intelligent agent that uses multiple API services"""
     
     try:
         from evoagentx.agents.customize_agent import CustomizeAgent
         from evoagentx.models.model_configs import LLMConfig
         
-        # 创建各种API工具集
+        # Create various API toolkits
         weather_toolkit = create_weather_toolkit()
         rapidapi_weather_toolkit = create_rapidapi_weather_toolkit()
         
-        # 创建智能代理，整合多个API服务
+        # Create intelligent agent, integrating multiple API services
         agent = CustomizeAgent(
             name="Multi-Service Assistant",
             description="An intelligent assistant that can provide weather information from multiple sources",
@@ -560,24 +560,24 @@ Available tools:
                     "description": "The assistant's response with requested information"
                 }
             ],
-            tools=[weather_toolkit, rapidapi_weather_toolkit],  # 使用多个工具集
+            tools=[weather_toolkit, rapidapi_weather_toolkit],  # Use multiple toolkits
             max_tool_calls=3,
-            # llm_config=LLMConfig(model="gpt-3.5-turbo")  # 需要配置LLM
+            # llm_config=LLMConfig(model="gpt-3.5-turbo")  # Need to configure LLM
         )
         
         return agent
         
     except ImportError as e:
-        print(f"无法导入CustomizeAgent: {e}")
-        print("请确保已正确安装EvoAgentX框架")
+        print(f"Failed to import CustomizeAgent: {e}")
+        print("Please ensure the EvoAgentX framework is correctly installed")
         return None
 
 
-# 示例4：工具集的高级配置
+# Example 4: Advanced configuration for toolkits
 def create_advanced_api_toolkit():
-    """创建具有高级配置的API工具集"""
+    """Create an API toolkit with advanced configuration"""
     
-    # 带有复杂认证的API规范
+    # API specification with complex authentication
     advanced_api_spec = {
         "openapi": "3.0.0",
         "info": {
@@ -604,40 +604,40 @@ def create_advanced_api_toolkit():
         }
     }
     
-    # 创建带有自定义配置的工具集
+    # Create a toolkit with custom configuration
     toolkit = create_openapi_toolkit(
         schema_path_or_dict=advanced_api_spec,
         auth_config={
             "api_key": "your-api-key",
-            "bearer_token": "your-bearer-token"  # 支持多种认证方式
+            "bearer_token": "your-bearer-token"  # Support multiple authentication methods
         }
     )
     
-    # 添加自定义请求头
+    # Add custom headers
     toolkit.common_headers.update({
         "User-Agent": "EvoAgentX-Client/1.0",
         "Accept": "application/json",
         "Cache-Control": "no-cache"
     })
     
-    # 为工具添加自定义行为
+    # Add custom behavior for tools
     for tool in toolkit.tools:
         original_function = tool.function
         
         def create_enhanced_wrapper(func):
             def enhanced_wrapper(**kwargs):
-                # 添加请求前处理
-                print(f"正在调用API工具: {tool.name}")
-                print(f"参数: {kwargs}")
+                # Pre-request processing
+                print(f"Calling API tool: {tool.name}")
+                print(f"Parameters: {kwargs}")
                 
                 try:
                     result = func(**kwargs)
-                    # 添加响应后处理
-                    print(f"API调用成功，返回结果类型: {type(result)}")
+                    # Post-response processing
+                    print(f"API call succeeded, return type: {type(result)}")
                     return result
                 except Exception as e:
-                    print(f"API调用失败: {e}")
-                    # 可以添加重试逻辑或错误处理
+                    print(f"API call failed: {e}")
+                    # You can add retry logic or error handling here
                     raise
                     
             return enhanced_wrapper
@@ -647,20 +647,20 @@ def create_advanced_api_toolkit():
     return toolkit
 
 
-# 天气API功能演示函数
+# Weather API feature demo function
 def demo_weather_functions():
-    """演示三个天气API功能的详细使用"""
-    print("=== 天气API三大功能演示 ===\n")
+    """Demonstrate detailed usage of the three weather API features"""
+    print("=== Demonstration of three weather API features ===\n")
     
     try:
-        # 创建工具集
+        # Create toolkit
         toolkit = create_rapidapi_weather_toolkit()
-        print(f"工具集创建成功，包含 {len(toolkit.tools)} 个工具:")
+        print(f"Toolkit created successfully with {len(toolkit.tools)} tools:")
         for tool in toolkit.tools:
             print(f"  - {tool.name}: {tool.description}")
         print()
         
-        # 获取工具
+        # Get tool
         city_tool = None
         coord_tool = None
         forecast_tool = None
@@ -673,14 +673,14 @@ def demo_weather_functions():
             elif "getFiveDayForecast" in tool.name:
                 forecast_tool = tool
         
-        # 功能1：按城市名称查询天气
-        print("【功能1】按城市名称查询天气")
+        # Feature 1: Query weather by city name
+        print("[Feature 1] Query weather by city name")
         print("-" * 40)
         if city_tool:
             cities = ["new york", "beijing", "tokyo"]
             for city in cities:
                 try:
-                    print(f"查询 {city} 的天气...")
+                    print(f"Querying weather for {city}...")
                     result = city_tool.function(city=city, lang="EN")
                     
                     name = result.get('name', 'Unknown')
@@ -690,26 +690,26 @@ def demo_weather_functions():
                     weather = result.get('weather', [{}])[0].get('description', 'N/A')
                     
                     print(f"  ✓ {name}, {country}")
-                    print(f"    温度: {temp}°F, 湿度: {humidity}%")
-                    print(f"    天气: {weather}")
+                    print(f"    Temperature: {temp}°F, Humidity: {humidity}%")
+                    print(f"    Weather: {weather}")
                     print()
                 except Exception as e:
-                    print(f"  ✗ 查询 {city} 失败: {e}")
+                    print(f"  ✗ Failed to query {city}: {e}")
                     print()
         
-        # 功能2：按经纬度查询天气
-        print("【功能2】按经纬度查询天气")
+        # Feature 2: Query weather by coordinates
+        print("[Feature 2] Query weather by coordinates")
         print("-" * 40)
         if coord_tool:
             coordinates = [
-                ("40.730610", "-73.935242", "纽约地区"),
-                ("39.904200", "116.407396", "北京地区"),
-                ("35.689487", "139.691706", "东京地区")
+                ("40.730610", "-73.935242", "New York area"),
+                ("39.904200", "116.407396", "Beijing area"),
+                ("35.689487", "139.691706", "Tokyo area")
             ]
             
             for lat, lon, desc in coordinates:
                 try:
-                    print(f"查询 {desc} ({lat}, {lon}) 的天气...")
+                    print(f"Querying weather for {desc} ({lat}, {lon})...")
                     result = coord_tool.function(latitude=lat, longitude=lon, lang="EN")
                     
                     name = result.get('name', 'Unknown')
@@ -719,19 +719,19 @@ def demo_weather_functions():
                     weather = result.get('weather', [{}])[0].get('description', 'N/A')
                     
                     print(f"  ✓ {name}, {country}")
-                    print(f"    温度: {temp}K, 湿度: {humidity}%")
-                    print(f"    天气: {weather}")
+                    print(f"    Temperature: {temp}K, Humidity: {humidity}%")
+                    print(f"    Weather: {weather}")
                     print()
                 except Exception as e:
-                    print(f"  ✗ 查询 {desc} 失败: {e}")
+                    print(f"  ✗ Failed to query {desc}: {e}")
                     print()
         
-        # 功能3：5天天气预报
-        print("【功能3】5天天气预报")
+        # Feature 3: 5-day weather forecast
+        print("[Feature 3] 5-day weather forecast")
         print("-" * 40)
         if forecast_tool:
             try:
-                print("获取纽约地区5天天气预报...")
+                print("Getting 5-day weather forecast for New York area...")
                 result = forecast_tool.function(latitude="40.730610", longitude="-73.935242", lang="EN")
                 
                 city_info = result.get('city', {})
@@ -739,69 +739,69 @@ def demo_weather_functions():
                 country = city_info.get('country', 'Unknown')
                 cnt = result.get('cnt', 0)
                 
-                print(f"  ✓ {city_name}, {country} - 共 {cnt} 条预报数据")
+                print(f"  ✓ {city_name}, {country} - Total {cnt} forecast entries")
                 
                 forecasts = result.get('list', [])
                 if forecasts:
-                    print("  未来几天天气预报:")
-                    for i, forecast in enumerate(forecasts):  # 显示前10条
+                    print("  Weather forecast for the next few days:")
+                    for i, forecast in enumerate(forecasts):  # Show the first 10 entries
                         dt_txt = forecast.get('dt_txt', 'Unknown')
                         temp = forecast.get('main', {}).get('temp', 'N/A')
                         weather_desc = forecast.get('weather', [{}])[0].get('description', 'N/A')
                         humidity = forecast.get('main', {}).get('humidity', 'N/A')
                         
-                        print(f"    {dt_txt}: {temp}K, {weather_desc}, 湿度{humidity}%")
+                        print(f"    {dt_txt}: {temp}K, {weather_desc}, Humidity {humidity}%")
                         
                         if 'rain' in forecast:
                             rain = forecast['rain'].get('3h', 0)
                             if rain > 0:
-                                print(f"      降雨量: {rain}mm")
+                                print(f"      Rainfall: {rain}mm")
                 print()
             except Exception as e:
-                print(f"  ✗ 获取5天预报失败: {e}")
+                print(f"  ✗ Failed to get 5-day forecast: {e}")
                 print()
         
     except Exception as e:
-        print(f"演示过程中发生错误: {e}")
+        print(f"Error occurred during demonstration: {e}")
     
-    print("=== 演示完成 ===")
+    print("=== Demonstration completed ===")
 
 
-# 使用示例
+# Usage example
 def main():
-    """主函数，演示各种API集成"""
+    """Main function, demonstrate various API integrations"""
     
-    print("=== API转换器真实世界示例 ===\n")
+    print("=== API Converter Real World Examples ===\n")
     
-    # # 1. 创建天气工具集
-    # print("1. 创建天气API工具集...")
+    # # 1. Create weather toolkit
+    # print("1. Creating weather API toolkit...")
     # try:
     #     weather_toolkit = create_weather_toolkit()
-    #     print(f"   天气工具集创建成功: {weather_toolkit.name}")
-    #     print(f"   包含工具: {[tool.name for tool in weather_toolkit.tools]}")
+    #     print(f"   Weather toolkit created successfully: {weather_toolkit.name}")
+    #     print(f"   Contains tools: {[tool.name for tool in weather_toolkit.tools]}")
         
-    #     # 演示天气工具使用（需要有效的API密钥）
+    #     # Demonstrate weather tool usage (requires valid API key)
     #     if os.getenv("OPENWEATHER_API_KEY"):
     #         weather_tool = weather_toolkit.get_tool("getCurrentWeather")
     #         # result = weather_tool(q="Beijing,CN", units="metric")
-    #         # print(f"   北京天气: {result}")
+    #         # print(f"   Beijing weather: {result}")
     #     else:
-    #         print("   提示: 设置OPENWEATHER_API_KEY环境变量以测试实际API调用")
+    #         print("   Tip: Set OPENWEATHER_API_KEY environment variable to test actual API calls")
             
     # except Exception as e:
-    #     print(f"   创建天气工具集时出错: {e}")
+    #     print(f"   Error creating weather toolkit: {e}")
     
     # print()
     
-    # 2. 创建RapidAPI天气工具集（包含三个功能）
-    print("2. 创建RapidAPI天气API工具集（包含三个功能）...")
+    # 2. Create RapidAPI weather toolkit (includes three features)
+    print("2. Creating RapidAPI weather API toolkit (includes three features)...")
     try:
         rapidapi_weather_toolkit = create_rapidapi_weather_toolkit()
-        print(f"   RapidAPI天气工具集创建成功: {rapidapi_weather_toolkit.name}")
-        print(f"   包含工具: {[tool.name for tool in rapidapi_weather_toolkit.tools]}")
-        print(f"   RapidAPI头配置: {rapidapi_weather_toolkit.common_headers}")
+        print(f"   RapidAPI weather toolkit created successfully: {rapidapi_weather_toolkit.name}")
+        print(f"   Contains tools: {[tool.name for tool in rapidapi_weather_toolkit.tools]}")
+        print(f"   RapidAPI header configuration: {rapidapi_weather_toolkit.common_headers}")
         
-        # 获取所有三个工具
+        # Get all three tools
         city_tool = None
         latlon_tool = None
         forecast_tool = None
@@ -814,58 +814,58 @@ def main():
             elif tool.name == "getFiveDayForecast":
                 forecast_tool = tool
         
-        print("\n   === 功能1：按城市名称查询天气 ===")
+        print("\n   === Feature 1: Query weather by city name ===")
         if city_tool:
             try:
-                print("   正在查询纽约天气...")
+                print("   Querying New York weather...")
                 result = city_tool.function(city="new york", lang="EN")
-                print("   ✓ 纽约天气查询成功!")
-                print(f"   城市: {result.get('name', 'N/A')}")
+                print("   ✓ New York weather query successful!")
+                print(f"   City: {result.get('name', 'N/A')}")
                 if 'main' in result:
                     temp_f = result['main'].get('temp', 'N/A')
                     humidity = result['main'].get('humidity', 'N/A')
-                    print(f"   温度: {temp_f}°F")
-                    print(f"   湿度: {humidity}%")
+                    print(f"   Temperature: {temp_f}°F")
+                    print(f"   Humidity: {humidity}%")
                 if 'weather' in result and result['weather']:
                     weather_desc = result['weather'][0].get('description', 'N/A')
-                    print(f"   天气状况: {weather_desc}")
+                    print(f"   Weather condition: {weather_desc}")
                 if 'coord' in result:
                     lon = result['coord'].get('lon', 'N/A')
                     lat = result['coord'].get('lat', 'N/A')
-                    print(f"   经纬度: {lat}, {lon}")
+                    print(f"   Coordinates: {lat}, {lon}")
             except Exception as api_error:
-                print(f"   ✗ 城市天气查询失败: {api_error}")
+                print(f"   ✗ City weather query failed: {api_error}")
         
-        print("\n   === 功能2：按经纬度查询天气 ===")
+        print("\n   === Feature 2: Query weather by coordinates ===")
         if latlon_tool:
             try:
-                print("   正在查询经纬度(40.730610, -73.935242)天气...")
+                print("   Querying weather for coordinates (40.730610, -73.935242)...")
                 result = latlon_tool.function(latitude="40.730610", longitude="-73.935242", lang="EN")
-                print("   ✓ 经纬度天气查询成功!")
-                print(f"   地点: {result.get('name', 'N/A')}")
+                print("   ✓ Coordinate weather query successful!")
+                print(f"   Location: {result.get('name', 'N/A')}")
                 if 'main' in result:
                     temp = result['main'].get('temp', 'N/A')
                     humidity = result['main'].get('humidity', 'N/A')
-                    print(f"   温度: {temp}K")
-                    print(f"   湿度: {humidity}%")
+                    print(f"   Temperature: {temp}K")
+                    print(f"   Humidity: {humidity}%")
                 if 'weather' in result and result['weather']:
                     weather_desc = result['weather'][0].get('description', 'N/A')
-                    print(f"   天气状况: {weather_desc}")
+                    print(f"   Weather condition: {weather_desc}")
             except Exception as api_error:
-                print(f"   ✗ 经纬度天气查询失败: {api_error}")
+                print(f"   ✗ Coordinate weather query failed: {api_error}")
         
-        print("\n   === 功能3：5天天气预报 ===")
+        print("\n   === Feature 3: 5-day weather forecast ===")
         if forecast_tool:
             try:
-                print("   正在获取5天天气预报...")
+                print("   Getting 5-day weather forecast...")
                 result = forecast_tool.function(latitude="40.730610", longitude="-73.935242", lang="EN")
-                print("   ✓ 5天天气预报获取成功!")
-                print(f"   预报条数: {result.get('cnt', 'N/A')}")
+                print("   ✓ 5-day weather forecast retrieved successfully!")
+                print(f"   Forecast count: {result.get('cnt', 'N/A')}")
                 if 'city' in result:
                     city_name = result['city'].get('name', 'N/A')
-                    print(f"   城市: {city_name}")
+                    print(f"   City: {city_name}")
                 if 'list' in result and result['list']:
-                    print("   前3天预报:")
+                    print("   First 3 days forecast:")
                     for i, forecast in enumerate(result['list'][:3]):
                         dt_txt = forecast.get('dt_txt', 'N/A')
                         if 'main' in forecast:
@@ -873,49 +873,49 @@ def main():
                             print(f"     {dt_txt}: {temp}K")
                         if 'weather' in forecast and forecast['weather']:
                             desc = forecast['weather'][0].get('description', 'N/A')
-                            print(f"       天气: {desc}")
+                            print(f"       Weather: {desc}")
             except Exception as api_error:
-                print(f"   ✗ 5天天气预报获取失败: {api_error}")
+                print(f"   ✗ Failed to get 5-day weather forecast: {api_error}")
             
     except Exception as e:
-        print(f"   创建RapidAPI天气工具集时出错: {e}")
+        print(f"   Error creating RapidAPI weather toolkit: {e}")
     
     print()
     
-    # 4. 创建多服务代理
-    # print("3. 创建多服务智能代理...")
+    # 4. Create multi-service agent
+    # print("3. Creating multi-service intelligent agent...")
     # try:
     #     agent = create_multi_service_agent()
     #     if agent:
-    #         print(f"   多服务代理创建成功: {agent.name}")
-    #         print(f"   代理描述: {agent.description}")
+    #         print(f"   Multi-service agent created successfully: {agent.name}")
+    #         print(f"   Agent description: {agent.description}")
             
-    #         # 演示代理使用
+    #         # Demonstrate agent usage
     #         # result = agent(inputs={"user_request": "What's the weather like in Tokyo?"})
-    #         # print(f"   代理响应: {result}")
+    #         # print(f"   Agent response: {result}")
     #     else:
-    #         print("   多服务代理创建失败（可能缺少依赖）")
+    #         print("   Multi-service agent creation failed (possibly missing dependencies)")
             
     # except Exception as e:
-    #     print(f"   创建多服务代理时出错: {e}")
+    #     print(f"   Error creating multi-service agent: {e}")
     
     # print()
     
-    # # 4. 创建高级配置工具集
-    # print("4. 创建高级配置API工具集...")
+    # # 4. Create advanced configuration toolkit
+    # print("4. Creating advanced configuration API toolkit...")
     # try:
     #     advanced_toolkit = create_advanced_api_toolkit()
-    #     print(f"   高级工具集创建成功: {advanced_toolkit.name}")
-    #     print(f"   自定义请求头: {advanced_toolkit.common_headers}")
+    #     print(f"   Advanced toolkit created successfully: {advanced_toolkit.name}")
+    #     print(f"   Custom request headers: {advanced_toolkit.common_headers}")
         
     # except Exception as e:
-    #     print(f"   创建高级工具集时出错: {e}")
+    #     print(f"   Error creating advanced toolkit: {e}")
     
-    print("\n=== 基础示例完成 ===")
-    print("\n现在演示完整的天气API三大功能...")
+    print("\n=== Basic examples completed ===")
+    print("\nNow demonstrating complete weather API three major features...")
     print("=" * 60)
     
-    # 演示三个天气API功能
+    # Demonstrate three weather API features
     demo_weather_functions()
 
 

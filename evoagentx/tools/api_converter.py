@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Any, Union, Callable
 from abc import ABC, abstractmethod
 from functools import partial
 
+
 from .tool import Tool, Toolkit
 from ..core.logging import logger
 from ..core.module import BaseModule
@@ -12,16 +13,16 @@ from ..core.module import BaseModule
 
 class APITool(Tool):
     """
-    API工具包装器，将单个API端点包装为Tool (转为英文)
+    API tool wrapper that encapsulates a single API endpoint as a Tool
     
     Attributes:
-        name: 工具名称
-        description: 工具描述
-        inputs: 输入参数规范
-        required: 必需参数列表
-        endpoint_config: API端点配置
-        auth_config: 认证配置
-        function: 实际执行函数
+        name: Tool name
+        description: Tool description
+        inputs: Input parameter schema
+        required: List of required parameters
+        endpoint_config: API endpoint configuration
+        auth_config: Authentication configuration
+        function: Actual execution function
     """
     
     def __init__(
@@ -44,7 +45,7 @@ class APITool(Tool):
         return self.name
     
     def __call__(self, **kwargs):
-        """执行API调用"""
+        """Execute the API call"""
         if not self.function:
             raise ValueError("Function not set for APITool")
         
@@ -56,7 +57,7 @@ class APITool(Tool):
             raise
     
     def _process_result(self, result: Any) -> Any:
-        """处理API返回结果"""
+        """Process API response"""
         if isinstance(result, requests.Response):
             try:
                 return result.json()
@@ -66,13 +67,13 @@ class APITool(Tool):
     
     @classmethod
     def validate_attributes(cls):
-        """验证属性"""
-        # APITool的属性在实例化时设置，跳过类级别的属性验证
-        # 只有在子类中定义了类级别属性时才进行验证
+        """Validate attributes"""
+        # APITool attributes are set during instantiation; skip class-level attribute validation
+        # Only validate if class-level attributes are defined in subclasses
         if cls.__name__ == 'APITool':
             return
         
-        # 继承父类验证，但放宽对__call__方法的要求
+        # Inherit parent validation but relax the requirement for the __call__ method
         required_attributes = {
             "name": str,
             "description": str,
@@ -93,14 +94,14 @@ class APITool(Tool):
 
 class APIToolkit(Toolkit):
     """
-    API工具集合，表示一个API服务的所有端点
+    API tool collection representing all endpoints of an API service
     
     Attributes:
-        name: 服务名称
-        tools: API工具列表
-        base_url: 基础URL
-        auth_config: 认证配置
-        common_headers: 通用请求头
+        name: Service name
+        tools: List of API tools
+        base_url: Base URL
+        auth_config: Authentication configuration
+        common_headers: Common request headers
     """
     
     def __init__(
@@ -117,11 +118,11 @@ class APIToolkit(Toolkit):
         self.common_headers = common_headers or {}
     
     def add_auth_to_headers(self, headers: Dict[str, str]) -> Dict[str, str]:
-        """为请求头添加认证信息"""
+        """Add authentication information to request headers"""
         headers = headers.copy()
         headers.update(self.common_headers)
         
-        # 处理不同类型的认证
+        # Handle different authentication types
         if "api_key" in self.auth_config:
             key_name = self.auth_config.get("key_name", "X-API-Key")
             headers[key_name] = self.auth_config["api_key"]
@@ -134,9 +135,9 @@ class APIToolkit(Toolkit):
 
 class BaseAPIConverter(BaseModule, ABC):
     """
-    基础API转换器抽象类
+    Base API converter abstract class
     
-    负责将API规范转换为APIToolkit
+    Responsible for converting an API specification into an APIToolkit
     """
     
     def __init__(
@@ -146,12 +147,12 @@ class BaseAPIConverter(BaseModule, ABC):
         auth_config: Dict[str, Any] = None
     ):
         """
-        初始化API转换器
+        Initialize the API converter
         
         Args:
-            input_schema: API规范，可以是文件路径或字典
-            description: 服务描述
-            auth_config: 认证配置
+            input_schema: API specification, can be a file path or a dictionary
+            description: Service description
+            auth_config: Authentication configuration
         """
         super().__init__()
         self.input_schema = self._load_schema(input_schema)
@@ -159,9 +160,9 @@ class BaseAPIConverter(BaseModule, ABC):
         self.auth_config = auth_config or {}
     
     def _load_schema(self, schema: Union[str, Dict[str, Any]]) -> Dict[str, Any]:
-        """加载API规范"""
+        """Load API specification"""
         if isinstance(schema, str):
-            # 如果是文件路径
+            # If it's a file path
             try:
                 with open(schema, 'r', encoding='utf-8') as f:
                     if schema.endswith('.json'):
@@ -170,7 +171,7 @@ class BaseAPIConverter(BaseModule, ABC):
                         import yaml
                         return yaml.safe_load(f)
                     else:
-                        # 尝试JSON解析
+                        # Attempt JSON parsing
                         content = f.read()
                         return json.loads(content)
             except Exception as e:
@@ -184,41 +185,41 @@ class BaseAPIConverter(BaseModule, ABC):
     @abstractmethod
     def convert_to_toolkit(self) -> APIToolkit:
         """
-        将API规范转换为APIToolkit
+        Convert API specification to APIToolkit
         
         Returns:
-            APIToolkit: 转换后的工具集
+            APIToolkit: Converted toolkit
         """
         pass
     
     @abstractmethod
     def _create_api_function(self, endpoint_config: Dict[str, Any]) -> Callable:
         """
-        为单个API端点创建执行函数
+        Create an execution function for a single API endpoint
         
         Args:
-            endpoint_config: 端点配置
+            endpoint_config: Endpoint configuration
             
         Returns:
-            Callable: API执行函数
+            Callable: API execution function
         """
         pass
     
     def _extract_parameters(self, endpoint_config: Dict[str, Any]) -> tuple:
         """
-        从端点配置中提取参数信息
+        Extract parameter information from endpoint configuration
         
         Args:
-            endpoint_config: 端点配置
+            endpoint_config: Endpoint configuration
             
         Returns:
-            tuple: (inputs, required) 参数规范和必需参数列表
+            tuple: (inputs, required) parameter schema and list of required parameters
         """
         inputs = {}
         required = []
         
-        # 这里需要根据具体的API规范格式来实现
-        # 默认实现，子类可以重写
+        # Implementation depends on the specific API specification format
+        # Default implementation; subclasses can override
         parameters = endpoint_config.get("parameters", [])
         
         for param in parameters:
@@ -240,11 +241,11 @@ class BaseAPIConverter(BaseModule, ABC):
 
 class OpenAPIConverter(BaseAPIConverter):
     """
-    OpenAPI (Swagger) 规范转换器
+    OpenAPI (Swagger) specification converter
     """
     
     def convert_to_toolkit(self) -> APIToolkit:
-        """将OpenAPI规范转换为APIToolkit"""
+        """Convert OpenAPI specification to APIToolkit"""
         service_name = self.input_schema.get("info", {}).get("title", "API Service")
         base_url = self._get_base_url()
         
@@ -267,12 +268,12 @@ class OpenAPIConverter(BaseAPIConverter):
         )
     
     def _get_base_url(self) -> str:
-        """从OpenAPI规范中获取基础URL"""
+        """Get base URL from the OpenAPI specification"""
         servers = self.input_schema.get("servers", [])
         if servers:
             return servers[0].get("url", "")
         
-        # 旧版本的host和basePath
+        # Legacy fields: host and basePath
         host = self.input_schema.get("host", "")
         base_path = self.input_schema.get("basePath", "")
         schemes = self.input_schema.get("schemes", ["https"])
@@ -289,19 +290,19 @@ class OpenAPIConverter(BaseAPIConverter):
         operation: Dict[str, Any], 
         base_url: str
     ) -> Optional[APITool]:
-        """从OpenAPI操作创建工具"""
+        """Create a tool from an OpenAPI operation"""
         try:
-            # 生成工具名称
+            # Generate tool name
             operation_id = operation.get("operationId")
             if not operation_id:
-                # 如果没有operationId，根据路径和方法生成
+                # If operationId is missing, generate based on path and method
                 clean_path = path.replace("/", "_").replace("{", "").replace("}", "").strip("_")
                 operation_id = f"{method.lower()}_{clean_path}"
             
-            # 提取参数
+            # Extract parameters
             inputs, required = self._extract_openapi_parameters(operation)
             
-            # 创建API执行函数
+            # Create API execution function
             api_function = self._create_api_function({
                 "url": base_url + path,
                 "method": method.upper(),
@@ -326,11 +327,11 @@ class OpenAPIConverter(BaseAPIConverter):
             return None
     
     def _extract_openapi_parameters(self, operation: Dict[str, Any]) -> tuple:
-        """从OpenAPI操作中提取参数"""
+        """Extract parameters from an OpenAPI operation"""
         inputs = {}
         required = []
         
-        # 处理parameters
+        # Handle parameters
         parameters = operation.get("parameters", [])
         for param in parameters:
             param_name = param.get("name", "")
@@ -345,7 +346,7 @@ class OpenAPIConverter(BaseAPIConverter):
             if param.get("required", False):
                 required.append(param_name)
         
-        # 处理requestBody
+        # Handle requestBody
         request_body = operation.get("requestBody", {})
         if request_body:
             content = request_body.get("content", {})
@@ -366,13 +367,13 @@ class OpenAPIConverter(BaseAPIConverter):
         return inputs, required
     
     def _create_api_function(self, endpoint_config: Dict[str, Any]) -> Callable:
-        """创建OpenAPI执行函数"""
+        """Create OpenAPI execution function"""
         url = endpoint_config["url"]
         method = endpoint_config["method"]
         operation = endpoint_config["operation"]
         
         def api_call(**kwargs):
-            # 分离路径参数、查询参数和请求体
+            # Separate path params, query params, and request body
             path_params = {}
             query_params = {}
             body_data = {}
@@ -392,19 +393,19 @@ class OpenAPIConverter(BaseAPIConverter):
                 else:
                     body_data[key] = value
             
-            # 替换路径参数
+            # Replace path parameters
             final_url = url
             for param_name, param_value in path_params.items():
                 final_url = final_url.replace(f"{{{param_name}}}", str(param_value))
             
-            # 准备请求
+            # Prepare request
             headers = {"Content-Type": "application/json"}
             if hasattr(self, 'auth_config') and self.auth_config:
                 if "api_key" in self.auth_config:
                     key_name = self.auth_config.get("key_name", "X-API-Key")
                     headers[key_name] = self.auth_config["api_key"]
             
-            # 发送请求
+            # Send request
             try:
                 if method in ["GET", "DELETE"]:
                     response = requests.request(
@@ -435,15 +436,15 @@ class OpenAPIConverter(BaseAPIConverter):
                 logger.error(f"API request failed: {e}")
                 raise
         
-        # 设置函数名称以便调试
+        # Set function name for easier debugging
         api_call.__name__ = f"api_call_{method.lower()}"
         return api_call
 
 
 class RapidAPIConverter(OpenAPIConverter):
     """
-    RapidAPI专用转换器
-    继承自OpenAPIConverter，添加RapidAPI特定的认证和配置
+    RapidAPI-specific converter
+    Inherits from OpenAPIConverter and adds RapidAPI-specific authentication and configuration
     """
     
     def __init__(
@@ -455,15 +456,25 @@ class RapidAPIConverter(OpenAPIConverter):
         **kwargs
     ):
         """
-        初始化RapidAPI转换器
+        Initialize the RapidAPI converter
         
         Args:
-            input_schema: API规范
-            description: 服务描述
-            rapidapi_key: RapidAPI密钥
-            rapidapi_host: RapidAPI主机
+            input_schema: API specification
+            description: Service description
+            rapidapi_key: RapidAPI key
+            rapidapi_host: RapidAPI host
         """
-        # 设置RapidAPI特定的认证配置
+        # Set RapidAPI-specific authentication configuration
+        if not rapidapi_key:
+            from os import getenv
+            from dotenv import load_dotenv
+            load_dotenv()
+            rapidapi_key = getenv("RAPIDAPI_KEY", "")
+            if not rapidapi_key:
+                raise ValueError("rapidapi_key not provided or RAPIDAPI_KEY environment variable not set")
+        if not rapidapi_host:
+            raise ValueError("rapidapi_host not provided or RAPIDAPI_HOST environment variable not set")
+        
         auth_config = {
             "api_key": rapidapi_key,
             "key_name": "X-RapidAPI-Key",
@@ -478,10 +489,10 @@ class RapidAPIConverter(OpenAPIConverter):
         )
     
     def convert_to_toolkit(self) -> APIToolkit:
-        """转换为RapidAPI工具集"""
+        """Convert to a RapidAPI toolkit"""
         toolkit = super().convert_to_toolkit()
         
-        # 添加RapidAPI特定的通用头
+        # Add RapidAPI-specific common headers
         rapidapi_headers = {
             "X-RapidAPI-Key": self.auth_config.get("api_key", ""),
             "X-RapidAPI-Host": self.auth_config.get("rapidapi_host", "")
@@ -492,13 +503,13 @@ class RapidAPIConverter(OpenAPIConverter):
         return toolkit
     
     def _create_api_function(self, endpoint_config: Dict[str, Any]) -> Callable:
-        """创建RapidAPI执行函数"""
+        """Create RapidAPI execution function"""
         url = endpoint_config["url"]
         method = endpoint_config["method"]
         operation = endpoint_config["operation"]
         
         def rapidapi_call(**kwargs):
-            # 分离参数
+            # Separate parameters
             path_params = {}
             query_params = {}
             body_data = {}
@@ -518,19 +529,19 @@ class RapidAPIConverter(OpenAPIConverter):
                 else:
                     body_data[key] = value
             
-            # 替换路径参数
+            # Replace path parameters
             final_url = url
             for param_name, param_value in path_params.items():
                 final_url = final_url.replace(f"{{{param_name}}}", str(param_value))
             
-            # 准备RapidAPI请求头
+            # Prepare RapidAPI request headers
             headers = {
                 "Content-Type": "application/json",
                 "X-RapidAPI-Key": self.auth_config.get("api_key", ""),
                 "X-RapidAPI-Host": self.auth_config.get("rapidapi_host", "")
             }
             
-            # 发送请求
+            # Send request
             try:
                 if method in ["GET", "DELETE"]:
                     response = requests.request(
@@ -571,15 +582,15 @@ def create_openapi_toolkit(
     auth_config: Dict[str, Any] = None
 ) -> APIToolkit:
     """
-    便捷函数：从OpenAPI规范创建APIToolkit
+    Convenience function: create an APIToolkit from an OpenAPI specification
     
     Args:
-        schema_path_or_dict: OpenAPI规范文件路径或字典
-        service_name: 服务名称（可选，会从规范中提取）
-        auth_config: 认证配置
+        schema_path_or_dict: OpenAPI specification file path or dictionary
+        service_name: Service name (optional, will be extracted from the spec)
+        auth_config: Authentication configuration
     
     Returns:
-        APIToolkit: 创建的工具集
+        APIToolkit: Created toolkit
     """
     converter = OpenAPIConverter(
         input_schema=schema_path_or_dict,
@@ -596,16 +607,16 @@ def create_rapidapi_toolkit(
     service_name: str = None
 ) -> APIToolkit:
     """
-    便捷函数：创建RapidAPI工具集
+    Convenience function: create a RapidAPI toolkit
     
     Args:
-        schema_path_or_dict: API规范文件路径或字典
-        rapidapi_key: RapidAPI密钥
-        rapidapi_host: RapidAPI主机
-        service_name: 服务名称（可选）
+        schema_path_or_dict: API specification file path or dictionary
+        rapidapi_key: RapidAPI key
+        rapidapi_host: RapidAPI host
+        service_name: Service name (optional)
     
     Returns:
-        APIToolkit: 创建的RapidAPI工具集
+        APIToolkit: Created RapidAPI toolkit
     """
     converter = RapidAPIConverter(
         input_schema=schema_path_or_dict,

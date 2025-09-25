@@ -6,11 +6,11 @@ from evoagentx.tools.api_converter import (
     create_rapidapi_toolkit
 )
 
-# 示例1：使用OpenAPI规范创建工具集
+# Example 1: Create a toolkit using the OpenAPI specification
 def example_openapi_converter():
-    """使用OpenAPI规范创建工具集的示例"""
+    """Example of creating a toolkit using the OpenAPI specification"""
     
-    # 示例OpenAPI规范（简化版）
+    # Example OpenAPI specification (simplified version)
     openapi_spec = {
         "openapi": "3.0.0",
         "info": {
@@ -106,8 +106,8 @@ def example_openapi_converter():
         }
     }
     
-    # 方法1：使用转换器类
-    print("=== 使用OpenAPIConverter ===")
+    # Method 1: Using converter class
+    print("=== Using OpenAPIConverter ===")
     converter = OpenAPIConverter(
         input_schema=openapi_spec,
         description="Weather service API",
@@ -118,33 +118,33 @@ def example_openapi_converter():
     )
     
     toolkit = converter.convert_to_toolkit()
-    print(f"服务名称: {toolkit.name}")
-    print(f"基础URL: {toolkit.base_url}")
-    print(f"工具数量: {len(toolkit.tools)}")
+    print(f"Service name: {toolkit.name}")
+    print(f"Base URL: {toolkit.base_url}")
+    print(f"Number of tools: {len(toolkit.tools)}")
     
     for tool in toolkit.tools:
-        print(f"\n工具: {tool.name}")
-        print(f"描述: {tool.description}")
-        print(f"输入参数: {list(tool.inputs.keys())}")
-        print(f"必需参数: {tool.required}")
+        print(f"\nTool: {tool.name}")
+        print(f"Description: {tool.description}")
+        print(f"Input parameters: {list(tool.inputs.keys())}")
+        print(f"Required parameters: {tool.required}")
     
-    # 方法2：使用便捷函数
-    print("\n=== 使用便捷函数 ===")
+    # Method 2: Using utility function
+    print("\n=== Using utility function ===")
     toolkit2 = create_openapi_toolkit(
         schema_path_or_dict=openapi_spec,
         service_name="Weather Service",
         auth_config={"api_key": "your-api-key"}
     )
-    print(f"便捷函数创建的工具集: {toolkit2.name}")
+    print(f"Toolkit created by utility function: {toolkit2.name}")
     
     return toolkit
 
 
-# 示例2：使用RapidAPI创建工具集
+# Example 2: Create a toolkit using RapidAPI
 def example_rapidapi_converter():
-    """使用RapidAPI创建工具集的示例"""
+    """Example of creating a toolkit using RapidAPI"""
     
-    # RapidAPI的OpenAPI规范通常从RapidAPI平台获取
+    # OpenAPI specification for RapidAPI is usually obtained from RapidAPI platform
     rapidapi_spec = {
         "openapi": "3.0.0",
         "info": {
@@ -197,9 +197,9 @@ def example_rapidapi_converter():
         }
     }
     
-    print("\n=== 使用RapidAPIConverter ===")
+    print("\n=== Using RapidAPIConverter ===")
     
-    # 方法1：使用转换器类
+    # Method 1: Using converter class
     converter = RapidAPIConverter(
         input_schema=rapidapi_spec,
         description="Microsoft Translator API",
@@ -208,15 +208,15 @@ def example_rapidapi_converter():
     )
     
     toolkit = converter.convert_to_toolkit()
-    print(f"RapidAPI服务: {toolkit.name}")
-    print(f"通用请求头: {toolkit.common_headers}")
+    print(f"RapidAPI service: {toolkit.name}")
+    print(f"Common headers: {toolkit.common_headers}")
     
     for tool in toolkit.tools:
-        print(f"\n工具: {tool.name}")
-        print(f"描述: {tool.description}")
-        print(f"输入参数: {list(tool.inputs.keys())}")
+        print(f"\nTool: {tool.name}")
+        print(f"Description: {tool.description}")
+        print(f"Input parameters: {list(tool.inputs.keys())}")
     
-    # 方法2：使用便捷函数
+    # Method 2: Using utility function
     toolkit2 = create_rapidapi_toolkit(
         schema_path_or_dict=rapidapi_spec,
         rapidapi_key="your-rapidapi-key",
@@ -227,11 +227,11 @@ def example_rapidapi_converter():
     return toolkit
 
 
-# 示例3：在CustomizeAgent中使用API工具集
+# Example 3: Use the API toolkit in CustomizeAgent
 def example_with_customize_agent():
-    """展示如何在CustomizeAgent中使用API工具集"""
+    """Demonstrate how to use the API toolkit in CustomizeAgent"""
     
-    # 首先创建API工具集
+    # First create API toolkit
     openapi_spec = {
         "openapi": "3.0.0",
         "info": {"title": "Calculator API", "version": "1.0.0"},
@@ -263,17 +263,17 @@ def example_with_customize_agent():
         }
     }
     
-    # 创建API工具集
+    # Create API toolkit
     api_toolkit = create_openapi_toolkit(
         schema_path_or_dict=openapi_spec,
         auth_config={"api_key": "calc-api-key"}
     )
     
-    print("\n=== 在CustomizeAgent中使用API工具 ===")
-    print(f"API工具集: {api_toolkit.name}")
-    print(f"可用工具: {[tool.name for tool in api_toolkit.tools]}")
+    print("\n=== Using API tools in CustomizeAgent ===")
+    print(f"API toolkit: {api_toolkit.name}")
+    print(f"Available tools: {[tool.name for tool in api_toolkit.tools]}")
     
-    # 注意：实际使用时需要导入CustomizeAgent
+    # Note: Import CustomizeAgent when actually using
     # from evoagentx.agents.customize_agent import CustomizeAgent
     # 
     # agent = CustomizeAgent(
@@ -286,17 +286,17 @@ def example_with_customize_agent():
     #     outputs=[
     #         {"name": "result", "type": "string", "description": "Calculation result"}
     #     ],
-    #     tools=[api_toolkit]  # 使用API工具集
+    #     tools=[api_toolkit]  # Use API toolkit
     # )
     
     return api_toolkit
 
 
-# 示例4：从文件加载API规范
+# Example 4: Load API specification from file
 def example_load_from_file():
-    """从文件加载API规范的示例"""
+    """Example of loading API specification from file"""
     
-    # 创建示例OpenAPI文件
+    # Create sample OpenAPI file
     sample_spec = {
         "openapi": "3.0.0",
         "info": {
@@ -322,31 +322,31 @@ def example_load_from_file():
         }
     }
     
-    # 保存到文件
+    # Save to file
     spec_file = "/tmp/sample_api_spec.json"
     with open(spec_file, 'w') as f:
         json.dump(sample_spec, f, indent=2)
     
-    print(f"\n=== 从文件加载API规范 ===")
-    print(f"规范文件: {spec_file}")
+    print(f"\n=== Load API specification from file ===")
+    print(f"Spec file: {spec_file}")
     
-    # 从文件创建工具集
+    # Create toolkit from file
     toolkit = create_openapi_toolkit(
         schema_path_or_dict=spec_file,
         service_name="Sample Service"
     )
     
-    print(f"从文件创建的工具集: {toolkit.name}")
-    print(f"工具: {[tool.name for tool in toolkit.tools]}")
+    print(f"Toolkit created from file: {toolkit.name}")
+    print(f"Tools: {[tool.name for tool in toolkit.tools]}")
     
     return toolkit
 
 
 if __name__ == "__main__":
-    print("API转换器使用示例")
+    print("API Converter usage examples")
     print("=" * 50)
     
-    # 运行示例
+    # Run examples
     try:
         example_openapi_converter()
         example_rapidapi_converter()
@@ -354,9 +354,9 @@ if __name__ == "__main__":
         example_load_from_file()
         
         print("\n" + "=" * 50)
-        print("所有示例运行完成！")
+        print("All examples completed!")
         
     except Exception as e:
-        print(f"运行示例时出错: {e}")
+        print(f"Error running examples: {e}")
         import traceback
         traceback.print_exc()

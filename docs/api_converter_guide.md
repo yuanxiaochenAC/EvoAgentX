@@ -1,63 +1,63 @@
-# API转换器使用指南
+# API Converter User Guide
 
-API转换器是EvoAgentX框架中的一个强大工具，用于将各种API规范（如OpenAPI/Swagger、RapidAPI等）自动转换为可在智能代理中使用的工具集。
+The API Converter is a powerful tool in the EvoAgentX framework that automatically converts various API specifications (such as OpenAPI/Swagger and RapidAPI) into toolkits that can be used by intelligent agents.
 
-## 核心组件
+## Core Components
 
 ### 1. APITool
-单个API端点的工具包装器，继承自`Tool`类。
+A tool wrapper for a single API endpoint, inheriting from the Tool class.
 
-**主要特性:**
-- 自动处理API请求和响应
-- 支持各种HTTP方法（GET, POST, PUT, DELETE, PATCH）
-- 灵活的参数处理（路径参数、查询参数、请求体）
-- 内置错误处理和结果转换
+Key features:
+- Automatically handles API requests and responses
+- Supports various HTTP methods (GET, POST, PUT, DELETE, PATCH)
+- Flexible parameter handling (path params, query params, request body)
+- Built-in error handling and result processing
 
-### 2. APIToolkit  
-API服务的工具集合，继承自`Toolkit`类。
+### 2. APIToolkit
+A collection of tools for an API service, inheriting from the Toolkit class.
 
-**主要特性:**
-- 管理多个相关的API工具
-- 统一的认证配置
-- 通用请求头管理
-- 服务级别的配置
+Key features:
+- Manage multiple related API tools
+- Unified authentication configuration
+- Common request header management
+- Service-level configuration
 
 ### 3. BaseAPIConverter
-基础API转换器抽象类，定义了转换接口。
+Abstract base class for API converters that defines the conversion interface.
 
-**核心方法:**
-- `convert_to_toolkit()`: 将API规范转换为APIToolkit
-- `_create_api_function()`: 为单个端点创建执行函数
-- `_extract_parameters()`: 提取参数信息
+Core methods:
+- convert_to_toolkit(): Convert an API specification to an APIToolkit
+- _create_api_function(): Create an execution function for a single endpoint
+- _extract_parameters(): Extract parameter information
 
 ### 4. OpenAPIConverter
-OpenAPI (Swagger) 规范转换器，继承自`BaseAPIConverter`。
+OpenAPI (Swagger) specification converter that inherits from BaseAPIConverter.
 
-**支持特性:**
-- OpenAPI 3.0+ 规范
-- 自动参数提取
-- 路径参数替换
-- 请求体处理
-- 响应格式化
+Supported features:
+- OpenAPI 3.0+ specifications
+- Automatic parameter extraction
+- Path parameter replacement
+- Request body handling
+- Response formatting
 
 ### 5. RapidAPIConverter
-RapidAPI专用转换器，继承自`OpenAPIConverter`。
+RapidAPI-specific converter that inherits from OpenAPIConverter.
 
-**RapidAPI特性:**
-- 自动添加RapidAPI认证头
-- 支持RapidAPI主机配置
-- 专用的错误处理
+RapidAPI features:
+- Automatically add RapidAPI authentication headers
+- Support RapidAPI host configuration
+- Specialized error handling
 
-## 使用方法
+## Usage
 
-### 基本用法
+### Basic Usage
 
-#### 1. 从OpenAPI规范创建工具集
+#### 1. Create a toolkit from an OpenAPI spec
 
 ```python
-from evoagentx.tools.api_converter import create_api_toolkit_from_openapi
+from evoagentx.tools.api_converter import create_openapi_toolkit
 
-# 从字典创建
+# Create from a dictionary
 openapi_spec = {
     "openapi": "3.0.0",
     "info": {"title": "Weather API", "version": "1.0.0"},
@@ -70,7 +70,7 @@ openapi_spec = {
                 "parameters": [
                     {
                         "name": "city",
-                        "in": "query", 
+                        "in": "query",
                         "required": True,
                         "schema": {"type": "string"},
                         "description": "City name"
@@ -81,19 +81,19 @@ openapi_spec = {
     }
 }
 
-toolkit = create_api_toolkit_from_openapi(
+toolkit = create_openapi_toolkit(
     schema_path_or_dict=openapi_spec,
     auth_config={"api_key": "your-api-key"}
 )
 
-# 从文件创建
-toolkit = create_api_toolkit_from_openapi(
+# Create from a file
+toolkit = create_openapi_toolkit(
     schema_path_or_dict="path/to/openapi.json",
     auth_config={"api_key": "your-api-key"}
 )
 ```
 
-#### 2. 创建RapidAPI工具集
+#### 2. Create a RapidAPI toolkit
 
 ```python
 from evoagentx.tools.api_converter import create_rapidapi_toolkit
@@ -105,19 +105,19 @@ toolkit = create_rapidapi_toolkit(
 )
 ```
 
-#### 3. 在CustomizeAgent中使用
+#### 3. Use in CustomizeAgent
 
 ```python
 from evoagentx.agents.customize_agent import CustomizeAgent
-from evoagentx.tools.api_converter import create_api_toolkit_from_openapi
+from evoagentx.tools.api_converter import create_openapi_toolkit
 
-# 创建API工具集
-api_toolkit = create_api_toolkit_from_openapi(
+# Create the API toolkit
+api_toolkit = create_openapi_toolkit(
     schema_path_or_dict=openapi_spec,
     auth_config={"api_key": "your-api-key"}
 )
 
-# 创建使用API工具的智能代理
+# Create an agent that uses the API toolkit
 agent = CustomizeAgent(
     name="Weather Agent",
     description="An agent that provides weather information",
@@ -128,52 +128,52 @@ agent = CustomizeAgent(
     outputs=[
         {"name": "weather_info", "type": "string", "description": "Weather information"}
     ],
-    tools=[api_toolkit]  # 使用API工具集
+    tools=[api_toolkit]
 )
 
-# 使用代理
+# Use the agent
 result = agent(inputs={"city": "Beijing"})
 ```
 
-### 高级用法
+### Advanced Usage
 
-#### 1. 自定义转换器
+#### 1. Custom converter
 
 ```python
 from evoagentx.tools.api_converter import BaseAPIConverter
 
 class CustomAPIConverter(BaseAPIConverter):
     def convert_to_toolkit(self):
-        # 实现自定义转换逻辑
+        # Implement custom conversion logic
         pass
-    
+
     def _create_api_function(self, endpoint_config):
-        # 实现自定义API函数创建
+        # Implement custom API function creation
         pass
 ```
 
-#### 2. 复杂认证配置
+#### 2. Complex authentication configuration
 
 ```python
-# API密钥认证
+# API key auth
 auth_config = {
     "api_key": "your-api-key",
-    "key_name": "X-API-Key"  # 自定义头名称
+    "key_name": "X-API-Key"  # Custom header name
 }
 
-# Bearer Token认证
+# Bearer Token auth
 auth_config = {
     "bearer_token": "your-bearer-token"
 }
 
-# 组合认证
+# Combined auth
 auth_config = {
     "api_key": "your-api-key",
     "bearer_token": "your-bearer-token"
 }
 ```
 
-#### 3. 自定义请求头
+#### 3. Custom request headers
 
 ```python
 from evoagentx.tools.api_converter import OpenAPIConverter
@@ -185,64 +185,64 @@ converter = OpenAPIConverter(
 
 toolkit = converter.convert_to_toolkit()
 
-# 添加自定义请求头
+# Add custom request headers
 toolkit.common_headers.update({
     "User-Agent": "MyApp/1.0",
     "Accept": "application/json"
 })
 ```
 
-## 支持的API规范格式
+## Supported API Specification Formats
 
 ### OpenAPI/Swagger
-- **版本**: OpenAPI 3.0+, Swagger 2.0
-- **格式**: JSON, YAML
-- **特性**: 完整的参数提取、请求体处理、响应格式化
+- Versions: OpenAPI 3.0+, Swagger 2.0
+- Formats: JSON, YAML
+- Features: Complete parameter extraction, request body handling, response formatting
 
 ### RapidAPI
-- **基础**: OpenAPI规范
-- **增强**: RapidAPI特定的认证和配置
-- **特性**: 自动RapidAPI头处理
+- Based on: OpenAPI specification
+- Enhancements: RapidAPI-specific authentication and configuration
+- Features: Automatic RapidAPI header handling
 
-## 参数类型映射
+## Parameter Type Mapping
 
-| OpenAPI类型 | Tool输入类型 | 描述 |
-|-------------|-------------|------|
-| string      | string      | 字符串 |
-| integer     | integer     | 整数 |
-| number      | number      | 数字 |
-| boolean     | boolean     | 布尔值 |
-| array       | array       | 数组 |
-| object      | object      | 对象 |
+| OpenAPI Type | Tool Input Type | Description |
+|-------------|------------------|-------------|
+| string      | string           | String      |
+| integer     | integer          | Integer     |
+| number      | number           | Number      |
+| boolean     | boolean          | Boolean     |
+| array       | array            | Array       |
+| object      | object           | Object      |
 
-## 错误处理
+## Error Handling
 
-API转换器提供多层错误处理：
+The API Converter provides layered error handling:
 
-1. **转换时错误**: 规范解析失败、格式不正确
-2. **运行时错误**: API请求失败、网络错误
-3. **响应错误**: API返回错误状态码
+1. Conversion errors: Spec parsing failures, invalid formats
+2. Runtime errors: API request failures, network issues
+3. Response errors: API returns error status codes
 
 ```python
 try:
-    toolkit = create_api_toolkit_from_openapi(openapi_spec)
+    toolkit = create_openapi_toolkit(openapi_spec)
     result = toolkit.get_tool("weather_api")(city="Beijing")
 except Exception as e:
     print(f"Error: {e}")
 ```
 
-## 最佳实践
+## Best Practices
 
-### 1. API密钥管理
+### 1. API Key Management
 ```python
 import os
 
-# 使用环境变量存储敏感信息
+# Store sensitive information in environment variables
 api_key = os.getenv("WEATHER_API_KEY")
 auth_config = {"api_key": api_key}
 ```
 
-### 2. 错误重试
+### 2. Retry on Errors
 ```python
 import time
 from functools import wraps
@@ -263,74 +263,74 @@ def retry_api_call(max_retries=3, delay=1):
     return decorator
 ```
 
-### 3. 响应缓存
+### 3. Response Caching
 ```python
 from functools import lru_cache
 
-# 对稳定的API结果进行缓存
+# Cache results for stable API endpoints
 @lru_cache(maxsize=100)
 def cached_api_call(endpoint, params):
-    # API调用逻辑
+    # API call logic
     pass
 ```
 
-## 故障排除
+## Troubleshooting
 
-### 常见问题
+### Common Issues
 
-1. **转换失败**
-   - 检查OpenAPI规范格式
-   - 验证必需字段是否存在
-   - 确认服务器URL配置
+1. Conversion failed
+   - Check the OpenAPI spec format
+   - Verify that required fields are present
+   - Confirm server URL configuration
 
-2. **API调用失败**
-   - 验证API密钥和认证配置
-   - 检查网络连接
-   - 确认API端点可访问
+2. API call failed
+   - Verify API key and authentication configuration
+   - Check network connectivity
+   - Confirm the API endpoint is accessible
 
-3. **参数错误**
-   - 检查参数名称和类型
-   - 验证必需参数是否提供
-   - 确认参数值格式正确
+3. Parameter errors
+   - Check parameter names and types
+   - Verify required parameters are provided
+   - Confirm parameter value formats are correct
 
-### 调试技巧
+### Debugging Tips
 
 ```python
 import logging
 
-# 启用详细日志
+# Enable verbose logging
 logging.basicConfig(level=logging.DEBUG)
 
-# 检查生成的工具
+# Inspect generated tools
 for tool in toolkit.tools:
     print(f"Tool: {tool.name}")
     print(f"Inputs: {tool.inputs}")
     print(f"Required: {tool.required}")
 ```
 
-## 扩展开发
+## Extensibility
 
-### 添加新的API规范支持
+### Add support for a new API specification
 
-1. 继承`BaseAPIConverter`
-2. 实现`convert_to_toolkit()`方法
-3. 实现`_create_api_function()`方法
-4. 添加特定的参数提取逻辑
+1. Inherit from BaseAPIConverter
+2. Implement the convert_to_toolkit() method
+3. Implement the _create_api_function() method
+4. Add spec-specific parameter extraction logic
 
-### 自定义工具行为
+### Customize tool behavior
 
-1. 继承`APITool`类
-2. 重写`__call__`方法
-3. 添加自定义的结果处理逻辑
+1. Inherit from the APITool class
+2. Override the __call__ method
+3. Add custom result processing logic
 
-## 示例项目
+## Example Project
 
-查看`examples/api_converter_example.py`获取完整的使用示例，包括：
-- 基本OpenAPI转换
-- RapidAPI集成
-- CustomizeAgent集成
-- 文件加载示例
+See examples/tools/api_converter_example.py for a complete example, including:
+- Basic OpenAPI conversion
+- RapidAPI integration
+- CustomizeAgent integration
+- File loading example
 
 ---
 
-通过API转换器，您可以轻松地将任何遵循标准规范的API集成到EvoAgentX智能代理中，大大扩展代理的能力和应用场景。
+With the API Converter, you can easily integrate any standards-compliant API into EvoAgentX agents, greatly expanding their capabilities and use cases.
