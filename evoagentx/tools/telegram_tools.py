@@ -145,7 +145,7 @@ class TelegramBase(BaseModule):
         """
         try:
             try:
-                loop = asyncio.get_running_loop()
+                asyncio.get_running_loop()
                 # We're in an async context, need to run in a new thread
                 import concurrent.futures
                 with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -1143,7 +1143,7 @@ class ReadFileContentTool(Tool):
                     try:
                         if os.path.exists(downloaded_path):
                             os.remove(downloaded_path)
-                    except:
+                    except Exception:
                         pass  # Ignore cleanup errors
                     
             except Exception as e:
