@@ -39,6 +39,8 @@ The corpus includes both simple workflows, such as **Arxiv Daily Digest**, **Rec
      --output arxiv_digest.md
    ```
 
+- Arxiv Daily Digest workflow was contributed by Shiyang Liang: victor.liang28@outlook.com & [@Haoyang Li](https://github.com/Oxygennnnn).
+
 ------------------------------------------------------------
 
 2. Recipe Generator
@@ -50,6 +52,8 @@ The corpus includes both simple workflows, such as **Arxiv Daily Digest**, **Rec
      --goal "Generate a healthy vegetarian dinner recipe that uses tofu, broccoli, and garlic. Include step-by-step instructions and estimated cooking time." `
      --output recipe.md
    ```
+
+   - Recipe Generator workflow was contributed by [@xyq116](https://github.com/xyq116).
 
 ------------------------------------------------------------
 
@@ -64,18 +68,34 @@ The corpus includes both simple workflows, such as **Arxiv Daily Digest**, **Rec
    ```
 
    Open tetris.html in a browser to play.
+   - Tetris Game Generator workflow was contributed by [@fangjy6](https://github.com/fangjy6).
+
+------------------------------------------------------------
+
+4. Travel Recommendation Generator
+   Generate a travel recommendation based on user preferences.
+
+   ```bash
+   python Wonderful_workflow_corpus/execute_workflow.py `
+     --workflow Wonderful_workflow_corpus/travel_recommendation/workflow.json `
+     --goal "Plan a 7-day trip for 2 adults from San Francisco (SFO) to Tokyo on 2025-10-12 to 2025-10-18 with a total budget of USD 3,200. Prefer a 4-star hotel in Shinjuku or Shibuya with breakfast, fast Wi-Fi, and a gym (≤220 USD/night). Round-trip flights; local metro + walking (Suica). Dining: ramen, sushi, izakaya (mid-range). Interests: culture, contemporary art, historic neighborhoods, light outdoor; medium comfort; no group tours." `
+     --output travel_recommendation.md
+   ```
+   
+   - Travel Recommendation Generator workflow was contributed by [@xyq116](https://github.com/xyq116).
 
 ------------------------------------------------------------
 
 📊 Advanced Workflow
 --------------------
 
-4. Example: Stock Analysis
+5. Example: Stock Analysis
 Run the full pipeline with:
 
 ```bash
 python Wonderful_workflow_corpus/invest/stock_analysis.py
 ```
+- Stock Analysis workflow was contributed by [@bruuuuuceliu](https://github.com/bruuuuuceliu) & [@yuanxiaochenAC](https://github.com/yuanxiaochenAC).
 
 The process will:
 
