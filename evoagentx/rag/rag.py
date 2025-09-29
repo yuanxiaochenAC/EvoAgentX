@@ -578,8 +578,7 @@ class RAGEngine:
                     graph_store=index.get_index().storage_context.graph_store,
                     embed_model=self.embed_model.get_embedding_model(),
                     query=Query(query_str="", top_k=self.config.retrieval.top_k if self.config.retrieval else 5),
-                    storage_handler=self.storage_handler,
-                    chunk_class = self.chunk_class
+                    storage_handler=self.storage_handler
                 )
 
             nodes = corpus.to_llama_nodes()
