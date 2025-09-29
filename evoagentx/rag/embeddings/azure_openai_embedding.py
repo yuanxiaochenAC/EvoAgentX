@@ -46,18 +46,18 @@ class AzureOpenAIEmbedding(BaseEmbedding):
     ) -> None:
         api_key = (
             api_key
-            or os.getenv("AZURE_OPENAI_API_KEY")
+            or os.getenv("AZURE_EMBED_API_KEY")
             or os.getenv("OPENAI_API_KEY")
             or ""
         )
         super().__init__(api_key=api_key, model_name=model_name, embed_batch_size=embed_batch_size)
 
         self.model_name = model_name
-        self.azure_endpoint = azure_endpoint or os.getenv("AZURE_OPENAI_ENDPOINT")
-        self.api_version = api_version or os.getenv("AZURE_OPENAI_API_VERSION")
+        self.azure_endpoint = azure_endpoint or os.getenv("AZURE_EMBED_ENDPOINT")
+        self.api_version = api_version or os.getenv("AZURE_EMBED_API_VERSION")
         self.deployment_name = (
             deployment_name
-            or os.getenv("AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT")
+            or os.getenv("AZURE_EMBED_DEPLOYMENT")
             or model_name
         )
         self.dimensions = dimensions
