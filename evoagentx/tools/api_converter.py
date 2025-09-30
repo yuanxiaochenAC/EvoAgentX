@@ -1,9 +1,7 @@
 import json
 import requests
-import inspect
 from typing import Dict, List, Optional, Any, Union, Callable
 from abc import ABC, abstractmethod
-from functools import partial
 
 
 from .tool import Tool, Toolkit
@@ -61,7 +59,7 @@ class APITool(Tool):
         if isinstance(result, requests.Response):
             try:
                 return result.json()
-            except:
+            except (ValueError, json.JSONDecodeError):
                 return result.text
         return result
     
@@ -429,7 +427,7 @@ class OpenAPIConverter(BaseAPIConverter):
                 
                 try:
                     return response.json()
-                except:
+                except (ValueError, json.JSONDecodeError):
                     return response.text
                     
             except requests.exceptions.RequestException as e:
@@ -565,7 +563,7 @@ class RapidAPIConverter(OpenAPIConverter):
                 
                 try:
                     return response.json()
-                except:
+                except (ValueError, json.JSONDecodeError):
                     return response.text
                     
             except requests.exceptions.RequestException as e:
