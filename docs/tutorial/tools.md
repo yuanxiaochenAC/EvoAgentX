@@ -13,7 +13,7 @@ We'll cover:
 - `examples/tools/tools_database.py` - Database examples (Section 5)
 - `examples/tools/tools_images.py` - Image handling examples (Section 6)
 - `examples/tools/tools_browser.py` - Browser automation examples (Section 7)
-- `examples/tools/tools_integration.py` - MCP and integration examples (Section 8)
+- `examples/tools/tools_converters.py` - Converters (MCP + API Converter) examples (Section 8)
 
 1. **Understanding the Tool Architecture**: Learn about the base Tool class and Toolkit system
 2. **Code Interpreters**: Execute Python code safely using Python and Docker interpreters
@@ -71,8 +71,9 @@ By the end of this tutorial, you'll understand how to leverage these tools in yo
 | **🧰 Browser Tools** |  |  |  |
 | [BrowserToolkit](#7-browser-tools) | Fine-grained browser automation: initialize, navigate, type, click, resnapshot page, read console logs, and close. | [evoagentx/tools/browser_tool.py](../../evoagentx/tools/browser_tool.py) | [examples/tools/tools_browser.py](../../examples/tools/tools_browser.py) |
 | [BrowserUseToolkit](#7-browser-tools) | High-level, natural-language browser automation (navigate, fill forms, click, search, etc.) driven by an LLM. | [evoagentx/tools/browser_use.py](../../evoagentx/tools/browser_use.py) | [examples/tools/tools_browser.py](../../examples/tools/tools_browser.py) |
-| **🧰 MCP Tools** |  |  |  |
-| [MCPToolkit](#81-mcptoolkit) | Connect to external MCP servers and discover their tools. Extends EvoAgentX with third-party capabilities. | [evoagentx/tools/mcp.py](../../evoagentx/tools/mcp.py) | [examples/tools/tools_integration.py](../../examples/tools/tools_integration.py) |
+| **🧰 Converters** |  |  |  |
+| [MCPToolkit](#81-mcptoolkit) | Connect to external MCP servers and discover their tools. Extends EvoAgentX with third-party capabilities. | [evoagentx/tools/mcp.py](../../evoagentx/tools/mcp.py) | [examples/tools/tools_converters.py](../../examples/tools/tools_converters.py) |
+| [API Converter (APIToolkit)](#82-api-converter) | Convert API specs (OpenAPI/RapidAPI) into executable toolkits and tools automatically. | [evoagentx/tools/api_converter.py](../../evoagentx/tools/api_converter.py) | [examples/tools/tools_converters.py](../../examples/tools/tools_converters.py) |
 
 </details>
 
@@ -84,7 +85,7 @@ By the end of this tutorial, you'll understand how to leverage these tools in yo
 - [Database Tools](#4-filesystem-tools) - Data persistence and querying
 - [Image Handling Tools](#5-database-tools) - Image analysis and generation
 - [Browser Tools](#6-image-handling-tools) - Web automation
-- [MCP Tools](#8-mcp-tools) - External service integration
+- [Converters](#8-converters) - MCP and API converters
 
 ---
 
@@ -3259,40 +3260,41 @@ The separated `tools_browser.py` file provides several advantages:
 
 ---
 
-## 8. MCP Tools
+## 8. Converters
 
-**📁 Example File**: `examples/tools/tools_integration.py`
+**📁 Example File**: `examples/tools/tools_converters.py`
 
 **🔧 Toolkit Files**: 
 - `evoagentx/tools/mcp.py` - MCPToolkit implementation
+- `evoagentx/tools/api_converter.py` - API Converter implementations (OpenAPIConverter, RapidAPIConverter, APIToolkit)
 
-**🚀 Run Examples**: `python -m examples.tools.tools_integration`
+**🚀 Run Examples**: `python -m examples.tools.tools_converters`
 
-**🧪 Test Files**: `tests/tools/test_mcp_tools.py` (to be created)
+**🧪 Test Files**: `tests/tools/test_converters.py` (to be created)
 
-**🚀 Run Tests**: `python -m tests.tools.test_mcp_tools` (when test files are created)
+**🚀 Run Tests**: `python -m tests.tools.test_converters` (when test files are created)
 
 **📁 View Source Code**: 
 ```bash
-# View toolkit implementation
+# View MCP toolkit implementation
 ls evoagentx/tools/mcp.py
 
-# View example file
-cat examples/tools/tools_integration.py
+# View API Converter implementation
+ls evoagentx/tools/api_converter.py
 
-# View toolkit source files
-cat evoagentx/tools/mcp.py
+# View example file
+cat examples/tools/tools_converters.py
 ```
 
 **📋 Configuration Files**:
 - `examples/tools/sample_mcp.config` - Sample MCP server configuration
 
-EvoAgentX provides comprehensive MCP (Model Context Protocol) integration capabilities for connecting to external tools and services:
+EvoAgentX provides two complementary converter capabilities for integrating external services and transforming API specifications into executable tools:
 
 1. **MCPToolkit**: Connects to external MCP servers and provides access to their tools
-2. **FastMCP 2.0 Integration**: Enhanced performance and reliability with FastMCP backend
-3. **Multiple Server Support**: Connect to multiple MCP servers simultaneously
-4. **Automatic Tool Discovery**: Automatically discover and integrate available tools from MCP servers
+2. **API Converter**: Converts API specifications (OpenAPI, RapidAPI) into executable toolkits automatically
+
+---
 
 ### 8.1 MCPToolkit
 
@@ -3360,125 +3362,111 @@ if arxiv_tool:
 toolkit.disconnect()
 ```
 
-### 8.2 MCP Configuration
+### 8.2 API Converter
 
-**MCP servers are configured using JSON configuration files that specify how to start and connect to external services.**
+**The API Converter transforms API specifications into an executable `APIToolkit` with callable tools derived from each API operation. It supports OpenAPI (Swagger) and RapidAPI specifications.**
 
-#### 8.2.1 Configuration Format
+#### 8.2.1 Setup
 
-```json
-{
-    "mcpServers": {
-        "server-name": {
-            "command": "command-to-run",
-            "args": ["arg1", "arg2"],
-            "env": {
-                "ENV_VAR": "value"
+```python
+from evoagentx.tools.api_converter import (
+    create_openapi_toolkit,
+    create_rapidapi_toolkit,
+)
+
+# Option A: Build toolkit from an OpenAPI spec (dict or JSON/YAML file path)
+openapi_toolkit = create_openapi_toolkit(
+    schema_path_or_dict={
+        "openapi": "3.0.0",
+        "info": {"title": "Sample API", "version": "1.0"},
+        "servers": [{"url": "https://api.example.com"}],
+        "paths": {
+            "/items": {
+                "get": {
+                    "operationId": "listItems",
+                    "summary": "List items",
+                    "parameters": [
+                        {"name": "limit", "in": "query", "required": False, "schema": {"type": "integer"}}
+                    ]
+                }
             }
         }
     }
-}
+)
+
+# Option B: Build toolkit from a RapidAPI spec (dict or JSON file path)
+import os
+from dotenv import load_dotenv
+load_dotenv()
+rapidapi_key = os.getenv("RAPIDAPI_KEY", "")
+rapidapi_host = "open-weather13.p.rapidapi.com"
+rapidapi_toolkit = create_rapidapi_toolkit(
+    schema_path_or_dict="path/to/rapidapi_openapi.json",  # or a dict
+    rapidapi_key=rapidapi_key,
+    rapidapi_host=rapidapi_host,
+)
 ```
 
-#### 8.2.2 Example Configurations
+#### 8.2.2 Available Methods
 
-**arXiv MCP Server**:
-```json
-{
-    "mcpServers": {
-        "arxiv-mcp-server": {
-            "command": "uv",
-            "args": [
-                "tool",
-                "run",
-                "arxiv-mcp-server",
-                "--storage-path", "./data/"
-            ]
-        }
-    }
-}
-```
+Toolkits returned by the API Converter are instances of `APIToolkit` and provide:
 
-**File System MCP Server**:
-```json
-{
-    "mcpServers": {
-        "file-system-server": {
-            "command": "file-system-mcp-server",
-            "args": ["--root", "/path/to/root"]
-        }
-    }
-}
+- **`get_tools()`**: Returns all available tools derived from API operations
+- **`get_tool(tool_name)`**: Returns a tool by its operationId-derived name
+- **`get_tool_schemas()`**: Returns OpenAI-compatible schemas for all tools
+
+#### 8.2.3 Usage Example
+
+```python
+# Inspect available tools
+for tool in openapi_toolkit.get_tools():
+    print(f"Tool: {tool.name} -> {tool.description}")
+
+# Use a specific tool (operationId is used as tool.name when available)
+list_items = openapi_toolkit.get_tool("listItems")
+result = list_items(limit=5)
+print("Result:", result)
+
+# RapidAPI example using the weather spec in tools_converters.py
+weather_tool = rapidapi_toolkit.get_tool("getCityWeather")
+if weather_tool:
+    res = weather_tool(city="new york", lang="EN")
+    print("Weather:", type(res), str(res)[:200], "...")
 ```
 
 ### 8.3 Running the Examples
 
-To run the MCP tool examples:
+To run the converter examples:
 
 ```bash
-# Run all MCP tool examples
-python -m examples.tools.tools_integration
+# Run all converter examples (MCP + API Converter)
+python -m examples.tools.tools_converters
 
 # Or run from the examples/tools directory
 cd examples/tools
-python tools_integration.py
+python tools_converters.py
 ```
 
 **Example Output**:
 ```
-===== MCP TOOL EXAMPLES =====
+===== CONVERTER EXAMPLES =====
 
-===== MCP ARXIV SERVER EXAMPLE =====
-Loading MCP configuration from: /path/to/sample_mcp.config
-Initializing MCPToolkit...
-✓ MCPToolkit initialized successfully
+===== API CONVERTER (RapidAPI) SMOKE TEST =====
+✓ Built toolkit from provided spec
+Available tools: 3
+  Tool: getCityWeather
+  Tool: getWeatherByCoordinates
+  Tool: getFiveDayForecast
 
-Step 1: Connecting to MCP servers and retrieving tools...
-✓ Connected to 1 MCP server(s)
-
-Step 2: Exploring available tools...
-Toolkit 1: arxiv-mcp-server
-----------------------------------------
-Available tools: 1
-  Tool 1: search_papers
-    Description: Search for research papers on arXiv
-    Inputs: 1 parameters
-    Parameters:
-      ✓ query (string): Search query for papers
-
-Step 3: Using arXiv search tool...
-✓ Found arXiv tool: search_papers
-  Description: Search for research papers on arXiv
-
-Searching for research papers about: 'artificial intelligence'
-
-Search Results:
---------------------------------------------------
+(Optional) Real API call performed if RAPIDAPI_KEY is set
 Result type: <class 'dict'>
-Result content: {'papers': [{'title': 'Deep Learning for AI'...}]}
-✓ MCP arXiv example completed
-✓ MCP connection closed
-===== ALL MCP TOOL EXAMPLES COMPLETED =====
+...
+
+===== MCP INTEGRATION EXAMPLE =====
+✓ MCPToolkit initialized
+✓ Connected to configured MCP server(s)
+✓ Discovered tools and performed sample invocation
 ```
 
-1. **Tool Architecture**: Understood the base Tool class and Toolkit system providing standardized interfaces
-2. **Code Interpreters**: Learned how to execute Python code securely using both Python and Docker interpreter toolkits
-3. **Search Tools**: Discovered how to access web information using Wikipedia and Google search toolkits
-4. **File Operations**: Learned how to handle file operations with special support for different file formats
-5. **Browser Automation**: Learned how to control web browsers using both Selenium-based fine-grained control and AI-driven natural language automation
-6. **MCP Tools**: Learned how to connect to external services using the Model Context Protocol
-**Note**: Make sure you have the required MCP server packages installed and running before testing the examples.
+**Note**: Ensure you have the required dependencies installed and any needed API keys (e.g., RAPIDAPI_KEY) configured before running networked examples.
 
----
-
-### 8.4 File Organization Benefits
-
-The separated `tools_integration.py` file provides several advantages:
-
-✅ **Focused Learning**: Concentrate on MCP integration without distraction from other tool categories  
-✅ **Server Management**: Learn how to configure and manage MCP servers  
-✅ **Tool Discovery**: Understand how to explore and use external tools  
-✅ **Error Handling**: Robust error handling and troubleshooting guidance  
-✅ **Configuration Examples**: Multiple configuration examples for different use cases  
-✅ **Setup Guide**: Comprehensive setup guide and best practices  
-✅ **Modular Testing**: Test MCP integration independently from other tool categories
