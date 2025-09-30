@@ -68,12 +68,12 @@ embedding=EmbeddingConfig(
 # For azure openai example
 embedding=EmbeddingConfig(
     provider="azure_openai",
-    model_name=AZURE_EMBED_DEPLOYMENT,
-    api_key=openai_api_key,
+    model_name=os.environ["AZURE_EMBED_DEPLOYMENT"],
+    api_key=os.environ["AZURE_EMBED_API_KEY"],
     dimensions=3072,
-    deployment_name=AZURE_EMBED_DEPLOYMENT,
-    azure_endpoint=AZURE_EMBED_ENDPOINT,
-    api_version=AZURE_EMBED_API_VERSION,
+    deployment_name=os.environ["AZURE_EMBED_DEPLOYMENT"],
+    azure_endpoint=os.environ["AZURE_EMBED_ENDPOINT"],
+    api_version=os.environ["AZURE_EMBED_API_VERSION"],
 )
 
 """
@@ -90,8 +90,14 @@ embedding=EmbeddingConfig(
 # )
 embedding=EmbeddingConfig(
     provider="azure_openai",
+    model_name=os.environ["AZURE_EMBED_DEPLOYMENT"],
+    api_key=os.environ["AZURE_EMBED_API_KEY"],
     dimensions=3072,
+    deployment_name=os.environ["AZURE_EMBED_DEPLOYMENT"],
+    azure_endpoint=os.environ["AZURE_EMBED_ENDPOINT"],
+    api_version=os.environ["AZURE_EMBED_API_VERSION"],
 )
+
 
 rag_config = RAGConfig(
     reader=ReaderConfig(
