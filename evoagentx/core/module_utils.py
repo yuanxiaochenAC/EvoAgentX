@@ -7,7 +7,7 @@ from uuid import uuid4
 from datetime import datetime, date 
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined, ValidationError
-from typing import Union, Type, Any, List, Dict, Tuple, Iterable, get_origin, get_args
+from typing import Union, Type, Any, List, Dict, Tuple, get_origin, get_args
 
 from .logging import logger 
 
@@ -189,7 +189,7 @@ def parse_json_from_text(text: str) -> List[str]:
             matches.extend(found)
 
     # If no match within fenced blocks, fall back to full content (only if we didn't already scan it)
-    if not matches and blocks is not [text]:
+    if not matches:
         found = pattern.findall(text)
         matches.extend(found)
 
