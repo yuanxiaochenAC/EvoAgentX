@@ -533,8 +533,8 @@ EvoAgentX 定期邀请顶尖研究人员开展讲座，分享 AI 领域的前沿
 | 发言者 | 主题 | 日期 | 会议视频 |
 |---|---|---|---|
 | [张恒哲](https://hengzhe-zhang.github.io/) | 遗传编程：从进化算法到 LLM 时代 | 2025-08-10 | [YouTube](https://www.youtube.com/watch?v=naja_kDYc_Y) |
-| [张桂彬](https://www.guibinz.top/) | G-Memory：追踪多智能体系统的分层记忆 | 2025-09-28 |  |
-| [董冠霖](https://dongguanting.github.io/) | 智能体强化策略优化 | 2025-11-02 |  |
+| [张桂彬](https://www.guibinz.top/) | G-Memory：追踪多智能体系统的分层记忆 | 2025-09-28 | [YouTube](https://www.youtube.com/watch?v=xzqZsZWfabw&t=3s) |
+| [董冠霖](https://dongguanting.github.io/) | 智能体强化策略优化 | 2025-10-30 | [YouTube](https://www.youtube.com/watch?v=UB-FL5JFXJY) |
 
 
 ## 🎯 路线图
