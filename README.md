@@ -33,18 +33,10 @@
 
 </div>
 
-<h4 align="center">
-  <i>An automated framework for evaluating and evolving agentic workflows.</i>
-</h4>
 
-<p align="center">
-  <img src="./assets/framework_en.jpg">
-</p>
 
 ## What is EvoAgentX
-EvoAgentX is an open-source framework for building, evaluating, and evolving LLM-based agents or agentic workflows in an automated, modular, and goal-driven manner.
-
-At its core, EvoAgentX enables developers and researchers to move beyond static prompt chaining or manual workflow orchestration. It introduces a self-evolving agent ecosystem, where AI agents can be constructed, assessed, and optimized through iterative feedback loops—much like how software is continuously tested and improved.
+EvoAgentX is an open-source framework for building, evaluating, and evolving LLM-based agents or agentic workflows in an automated, modular, and goal-driven manner. At its core, EvoAgentX enables developers and researchers to move beyond static prompt chaining or manual workflow orchestration. It introduces a self-evolving agent ecosystem, where AI agents can be constructed, assessed, and optimized through iterative feedback loops—much like how software is continuously tested and improved.
 
 ### ✨ Key Features
 
@@ -134,7 +126,7 @@ Here’s how:
   - [📊 Results](#-results)
 - [Applications](#applications)
 - [Tutorial and Use Cases](#tutorial-and-use-cases)
-- [🗣️ EvoAgentX TALK](#EvoAgentX-TALK) 
+- [🗣️ EvoAgentX TALK](#evoagentx-talk)
 - [🎯 Roadmap](#-roadmap)  
 - [🙋 Support](#-support)
   - [Join the Community](#join-the-community)
@@ -456,6 +448,8 @@ We have integrated some effective agent/workflow evolution algorithms into EvoAg
 | **TextGrad**  | Gradient-based optimization for LLM prompts and reasoning chains, enabling differentiable planning. | [📄 Nature (2025)](https://www.nature.com/articles/s41586-025-08661-4) |
 | **MIPRO**     | Model-agnostic Iterative Prompt Optimization using black-box evaluations and adaptive reranking. | [📄 arXiv:2406.11695](https://arxiv.org/abs/2406.11695) |
 | **AFlow**     | Reinforcement learning-inspired agent workflow evolution using Monte Carlo Tree Search. | [📄 arXiv:2410.10762](https://arxiv.org/abs/2410.10762) |
+| **EvoPrompt**     | EvoPrompt dynamically refines prompts via feedback-driven evolution to enhance agent performance and adaptability. | [📄 arXiv:2309.08532](https://arxiv.org/abs/2309.08532) |
+
 
 **Please suggest the latest self-evolving algorithm by submitting an issue or a Pull Request.**
 
@@ -526,9 +520,9 @@ Below is a running log of scheduled and completed talks:
 
 | Speaker | Topic | Date | Meeting Video |
 |---|---|---|---|
-| [Hengzhe Zhang — Researcher](https://hengzhe-zhang.github.io/) | Genetic Programming: From Evolutionary Algorithms to the LLM Era | 2025-08-10 | [YouTube](https://www.youtube.com/watch?v=naja_kDYc_Y) |
-| [Guibin Zhang — Researcher](https://www.guibinz.top/) | G-Memory: Tracing Hierarchical Memory for Multi-Agent Systems | 2025-09-28 |  |
-| [Guanting Dong — Researcher](https://dongguanting.github.io/) | Agentic Reinforced Policy Optimization | 2025-11-02 |  |
+| [Hengzhe Zhang](https://hengzhe-zhang.github.io/) | Genetic Programming: From Evolutionary Algorithms to the LLM Era | 2025-08-10 | [YouTube](https://www.youtube.com/watch?v=naja_kDYc_Y) |
+| [Guibin Zhang](https://www.guibinz.top/) | G-Memory: Tracing Hierarchical Memory for Multi-Agent Systems | 2025-09-28 | [YouTube](https://www.youtube.com/watch?v=xzqZsZWfabw&t=3s) |
+| [Guanting Dong](https://dongguanting.github.io/) | Agentic Reinforced Policy Optimization | 2025-11-02 |  |
 
 
 ## 🎯 Roadmap
@@ -605,7 +599,7 @@ Please consider citing our work if you find EvoAgentX helpful:
 ```
 
 ## 📚 Acknowledgements 
-This project builds upon several outstanding open-source projects: [AFlow](https://github.com/FoundationAgents/MetaGPT/tree/main/metagpt/ext/aflow), [TextGrad](https://github.com/zou-group/textgrad), [DSPy](https://github.com/stanfordnlp/dspy), [LiveCodeBench](https://github.com/LiveCodeBench/LiveCodeBench), and more. We would like to thank the developers and maintainers of these frameworks for their valuable contributions to the open-source community.
+This project builds upon several outstanding open-source projects: [AFlow](https://github.com/FoundationAgents/MetaGPT/tree/main/metagpt/ext/aflow), [TextGrad](https://github.com/zou-group/textgrad), [DSPy](https://github.com/stanfordnlp/dspy), [EvoPrompt](https://github.com/beeevita/EvoPrompt), [LiveCodeBench](https://github.com/LiveCodeBench/LiveCodeBench)and more. We would like to thank the developers and maintainers of these frameworks for their valuable contributions to the open-source community.
 
 ## 📄 License
 
