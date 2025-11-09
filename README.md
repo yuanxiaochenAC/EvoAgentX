@@ -522,7 +522,7 @@ Below is a running log of scheduled and completed talks:
 |---|---|---|---|
 | [Hengzhe Zhang](https://hengzhe-zhang.github.io/) | Genetic Programming: From Evolutionary Algorithms to the LLM Era | 2025-08-10 | [YouTube](https://www.youtube.com/watch?v=naja_kDYc_Y) |
 | [Guibin Zhang](https://www.guibinz.top/) | G-Memory: Tracing Hierarchical Memory for Multi-Agent Systems | 2025-09-28 | [YouTube](https://www.youtube.com/watch?v=xzqZsZWfabw&t=3s) |
-| [Guanting Dong](https://dongguanting.github.io/) | Agentic Reinforced Policy Optimization | 2025-11-02 |  [YouTube](https://www.youtube.com/watch?v=UB-FL5JFXJY)  |
+| [Guanting Dong](https://dongguanting.github.io/) | Agentic Reinforced Policy Optimization | 2025-10-30 |  [YouTube](https://www.youtube.com/watch?v=UB-FL5JFXJY)  |
 
 
 ## 🎯 Roadmap
