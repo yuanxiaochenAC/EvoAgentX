@@ -24,7 +24,7 @@ This project provides a FastAPI-based server for storing agents and workflows, w
    cd EvoAgentX
    ```
 
-2. Create a `.env` file with your configuration:
+2. Create a `.env` file with your configuration (see evoagentx/app/.env.example):
    ```bash
       MONGODB_URL=your_mogodb_url
       MONGODB_DB_NAME=evoagentx
