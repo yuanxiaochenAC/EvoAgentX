@@ -23,6 +23,19 @@
 pip install git+https://github.com/EvoAgentX/EvoAgentX.git
 ```
 
+可选功能依赖（按需安装）：
+
+```bash
+pip install "evoagentx[rag]"
+pip install "evoagentx[tools]"
+pip install "evoagentx[server]"
+pip install "evoagentx[multimodal]"
+pip install "evoagentx[optimizers]"
+pip install "evoagentx[benchmarks]"
+pip install "evoagentx[viz]"
+pip install "evoagentx[all]"
+```
+
 ### 方法 2：从源代码安装（开发者专用）
 
 如果您希望为 EvoAgentX 做贡献，或需要获取最新的开发版本，可以直接从源代码安装：
@@ -50,7 +63,9 @@ conda create -n evoagentx python=3.10
 conda activate evoagentx
 
 # 安装包
-pip install -r requirements.txt
+pip install -e ".[dev]"
+# 或者按需安装可选功能
+pip install -e ".[dev,rag,tools,server]"
 # 或者以开发模式安装
 pip install -e .
 ```

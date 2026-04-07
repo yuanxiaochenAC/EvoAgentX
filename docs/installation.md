@@ -23,6 +23,19 @@ The simplest way to install EvoAgentX is using pip:
 pip install git+https://github.com/EvoAgentX/EvoAgentX.git
 ```
 
+Optional feature sets:
+
+```bash
+pip install "evoagentx[rag]"
+pip install "evoagentx[tools]"
+pip install "evoagentx[server]"
+pip install "evoagentx[multimodal]"
+pip install "evoagentx[optimizers]"
+pip install "evoagentx[benchmarks]"
+pip install "evoagentx[viz]"
+pip install "evoagentx[all]"
+```
+
 ### Method 2: From Source (For Development)
 
 If you want to contribute to EvoAgentX or need the latest development version, you can install it directly from the source:
@@ -50,9 +63,11 @@ conda create -n evoagentx python=3.11
 conda activate evoagentx
 
 # Install the package dependencies
-pip install -r requirements.txt  # Use this to replicate the repository dependencies
+pip install -e ".[dev]"
+# Or install with optional features
+pip install -e ".[dev,rag,tools,server]"
 # OR install in development mode
-pip install -e .                 # Use this if you want to work on EvoAgentX itself
+pip install -e .
 ```
 
 ## Verifying Installation
@@ -67,4 +82,3 @@ print(evoagentx.__version__)
 ```
 
 You should see the current version of EvoAgentX printed to the console.
-
