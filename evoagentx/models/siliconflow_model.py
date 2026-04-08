@@ -3,7 +3,7 @@ from tenacity import (
     stop_after_attempt,
     wait_random_exponential,
 )
-from typing import List
+from typing import List, Tuple
 
 from .openai_model import OpenAILLM
 from .model_configs import SiliconFlowConfig
@@ -20,7 +20,8 @@ class SiliconFlowLLM(OpenAILLM):
     def init_model(self):
         config: SiliconFlowConfig = self.config
         self._client = self._init_client(config) # OpenAI(api_key=config.siliconflow_key, base_url="https://api.siliconflow.cn/v1")
-        self._default_ignore_fields = ["llm_type", "siliconflow_key", "output_response"] # parameters in SiliconFlowConfig that are not OpenAI models' input parameters 
+        self._default_ignore_fields = ["llm_type", "siliconflow_key", "output_response"] # parameters in SiliconFlowConfig that are not OpenAI models' input parameters
+        self._last_response = None
 
     def _init_client(self, config: SiliconFlowConfig):
         client = OpenAI(api_key=config.siliconflow_key, base_url="https://api.siliconflow.cn/v1")
@@ -35,15 +36,16 @@ class SiliconFlowLLM(OpenAILLM):
         try:
             completion_params = self.get_completion_params(**kwargs)
             response = self._client.chat.completions.create(
-                messages=messages, 
+                messages=messages,
                 **completion_params
             )
             if stream:
-                output = self.get_stream_output(response, output_response=output_response)
-                cost = self._completion_cost(self.response)  
+                output, stream_response = self.get_stream_output(response, output_response=output_response)
+                cost = self._completion_cost(stream_response)
             else:
                 output: str = response.choices[0].message.content
                 cost = self._completion_cost(response)
+                self._last_response = response
                 if output_response:
                     print(output)
             self._update_cost(cost=cost)
@@ -67,7 +69,7 @@ class SiliconFlowLLM(OpenAILLM):
         # total_tokens = input_tokens + output_tokens
         if model not in model_cost:
             return Cost(input_tokens=input_tokens, output_tokens=output_tokens, input_cost=0.0, output_cost=0.0)
-        
+
         if "token_cost" in model_cost[model]:
             # total_cost = total_tokens * model_cost[model]["token_cost"] / 1e6
             input_cost = input_tokens * model_cost[model]["token_cost"] / 1e6
@@ -76,14 +78,17 @@ class SiliconFlowLLM(OpenAILLM):
             # total_cost = input_tokens * model_cost[model]["input_token_cost"] / 1e6 + output_tokens * model_cost[model]["output_token_cost"] / 1e6
             input_cost = input_tokens * model_cost[model]["input_token_cost"] / 1e6
             output_cost = output_tokens * model_cost[model]["output_token_cost"] / 1e6
-        
+
         return Cost(input_tokens=input_tokens, output_tokens=output_tokens, input_cost=input_cost, output_cost=output_cost)
 
 
     def get_cost(self) -> dict:
         cost_info = {}
+        if self._last_response is None:
+            cost_info["error"] = "No response available yet — no generation has been performed"
+            return cost_info
         try:
-            tokens = self.response.usage
+            tokens = self._last_response.usage
             if tokens.prompt_tokens == -1:
                 cost_info["note"] = "Token counts not available in stream mode"
                 cost_info["prompt_tokens"] = 0
@@ -99,7 +104,7 @@ class SiliconFlowLLM(OpenAILLM):
 
         return cost_info
 
-    def get_stream_output(self, response: Stream, output_response: bool=True) -> str:
+    def get_stream_output(self, response: Stream, output_response: bool=True) -> Tuple[str, object]:
         output = ""
         last_chunk = None
         for chunk in response:
@@ -113,12 +118,12 @@ class SiliconFlowLLM(OpenAILLM):
         if output_response:
             print("")
 
-        # Store usage information from the last chunk
-        if hasattr(last_chunk, 'usage'):
-            self.response = last_chunk
+        # Build response object from the last chunk's usage info
+        if last_chunk is not None and hasattr(last_chunk, 'usage') and last_chunk.usage is not None:
+            stream_response = last_chunk
         else:
             # Create a placeholder response object for stream mode
-            self.response = type('StreamResponse', (), {
+            stream_response = type('StreamResponse', (), {
                 'usage': type('StreamUsage', (), {
                     'prompt_tokens': -1,
                     'completion_tokens': -1,
@@ -126,7 +131,8 @@ class SiliconFlowLLM(OpenAILLM):
                 })
             })
 
-        return output
+        self._last_response = stream_response
+        return output, stream_response
 
     def _update_cost(self, cost: Cost):
         cost_manager.update_cost(cost=cost, model=self.config.model)
