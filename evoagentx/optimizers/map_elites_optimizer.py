@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import random
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 from .engine.base import BaseOptimizer
 from .engine.decorators import EntryPoint
