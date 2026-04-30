@@ -43,7 +43,7 @@ class MetaModule(ModelMetaclass):
         Returns:
             The created class object
         """
-        cls = super().__new__(mcs, name, bases, namespace)
+        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
         register_module(name, cls)
         return cls 
 
@@ -62,8 +62,13 @@ class BaseModule(BaseModel, metaclass=MetaModule):
 
     class_name: str = None 
     # NOTE: do not set "validate_assignment" to True, otherwise infinite recursion will occur when validating the model.
-    model_config = {"arbitrary_types_allowed": True, "extra": "allow", "protected_namespaces": (), "validate_assignment": False}
-
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        extra="allow",
+        protected_namespaces=(),
+        validate_assignment=False
+    )
+    
     def __init_subclass__(cls, **kwargs):
         """
         Subclass initialization method that automatically sets the class_name attribute.
