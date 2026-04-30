@@ -159,7 +159,38 @@ def fix_json_booleans(string: str) -> str:
     return modified_string
 
 
+def remove_json_comments(json_str: str) -> str:
+    """
+    Remove // and /* */ comments from a JSON-like string and preserving text inside quotes.
+
+    Args:
+        json_str (str): The JSON-like input string that may contain comments.
+
+    Returns:
+        str: The same string with comments removed.
+    """
+    pattern = regex.compile(
+        r"""
+        ("(?:\\.|[^"\\])*")   |  # group 1: double-quoted string
+        ('(?:\\.|[^'\\])*')   |  # group 2: single-quoted string
+        (//[^\n\r]*)          |  # group 3: single-line comment
+        (/\*.*?\*/)              # group 4: multi-line comment
+        """,
+        regex.VERBOSE | regex.DOTALL | regex.MULTILINE
+    )
+
+    def _replacer(match) -> str:
+        # If group 3 (//...) or group 4 (/*...*/) matched, remove it
+        if match.group(3) or match.group(4):
+            return ""
+        # Otherwise it's a quoted string (group 1 or 2) — keep it unchanged
+        return match.group(0)
+
+    return pattern.sub(_replacer, json_str).strip()
+
+
 def fix_json(string: str) -> str:
+    string = remove_json_comments(string)
     string = fix_json_booleans(string)
     string = escape_json_values(string)
     return string
