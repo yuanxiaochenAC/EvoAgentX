@@ -1,15 +1,17 @@
-import os 
-import re
-import yaml
 import json
-import regex
+import os
+from datetime import date, datetime
+from types import UnionType
+from typing import Any, Dict, List, Optional, Type, Union, get_args, get_origin
 from uuid import uuid4
-from datetime import datetime, date 
+
+import regex
+import yaml
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined, ValidationError
-from typing import Union, Type, Any, List, Dict, Tuple, get_origin, get_args
 
-from .logging import logger 
+from .logging import logger
+
 
 def make_parent_folder(path: str):
 
@@ -113,7 +115,7 @@ def escape_json_values(string: str) -> str:
         raw_value = raw_value.replace('\n', '\\n')
         return f'"{raw_value}"'
     
-    def fix_json(match):
+    def escape_nested_json(match):
         raw_key = match.group(1)
         raw_value = match.group(2)
         raw_value = raw_value.replace("\n", "\\n")
@@ -128,18 +130,20 @@ def escape_json_values(string: str) -> str:
 
     try:
         string = regex.sub(r'(?<!\\)"', '\\\"', string) # replace " with \"
-        pattern_key = r'\\"([^"]+)\\"(?=\s*:\s*)'
+        # pattern_key = r'\\"([^"]+)\\"(?=\s*:\s*)'
+        pattern_key = r'(?:(?<=^)|(?<=[{,]))\s*\\"([^"]+)\\"(?=\s*:)'
         string = regex.sub(pattern_key, r'"\1"', string) # replace \\"key\\" with "key"
         pattern_value = r'(?<=:\s*)\\"((?:\\.|[^"\\])*)\\"'
         string = regex.sub(pattern_value, escape_value, string, flags=regex.DOTALL) # replace \\"value\\" with "value"and change \n to \\n
         pattern_nested_json = r'"([^"]+)"\s*:\s*\\"([^"]*\{+[\S\s]*?\}+)[\r\n\\n]*"' # handle nested json in value
-        string = regex.sub(pattern_nested_json, fix_json, string, flags=regex.DOTALL)
+        string = regex.sub(pattern_nested_json, escape_nested_json, string, flags=regex.DOTALL)
         json.loads(string)
         return string
     except json.JSONDecodeError:
         pass
     
     return string
+
 
 def fix_json_booleans(string: str) -> str:
     """
