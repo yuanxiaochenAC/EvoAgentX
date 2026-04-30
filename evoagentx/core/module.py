@@ -378,9 +378,7 @@ class BaseModule(BaseModel, metaclass=MetaModule):
             kwargs.pop("indent", None)
         if kwargs.get("default", None) is None:
             kwargs["default"] = custom_serializer
-        data = self.to_dict(exclude_none=True)
-        for ignore_field in ignore:
-            data.pop(ignore_field, None)
+        data = self.to_dict(ignore=ignore, exclude_none=True)
         return json.dumps(data, **kwargs)
     
     def to_str(self, **kwargs) -> str:
