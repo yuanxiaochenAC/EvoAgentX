@@ -1,22 +1,24 @@
-import os 
-import yaml
-import json 
 import copy
+import json
 import logging
-from typing import Callable, Any, Dict, List
-from pydantic import BaseModel, ValidationError
+import os
+from typing import Any, Callable, Dict, List
+
+import yaml
+from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic._internal._model_construction import ModelMetaclass
 
-from .logging import logger
 from .callbacks import callback_manager, exception_buffer
+from .logging import logger
 from .module_utils import (
-    save_json,
     custom_serializer,
-    parse_json_from_text, 
+    get_base_module_init_error_message,
     get_error_message,
-    get_base_module_init_error_message
+    parse_json_from_text,
+    recursive_to_dict,
+    save_json,
 )
-from .registry import register_module, MODULE_REGISTRY
+from .registry import MODULE_REGISTRY, register_module
 
 
 class MetaModule(ModelMetaclass):
@@ -223,7 +225,7 @@ class BaseModule(BaseModel, metaclass=MetaModule):
         Raises:
             ValueError: When the input is not a valid JSON string
         """
-        use_logger = kwargs.get("log", True)
+        use_logger = kwargs.pop("log", True)
         try:
             data = yaml.safe_load(content)
         except Exception:
@@ -238,7 +240,7 @@ class BaseModule(BaseModel, metaclass=MetaModule):
                 logger.error(error_message)
             raise ValueError(error_message)
 
-        return cls.from_dict(data, log=use_logger)
+        return cls.from_dict(data, log=use_logger, **kwargs)
     
     @classmethod
     def from_str(cls, content: str, **kwargs) -> "BaseModule":
@@ -260,7 +262,7 @@ class BaseModule(BaseModel, metaclass=MetaModule):
         Raises:
             ValueError: When the input does not contain valid JSON strings or the JSON is incompatible with the class
         """
-        use_logger = kwargs.get("log", True)
+        use_logger = kwargs.pop("log", True)
         
         extracted_json_list = parse_json_from_text(content)
         if len(extracted_json_list) == 0:
@@ -272,7 +274,7 @@ class BaseModule(BaseModel, metaclass=MetaModule):
         module = None
         for json_str in extracted_json_list:
             try:
-                module = cls.from_json(json_str, log=False)
+                module = cls.from_json(json_str, log=False, **kwargs)
             except Exception:
                 continue
             break
@@ -336,7 +338,7 @@ class BaseModule(BaseModel, metaclass=MetaModule):
         
         function = load_function or cls.load_module
         content = function(path, **kwargs)
-        module = cls.from_dict(content, log=use_logger)
+        module = cls.from_dict(content, log=use_logger, **kwargs)
 
         return module
     
