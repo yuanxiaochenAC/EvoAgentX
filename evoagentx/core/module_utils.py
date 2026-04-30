@@ -309,7 +309,6 @@ def remove_repr_quotes(json_string):
     return result
 
 def custom_serializer(obj: Any): 
-
     if isinstance(obj, (bytes, bytearray)):
         return obj.decode()
     if isinstance(obj, (datetime, date)):
@@ -319,7 +318,14 @@ def custom_serializer(obj: Any):
     if hasattr(obj, "read") and hasattr(obj, "name"):
         return f"<FileObject name={getattr(obj, 'name', 'unknown')}>"
     if callable(obj):
-        return obj.__name__
+        if hasattr(obj, "__name__"):
+            return obj.__name__
+        elif hasattr(obj, "name"):
+            return obj.name
+        elif hasattr(obj, "__class__"):
+            return obj.__repr__() if hasattr(obj, "__repr__") else obj.__class__.__name__
+        else:
+            return str(obj)
     if hasattr(obj, "__class__"):
         return obj.__repr__() if hasattr(obj, "__repr__") else obj.__class__.__name__
     
