@@ -1,7 +1,6 @@
 import json
 import os
 from datetime import date, datetime
-from types import UnionType
 from typing import Any, Dict, List, Optional, Type, Union, get_args, get_origin
 from uuid import uuid4
 
