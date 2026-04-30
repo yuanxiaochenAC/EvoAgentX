@@ -83,25 +83,27 @@ def save_json(data, path: str, type: str="json", use_indent: bool=True) -> str:
     return path
 
 
-def _extract_fenced_blocks(text: str) -> Tuple[List[str], List[str]]:
+def extract_fenced_blocks(text: str, labels: Optional[List[str]] = None) -> List[str]:
     """
     Extract fenced code blocks from the given text.
 
-    Returns:
-        preferred (List[str]): Code blocks explicitly labeled as json/yaml/yml.
-        others (List[str]): Code blocks with other or missing language labels.
-    """
-    _FENCE_RE = re.compile(r"```(\w+)?\r?\n(.*?)```", re.DOTALL)
+    Args:
+        text (str): The text to extract fenced code blocks from.
+        labels (List[str]): The labels to extract fenced code blocks for.
 
-    preferred, others = [], []
-    for m in _FENCE_RE.finditer(text):
-        lang = (m.group(1) or "").lower().strip()
-        code = m.group(2)
-        if lang in ("json", "yaml", "yml"):
-            preferred.append(code)
-        else:
-            others.append(code)
-    return preferred, others
+    Returns:
+        List[str]: Code blocks with specified labels.
+    """
+    # Pattern to match fenced blocks: ```label\ncode\n```
+    pattern = r"```([a-zA-Z0-9_\-\+]*)\s*\n*(.*?)\n*```"
+    matches = regex.findall(pattern, text, regex.DOTALL)
+    
+    if labels:
+        # Normalize labels for case-insensitive matching
+        labels_lower = {label.lower() for label in labels}
+        return [code.strip() for lang, code in matches if lang.strip().lower() in labels_lower]
+    
+    return [code.strip() for _, code in matches]
 
 
 def escape_json_values(string: str) -> str:
@@ -206,25 +208,14 @@ def parse_json_from_text(text: str) -> List[str]:
     Returns:
         List[str]: a list of parsed JSON data
     """
-    preferred, others = _extract_fenced_blocks(text)
+    fenced_blocks = extract_fenced_blocks(text)
+    if fenced_blocks:
+        matches = fenced_blocks
+    else:
+        json_pattern = r"""(?:\{(?:[^{}]*|(?R))*\}|\[(?:[^\[\]]*|(?R))*\])"""
+        pattern = regex.compile(json_pattern, regex.VERBOSE)
+        matches = pattern.findall(text)
 
-    # Candidate search order: JSON/YAML fenced > other fenced > full original text
-    blocks = preferred or others or [text]
-    
-    json_pattern = r"""(?:\{(?:[^{}]*|(?R))*\}|\[(?:[^\[\]]*|(?R))*\])"""
-    pattern = regex.compile(json_pattern, regex.VERBOSE)
-    matches: List[str] = []
-    for block in blocks:
-        found = pattern.findall(block)
-        if found:
-            matches.extend(found)
-
-    # If no match within fenced blocks, fall back to full content (only if we didn't already scan it)
-    if not matches:
-        found = pattern.findall(text)
-        matches.extend(found)
-
-    # Normalize/repair using your existing function.
     matches = [fix_json(m) for m in matches]
     return matches
 
