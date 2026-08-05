@@ -94,6 +94,35 @@ response = llm.generate(
 )
 ```
 
+### NovitaLLM
+
+NovitaLLM is an adapter for models hosted on the [Novita AI platform](https://novita.ai/), which offers access to open-source and proprietary LLMs via an OpenAI-compatible API.
+
+Thanks to Novita's OpenAI-compatible interface, the `NovitaLLM` model class in EvoAgentX allows seamless switching between models hosted on Novita using the same API format.
+
+**Basic Usage:**
+
+```python
+from evoagentx.models import NovitaConfig, NovitaLLM
+
+# Configure the model
+config = NovitaConfig(
+    model="deepseek/deepseek-v3",
+    novita_key="your-novita-api-key",
+    temperature=0.7,
+    max_tokens=1000
+)
+
+# Initialize the model
+llm = NovitaLLM(config=config)
+
+# Generate text
+response = llm.generate(
+    prompt="Write a poem about artificial intelligence.",
+    system_message="You are a creative poet."
+)
+```
+
 ### OpenRouterLLM
 
 OpenRouterLLM is an adapter for the [OpenRouter platform](https://openrouter.ai/), which provides access to a wide range of language models from various providers through a unified API. It supports models from providers like Anthropic, Google, Meta, Mistral AI, and more, all accessible through a single interface.
