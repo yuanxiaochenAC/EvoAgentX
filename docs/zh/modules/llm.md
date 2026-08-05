@@ -106,7 +106,7 @@ from evoagentx.models import NovitaConfig, NovitaLLM
 
 # Configure the model
 config = NovitaConfig(
-    model="deepseek/deepseek-v3",
+    model="moonshotai/kimi-k3",
     novita_key="your-novita-api-key",
     temperature=0.7,
     max_tokens=1000
