@@ -7,3 +7,4 @@ from .model_utils import *
 from .siliconflow_model import * 
 from .openrouter_model import * 
 from .aliyun_model import *
+from .novita_model import *

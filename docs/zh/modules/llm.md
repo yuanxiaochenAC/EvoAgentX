@@ -93,6 +93,35 @@ response = llm.generate(
 )
 ```
 
+### NovitaLLM
+
+NovitaLLM 是 [Novita AI 平台](https://novita.ai/) 上托管模型的适配器，该平台通过 OpenAI 兼容的 API 提供对开源和专有模型的访问。
+
+得益于 Novita 兼容 OpenAI 的接口，EvoAgentX 中的 `NovitaLLM` 模型类允许使用相同的 API 格式在 Novita 上托管的不同模型之间无缝切换。
+
+**基本用法：**
+
+```python
+from evoagentx.models import NovitaConfig, NovitaLLM
+
+# Configure the model
+config = NovitaConfig(
+    model="deepseek/deepseek-v4-pro",
+    novita_key="your-novita-api-key",
+    temperature=0.7,
+    max_tokens=1000
+)
+
+# Initialize the model
+llm = NovitaLLM(config=config)
+
+# Generate text
+response = llm.generate(
+    prompt="Write a poem about artificial intelligence.",
+    system_message="You are a creative poet."
+)
+```
+
 ### OpenRouterLLM
 
 OpenRouterLLM 是 [OpenRouter 平台](https://openrouter.ai/) 的适配器，该平台通过统一的 API 提供对各种提供商的语言模型的访问。它支持来自 Anthropic、Google、Meta、Mistral AI 等提供商的模型，所有这些都可以通过单一接口访问。
